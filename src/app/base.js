@@ -18,6 +18,7 @@ define([
     var COMMENT = "cheqroom.Comment",
         ATTACHMENT = "cheqroom.Attachment",
         IMAGE = "cheqroom.prop.Image",
+        IMAGE_OTHER = "cheqroom.attachment.Image",
         DEFAULTS = {
             id: "",
             modified: null,
@@ -339,6 +340,7 @@ define([
                         break;
                     case IMAGE:
                     case ATTACHMENT:
+                    case IMAGE_OTHER:
                         obj = that._getAttachment(kv, options);
                         if (obj) {
                             that.attachments = that.attachments || [];

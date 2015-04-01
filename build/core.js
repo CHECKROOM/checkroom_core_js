@@ -444,6 +444,7 @@ define("../../tests/js/lib/almond/almond", function(){});
 /**
  * Provides some common helper functions
  * @module common
+ * @copyright CHECKROOM NV 2015
  */
 define('common',[], function () {
 
@@ -506,8 +507,9 @@ define('common',[], function () {
 });
 /**
  * The DateHelper module
- * @module dateHelper
  * a DateHelper class
+ * @module dateHelper
+ * @copyright CHECKROOM NV 2015
  */
 define('dateHelper',["jquery", "moment"], function ($, moment) {
 
@@ -687,6 +689,7 @@ define('dateHelper',["jquery", "moment"], function ($, moment) {
 /**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
+ * @copyright CHECKROOM NV 2015
  */
 define('api',[
     'jquery',
@@ -1195,10 +1198,9 @@ define('api',[
 });
 /**
  * The KeyValue module
- * @module KeyValue
  * a helper class that can read KeyValues
- * TODO: we'll use objects like these probably in a class inherited from Base
- * TODO: implement this just like in web_2014
+ * @module KeyValue
+ * @copyright CHECKROOM NV 2015
  */
 define('keyvalue',['jquery'], function ($) {
 
@@ -1206,12 +1208,15 @@ define('keyvalue',['jquery'], function ($) {
         id: '',
         pk: '',
         key: '',
+        kind: 'string',
         value: null,
         modified: null,
         by: null
     };
 
     /**
+     * KeyValue class
+     * @param spec
      * @class KeyValue
      * @constructor
      */
@@ -1223,6 +1228,7 @@ define('keyvalue',['jquery'], function ($) {
         this.id = spec.id || DEFAULTS.id;
         this.pk = spec.pk || DEFAULTS.pk;
         this.key = spec.key || DEFAULTS.key;
+        this.kind = spec.kind || DEFAULTS.kind;  // string, int, float, bool, date, attachment
         this.value = spec.value || DEFAULTS.value;
         this.modified = spec.modified || DEFAULTS.modified;
         this.by = spec.by || DEFAULTS.by;
@@ -1243,8 +1249,11 @@ define('keyvalue',['jquery'], function ($) {
      * @returns {string}
      */
     KeyValue.prototype.getName = function() {
+        // cheqroom.prop.Warranty+date
+        // cheqroom.prop.Buy+price;EUR
         var keyParts = this.key.split(";");
-        return keyParts[0].split('.').pop().split('+').join(' ');
+        var noUnit = keyParts[0]
+        return noUnit.split('.').pop().split('+').join(' ');
     };
 
     /**
@@ -1268,6 +1277,7 @@ define('keyvalue',['jquery'], function ($) {
             (this.id == DEFAULTS.id) &&
             (this.pk == DEFAULTS.pk) &&
             (this.key == DEFAULTS.key) &&
+            (this.kind == DEFAULTS.kind) &&
             (this.value == DEFAULTS.value) &&
             (this.modified == DEFAULTS.modified) &&
             (this.by == DEFAULTS.by));
@@ -1304,7 +1314,7 @@ define('keyvalue',['jquery'], function ($) {
      * _toJson, makes a dict of the object
      * @method _toJson
      * @param options
-     * @returns {{}}
+     * @returns {object}
      * @private
      */
     KeyValue.prototype._toJson = function(options) {
@@ -1312,6 +1322,7 @@ define('keyvalue',['jquery'], function ($) {
             id: this.id,
             pk: this.pk,
             key: this.key,
+            kind: this.kind,
             value: this.value,
             modified: this.modified,
             by: this.by
@@ -1325,114 +1336,28 @@ define('keyvalue',['jquery'], function ($) {
      * @param {object} data the json response
      * @param {object} options dict
      * @returns promise
+     * @private
      */
     KeyValue.prototype._fromJson = function(data, options) {
         this.raw = data;
         this.id = data.id || DEFAULTS.id;
         this.pk = data.pk || DEFAULTS.pk;
         this.key = data.key || DEFAULTS.key;
+        this.kind = data.kind || DEFAULTS.kind;
         this.value = data.value || DEFAULTS.value;
         this.modified = data.modified || DEFAULTS.modified;
         this.by = data.by || DEFAULTS.by;
         return $.Deferred().resolve(data);
     };
 
-//
-//    KeyValue.prototype.canDelete = function(by) {
-//        // Inheriting classes can do something useful with this
-//        return true;
-//    };
-//
-//    KeyValue.prototype.canEdit = function(by) {
-//        // Inheriting classes can do something useful with this
-//        return true;
-//    };
-//
-//    /**
-//     Managing document KeyValues
-//     */
-//
-//    /**
-//     * _addKeyValue adds a KeyValue by its key and a value
-//     * @param key
-//     * @param value
-//     * @param kind
-//     * @returns {*}
-//     * @private
-//     */
-//    KeyValue.prototype._addKeyValue = function(key, value, kind) {
-//        if (this.existsInDb()) {
-//            return $.Deferred().reject(new Error("_addKeyValue cannot add if it already exists in the database"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        return this.ds.call(this.pk, 'addKeyValue', {key: key, value: value, kind: kind, _fields: this.fields})
-//            .then(function() {
-//                that.reset();
-//            })
-//            .always(function() {
-//                that.isBusy(false);
-//            });
-//    };
-//
-//    /**
-//     * _updateKeyValue updates a KeyValue by its key and a new value
-//     * @param key
-//     * @param value
-//     * @param kind
-//     * @returns {*}
-//     * @private
-//     */
-//    KeyValue.prototype._updateKeyValue = function(key, value, kind) {
-//        if (!this.existsInDb()) {
-//            return $.Deferred().reject(new Error("_updateKeyValue cannot update if it doesn't exist in the database"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        return this.ds.call(this.pk, 'updateKeyValue', {key: key, value: value, kind: kind, _fields: this.fields})
-//            .then(function() {
-//                that.reset();
-//            })
-//            .always(function() {
-//                that.isBusy(false);
-//            });
-//    };
-//
-//    /**
-//     * _removeKeyValue removes a KeyValue by its guid id
-//     * @returns {*}
-//     * @private
-//     */
-//    KeyValue.prototype._removeKeyValue = function() {
-//        if (!this.existsInDb()) {
-//            return $.Deferred().reject(new Error("_removeKeyValue cannot remove keyvalue if it doesn't exist in the database"));
-//        }
-//
-//        if (!this.canDelete(this.by)) {
-//            return $.Deferred().reject(new Error("_removeKeyValue cannot remove keyvalue"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        this.isDeleting(true);
-//        return this.ds.call(this.pk, 'removeKeyValue', {id: this.id, _fields: this.fields})
-//            .then(function() {
-//                that.reset();
-//            })
-//            .always(function() {
-//                that.isBusy(false);
-//                that.isDeleting(false);
-//            });
-//    };
-
     return KeyValue;
+
 });
 /**
  * The Attachment module
- * @module attachment
  * an Attachment class inheriting from KeyValue
+ * @module attachment
+ * @copyright CHECKROOM NV 2015
  */
 define('Attachment',[
     'jquery',
@@ -1500,8 +1425,9 @@ define('Attachment',[
 });
 /**
  * The Document module
- * @module document
  * a base class for all documents from the CHECKROOM API
+ * @module document
+ * @copyright CHECKROOM NV 2015
  */
 define('document',[
     'jquery',
@@ -1750,9 +1676,10 @@ define('document',[
 
 /**
  * The Comment module
- * @module comment
  * a helper class that can read a Comment KeyValue
  * Comment inherits from KeyValue and adds some specifics to it
+ * @module comment
+ * @copyright CHECKROOM NV 2015
  */
 define('comment',[
     'jquery',
@@ -1827,8 +1754,9 @@ define('comment',[
 });
 /**
  * The Attachment module
- * @module attachment
  * an Attachment class inheriting from KeyValue
+ * @module attachment
+ * @copyright CHECKROOM NV 2015
  */
 define('attachment',[
     'jquery',
@@ -1896,9 +1824,10 @@ define('attachment',[
 });
 /**
  * The Base module
- * @module base
  * a base class for all documents that have: comments, attachments, other keyvalues
  * it inherits from Document to support some basic actions
+ * @copyright CHECKROOM NV 2015
+ * @module base
  */
 define('Base',[
     'jquery',
@@ -1913,6 +1842,7 @@ define('Base',[
     var COMMENT = "cheqroom.Comment",
         ATTACHMENT = "cheqroom.Attachment",
         IMAGE = "cheqroom.prop.Image",
+        IMAGE_OTHER = "cheqroom.attachment.Image",
         DEFAULTS = {
             id: "",
             modified: null,
@@ -1959,6 +1889,7 @@ define('Base',[
      * after calling reset() isEmpty() should return true
      * We'll only check for comments, attachments, keyValues here
      * @method isEmpty
+     * @returns {boolean}
      */
     Base.prototype.isEmpty = function() {
         return (
@@ -1987,20 +1918,47 @@ define('Base',[
 
     // Comments
     // ----
+    /**
+     * Adds a comment by string
+     * @param comment
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.addComment = function(comment, skipRead) {
         return this.addKeyValue(COMMENT, comment, "string", skipRead);
     };
 
+    /**
+     * Updates a comment by id
+     * @param id
+     * @param comment
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.updateComment = function(id, comment, skipRead) {
         return this.updateKeyValue(id, COMMENT, comment, "string", skipRead);
     };
 
+    /**
+     * Deletes a Comment by id
+     * @param id
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.deleteComment = function(id, skipRead) {
-        return this.removeKeyValue(id);
+        return this.removeKeyValue(id, skipRead);
     };
 
     // KeyValue stuff
     // ----
+    /**
+     * Adds a key value
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.addKeyValue = function(key, value, kind, skipRead) {
         return this._doApiCall({
             method: 'addKeyValue',
@@ -2009,6 +1967,15 @@ define('Base',[
         });
     };
 
+    /**
+     * Updates a keyvalue by id
+     * @param id
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.updateKeyValue = function(id, key, value, kind, skipRead) {
         return this._doApiCall({
             method: 'updateKeyValue',
@@ -2017,6 +1984,12 @@ define('Base',[
         });
     };
 
+    /**
+     * Removes a keyvalue by id
+     * @param id
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.removeKeyValue = function(id, skipRead) {
         return this._doApiCall({
             method: 'removeKeyValue',
@@ -2025,6 +1998,15 @@ define('Base',[
         });
     };
 
+    /**
+     * Sets a keyvalue by id
+     * @param id
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.setKeyValue = function(id, key, value, kind, skipRead) {
         var params = {key: key, value: value, kind: kind};
         if( (id!=null) &&
@@ -2040,6 +2022,12 @@ define('Base',[
 
     // Attachments stuff
     // ----
+    /**
+     * changes the cover image to another Attachment
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.setCover = function(att, skipRead) {
         return this._doApiCall({
             method: 'setCover',
@@ -2048,16 +2036,32 @@ define('Base',[
         });
     };
 
+    /**
+     * attaches an image Attachment file, shortcut to attach
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.attachImage = function(att, skipRead) {
         return this.attach(att, IMAGE, skipRead);
     };
 
+    /**
+     * attaches an Attachment file, shortcut to attach
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.attachFile = function(att, skipRead) {
         return this.attach(att, ATTACHMENT, skipRead);
     };
 
     /**
-     attaches an Attachment object
+     * attaches an Attachment object
+     * @param att
+     * @param key
+     * @param skipRead
+     * @returns {promise}
      */
     Base.prototype.attach = function(att, key, skipRead) {
         if (this.existsInDb()) {
@@ -2072,7 +2076,10 @@ define('Base',[
     };
 
     /**
-     detaches an Attachment by kvId (guid)
+     * detaches an Attachment by kvId (guid)
+     * @param keyId
+     * @param skipRead
+     * @returns {promise}
      */
     Base.prototype.detach = function(keyId, skipRead) {
         if (this.existsInDb()) {
@@ -2104,6 +2111,7 @@ define('Base',[
      * @method _fromJson
      * @param {object} data the json response
      * @param {object} options dict
+     * @private
      */
     Base.prototype._fromJson = function(data, options) {
         var that = this;
@@ -2156,6 +2164,7 @@ define('Base',[
                         break;
                     case IMAGE:
                     case ATTACHMENT:
+                    case IMAGE_OTHER:
                         obj = that._getAttachment(kv, options);
                         if (obj) {
                             that.attachments = that.attachments || [];
@@ -2209,9 +2218,10 @@ define('Base',[
 
 /**
  * The Comment module
- * @module comment
  * a helper class that can read a Comment KeyValue
  * Comment inherits from KeyValue and adds some specifics to it
+ * @module comment
+ * @copyright CHECKROOM NV 2015
  */
 define('Comment',[
     'jquery',
@@ -2286,9 +2296,10 @@ define('Comment',[
 });
 /**
  * The Base module
- * @module base
  * a base class for all documents that have: comments, attachments, other keyvalues
  * it inherits from Document to support some basic actions
+ * @copyright CHECKROOM NV 2015
+ * @module base
  */
 define('base',[
     'jquery',
@@ -2303,6 +2314,7 @@ define('base',[
     var COMMENT = "cheqroom.Comment",
         ATTACHMENT = "cheqroom.Attachment",
         IMAGE = "cheqroom.prop.Image",
+        IMAGE_OTHER = "cheqroom.attachment.Image",
         DEFAULTS = {
             id: "",
             modified: null,
@@ -2349,6 +2361,7 @@ define('base',[
      * after calling reset() isEmpty() should return true
      * We'll only check for comments, attachments, keyValues here
      * @method isEmpty
+     * @returns {boolean}
      */
     Base.prototype.isEmpty = function() {
         return (
@@ -2377,20 +2390,47 @@ define('base',[
 
     // Comments
     // ----
+    /**
+     * Adds a comment by string
+     * @param comment
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.addComment = function(comment, skipRead) {
         return this.addKeyValue(COMMENT, comment, "string", skipRead);
     };
 
+    /**
+     * Updates a comment by id
+     * @param id
+     * @param comment
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.updateComment = function(id, comment, skipRead) {
         return this.updateKeyValue(id, COMMENT, comment, "string", skipRead);
     };
 
+    /**
+     * Deletes a Comment by id
+     * @param id
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.deleteComment = function(id, skipRead) {
-        return this.removeKeyValue(id);
+        return this.removeKeyValue(id, skipRead);
     };
 
     // KeyValue stuff
     // ----
+    /**
+     * Adds a key value
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.addKeyValue = function(key, value, kind, skipRead) {
         return this._doApiCall({
             method: 'addKeyValue',
@@ -2399,6 +2439,15 @@ define('base',[
         });
     };
 
+    /**
+     * Updates a keyvalue by id
+     * @param id
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.updateKeyValue = function(id, key, value, kind, skipRead) {
         return this._doApiCall({
             method: 'updateKeyValue',
@@ -2407,6 +2456,12 @@ define('base',[
         });
     };
 
+    /**
+     * Removes a keyvalue by id
+     * @param id
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.removeKeyValue = function(id, skipRead) {
         return this._doApiCall({
             method: 'removeKeyValue',
@@ -2415,6 +2470,15 @@ define('base',[
         });
     };
 
+    /**
+     * Sets a keyvalue by id
+     * @param id
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.setKeyValue = function(id, key, value, kind, skipRead) {
         var params = {key: key, value: value, kind: kind};
         if( (id!=null) &&
@@ -2430,6 +2494,12 @@ define('base',[
 
     // Attachments stuff
     // ----
+    /**
+     * changes the cover image to another Attachment
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.setCover = function(att, skipRead) {
         return this._doApiCall({
             method: 'setCover',
@@ -2438,16 +2508,32 @@ define('base',[
         });
     };
 
+    /**
+     * attaches an image Attachment file, shortcut to attach
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.attachImage = function(att, skipRead) {
         return this.attach(att, IMAGE, skipRead);
     };
 
+    /**
+     * attaches an Attachment file, shortcut to attach
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
     Base.prototype.attachFile = function(att, skipRead) {
         return this.attach(att, ATTACHMENT, skipRead);
     };
 
     /**
-     attaches an Attachment object
+     * attaches an Attachment object
+     * @param att
+     * @param key
+     * @param skipRead
+     * @returns {promise}
      */
     Base.prototype.attach = function(att, key, skipRead) {
         if (this.existsInDb()) {
@@ -2462,7 +2548,10 @@ define('base',[
     };
 
     /**
-     detaches an Attachment by kvId (guid)
+     * detaches an Attachment by kvId (guid)
+     * @param keyId
+     * @param skipRead
+     * @returns {promise}
      */
     Base.prototype.detach = function(keyId, skipRead) {
         if (this.existsInDb()) {
@@ -2494,6 +2583,7 @@ define('base',[
      * @method _fromJson
      * @param {object} data the json response
      * @param {object} options dict
+     * @private
      */
     Base.prototype._fromJson = function(data, options) {
         var that = this;
@@ -2546,6 +2636,7 @@ define('base',[
                         break;
                     case IMAGE:
                     case ATTACHMENT:
+                    case IMAGE_OTHER:
                         obj = that._getAttachment(kv, options);
                         if (obj) {
                             that.attachments = that.attachments || [];
@@ -2601,8 +2692,7 @@ define('base',[
  * The Contact module
  * Contact class inherits from Base so it supports KeyValues (Attachment, Comment)
  * @module contact
- * TODO: In v2 this is still the endpoint for customers
- * TODO: Right now it's just a rename
+ * @copyright CHECKROOM NV 2015
  */
 define('Contact',[
     'jquery',
@@ -2741,8 +2831,9 @@ define('Contact',[
 });
 /**
  * The DateHelper module
- * @module dateHelper
  * a DateHelper class
+ * @module dateHelper
+ * @copyright CHECKROOM NV 2015
  */
 define('DateHelper',["jquery", "moment"], function ($, moment) {
 
@@ -2921,8 +3012,9 @@ define('DateHelper',["jquery", "moment"], function ($, moment) {
 });
 /**
  * The Document module
- * @module document
  * a base class for all documents from the CHECKROOM API
+ * @module document
+ * @copyright CHECKROOM NV 2015
  */
 define('Document',[
     'jquery',
@@ -3172,6 +3264,7 @@ define('Document',[
 /**
  * The Item module
  * @module item
+ * @copyright CHECKROOM NV 2015
  */
 define('Item',[
     'jquery',
@@ -3588,10 +3681,9 @@ define('Item',[
 });
 /**
  * The KeyValue module
- * @module KeyValue
  * a helper class that can read KeyValues
- * TODO: we'll use objects like these probably in a class inherited from Base
- * TODO: implement this just like in web_2014
+ * @module KeyValue
+ * @copyright CHECKROOM NV 2015
  */
 define('KeyValue',['jquery'], function ($) {
 
@@ -3599,12 +3691,15 @@ define('KeyValue',['jquery'], function ($) {
         id: '',
         pk: '',
         key: '',
+        kind: 'string',
         value: null,
         modified: null,
         by: null
     };
 
     /**
+     * KeyValue class
+     * @param spec
      * @class KeyValue
      * @constructor
      */
@@ -3616,6 +3711,7 @@ define('KeyValue',['jquery'], function ($) {
         this.id = spec.id || DEFAULTS.id;
         this.pk = spec.pk || DEFAULTS.pk;
         this.key = spec.key || DEFAULTS.key;
+        this.kind = spec.kind || DEFAULTS.kind;  // string, int, float, bool, date, attachment
         this.value = spec.value || DEFAULTS.value;
         this.modified = spec.modified || DEFAULTS.modified;
         this.by = spec.by || DEFAULTS.by;
@@ -3636,8 +3732,11 @@ define('KeyValue',['jquery'], function ($) {
      * @returns {string}
      */
     KeyValue.prototype.getName = function() {
+        // cheqroom.prop.Warranty+date
+        // cheqroom.prop.Buy+price;EUR
         var keyParts = this.key.split(";");
-        return keyParts[0].split('.').pop().split('+').join(' ');
+        var noUnit = keyParts[0]
+        return noUnit.split('.').pop().split('+').join(' ');
     };
 
     /**
@@ -3661,6 +3760,7 @@ define('KeyValue',['jquery'], function ($) {
             (this.id == DEFAULTS.id) &&
             (this.pk == DEFAULTS.pk) &&
             (this.key == DEFAULTS.key) &&
+            (this.kind == DEFAULTS.kind) &&
             (this.value == DEFAULTS.value) &&
             (this.modified == DEFAULTS.modified) &&
             (this.by == DEFAULTS.by));
@@ -3697,7 +3797,7 @@ define('KeyValue',['jquery'], function ($) {
      * _toJson, makes a dict of the object
      * @method _toJson
      * @param options
-     * @returns {{}}
+     * @returns {object}
      * @private
      */
     KeyValue.prototype._toJson = function(options) {
@@ -3705,6 +3805,7 @@ define('KeyValue',['jquery'], function ($) {
             id: this.id,
             pk: this.pk,
             key: this.key,
+            kind: this.kind,
             value: this.value,
             modified: this.modified,
             by: this.by
@@ -3718,115 +3819,28 @@ define('KeyValue',['jquery'], function ($) {
      * @param {object} data the json response
      * @param {object} options dict
      * @returns promise
+     * @private
      */
     KeyValue.prototype._fromJson = function(data, options) {
         this.raw = data;
         this.id = data.id || DEFAULTS.id;
         this.pk = data.pk || DEFAULTS.pk;
         this.key = data.key || DEFAULTS.key;
+        this.kind = data.kind || DEFAULTS.kind;
         this.value = data.value || DEFAULTS.value;
         this.modified = data.modified || DEFAULTS.modified;
         this.by = data.by || DEFAULTS.by;
         return $.Deferred().resolve(data);
     };
 
-//
-//    KeyValue.prototype.canDelete = function(by) {
-//        // Inheriting classes can do something useful with this
-//        return true;
-//    };
-//
-//    KeyValue.prototype.canEdit = function(by) {
-//        // Inheriting classes can do something useful with this
-//        return true;
-//    };
-//
-//    /**
-//     Managing document KeyValues
-//     */
-//
-//    /**
-//     * _addKeyValue adds a KeyValue by its key and a value
-//     * @param key
-//     * @param value
-//     * @param kind
-//     * @returns {*}
-//     * @private
-//     */
-//    KeyValue.prototype._addKeyValue = function(key, value, kind) {
-//        if (this.existsInDb()) {
-//            return $.Deferred().reject(new Error("_addKeyValue cannot add if it already exists in the database"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        return this.ds.call(this.pk, 'addKeyValue', {key: key, value: value, kind: kind, _fields: this.fields})
-//            .then(function() {
-//                that.reset();
-//            })
-//            .always(function() {
-//                that.isBusy(false);
-//            });
-//    };
-//
-//    /**
-//     * _updateKeyValue updates a KeyValue by its key and a new value
-//     * @param key
-//     * @param value
-//     * @param kind
-//     * @returns {*}
-//     * @private
-//     */
-//    KeyValue.prototype._updateKeyValue = function(key, value, kind) {
-//        if (!this.existsInDb()) {
-//            return $.Deferred().reject(new Error("_updateKeyValue cannot update if it doesn't exist in the database"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        return this.ds.call(this.pk, 'updateKeyValue', {key: key, value: value, kind: kind, _fields: this.fields})
-//            .then(function() {
-//                that.reset();
-//            })
-//            .always(function() {
-//                that.isBusy(false);
-//            });
-//    };
-//
-//    /**
-//     * _removeKeyValue removes a KeyValue by its guid id
-//     * @returns {*}
-//     * @private
-//     */
-//    KeyValue.prototype._removeKeyValue = function() {
-//        if (!this.existsInDb()) {
-//            return $.Deferred().reject(new Error("_removeKeyValue cannot remove keyvalue if it doesn't exist in the database"));
-//        }
-//
-//        if (!this.canDelete(this.by)) {
-//            return $.Deferred().reject(new Error("_removeKeyValue cannot remove keyvalue"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        this.isDeleting(true);
-//        return this.ds.call(this.pk, 'removeKeyValue', {id: this.id, _fields: this.fields})
-//            .then(function() {
-//                that.reset();
-//            })
-//            .always(function() {
-//                that.isBusy(false);
-//                that.isDeleting(false);
-//            });
-//    };
-
     return KeyValue;
+
 });
 /**
  * The Location module
  * Location class inherits from Base so it supports KeyValues (Attachment, Comment)
  * @module location
- * TODO: Our UI doesn't support KeyValues of this, so we should override and disable these methods
+ * @copyright CHECKROOM NV 2015
  */
 define('Location',[
     'jquery',
@@ -3919,10 +3933,11 @@ define('Location',[
 });
 /**
  * The Transaction module
- * @module transaction
- * @implements Base
  * a base class for Reservations and Orders
  * Share similar manipulating of: status, dates, items, contacts, locations, comments, attachments
+ * @module transaction
+ * @implements Base
+ * @copyright CHECKROOM NV 2015
  */
 define('transaction',[
     'jquery',
@@ -4517,6 +4532,11 @@ define('transaction',[
     return Transaction;
 });
 
+/**
+ * The Order module
+ * @module module
+ * @copyright CHECKROOM NV 2015
+ */
 define('Order',[
     "jquery",
     "api",
@@ -4785,8 +4805,9 @@ define('Order',[
 
 /**
  * The Helper module
- * @module helper
  * a Helper class which allows you to call helpers based on the settings in group.profile and user.profile
+ * @module helper
+ * @copyright CHECKROOM NV 2015
  */
 define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHelper) {
 
@@ -4819,6 +4840,11 @@ define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHel
     return Helper;
 
 });
+/**
+ * The Reservation module
+ * @module reservation
+ * @copyright CHECKROOM NV 2015
+ */
 define('Reservation',[
     "jquery",
     "api",
@@ -5217,10 +5243,11 @@ define('Reservation',[
 });
 /**
  * The Transaction module
- * @module transaction
- * @implements Base
  * a base class for Reservations and Orders
  * Share similar manipulating of: status, dates, items, contacts, locations, comments, attachments
+ * @module transaction
+ * @implements Base
+ * @copyright CHECKROOM NV 2015
  */
 define('Transaction',[
     'jquery',
@@ -5815,6 +5842,11 @@ define('Transaction',[
     return Transaction;
 });
 
+/**
+ * The Main module
+ * bundles all core js code together
+ * @copyright CHECKROOM NV 2015
+ */
 define('../main',[
     'api',
     'Attachment',
@@ -5832,12 +5864,6 @@ define('../main',[
     'Reservation',
     'Transaction'], function(api, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction) {
 
-    // TODO:
-    // The module combines all core files together in a single dependency
-    // When we use this module in another project we'll do:
-    // `new api.ApiDataSource({...});`
-    // It will be good to minify and provide a single access point into the CR Core API from JS?
-    // This is also that file that will be minified by Grunt?
     var core = {};
 
     // namespaces

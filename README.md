@@ -2,6 +2,10 @@
 
 A JavaScript wrapper around the CHEQROOM REST API
 
+## Installation
+
+Install `sudo npm install` required npm packages
+
 ## Build instructions
 
 Call `grunt` to build and run the tests

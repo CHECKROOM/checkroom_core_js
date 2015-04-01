@@ -9,6 +9,7 @@ define([
 
     var DEFAULTS = {
         name: '',
+        group: '',  // groupid
         role: 'user',  // user, admin
         active: true
     };
@@ -25,9 +26,11 @@ define([
      */
     var User = function(opt) {
         var spec = $.extend({
-            fields: ['*']
+            fields: ['*','group']
         }, opt);
         Base.call(this, spec);
+
+        this.helper = spec.helper;
 
         /*
         from API:
@@ -89,6 +92,13 @@ define([
         return isDirty;
     };
 
+    User.prototype.getImageUrl = function(size, bustCache) {
+        return (
+            (this.picture!=null) &&
+            (this.picture.length>0)) ?
+            this.helper.getImageCDNUrl({}, "groupid", this.picture, size, bustCache) :
+            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    };
 
     User.prototype._getDefaults = function() {
         return DEFAULTS;
@@ -97,12 +107,13 @@ define([
     /**
      * Writes the user to a json object
      * @param options
-     * @returns {*}
+     * @returns {object}
      * @private
      */
     User.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
+        data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
         data.active = this.active || DEFAULTS.active;
         return data;
@@ -112,13 +123,16 @@ define([
      * Reads the user from the json object
      * @param data
      * @param options
-     * @returns {*}
+     * @returns {promise}
      * @private
      */
     User.prototype._fromJson = function(data, options) {
         var that = this;
         return Base.prototype._fromJson.call(this, data, options)
             .then(function() {
+                // Read the group id from group or group._id
+                // depending on the fields
+                that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
                 that.name = data.name || DEFAULTS.name;
                 that.role = data.role || DEFAULTS.role;
                 that.active = (data.active!=null) ? data.active : DEFAULTS.active;

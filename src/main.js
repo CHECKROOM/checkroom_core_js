@@ -18,7 +18,8 @@ define([
     'Order',
     'helper',
     'Reservation',
-    'Transaction'], function(api, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction) {
+    'Transaction',
+    'User'], function(api, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
 
     var core = {};
 
@@ -39,6 +40,7 @@ define([
     core.Order = Order;
     core.Reservation = Reservation;
     core.Transaction = Transaction;
+    core.User = User;
 
     return core;
 });

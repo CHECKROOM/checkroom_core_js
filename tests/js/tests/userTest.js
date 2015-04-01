@@ -7,18 +7,32 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
         var run = function() {
 
             var collection = "users";
-            var getUser = function(ds) {
-                return new cr.User({
-                    ds: ds,
-                    name: 'Vincent Theeten',
-                    role: 'admin',
-                    active: false
-                });
-            };
 
             // Get a user with token
             helper.getApiDataSource(collection)
                 .done(function(ds) {
+
+                    var getUser = function() {
+                        return new cr.User({
+                            ds: ds,
+                            name: 'Vincent Theeten',
+                            role: 'admin',
+                            active: false,
+                            helper: new cr.Helper()
+                        });
+                    };
+
+                    var getAnyUser = function() {
+                        return ds.list()
+                            .then(function(users) {
+                                var user = getUser();
+                                user.id = users[0]._id;
+                                return user.get()
+                                    .then(function() {
+                                        return user;
+                                    });
+                            });
+                    };
 
                     /**
                      * Testing API /list calls
@@ -30,6 +44,24 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             .done(function(users) {
                                 ok(users!=null);
                                 ok(users.length>0);
+
+                                var user = getUser();
+                                user.id = users[0]._id;
+                                user.get()
+                                    .done(function() {
+                                        ok(user.group.length>0);
+                                    })
+                                    .always(function(){
+                                        start();
+                                    });
+                            });
+                    });
+
+                    // Test getting a image urls
+                    asyncTest("list users", function() {
+                        getAnyUser()
+                            .then(function(user) {
+                                ok(user.getImageUrl());
                             })
                             .always(function(){
                                 start();

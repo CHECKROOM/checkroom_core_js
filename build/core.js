@@ -4837,6 +4837,45 @@ define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHel
         return m.clone().add(1, 'day');
     };
 
+    /**
+     * getImageCDNUrl gets an image by using the path to a CDN location
+     * @param settings
+     * @param groupId
+     * @param attachmentId
+     * @param size
+     * @returns {string}
+     */
+    Helper.prototype.getImageCDNUrl = function(settings, groupId, attachmentId, size) {
+        // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+        var url = "https://cheqroom-cdn.s3.amazonaws.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
+        if( (size) &&
+            (size.length>0)) {
+            var parts = url.split('.');
+            var ext = parts.pop();  // pop off the extension, we'll change it
+            url = parts.join('.') + "-" + size + ".jpg";  // resized images are always jpg
+        }
+        return url;
+    };
+
+    /**
+     * getImageUrl gets an image by using the datasource /get style and a mimeType
+     * @param ds
+     * @param pk
+     * @param size
+     * @param bustCache
+     * @returns {string}
+     */
+    Helper.prototype.getImageUrl = function(ds, pk, size, bustCache) {
+        var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+        if (size) {
+            url += '&size=' + size;
+        }
+        if (bustCache) {
+            url += '&_bust=' + new Date().getTime();
+        }
+        return url;
+    };
+
     return Helper;
 
 });
@@ -5843,6 +5882,152 @@ define('Transaction',[
 });
 
 /**
+ * The User module
+ * @module user
+ * @copyright CHECKROOM NV 2015
+ */
+define('User',[
+    'jquery',
+    'base'], function ($, Base) {
+
+    var DEFAULTS = {
+        name: '',
+        group: '',  // groupid
+        role: 'user',  // user, admin
+        active: true
+    };
+
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = Base.prototype;
+
+    /**
+     * @class User
+     * @constructor
+     * @extends Base
+     */
+    var User = function(opt) {
+        var spec = $.extend({
+            fields: ['*','group']
+        }, opt);
+        Base.call(this, spec);
+
+        this.helper = spec.helper;
+
+        /*
+        from API:
+
+        login = StringField(primary_key=True, min_length=4)
+        role = StringField(required=True, choices=USER_ROLE)
+        group = ReferenceField(Group)
+        password = StringField(min_length=4)
+        name = StringField(min_length=4)
+        email = EmailField(required=True, unique=True)
+        lastLogin = DateTimeField()
+        profile = EmbeddedDocumentField(UserProfile)
+        active = BooleanField(default=True)
+        picture = ReferenceField(Attachment)
+        timezone = StringField(default="Etc/GMT")  # stored as
+        */
+
+        this.name = spec.name || DEFAULTS.name;
+        this.role = spec.role || DEFAULTS.role;
+        this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
+    };
+
+    User.prototype = new tmp();
+    User.prototype.constructor = User;
+
+    //
+    // Document overrides
+    //
+
+    /**
+     * Checks if the user is empty
+     * @returns {boolean}
+     */
+    User.prototype.isEmpty = function() {
+        // We check: name, role
+        return (
+            (Base.prototype.isEmpty.call(this)) &&
+            (this.name==DEFAULTS.name) &&
+            (this.role==DEFAULTS.role));
+    };
+
+    /**
+     * Checks if the user is dirty and needs saving
+     * @returns {boolean}
+     */
+    User.prototype.isDirty = function() {
+        var isDirty = Base.prototype.isDirty.call(this);
+        if( (!isDirty) &&
+            (this.raw)) {
+            var name = this.raw.name || DEFAULTS.name;
+            var role = this.raw.role || DEFAULTS.role;
+            var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
+            return (
+                (this.name!=name) ||
+                (this.role!=role) ||
+                (this.active!=active)
+            );
+        }
+        return isDirty;
+    };
+
+    User.prototype.getImageUrl = function(size, bustCache) {
+        return (
+            (this.picture!=null) &&
+            (this.picture.length>0)) ?
+            this.helper.getImageCDNUrl({}, "groupid", this.picture, size, bustCache) :
+            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    };
+
+    User.prototype._getDefaults = function() {
+        return DEFAULTS;
+    };
+
+    /**
+     * Writes the user to a json object
+     * @param options
+     * @returns {object}
+     * @private
+     */
+    User.prototype._toJson = function(options) {
+        var data = Base.prototype._toJson.call(this, options);
+        data.name = this.name || DEFAULTS.name;
+        data.group = this.group || DEFAULTS.group;
+        data.role = this.role || DEFAULTS.role;
+        data.active = this.active || DEFAULTS.active;
+        return data;
+    };
+
+    /**
+     * Reads the user from the json object
+     * @param data
+     * @param options
+     * @returns {promise}
+     * @private
+     */
+    User.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Base.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                // Read the group id from group or group._id
+                // depending on the fields
+                that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
+                that.name = data.name || DEFAULTS.name;
+                that.role = data.role || DEFAULTS.role;
+                that.active = (data.active!=null) ? data.active : DEFAULTS.active;
+                $.publish('user.fromJson', data);
+                return data;
+            });
+    };
+
+    return User;
+    
+});
+/**
  * The Main module
  * bundles all core js code together
  * @copyright CHECKROOM NV 2015
@@ -5862,7 +6047,8 @@ define('../main',[
     'Order',
     'helper',
     'Reservation',
-    'Transaction'], function(api, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction) {
+    'Transaction',
+    'User'], function(api, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
 
     var core = {};
 
@@ -5883,6 +6069,7 @@ define('../main',[
     core.Order = Order;
     core.Reservation = Reservation;
     core.Transaction = Transaction;
+    core.User = User;
 
     return core;
 });

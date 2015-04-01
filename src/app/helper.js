@@ -54,6 +54,10 @@ define(["jquery", "moment", "dateHelper"], function ($, moment, DateHelper) {
 
     /**
      * getImageUrl gets an image by using the datasource /get style and a mimeType
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
      * @param ds
      * @param pk
      * @param size

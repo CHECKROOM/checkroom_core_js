@@ -4859,6 +4859,10 @@ define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHel
 
     /**
      * getImageUrl gets an image by using the datasource /get style and a mimeType
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
      * @param ds
      * @param pk
      * @param size
@@ -5892,6 +5896,7 @@ define('User',[
 
     var DEFAULTS = {
         name: '',
+        email: '',
         group: '',  // groupid
         role: 'user',  // user, admin
         active: true
@@ -5932,6 +5937,7 @@ define('User',[
         */
 
         this.name = spec.name || DEFAULTS.name;
+        this.email = spec.email || DEFAULTS.email;
         this.role = spec.role || DEFAULTS.role;
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
     };
@@ -5952,6 +5958,7 @@ define('User',[
         return (
             (Base.prototype.isEmpty.call(this)) &&
             (this.name==DEFAULTS.name) &&
+            (this.email==DEFAULTS.email) &&
             (this.role==DEFAULTS.role));
     };
 
@@ -5965,9 +5972,11 @@ define('User',[
             (this.raw)) {
             var name = this.raw.name || DEFAULTS.name;
             var role = this.raw.role || DEFAULTS.role;
+            var email = this.raw.email || DEFAULTS.email;
             var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
             return (
                 (this.name!=name) ||
+                (this.email!=email) ||
                 (this.role!=role) ||
                 (this.active!=active)
             );
@@ -5975,6 +5984,16 @@ define('User',[
         return isDirty;
     };
 
+    /**
+     * Gets an url for a user avatar
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
+     * @param size {string} default null is original size
+     * @param bustCache {boolean}
+     * @returns {string}
+     */
     User.prototype.getImageUrl = function(size, bustCache) {
         return (
             (this.picture!=null) &&
@@ -5996,6 +6015,7 @@ define('User',[
     User.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
+        data.email = this.email || DEFAULTS.email;
         data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
         data.active = this.active || DEFAULTS.active;
@@ -6017,6 +6037,7 @@ define('User',[
                 // depending on the fields
                 that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
                 that.name = data.name || DEFAULTS.name;
+                that.email = data.email || DEFAULTS.email;
                 that.role = data.role || DEFAULTS.role;
                 that.active = (data.active!=null) ? data.active : DEFAULTS.active;
                 $.publish('user.fromJson', data);

@@ -50,6 +50,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                 user.get()
                                     .done(function() {
                                         ok(user.group.length>0);
+                                        ok(user.name.length>0);
+                                        ok(user.email.length>0);
                                     })
                                     .always(function(){
                                         start();
@@ -57,14 +59,35 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
                     });
 
-                    // Test getting a image urls
-                    asyncTest("list users", function() {
+                    // Test getting a image url
+                    asyncTest("get user imageUrl", function() {
                         getAnyUser()
                             .then(function(user) {
                                 ok(user.getImageUrl());
                             })
                             .always(function(){
                                 start();
+                            });
+                    });
+
+                    // Test dirty flag and update
+                    asyncTest("get, dirty, update user", function() {
+                        getAnyUser()
+                            .then(function(user) {
+                                var oldName = user.name;
+                                user.name = "unit test";
+                                ok(user.isDirty());
+
+                                user.update()
+                                    .then(function() {
+                                        ok(user.name=="unit test");
+                                        ok(!user.isDirty());
+                                    })
+                                    .always(function(){
+                                        start();
+                                        user.name = oldName;
+                                        user.update();
+                                    });
                             });
                     });
 

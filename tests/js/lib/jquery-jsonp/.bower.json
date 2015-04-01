@@ -1,0 +1,14 @@
+{
+  "name": "jquery-jsonp",
+  "homepage": "https://github.com/jaubourg/jquery-jsonp",
+  "version": "2.4.0",
+  "_release": "2.4.0",
+  "_resolution": {
+    "type": "version",
+    "tag": "v2.4.0",
+    "commit": "3bb3da3d064ec0efe4cafad3fa36db68f6155e9e"
+  },
+  "_source": "git://github.com/jaubourg/jquery-jsonp.git",
+  "_target": "~2.4.0",
+  "_originalSource": "jquery-jsonp"
+}

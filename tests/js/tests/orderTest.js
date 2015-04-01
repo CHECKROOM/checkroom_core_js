@@ -1,0 +1,200 @@
+/**
+ * @copyright CHECKROOM NV 2015
+ */
+"use strict";
+define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
+
+        var run = function() {
+
+            var collection = "orders";
+
+            // Get a user with token
+            helper.getApiDataSources([collection, "items"])
+                .done(function(dss) {
+                    var ds = dss[collection];
+                    var dsItems = dss["items"];
+
+                    /**
+                     * Testing API /list calls
+                     */
+
+                    // Test getting a list of orders
+                    asyncTest("list orders", function() {
+                        ds.list()
+                            .done(function(orders) {
+                                ok(orders!=null);
+                                ok(orders.length>0);
+                            })
+                            .always(function(){
+                                start();
+                            });
+                    });
+
+                    asyncTest("list orders -- incomplete", function() {
+                        ds.list("creating_orders")
+                            .done(function(orders) {
+                                ok(orders!=null);
+                                ok(orders.length>0);
+                            })
+                            .always(function(){
+                                start();
+                            });
+                    });
+
+                    asyncTest("list orders -- open", function() {
+                        ds.list("open_orders")
+                            .done(function(orders) {
+                                ok(orders!=null);
+                                ok(orders.length>0);
+                            })
+                            .always(function(){
+                                start();
+                            });
+                    });
+
+                    asyncTest("list orders -- closed", function() {
+                        ds.list("closed_orders")
+                            .done(function(orders) {
+                                ok(orders!=null);
+                                ok(orders.length>0);
+                            })
+                            .always(function(){
+                                start();
+                            });
+                    });
+
+                    /**
+                     * Testing Order viewmodel calls
+                     */
+                    $.when(
+                        helper.getAnyContact(),
+                        helper.getAnyLocation()
+                    )
+                        .done(function(contact, location) {
+
+                            asyncTest("create Order object with contact, autoclean on delete", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true
+                                });
+
+                                order.setContact(contact._id)
+                                    .done(function() {
+                                        ok(order.id.length>0);
+                                        ok(order.contact.length>0);
+                                        ok(order.existsInDb());
+
+                                        var id = order.id;
+                                        order.clearContact()
+                                            .done(function() {
+                                                ok(!order.existsInDb());
+                                                ok(order.isEmpty());
+                                            }).always(function(){
+                                                start();
+                                            });
+                                    });
+                            });
+
+                            asyncTest("create Order object with location, autoclean on delete", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true
+                                });
+
+                                order.setLocation(location._id)
+                                    .done(function() {
+                                        ok(order.id.length>0);
+                                        ok(order.location.length>0);
+                                        ok(order.existsInDb());
+
+                                        var id = order.id;
+                                        order.clearLocation()
+                                            .done(function() {
+                                                ok(!order.existsInDb());
+                                                ok(order.isEmpty());
+                                            }).always(function(){
+                                                start();
+                                            });
+                                    });
+                            });
+
+                            asyncTest("create Order object via constructor, searchItems", function() {
+                                var helper = new cr.Helper();
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    dsItems: dsItems,
+                                    autoCleanup: true,
+                                    location: location._id,
+                                    contact: contact._id,
+                                    helper: helper
+                                });
+
+                                var deleteOrder = function() {
+                                    order.delete();
+                                };
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.id.length>0);
+                                        ok(order.location.length>0);
+                                        ok(order.contact.length>0);
+                                        ok(order.existsInDb());
+                                        ok(order.status=="creating");
+
+                                        order.searchItems()
+                                            .done(function(items) {
+                                                ok(items!=null);
+                                                ok(items.length>0);
+
+                                                var item = items[0];
+                                                order.addItems([item._id])
+                                                    .then(function() {
+                                                        ok(order.items.length==1);
+                                                        ok(order.status=="creating");
+
+                                                        order.setFromDueDate(moment(), null)
+                                                            .then(function() {
+                                                                ok(order.from==null);
+                                                                ok(order.due!=null);
+                                                                ok(order.status=="creating");
+
+                                                                order.checkout()
+                                                                    .then(function() {
+                                                                        ok(order.from!=null);
+                                                                        ok(order.due!=null);
+                                                                        ok(order.status=="open");
+                                                                        var oldDue = order.due;
+
+                                                                        order._toLog();
+                                                                        order.setDueDate(moment().add(5, 'days'))
+                                                                            .then(function() {
+                                                                                var newDue = order.due;
+                                                                                ok(order.from!=null);
+                                                                                ok(order.due!=null);
+                                                                                ok(order.status=="open");
+                                                                                ok(oldDue.isBefore(newDue));
+
+                                                                                order.undoCheckout()
+                                                                                    .then(function() {
+                                                                                        ok(order.status=="creating");
+                                                                                    })
+                                                                                    .always(function() {
+                                                                                        start();
+                                                                                    });
+                                                                            }, deleteOrder);
+                                                                    });
+                                                            });
+                                                    });
+                                            });
+                                    });
+                            });
+
+                        });
+
+                });
+
+        };
+
+        return {run: run}
+    }
+);

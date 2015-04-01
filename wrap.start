@@ -1,0 +1,12 @@
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+    // AMD.
+    define(['jquery',
+        	  'jquery-jsonp',
+            'jquery-pubsub',
+        	  'moment'], factory);
+  } else {
+    // Browser globals.
+    root.cr = factory($, jsonp, pubsub, moment);
+  }
+}(this, function($, jsonp, pubsub, moment) {

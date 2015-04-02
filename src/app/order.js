@@ -6,7 +6,7 @@
 define([
     "jquery",
     "api",
-    "transaction"], function ($, api, Transaction) {
+    "transaction"], /** @lends Transaction */  function ($, api, Transaction) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14,6 +14,7 @@ define([
     tmp.prototype = Transaction.prototype;
 
     /**
+     * @name Order
      * @class Order
      * @constructor
      * @extends Transaction
@@ -35,6 +36,8 @@ define([
 
     /**
      * Overwrite only getMinDate, max date stays one year from now
+     * @method
+     * @name Order#getMindDate
      * @returns {*}
      */
     Order.prototype.getMinDate = function() {
@@ -70,11 +73,23 @@ define([
     //
     // Helpers
     //
+    /**
+     * Gets a friendly order duration or empty string
+     * @method
+     * @name Order#getFriendlyDuration
+     * @returns {string}
+     */
     Order.prototype.getFriendlyDuration = function() {
         var duration = this.getDuration();
         return (duration!=null) ? this._getDateHelper().getFriendlyDuration(duration) : "";
     };
 
+    /**
+     * Gets a moment duration object
+     * @method
+     * @name Order#getDuration
+     * @returns {*}
+     */
     Order.prototype.getDuration = function() {
         if (this.from!=null) {
             var to = (this.status=="closed") ? this.to : this.due;
@@ -85,14 +100,32 @@ define([
         return null;
     };
 
+    /**
+     * Checks if a PDF document can be generated
+     * @method
+     * @name Order#canGenerateAgreement
+     * @returns {boolean}
+     */
     Order.prototype.canGenerateAgreement = function() {
         return (this.status=="open") || (this.status=="closed");
     };
 
+    /**
+     * Checks if order can be checked in
+     * @method
+     * @name Order#canCheckin
+     * @returns {boolean}
+     */
     Order.prototype.canCheckin = function() {
         return (this.status=="open");
     };
 
+    /**
+     * Checks if order can be checked out
+     * @method
+     * @name Order#canCheckout
+     * @returns {boolean}
+     */
     Order.prototype.canCheckout = function() {
         return (
             (this.status=="creating") &&
@@ -103,6 +136,12 @@ define([
             (this.items.length));
     };
 
+    /**
+     * Checks if order can undo checkout
+     * @method
+     * @name Order#canUndoCheckout
+     * @returns {boolean}
+     */
     Order.prototype.canUndoCheckout = function() {
         return (this.status=="open");
     };
@@ -117,10 +156,12 @@ define([
 
     /**
      * Sets the Order from and due date in a single call
+     * @method
+     * @name Order#setFromDueDate
      * @param from
      * @param due (optional) if null, we'll take the default average checkout duration as due date
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.setFromDueDate = function(from, due, skipRead) {
         if (this.status!="creating") {
@@ -144,9 +185,11 @@ define([
 
     /**
      * Sets the Order from date
+     * @method
+     * @name Order#setFromDate
      * @param date
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.setFromDate = function(date, skipRead) {
         if (this.status!="creating") {
@@ -163,6 +206,13 @@ define([
             });
     };
 
+    /**
+     * Clears the order from date
+     * @method
+     * @name Order#clearFromDate
+     * @param skipRead
+     * @returns {promise}
+     */
     Order.prototype.clearFromDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear order from date, status is "+this.status));
@@ -173,6 +223,14 @@ define([
         return this._handleTransaction(skipRead);
     };
 
+    /**
+     * Sets the order due date
+     * @method
+     * @name Order#setDueDate
+     * @param due
+     * @param skipRead
+     * @returns {promise}
+     */
     Order.prototype.setDueDate = function(due, skipRead) {
         // Cannot change the to-date of a reservation that is not in status "creating"
         if( (this.status!="creating") &&
@@ -193,6 +251,13 @@ define([
             });
     };
 
+    /**
+     * Clears the order due date
+     * @method
+     * @name Order#clearDueDate
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.clearDueDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear order due date, status is "+this.status));
@@ -214,22 +279,61 @@ define([
     //
     // Business logic calls
     //
+    /**
+     * Searches for items that could match this order
+     * @method
+     * @name Order#searchItems
+     * @param params
+     * @param useAvailabilies
+     * @param onlyUnbooked
+     * @param skipItems
+     * @returns {*}
+     */
     Order.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
         return this._searchItems(params, "available", useAvailabilies, onlyUnbooked, skipItems || this.items);
     };
 
+    /**
+     * Checks in the order
+     * @method
+     * @name Order#checkin
+     * @param itemIds
+     * @param skipRead
+     * @returns {promise}
+     */
     Order.prototype.checkin = function(itemIds, skipRead) {
         return this._doApiCall({method: "checkin", items:itemIds, skipRead: skipRead});
     };
 
+    /**
+     * Checks out the order
+     * @method
+     * @name Order#checkout
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.checkout = function(skipRead) {
         return this._doApiCall({method: "checkout", skipRead: skipRead});
     };
 
+    /**
+     * Undoes the order checkout
+     * @method
+     * @name Order#undoCheckout
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.undoCheckout = function(skipRead) {
         return this._doApiCall({method: "undoCheckout", skipRead: skipRead});
     };
 
+    /**
+     * Generates a PDF agreement for the order
+     * @method
+     * @name Order#generateAgreement
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.generateAgreement = function(skipRead) {
         return this._doApiCall({method: "generateAgreement", skipRead: skipRead});
     };

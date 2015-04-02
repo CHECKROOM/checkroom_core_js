@@ -6,7 +6,7 @@
 define([
     "jquery",
     "api",
-    "transaction"], function ($, api, Transaction) {
+    "transaction"],  /** @lends Transaction */ function ($, api, Transaction) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14,9 +14,11 @@ define([
     tmp.prototype = Transaction.prototype;
 
     /**
+     * @name Reservation
      * @class Reservation
      * @constructor
      * @extends Transaction
+     * @propery {Array}  conflicts               - The reservation conflicts
      */
     var Reservation = function(opt) {
         var spec = $.extend({
@@ -37,7 +39,9 @@ define([
 
     /**
      * Overwrite only the getMinDate, max date is one year from now
-     * @returns {*}
+     * @method
+     * @name Reservation#getMinDate
+     * @returns {moment}
      */
     Reservation.prototype.getMinDate = function() {
         // Reservations can only start from the next timeslot at the earliest
@@ -53,6 +57,12 @@ define([
     //
     // Helpers
     //
+    /**
+     * Checks if the reservation can be booked
+     * @method
+     * @name Reservation#canReserve
+     * @returns {boolean}
+     */
     Reservation.prototype.canReserve = function() {
         return (
             (this.status=="creating") &&
@@ -64,18 +74,42 @@ define([
             (this.items.length));
     };
 
+    /**
+     * Checks if the reservation can be cancelled
+     * @method
+     * @name Reservation#canCancel
+     * @returns {boolean}
+     */
     Reservation.prototype.canCancel = function() {
         return (this.status=="open");
     };
 
+    /**
+     * Checks if the reservation can be edited
+     * @method
+     * @name Reservation#canEdit
+     * @returns {boolean}
+     */
     Reservation.prototype.canEdit = function() {
         return (this.status=="creating");
     };
 
+    /**
+     * Checks if the reservation can be deleted
+     * @method
+     * @name Reservation#canDelete
+     * @returns {boolean}
+     */
     Reservation.prototype.canDelete = function() {
         return (this.status=="creating");
     };
 
+    /**
+     * Checks if the reservation can be turned into an order
+     * @method
+     * @name Reservation#canMakeOrder
+     * @returns {boolean}
+     */
     Reservation.prototype.canMakeOrder = function() {
         if (this.status=="open") {
             var unavailable = this._getUnavailableItems();
@@ -120,6 +154,8 @@ define([
 
     /**
      * Sets the reservation from / to dates in a single call
+     * @method
+     * @name Reservation#setFromToDate
      * @param from
      * @param to (optional) if null, we'll take the default average checkout duration as due date
      * @param skipRead
@@ -150,6 +186,8 @@ define([
      * - bigger than minDate
      * - smaller than maxDate
      * - at least one interval before .to date (if set)
+     * @method
+     * @name Reservation#setFromDate
      * @param date
      * @param skipRead
      * @returns {*}
@@ -178,6 +216,13 @@ define([
             });
     };
 
+    /**
+     * Clear the reservation from date
+     * @method
+     * @name Reservation#clearFromDate
+     * @param skipRead
+     * @returns {*}
+     */
     Reservation.prototype.clearFromDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation from date, status is "+this.status));
@@ -194,6 +239,8 @@ define([
      * - bigger than minDate
      * - smaller than maxDate
      * - at least one interval after the .from date (if set)
+     * @method
+     * @name Reservation#setToDate
      * @param date
      * @param skipRead
      * @returns {*}
@@ -225,6 +272,13 @@ define([
             });
     };
 
+    /**
+     * Clears the reservation to date
+     * @method
+     * @name Reservation#clearToDate
+     * @param skipRead
+     * @returns {*}
+     */
     Reservation.prototype.clearToDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation to date, status is "+this.status));
@@ -250,6 +304,8 @@ define([
 
     /**
      * Searches for Items that are available for this reservation
+     * @method
+     * @name Reservation#searchItems
      * @param params
      * @param useAvailabilies (should always be true, we only use this flag for Order objects)
      * @param onlyUnbooked
@@ -261,6 +317,8 @@ define([
 
     /**
      * Books the reservation and sets the status to `open`
+     * @method
+     * @name Reservation#reserve
      * @param skipRead
      * @returns {*}
      */
@@ -270,6 +328,8 @@ define([
 
     /**
      * Unbooks the reservation and sets the status to `creating` again
+     * @method
+     * @name Reservation#undoReserve
      * @param skipRead
      * @returns {*}
      */
@@ -279,6 +339,8 @@ define([
 
     /**
      * Cancels the booked reservation and sets the status to `cancelled`
+     * @method
+     * @name Reservation#cancel
      * @param skipRead
      * @returns {*}
      */
@@ -288,6 +350,8 @@ define([
 
     /**
      * Turns an open reservation into an order (which still needs to be checked out)
+     * @method
+     * @name Reservation#makeOrder
      * @returns {*}
      */
     Reservation.prototype.makeOrder = function() {

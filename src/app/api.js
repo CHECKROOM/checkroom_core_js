@@ -1,6 +1,7 @@
 /**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
+ * @namespace api
  * @copyright CHECKROOM NV 2015
  */
 define([
@@ -46,6 +47,15 @@ define([
     //*************
     // ApiAjax
     //*************
+
+    /**
+     * The ajax communication object which makes the request to the API
+     * @name ApiAjax
+     * @param {object} spec
+     * @param {boolean} spec.useJsonp
+     * @constructor
+     * @memberof api
+     */
     api.ApiAjax = function(spec) {
         spec = spec || {};
         this.useJsonp = (spec.useJsonp!=null) ? spec.useJsonp : true;
@@ -178,6 +188,16 @@ define([
     //*************
     // ApiUser
     //*************
+
+    /**
+     * @name ApiUser
+     * @param {object} spec
+     * @param {string} spec.userId          - the users primary key
+     * @param {string} spec.userToken       - the users token
+     * @param {string} spec.tokenType       - the token type (empty for now)
+     * @constructor
+     * @memberof api
+     */
     api.ApiUser = function(spec) {
         spec = spec || {};
         this.userId = spec.userId || '';
@@ -227,6 +247,7 @@ define([
     //*************
     // ApiAuth
     //*************
+
     api.ApiAuth = function(spec) {
         spec = spec || {};
         this.urlAuth = spec.urlAuth || '';
@@ -254,12 +275,43 @@ define([
     //*************
     // ApiAuth
     //*************
+
+    /**
+     * @name ApiAuthV2
+     * @param {object}  spec
+     * @param {string}  spec.urlAuth          - the api url to use when authenticating
+     * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
+     * @constructor
+     * @memberof api
+     * @example
+     * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
+     * var userName = "";
+     * var password = "";
+     *
+     * var ajax = new cr.api.ApiAjax({useJsonp: true});
+     * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
+     * var authUser = null;
+     *
+     * auth.authenticate(userName, password)
+     *     .done(function(data) {
+     *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
+     *     });
+     *
+     */
     api.ApiAuthV2 = function(spec) {
         spec = spec || {};
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
     };
 
+    /**
+     * The call to authenticate a user with userid an dpassword
+     * @method
+     * @name ApiAuthV2#authenticate
+     * @param userId
+     * @param password
+     * @returns {object}
+     */
     api.ApiAuthV2.prototype.authenticate = function(userId, password) {
         system.log('ApiAuthV2: authenticate '+userId);
         var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2});
@@ -305,6 +357,17 @@ define([
     // ApiDataSource
     // Communicates with the API using an ApiUser
     //*************
+
+    /**
+     * @name ApiDataSource
+     * @param {object} spec
+     * @param {string} spec.collection         - the collection this datasource uses, e.g. "items"
+     * @param {string} spec.urlApi             - the api url to use
+     * @param {ApiAuthUser} spec.user          - the user auth object
+     * @param {ApiAjax}  spec.ajax             - the ajax api object to use
+     * @constructor
+     * @memberof api
+     */
     api.ApiDataSource = function(spec) {
         spec = spec || {};
         this.collection = spec.collection || '';
@@ -322,6 +385,14 @@ define([
             this.collection + '/';
     };
 
+    /**
+     * Checks if a certain document exists
+     * @method
+     * @name ApiDataSource#exists
+     * @param pk
+     * @param fields
+     * @returns {*}
+     */
     api.ApiDataSource.prototype.exists = function(pk, fields) {
         var dfd = $.Deferred();
         var that = this;
@@ -343,6 +414,14 @@ define([
         return dfd.promise();
     };
 
+    /**
+     * Gets a certain document by its primary key
+     * @method
+     * @name ApiDataSource#get
+     * @param pk
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.get = function(pk, fields) {
         system.log('ApiDataSource: ' + this.collection + ': get ' + pk);
         var url = this.getBaseUrl() + pk;
@@ -353,6 +432,15 @@ define([
         return this.ajax.get(url);
     };
 
+    /**
+     * Gets a certain document by its primary key, but returns null if not found
+     * instead of a rejected promise
+     * @method
+     * @name ApiDataSource#getIgnore404
+     * @param pk
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.getIgnore404 = function(pk, fields) {
         var that = this;
         var dfd = $.Deferred();
@@ -375,6 +463,14 @@ define([
         return dfd.promise();
     };
 
+    /**
+     * Get multiple document by primary keys in a single query
+     * @method
+     * @name ApiDataSource#getMultiple
+     * @param {array} pks
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.getMultiple = function(pks, fields) {
         system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
         var url = this.getBaseUrl() + pks.join(',') + ',';
@@ -385,12 +481,28 @@ define([
         return this.ajax.get(url);
     };
 
+    /**
+     * Deletes a document by its primary key
+     * @method
+     * @name ApiDataSource#delete
+     * @param pk
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.delete = function(pk) {
         system.log('ApiDataSource: ' + this.collection + ': delete ' + pk);
         var url = this.getBaseUrl() + pk + '/delete';
         return this.ajax.get(url);
     };
 
+    /**
+     * Updates a document by its primary key and a params objects
+     * @method
+     * @name ApiDataSource#update
+     * @param pk
+     * @param params
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.update = function(pk, params, fields) {
         system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
         var url = this.getBaseUrl() + pk + '/update';
@@ -403,6 +515,14 @@ define([
         return this.ajax.get(url);
     };
 
+    /**
+     * Creates a document with some data in an object
+     * @method
+     * @name ApiDataSource#create
+     * @param params
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.create = function(params, fields) {
         system.log('ApiDataSource: ' + this.collection + ': create');
         var url = this.getBaseUrl() + 'create';
@@ -416,6 +536,14 @@ define([
         return this.ajax.get(url);
     };
 
+    /**
+     * Creates multiple objects in one goe
+     * @method
+     * @name ApiDataSource#createMultiple
+     * @param objects
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.createMultiple = function(objects, fields) {
         system.log('ApiDataSource: ' + this.collection + ': createMultiple (' + objects.length + ')');
 
@@ -444,6 +572,17 @@ define([
         return dfd.promise();
     };
 
+    /**
+     * Get a list of objects from the collection
+     * @method
+     * @name ApiDataSource#list
+     * @param name
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.list = function(name, fields, limit, skip, sort) {
         system.log('ApiDataSource: ' + this.collection + ': list ' + name);
         var url = this.getBaseUrl();
@@ -457,6 +596,18 @@ define([
         return this.ajax.get(url);
     };
 
+    /**
+     * Searches for objects in the collection
+     * @method
+     * @name ApiDataSource#search
+     * @param params
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @param mimeType
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.search = function(params, fields, limit, skip, sort, mimeType) {
         system.log('ApiDataSource: ' + this.collection + ': search ' + params);
         var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
@@ -474,6 +625,18 @@ define([
         return url;
     };
 
+    /**
+     * Calls a certain method on an object or on the entire collection
+     * @method
+     * @name ApiDataSource#call
+     * @param pk
+     * @param method
+     * @param params
+     * @param fields
+     * @param timeOut
+     * @param usePost
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.call = function(pk, method, params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': call ' + method);
         var url = ((pk!=null) && (pk.length>0)) ?
@@ -489,14 +652,37 @@ define([
         }
     };
 
+    /**
+     * Gets the base url for all calls to this collection
+     * @method
+     * @name ApiDataSource#getBaseUrl
+     * @returns {string}
+     */
     api.ApiDataSource.prototype.getBaseUrl = function() {
         return this._baseUrl;
     };
 
+    /**
+     * Prepare some parameters so we can use them during a request
+     * @method
+     * @name ApiDataSource#getParams
+     * @param data
+     * @returns {object}
+     */
     api.ApiDataSource.prototype.getParams = function(data) {
         return $.param(this.ajax._prepareDict(data));
     };
 
+    /**
+     * Gets a dictionary of parameters
+     * @method
+     * @name ApiDataSource#getParamsDict
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @returns {{}}
+     */
     api.ApiDataSource.prototype.getParamsDict = function(fields, limit, skip, sort) {
         var p = {};
         if (fields) {   p['_fields'] = $.isArray(fields) ? fields.join(',') : fields; }

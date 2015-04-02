@@ -18,6 +18,8 @@ define([
      * @name Document
      * @class
      * @constructor
+     * @property {string}  id               - The documents primary key
+     * @property {string}  raw              - The raw, unprocessed json response
      */
     var Document = function(spec) {
         this.ds = spec.ds;                                              // ApiDataSource object

@@ -6,7 +6,7 @@
  */
 define([
     'jquery',
-    'base'], function ($, Base) {
+    'base'], /** @lends Base */ function ($, Base) {
 
     var DEFAULTS = {
         name: '',
@@ -19,9 +19,20 @@ define([
     tmp.prototype = Base.prototype;
 
     /**
+     * @name Location
      * @class Location
      * @constructor
      * @extends Base
+     * @property {string}  name        - the location name
+     * @property {string}  address     - the location address
+     * @example
+     * var loc = new cr.api.Location({ds: dsLocations});
+     * loc.name = "Headquarters";
+     * loc.address = "4280 Express Road, Sarasota, FL 34238";
+     * loc.create()
+     *     .done(function() {
+     *         console.log(loc);
+     *     });
      */
     var Location = function(opt) {
         var spec = $.extend({
@@ -42,6 +53,8 @@ define([
 
     /**
      * Checks if the location is empty
+     * @method
+     * @name Location#isEmpty
      * @returns {boolean}
      */
     Location.prototype.isEmpty = function() {
@@ -53,6 +66,8 @@ define([
 
     /**
      * Checks if the location is dirty and needs saving
+     * @method
+     * @name Location#isDirty
      * @returns {boolean}
      */
     Location.prototype.isDirty = function() {

@@ -9,7 +9,7 @@
 define([
     'jquery',
     'api',
-    'base'], function ($, api, Base) {
+    'base'], /** @lends Base */ function ($, api, Base) {
 
     var DEFAULTS = {
         status: "creating",
@@ -27,9 +27,19 @@ define([
     tmp.prototype = Base.prototype;
 
     /**
+     * @name Transaction
      * @class Transaction
      * @constructor
      * @extends Base
+     * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
+     * @property {Helper}  helper                     - A Helper object ref
+     * @property {string}  status                     - The transaction status
+     * @property {moment}  from                       - The transaction from date
+     * @property {moment}  to                         - The transaction to date
+     * @property {moment}  due                        - The transaction due date
+     * @property {string}  contact                    - The Contact.id for this transaction
+     * @property {string}  location                   - The Location.id for this transaction
+     * @property {Array}  items                       - A list of Item.id strings
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -59,6 +69,8 @@ define([
 
     /**
      * Gets the lowest possible date to start this transaction
+     * @method
+     * @name Transaction#getMinDate
      * @returns {Moment} min date
      */
     Transaction.prototype.getMinDate = function() {
@@ -69,6 +81,8 @@ define([
 
     /**
      * Gets the latest possible date to end this transaction
+     * @method
+     * @name Transaction#getMaxDate
      * @returns {Moment} max date
      */
     Transaction.prototype.getMaxDate = function() {
@@ -81,6 +95,8 @@ define([
     /**
      * suggestEndDate, makes a new moment() object with a suggested end date,
      * already rounded up according to the group.profile settings
+     * @method suggestEndDate
+     * @name Transaction#suggestEndDate
      * @param {Moment} m a suggested end date for this transaction
      * @returns {*}
      */
@@ -95,6 +111,8 @@ define([
     //
     /**
      * Checks if the transaction is empty
+     * @method isEmpty
+     * @name Transaction#isEmpty
      * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
      */
     Transaction.prototype.isEmpty = function() {
@@ -112,6 +130,8 @@ define([
 
     /**
      * Checks if the transaction is dirty and needs saving
+     * @method
+     * @name Transaction#isDirty
      * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
      */
     Transaction.prototype.isDirty = function() {
@@ -249,6 +269,8 @@ define([
 
     /**
      * Clear the transaction from date
+     * @method
+     * @name Transaction#clearFromDate
      * @param skipRead
      * @returns {promise}
      */
@@ -259,6 +281,8 @@ define([
 
     /**
      * Sets the transaction from date
+     * @method
+     * @name Transaction#setFromDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -272,6 +296,8 @@ define([
 
     /**
      * Clear the transaction to date
+     * @method
+     * @name Transaction#clearToDate
      * @param skipRead
      * @returns {promise}
      */
@@ -282,6 +308,8 @@ define([
 
     /**
      * Sets the transaction to date
+     * @method
+     * @name Transaction#setToDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -295,6 +323,8 @@ define([
 
     /**
      * Clear the transaction due date
+     * @method
+     * @name Transaction#clearDueDate
      * @param skipRead
      * @returns {promise}
      */
@@ -305,6 +335,8 @@ define([
 
     /**
      * Set the transaction due date
+     * @method
+     * @name Transaction#setDueDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -317,6 +349,8 @@ define([
     // Location setters
     /**
      * Sets the location for this transaction
+     * @method
+     * @name Transaction#setLocation
      * @param locationId
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
@@ -332,6 +366,8 @@ define([
 
     /**
      * Clears the location for this transaction
+     * @method
+     * @name Transaction#clearLocation
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
      */
@@ -348,6 +384,8 @@ define([
 
     /**
      * Sets the contact for this transaction
+     * @method
+     * @name Transaction#setContact
      * @param contactId
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
@@ -363,6 +401,8 @@ define([
 
     /**
      * Clears the contact for this transaction
+     * @method
+     * @name Transaction#clearContact
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
      */
@@ -384,6 +424,7 @@ define([
     /**
      * addItems; adds a bunch of Items to the transaction using a list of item ids
      * It creates the transaction if it doesn't exist yet
+     * @name Transaction#addItems
      * @method addItems
      * @param items
      * @param skipRead
@@ -404,6 +445,7 @@ define([
     /**
      * removeItems; removes a bunch of Items from the transaction using a list of item ids
      * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Transaction#removeItems
      * @method removeItems
      * @param items
      * @param skipRead
@@ -428,6 +470,7 @@ define([
     /**
      * clearItems; removes all Items from the transaction
      * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Transaction#clearItems
      * @method clearItems
      * @param skipRead
      * @returns {promise}
@@ -449,6 +492,7 @@ define([
 
     /**
      * swapItem; swaps one item for another in a transaction
+     * @name Transaction#swapItem
      * @method swapItem
      * @param fromItem
      * @param toItem
@@ -486,6 +530,7 @@ define([
      * @param useAvailabilies (uses items/searchAvailable instead of items/search)
      * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
      * @param skipItems array of item ids that should be skipped
+     * @private
      * @returns {*}
      */
     Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {

@@ -5,7 +5,7 @@
  */
 define([
     'jquery',
-    'base'], function ($, Base) {
+    'base'],  /** @lends User */ function ($, Base) {
 
     var DEFAULTS = {
         name: '',
@@ -19,9 +19,13 @@ define([
     tmp.prototype = Base.prototype;
 
     /**
+     * @name User
      * @class User
      * @constructor
      * @extends Base
+     * @property {string}  name               - The name
+     * @property {string}  role               - The role (admin, user)
+     * @property {boolean} active             - Is the user active?
      */
     var User = function(opt) {
         var spec = $.extend({
@@ -59,6 +63,8 @@ define([
 
     /**
      * Checks if the user is empty
+     * @method
+     * @name User#isEmpty
      * @returns {boolean}
      */
     User.prototype.isEmpty = function() {
@@ -71,6 +77,8 @@ define([
 
     /**
      * Checks if the user is dirty and needs saving
+     * @method
+     * @name User#isDirty
      * @returns {boolean}
      */
     User.prototype.isDirty = function() {

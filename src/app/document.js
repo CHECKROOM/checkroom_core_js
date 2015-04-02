@@ -7,7 +7,7 @@
 define([
     'jquery',
     'common',
-    'api'], function ($, common, api) {
+    'api'], /** @lends Document */function ($, common, api) {
 
     // Some constant values
     var DEFAULTS = {
@@ -15,7 +15,8 @@ define([
     };
 
     /**
-     * @class Document
+     * @name Document
+     * @class
      * @constructor
      */
     var Document = function(spec) {
@@ -28,7 +29,8 @@ define([
 
     /**
      * Resets the object
-     * @method reset
+     * @name  Document#reset
+     * @method
      * @returns {promise}
      */
     Document.prototype.reset = function() {
@@ -38,7 +40,8 @@ define([
 
     /**
      * Checks if the document exists in the database
-     * @method existsInDb
+     * @name  Document#existsInDb
+     * @method
      * @returns {boolean}
      */
     Document.prototype.existsInDb = function() {
@@ -48,7 +51,8 @@ define([
 
     /**
      * Checks if the object is empty
-     * @method isEmpty
+     * @name  Document#isEmpty
+     * @method
      * @returns {boolean}
      */
     Document.prototype.isEmpty = function() {
@@ -58,7 +62,8 @@ define([
     /**
      * Checks if the object needs to be saved
      * We don't check any of the keyvalues (or comments, attachments) here
-     * @method isDirty
+     * @name  Document#isDirty
+     * @method
      * @returns {boolean}
      */
     Document.prototype.isDirty = function() {
@@ -67,7 +72,8 @@ define([
 
     /**
      * Checks if the object is valid
-     * @method isValid
+     * @name  Document#isValid
+     * @method
      * @returns {boolean}
      */
     Document.prototype.isValid = function() {
@@ -77,7 +83,8 @@ define([
     /**
      * Discards any changes made to the object from the previously loaded raw response
      * or resets it when no old raw response was found
-     * @method discardChanges
+     * @name  Document#discardChanges
+     * @method
      * @returns {promise}
      */
     Document.prototype.discardChanges = function() {
@@ -86,7 +93,8 @@ define([
 
     /**
      * Reloads the object from db
-     * @method reload
+     * @name  Document#reload
+     * @method
      * @param fields
      * @returns {promise}
      */
@@ -100,7 +108,8 @@ define([
 
     /**
      * Gets an object by the default api.get
-     * @method get
+     * @name  Document#get
+     * @method
      * @param fields
      * @returns {promise}
      */
@@ -118,7 +127,8 @@ define([
 
     /**
      * Creates an object by the default api.create
-     * @method create
+     * @name  Document#create
+     * @method
      * @param skipRead skips reading the response via _fromJson (false)
      * @returns {promise}
      */
@@ -144,7 +154,8 @@ define([
 
     /**
      * Updates an object by the default api.update
-     * @method update
+     * @name  Document#update
+     * @method
      * @param skipRead skips reading the response via _fromJson (false)
      * @returns {promise}
      */
@@ -170,7 +181,8 @@ define([
 
     /**
      * Deletes an object by the default api.delete
-     * @method delete
+     * @name  Document#delete
+     * @method
      * @returns {promise}
      */
     Document.prototype.delete = function() {
@@ -197,6 +209,8 @@ define([
      * _toJson, makes a dict of this object
      * Possibly inheriting classes will override this method,
      * because not all fields can be set during create / update
+     * @name  Document#_toJson
+     * @method
      * @param options
      * @returns {{}}
      * @private
@@ -210,7 +224,8 @@ define([
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @method _fromJson
+     * @name  Document#_fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @private
@@ -227,6 +242,8 @@ define([
     /**
      * Wrapping the this.ds.call method
      * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+     * @name  Document#_doApiCall
+     * @method
      * @param spec
      * @returns {promise}
      * @private

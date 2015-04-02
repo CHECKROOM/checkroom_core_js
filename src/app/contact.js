@@ -6,7 +6,7 @@
  */
 define([
     'jquery',
-    'base'], function ($, Base) {
+    'base'], /** @lends Contact */ function ($, Base) {
 
     var DEFAULTS = {
         name: "",
@@ -21,7 +21,9 @@ define([
     tmp.prototype = Base.prototype;
 
     /**
-     * @class Contact
+     * Contact class
+     * @name  Contact
+     * @class
      * @constructor
      * @extends Base
      */
@@ -43,22 +45,45 @@ define([
 
     //
     // Specific validators
-    //
+    /**
+     * Checks if name is valid
+     * @name Contact#isValidName
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidName = function() {
         // TODO
         return ($.trim(this.name).length>=2);
     };
-
+    
+    /**
+     * Checks if company is valid
+     * @name  Contact#isValidCompany
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidCompany = function() {
         // TODO
         return ($.trim(this.company).length>=2);
     };
 
+    /**
+     * Checks if phone is valid
+     * @name  Contact#isValidPhone
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidPhone = function() {
         // TODO
         return ($.trim(this.phone).length>=2);
     };
 
+    /**
+     * Check is email is valid
+     * @name  Contact#isValidEmail
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidEmail = function() {
         // TODO
         return ($.trim(this.email).length>=2);
@@ -70,7 +95,12 @@ define([
 
     /**
      * Checks if the contact has any validation errors
+     * @name Contact#isValid
+     * @method 
      * @returns {boolean}
+     *
+     * @override
+     * @inheritDoc Base#isValid
      */
     Contact.prototype.isValid = function() {
         return this.isValidName() &&

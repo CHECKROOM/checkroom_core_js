@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Source: reservation.js</title>
+    
+    
+    
+    
+    
+    <meta property="og:title" content=""/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:image" content=""/>
+    
+    <meta property="og:url" content=""/>
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <script src="scripts/jquery.min.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/jaguar.css">
+    
+    
+    <script>
+    var config = {"monospaceLinks":true,"cleverLinks":true,"default":{"outputSourceFiles":true},"applicationName":"CHEQROOM","disqus":"","googleAnalytics":"","openGraph":{"title":"","type":"website","image":"","site_name":"","url":""},"meta":{"title":"","description":"","keyword":""},"linenums":false};
+    </script>
+    
+
+    
+</head>
+<body>
+<div id="wrap" class="clearfix">
+    
+<div class="navigation">
+    <h3 class="applicationName"><a href="index.html">CHEQROOM</a></h3>
+
+    <div class="search">
+        <input id="search" type="text" class="form-control input-sm" placeholder="Search Documentations">
+    </div>
+    <ul class="list">
+    
+        <li class="item" data-name="Base">
+            <span class="title">
+                <a href="Base.html">Base</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Base#_doApiCall"><a href="Base.html#_doApiCall">_doApiCall</a></li>
+            
+                <li data-name="Base#_fromJson"><a href="Base.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="Base#_toJson"><a href="Base.html#_toJson">_toJson</a></li>
+            
+                <li data-name="Base#create"><a href="Base.html#create">create</a></li>
+            
+                <li data-name="Base#delete"><a href="Base.html#delete">delete</a></li>
+            
+                <li data-name="Base#discardChanges"><a href="Base.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Base#existsInDb"><a href="Base.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Base#get"><a href="Base.html#get">get</a></li>
+            
+                <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Base#isEmpty"><a href="Base.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Base#isValid"><a href="Base.html#isValid">isValid</a></li>
+            
+                <li data-name="Base#reload"><a href="Base.html#reload">reload</a></li>
+            
+                <li data-name="Base#reset"><a href="Base.html#reset">reset</a></li>
+            
+                <li data-name="Base#update"><a href="Base.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Contact">
+            <span class="title">
+                <a href="Contact.html">Contact</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Contact#_doApiCall"><a href="Contact.html#_doApiCall">_doApiCall</a></li>
+            
+                <li data-name="Contact#_fromJson"><a href="Contact.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="Contact#_toJson"><a href="Contact.html#_toJson">_toJson</a></li>
+            
+                <li data-name="Contact#create"><a href="Contact.html#create">create</a></li>
+            
+                <li data-name="Contact#delete"><a href="Contact.html#delete">delete</a></li>
+            
+                <li data-name="Contact#discardChanges"><a href="Contact.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Contact#existsInDb"><a href="Contact.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Contact#get"><a href="Contact.html#get">get</a></li>
+            
+                <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Contact#isEmpty"><a href="Contact.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Contact#isValid"><a href="Contact.html#isValid">isValid</a></li>
+            
+                <li data-name="Contact#isValidCompany"><a href="Contact.html#isValidCompany">isValidCompany</a></li>
+            
+                <li data-name="Contact#isValidEmail"><a href="Contact.html#isValidEmail">isValidEmail</a></li>
+            
+                <li data-name="Contact#isValidName"><a href="Contact.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Contact#isValidPhone"><a href="Contact.html#isValidPhone">isValidPhone</a></li>
+            
+                <li data-name="Contact#reload"><a href="Contact.html#reload">reload</a></li>
+            
+                <li data-name="Contact#reset"><a href="Contact.html#reset">reset</a></li>
+            
+                <li data-name="Contact#update"><a href="Contact.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Document">
+            <span class="title">
+                <a href="Document.html">Document</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Document#_doApiCall"><a href="Document.html#_doApiCall">_doApiCall</a></li>
+            
+                <li data-name="Document#_fromJson"><a href="Document.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="Document#_toJson"><a href="Document.html#_toJson">_toJson</a></li>
+            
+                <li data-name="Document#create"><a href="Document.html#create">create</a></li>
+            
+                <li data-name="Document#delete"><a href="Document.html#delete">delete</a></li>
+            
+                <li data-name="Document#discardChanges"><a href="Document.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Document#existsInDb"><a href="Document.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Document#get"><a href="Document.html#get">get</a></li>
+            
+                <li data-name="Document#isDirty"><a href="Document.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Document#isEmpty"><a href="Document.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Document#isValid"><a href="Document.html#isValid">isValid</a></li>
+            
+                <li data-name="Document#reload"><a href="Document.html#reload">reload</a></li>
+            
+                <li data-name="Document#reset"><a href="Document.html#reset">reset</a></li>
+            
+                <li data-name="Document#update"><a href="Document.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="KeyValue">
+            <span class="title">
+                <a href="KeyValue.html">KeyValue</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="KeyValue#_fromJson"><a href="KeyValue.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="KeyValue#_toJson"><a href="KeyValue.html#_toJson">_toJson</a></li>
+            
+                <li data-name="KeyValue#existsInDb"><a href="KeyValue.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="KeyValue#getName"><a href="KeyValue.html#getName">getName</a></li>
+            
+                <li data-name="KeyValue#getUnit"><a href="KeyValue.html#getUnit">getUnit</a></li>
+            
+                <li data-name="KeyValue#isDirty"><a href="KeyValue.html#isDirty">isDirty</a></li>
+            
+                <li data-name="KeyValue#isEmpty"><a href="KeyValue.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="KeyValue#isValid"><a href="KeyValue.html#isValid">isValid</a></li>
+            
+                <li data-name="KeyValue#reset"><a href="KeyValue.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+    </ul>
+</div>
+    <div class="main">
+        <h1 class="page-title" data-filename="reservation.js.html">Source: reservation.js</h1>
+        
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Reservation module
+ * @module reservation
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    "jquery",
+    "api",
+    "transaction"], function ($, api, Transaction) {
+
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = Transaction.prototype;
+
+    /**
+     * @class Reservation
+     * @constructor
+     * @extends Transaction
+     */
+    var Reservation = function(opt) {
+        var spec = $.extend({
+            crtype: "cheqroom.types.reservation",
+            fields: ["*"]
+        }, opt);
+        Transaction.call(this, spec);
+
+        this.conflicts = [];
+    };
+
+    Reservation.prototype = new tmp();
+    Reservation.prototype.constructor = Reservation;
+
+    //
+    // Date helpers; we'll need these for sliding from / to dates during a long user session
+    //
+
+    /**
+     * Overwrite only the getMinDate, max date is one year from now
+     * @returns {*}
+     */
+    Reservation.prototype.getMinDate = function() {
+        // Reservations can only start from the next timeslot at the earliest
+        var dateHelper = this._getDateHelper();
+        var now = dateHelper.getNow();
+        var next = dateHelper.roundTimeUp(now, dateHelper.roundMinutes);
+        if (next==now) {
+            next = next.add(dateHelper.roundMinutes, "minutes");
+        }
+        return next;
+    };
+
+    //
+    // Helpers
+    //
+    Reservation.prototype.canReserve = function() {
+        return (
+            (this.status=="creating") &&
+            (this.location) &&
+            (this.contact) &&
+            (this.from) &&
+            (this.to) &&
+            (this.items) &&
+            (this.items.length));
+    };
+
+    Reservation.prototype.canCancel = function() {
+        return (this.status=="open");
+    };
+
+    Reservation.prototype.canEdit = function() {
+        return (this.status=="creating");
+    };
+
+    Reservation.prototype.canDelete = function() {
+        return (this.status=="creating");
+    };
+
+    Reservation.prototype.canMakeOrder = function() {
+        if (this.status=="open") {
+            var unavailable = this._getUnavailableItems();
+            var len = $.map(unavailable, function(n, i) { return i; }).length;
+            return (len==0);
+        } else {
+            return false;
+        }
+    };
+
+    //
+    // Document overrides
+    //
+    Reservation.prototype._toJson = function(options) {
+        var data = Transaction.prototype._toJson.call(this, options);
+        data.fromDate = (this.from!=null) ? this.from.toJSONDate() : "null";
+        data.toDate = (this.to!=null) ? this.to.toJSONDate() : "null";
+        return data;
+    };
+
+    Reservation.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Transaction.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                return that._loadConflicts(data, options)
+                    .then(function() {
+                        that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
+                        that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
+                        that.due = null;
+                        $.publish("reservation.fromJson", data);
+                    });
+            });
+    };
+
+    //
+    // Base overrides
+    //
+
+    //
+    // Transaction overrides
+    //
+
+    /**
+     * Sets the reservation from / to dates in a single call
+     * @param from
+     * @param to (optional) if null, we'll take the default average checkout duration as due date
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.setFromToDate = function(from, to, skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation from / to date, status is "+this.status));
+        }
+
+        var that = this;
+        var roundedFromDate = this._getHelper().roundTimeFrom(from);
+        var roundedToDate = (to) ?
+            this._getHelper().roundTimeTo(to) :
+            this._getHelper().addAverageDuration(roundedFromDate);
+
+        return this._checkFromToDate(roundedFromDate, roundedToDate)
+            .then(function() {
+                that.from = roundedFromDate;
+                that.to = roundedToDate;
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * setFromDate
+     * The from date must be:
+     * - bigger than minDate
+     * - smaller than maxDate
+     * - at least one interval before .to date (if set)
+     * @param date
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.setFromDate = function(date, skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation from date, status is "+this.status));
+        }
+
+        var that = this;
+        var dateHelper = this._getDateHelper();
+        var interval = dateHelper.roundMinutes;
+        var roundedFromDate = this._getHelper().roundTimeFrom(date);
+
+        return this._checkDateBetweenMinMax(roundedFromDate)
+            .then(function() {
+                // Must be at least 1 interval before to date, if it's already set
+                if( (that.to) &&
+                    (that.to.diff(roundedFromDate, "minutes") &lt; interval)) {
+                    return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation from date, after (or too close to) to date "+that.to.toJSONDate()));
+                }
+
+                that.from = roundedFromDate;
+
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    Reservation.prototype.clearFromDate = function(skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation from date, status is "+this.status));
+        }
+
+        this.from = null;
+
+        return this._handleTransaction(skipRead);
+    };
+
+    /**
+     * setToDate
+     * The to date must be:
+     * - bigger than minDate
+     * - smaller than maxDate
+     * - at least one interval after the .from date (if set)
+     * @param date
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.setToDate = function(date, skipRead) {
+        // Cannot change the to-date of a reservation that is not in status "creating"
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation to date, status is "+this.status));
+        }
+
+        // The to date must be:
+        // 1) at least 30 minutes into the feature
+        // 2) at least 15 minutes after the from date (if set)
+        var that = this;
+        var dateHelper = this._getDateHelper();
+        var interval = dateHelper.roundMinutes;
+        var roundedToDate = this._getHelper().roundTimeTo(date);
+
+        return this._checkDateBetweenMinMax(roundedToDate)
+            .then(function() {
+                if( (that.from) &&
+                    (that.from.diff(roundedToDate, "minutes") > interval)) {
+                    return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation to date, before (or too close to) to date "+that.from.toJSONDate()));
+                }
+
+                that.to = roundedToDate;
+
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    Reservation.prototype.clearToDate = function(skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation to date, status is "+this.status));
+        }
+
+        this.to = null;
+
+        return this._handleTransaction(skipRead);
+    };
+
+    // Reservation does not use due dates
+    Reservation.prototype.clearDueDate = function(skipRead) {
+        throw "Reservation.clearDueDate not implemented";
+    };
+    
+    Reservation.prototype.setDueDate = function(date, skipRead) {
+        throw "Reservation.setDueDate not implemented";
+    };
+
+    //
+    // Business logic calls
+    //
+
+    /**
+     * Searches for Items that are available for this reservation
+     * @param params
+     * @param useAvailabilies (should always be true, we only use this flag for Order objects)
+     * @param onlyUnbooked
+     * @returns {*}
+     */
+    Reservation.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
+        return this._searchItems(params, null, true, onlyUnbooked, skipItems || this.items);
+    };
+
+    /**
+     * Books the reservation and sets the status to `open`
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.reserve = function(skipRead) {
+        return this._doApiCall({method: "reserve", skipRead: skipRead});
+    };
+
+    /**
+     * Unbooks the reservation and sets the status to `creating` again
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.undoReserve = function(skipRead) {
+        return this._doApiCall({method: "undoReserve", skipRead: skipRead});
+    };
+
+    /**
+     * Cancels the booked reservation and sets the status to `cancelled`
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.cancel = function(skipRead) {
+        return this._doApiCall({method: "cancel", skipRead: skipRead});
+    };
+
+    /**
+     * Turns an open reservation into an order (which still needs to be checked out)
+     * @returns {*}
+     */
+    Reservation.prototype.makeOrder = function() {
+        return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
+    };
+
+    //
+    // Implementation
+    //
+    Reservation.prototype._checkFromToDate = function(from, to) {
+        var dateHelper = this._getDateHelper();
+        var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
+        var roundedToDate = to; //(due) ? this._getHelper().roundTimeTo(due) : null;
+
+        if (roundedFromDate && roundedToDate) {
+            return $.when(
+                this._checkDateBetweenMinMax(roundedFromDate),
+                this._checkDateBetweenMinMax(roundedToDate)
+            )
+                .then(function(fromRes, toRes) {
+                    var interval = dateHelper.roundMinutes;
+                    if (roundedToDate.diff(roundedFromDate, "minutes") &lt; interval) {
+                        return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from date, after (or too close to) to date "+roundedToDate.toJSONDate()));
+                    }
+                    if (roundedFromDate.diff(roundedToDate, "minutes") > interval) {
+                        return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order due date, before (or too close to) from date "+roundedFromDate.toJSONDate()));
+                    }
+                });
+        } else if (roundedFromDate) {
+            return this._checkDateBetweenMinMax(roundedFromDate);
+        } else if (roundedToDate) {
+            return this._checkDateBetweenMinMax(roundedToDate);
+        } else {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot from/due date, both are null"));
+        }
+    };
+
+    Reservation.prototype._getUnavailableItems = function() {
+        var unavailable = {};
+
+        if( (this.status=="open") &&
+            (this.location) &&
+            (this.items!=null) &&
+            (this.items.length>0)) {
+            $.each(this.items, function(i, item) {
+                if (item.status!="available") {
+                    unavailable["status"] = unavailable["status"] || [];
+                    unavailable["status"].push(item._id);
+                } else if (item.location!=location._id) {
+                    unavailable["location"] = unavailable["location"] || [];
+                    unavailable["location"].push(item._id);
+                }
+            });
+        }
+
+        return unavailable;
+    };
+
+    Reservation.prototype._loadConflicts = function(data, options) {
+        // Only load conflicts when it"s possible to have conflicts
+        // location, at least 1 date and at least 1 item
+        var that = this;
+        var hasLocation = (this.location!=null);
+        var hasAnyDate = (this.from!=null) || (this.to!=null);
+        var hasAnyItem = (this.items!=null) && (this.items.length>0);
+        var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
+
+        if( (hasNonConflictStatus) || 
+            (!hasLocation && !hasAnyDate && !hasAnyItem)) {
+
+            // We cannot have conflicts, so make the conflicts array empty
+            this.conflicts = [];
+            return $.Deferred().resolve(data);
+
+        } else if (this.status == "creating") {
+
+            // We can have conflicts,
+            // so we better check the server if there are any
+            return this.ds.call(this.id, "getConflicts")
+                .then(function(conflicts) {
+                    that.conflicts = conflicts || [];
+                });
+
+        } else if (this.status == "open") {
+
+            // The reservation is already open,
+            // so the only conflicts we can have is for making an order
+            $.each(this.raw.items, function(i, item) {
+               if (item.status!="available") {
+                   // TODO
+                   console.log("open reservation has conflict, unavailable item ", item._id);
+               } else if(item.location!=that.location) {
+                   // TODO
+                   console.log("open reservation has conflict, item at wrong location ", item._id);
+               }
+            });
+            this.conflicts = [];  // TODO!!
+            return $.Deferred().resolve(data);
+
+        } else {
+
+            // We should never get here :)
+            this.conflicts = [];
+            return $.Deferred().resolve(data);
+
+        }
+    };
+
+    return Reservation;
+    
+});</code></pre>
+        </article>
+    </section>
+
+
+
+
+
+
+        
+
+        <footer>
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Apr 02 2015 12:20:59 GMT+0200 (CEST)
+        </footer>
+    </div>
+</div>
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+<script src="scripts/main.js"></script>
+</body>
+</html>

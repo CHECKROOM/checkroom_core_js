@@ -4,7 +4,7 @@
  * @module KeyValue
  * @copyright CHECKROOM NV 2015
  */
-define(['jquery'], function ($) {
+define(['jquery'], /** @lends KeyValue */ function ($) {
 
     var DEFAULTS = {
         id: '',
@@ -18,9 +18,11 @@ define(['jquery'], function ($) {
 
     /**
      * KeyValue class
-     * @param spec
-     * @class KeyValue
+     * @name  KeyValue
+     * @class    
      * @constructor
+     * 
+     * @param spec
      */
     var KeyValue = function(spec) {
         this.ds = spec.ds;
@@ -38,7 +40,8 @@ define(['jquery'], function ($) {
 
     /**
      * Checks if the document exists in the database
-     * @method existsInDb
+     * @name  KeyValue#existsInDb
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.existsInDb = function() {
@@ -47,7 +50,8 @@ define(['jquery'], function ($) {
 
     /**
      * Gets the name for this keyValue
-     * @method getName
+     * @name  KeyValue#getName
+     * @method
      * @returns {string}
      */
     KeyValue.prototype.getName = function() {
@@ -60,7 +64,8 @@ define(['jquery'], function ($) {
 
     /**
      * Gets the unit for this keyValue, if no unit returns ""
-     * @method getUnit
+     * @name  KeyValue#getUnit
+     * @method
      * @returns {string}
      */
     KeyValue.prototype.getUnit = function() {
@@ -71,7 +76,8 @@ define(['jquery'], function ($) {
     /**
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
-     * @method isEmpty
+     * @name  KeyValue#isEmpty
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isEmpty = function() {
@@ -87,7 +93,8 @@ define(['jquery'], function ($) {
 
     /**
      * Checks if the object has changed
-     * @method isDirty
+     * @name KeyValue#isDirty
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isDirty = function() {
@@ -96,7 +103,8 @@ define(['jquery'], function ($) {
 
     /**
      * Checks if the object is valid
-     * @method isValid
+     * @name  KeyValue#isValid
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isValid = function() {
@@ -105,7 +113,8 @@ define(['jquery'], function ($) {
 
     /**
      * Resets the object
-     * @method reset
+     * @name  KeyValue#reset
+     * @method
      * @returns promise
      */
     KeyValue.prototype.reset = function() {
@@ -114,7 +123,7 @@ define(['jquery'], function ($) {
 
     /**
      * _toJson, makes a dict of the object
-     * @method _toJson
+     * @method
      * @param options
      * @returns {object}
      * @private
@@ -134,7 +143,7 @@ define(['jquery'], function ($) {
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @returns promise

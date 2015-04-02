@@ -12,7 +12,7 @@ define([
     'document',
     'comment',
     'attachment',
-    'keyvalue'], function ($, common, api, Document, Comment, Attachment, KeyValue) {
+    'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
 
     // Some constant values
     var COMMENT = "cheqroom.Comment",
@@ -34,7 +34,8 @@ define([
     tmp.prototype = Document.prototype;
 
     /**
-     * @class Base
+     * @name  Base
+     * @class
      * @constructor
      * @extends Document
      */
@@ -64,8 +65,10 @@ define([
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
      * We'll only check for comments, attachments, keyValues here
-     * @method isEmpty
+     * @name  Base#isEmpty
+     * @method
      * @returns {boolean}
+     * @override
      */
     Base.prototype.isEmpty = function() {
         return (
@@ -77,8 +80,10 @@ define([
 
     /**
      * Checks via the api if we can delete the document
-     * @method canDelete
+     * @name  Base#canDelete
+     * @method
      * @returns {promise}
+     * @override
      */
     Base.prototype.canDelete = function() {
         // Documents can only be deleted when they have a pk
@@ -96,6 +101,8 @@ define([
     // ----
     /**
      * Adds a comment by string
+     * @name  Base#addComment
+     * @method
      * @param comment
      * @param skipRead
      * @returns {promise}
@@ -106,6 +113,8 @@ define([
 
     /**
      * Updates a comment by id
+     * @name  Base#updateComment
+     * @method
      * @param id
      * @param comment
      * @param skipRead
@@ -117,6 +126,8 @@ define([
 
     /**
      * Deletes a Comment by id
+     * @name  Base#deleteComment
+     * @method
      * @param id
      * @param skipRead
      * @returns {promise}
@@ -129,6 +140,8 @@ define([
     // ----
     /**
      * Adds a key value
+     * @name  Base#addKeyValue
+     * @method
      * @param key
      * @param value
      * @param kind
@@ -145,6 +158,8 @@ define([
 
     /**
      * Updates a keyvalue by id
+     * @name  Base#updateKeyValue
+     * @method
      * @param id
      * @param key
      * @param value
@@ -162,6 +177,8 @@ define([
 
     /**
      * Removes a keyvalue by id
+     * @name  Base#removeKeyValue
+     * @method
      * @param id
      * @param skipRead
      * @returns {promise}
@@ -176,6 +193,8 @@ define([
 
     /**
      * Sets a keyvalue by id
+     * @name  Base#setKeyValue
+     * @method
      * @param id
      * @param key
      * @param value
@@ -200,6 +219,8 @@ define([
     // ----
     /**
      * changes the cover image to another Attachment
+     * @name  Base#setCover
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -214,6 +235,8 @@ define([
 
     /**
      * attaches an image Attachment file, shortcut to attach
+     * @name  Base#attachImage
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -224,6 +247,8 @@ define([
 
     /**
      * attaches an Attachment file, shortcut to attach
+     * @name  Base#attachFile
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -234,6 +259,8 @@ define([
 
     /**
      * attaches an Attachment object
+     * @name  Base#attach
+     * @method
      * @param att
      * @param key
      * @param skipRead
@@ -253,6 +280,8 @@ define([
 
     /**
      * detaches an Attachment by kvId (guid)
+     * @name  Base#detach
+     * @method
      * @param keyId
      * @param skipRead
      * @returns {promise}
@@ -284,7 +313,7 @@ define([
 
     /**
      * _fromJson: read some basic information
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @private
@@ -300,7 +329,7 @@ define([
 
     /**
      * _fromKeyValuesJson: reads the data.keyValues
-     * @method _fromKeyValuesJson
+     * @method
      * @param data
      * @param options
      * @returns {*}

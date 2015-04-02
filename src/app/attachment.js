@@ -6,7 +6,7 @@
  */
 define([
     'jquery',
-    'keyvalue'], function ($, KeyValue) {
+    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
 
     var EXT = /(?:\.([^.]+))?$/;
     var IMAGES = ['jpg', 'png'];
@@ -22,7 +22,8 @@ define([
     tmp.prototype = KeyValue.prototype;
 
     /**
-     * @class Attachment
+     * @name  Attachment
+     * @class
      * @constructor
      * @extends KeyValue
      */
@@ -38,6 +39,8 @@ define([
 
     /**
      * Gets the extension part of a filename
+     * @name  Attachment#getExt
+     * @method
      * @param name
      * @returns {string}
      */
@@ -48,6 +51,8 @@ define([
 
     /**
      * Checks if the attachment is an image
+     * @name  Attachment#isImage
+     * @method
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
@@ -58,6 +63,8 @@ define([
 
     /**
      * Checks if the attachment has a preview
+     * @name  Attachment#hasPreview
+     * @method
      * @returns {boolean}
      */
     Attachment.prototype.hasPreview = function() {

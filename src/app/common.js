@@ -3,7 +3,7 @@
  * @module common
  * @copyright CHECKROOM NV 2015
  */
-define([], function () {
+define([], /** Common */ function () {
 
     // Extending the string type with some helpers
     // ----

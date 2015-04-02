@@ -14,6 +14,19 @@ module.exports = function(grunt){
                 }
             }
         },
+        clean:{
+            jsdoc:['doc']
+        },
+        jsdoc : {
+            dist : {
+                src: ['src/**/*.js', 'README.md'],
+                options: {
+                    destination: 'doc',
+                    template : "node_modules/jaguarjs-jsdoc",
+                    configure : "jsdoc.conf.json"
+                }
+            }
+        },
         requirejs: {
             compile: {
                 options: {
@@ -76,10 +89,11 @@ module.exports = function(grunt){
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-qunit');
     grunt.loadNpmTasks('grunt-contrib-connect');
-    grunt.loadNpmTasks("grunt-contrib-yuidoc");
+    grunt.loadNpmTasks('grunt-contrib-clean');
+    grunt.loadNpmTasks("grunt-jsdoc");
 
     // this will generate the docs by typing "grunt docs" on the command line
-    grunt.registerTask("docs", ["yuidoc"]);
+    grunt.registerTask("docs", ["clean:jsdoc","jsdoc"]);
 
     // this would be run by typing "grunt test" on the command line
     grunt.registerTask('test', ['connect','qunit']);

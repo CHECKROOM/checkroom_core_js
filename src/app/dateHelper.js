@@ -4,7 +4,7 @@
  * @module dateHelper
  * @copyright CHECKROOM NV 2015
  */
-define(["jquery", "moment"], function ($, moment) {
+define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
     // Add a new function to moment
     moment.fn.toJSONDate = function() {
@@ -75,24 +75,43 @@ define(["jquery", "moment"], function ($, moment) {
      */
 
     var INCREMENT = 15;
+
+    /**
+     * @name  DateHelper
+     * @class
+     * @constructor
+     */
     var DateHelper = function(spec) {
         spec = spec || {};
         this.roundType = spec.roundType || "nearest";
         this.roundMinutes = spec.roundMinutes || INCREMENT;
     };
 
+    /**
+     * @name  DateHelper#getNow
+     * @method
+     * @return {moment}
+     */
     DateHelper.prototype.getNow = function() {
         // TODO: Use the right MomentJS constructor
         //       This one will be deprecated in the next version
         return moment();
     };
 
+    /**
+     * @name DateHelper#getFriendlyDuration
+     * @method
+     * @param  duration
+     * @return {} 
+     */
     DateHelper.prototype.getFriendlyDuration = function(duration) {
         return duration.humanize();
     };
 
     /**
      * Turns all strings that look like datetimes into moment objects recursively
+     * @name  DateHelper#fixDates
+     * @method
      * @param data
      * @returns {*}
      */
@@ -121,6 +140,8 @@ define(["jquery", "moment"], function ($, moment) {
 
     /**
      * roundTimeFrom uses the time rounding rules to round a begin datetime
+     * @name  DateHelper#roundTimeFrom
+     * @method
      * @param m
      */
     DateHelper.prototype.roundTimeFrom = function(m) {
@@ -129,6 +150,8 @@ define(["jquery", "moment"], function ($, moment) {
 
     /**
      * roundTimeTo uses the time rounding rules to round an end datetime
+     * @name  DateHelper#roundTimeTo
+     * @method
      * @param m
      */
     DateHelper.prototype.roundTimeTo = function(m) {
@@ -136,19 +159,37 @@ define(["jquery", "moment"], function ($, moment) {
     };
 
 
-
+    /**
+     * @name  DateHelper#roundTime
+     * @method
+     * @param  m
+     * @param  inc
+     * @param  direction
+     */
     DateHelper.prototype.roundTime = function(m, inc, direction) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
         return mom.roundTo("minute", inc || INCREMENT, direction);
     };
 
+    /**
+     * @name  DateHelper#roundTimeUp
+     * @method
+     * @param  m
+     * @param  inc
+     */
     DateHelper.prototype.roundTimeUp = function(m, inc) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
         return mom.roundTo("minute", inc || INCREMENT, "up");
     };
 
+    /**
+     * @name DateHelper#roundTimeDown
+     * @method
+     * @param  m
+     * @param  inc
+     */
     DateHelper.prototype.roundTimeDown = function(m, inc) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);

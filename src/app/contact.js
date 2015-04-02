@@ -98,9 +98,7 @@ define([
      * @name Contact#isValid
      * @method 
      * @returns {boolean}
-     *
      * @override
-     * @inheritDoc Base#isValid
      */
     Contact.prototype.isValid = function() {
         return this.isValidName() &&
@@ -112,6 +110,7 @@ define([
     /**
      * Checks if the contact is empty
      * @returns {boolean}
+     * @override
      */
     Contact.prototype.isEmpty = function() {
         return (
@@ -125,6 +124,7 @@ define([
     /**
      * Checks if the contact is dirty and needs saving
      * @returns {boolean}
+     * @override
      */
     Contact.prototype.isDirty = function() {
         var isDirty = Base.prototype.isDirty.call(this);

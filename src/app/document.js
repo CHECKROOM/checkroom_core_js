@@ -209,7 +209,6 @@ define([
      * _toJson, makes a dict of this object
      * Possibly inheriting classes will override this method,
      * because not all fields can be set during create / update
-     * @name  Document#_toJson
      * @method
      * @param options
      * @returns {{}}
@@ -224,7 +223,6 @@ define([
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @name  Document#_fromJson
      * @method
      * @param {object} data the json response
      * @param {object} options dict
@@ -242,7 +240,6 @@ define([
     /**
      * Wrapping the this.ds.call method
      * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
-     * @name  Document#_doApiCall
      * @method
      * @param spec
      * @returns {promise}

@@ -7,7 +7,7 @@
  */
 define([
     'jquery',
-    'keyvalue'], function ($, KeyValue) {
+    'keyvalue'],/** Comment */ function ($, KeyValue) {
 
     var KEY = "cheqroom.Comment";
     var DEFAULTS = {
@@ -19,7 +19,8 @@ define([
     tmp.prototype = KeyValue.prototype;
 
     /**
-     * @class Comment
+     * @name  Comment
+     * @class
      * @constructor
      * @extends KeyValue
      */

@@ -123,7 +123,6 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
 
     /**
      * _toJson, makes a dict of the object
-     * @name  KeyValue#_toJson
      * @method
      * @param options
      * @returns {object}
@@ -144,7 +143,6 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @name  KeyValue#_fromJson
      * @method
      * @param {object} data the json response
      * @param {object} options dict

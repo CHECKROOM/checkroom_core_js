@@ -21,6 +21,13 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
             helper.getApiDataSource(collection)
                 .done(function(ds) {
 
+                    var getAnyCheckedOutItem = function() {
+                        return helper.apiSearch({listName: "checkedout"}, collection, "*,location,category")
+                            .then(function(resp) {
+                                return (resp!=null) && (resp.docs!=null) && (resp.docs.length>0) ? resp.docs[0] : null;
+                            });
+                    };
+
                     var getAnyAvailableItem = function() {
                         return helper.apiSearch({listName: "available"}, collection, "*,location,category")
                             .then(function(resp) {
@@ -459,6 +466,28 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             });
                     });
 
+                    /**
+                     * Availabilities
+                     */
+                    asyncTest("Item getAvailabilities", function() {
+                        var item = new cr.Item({
+                            ds: ds
+                        });
+
+                        // Get any item
+                        getAnyCheckedOutItem()
+                            .done(function(data) {
+                                ok(data._id);
+                                item.id = data._id;
+
+                                item.getAvailabilities(null, null)
+                                    .done(function(avs) {
+                                        ok(avs.length>0);
+                                    }).always(function(){
+                                        start();
+                                    });
+                            });
+                    });
 
                     /**
                      * Testing comments on Items

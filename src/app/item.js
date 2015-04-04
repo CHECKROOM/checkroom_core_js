@@ -5,7 +5,7 @@
  */
 define([
     'jquery',
-    'base'], function ($, Base) {
+    'base'], /** @lends Base */ function ($, Base) {
 
     var FLAG = "cheqroom.prop.Custom",
         DEFAULT_LAT = 0.0,
@@ -27,8 +27,17 @@ define([
     tmp.prototype = Base.prototype;
 
     /**
+     * Item represents a single piece of equipment
+     * @name Item
      * @class Item
      * @constructor
+     * @property {string} name         the name of the item
+     * @property {status} status       the status of the item in an order, or expired
+     * @property {string} flag         the item flag
+     * @property {string} location     the item location primary key
+     * @property {string} category     the item category primary key
+     * @propery {Array} geo            the item geo position in lat lng array
+     * @propery {string} address       the item geo position address
      * @extends Base
      */
     var Item = function(opt) {
@@ -57,6 +66,7 @@ define([
 
     /**
      * Checks if the item is empty
+     * @name Item#isEmpty
      * @returns {boolean}
      */
     Item.prototype.isEmpty = function() {
@@ -73,6 +83,7 @@ define([
 
     /**
      * Checks if the item is dirty and needs saving
+     * @name Item#isDirty
      * @returns {boolean}
      */
     Item.prototype.isDirty = function() {
@@ -219,7 +230,17 @@ define([
     //
     // Business logic
     //
-//
+    /**
+     * Checks if the Item is unavailable between from / to dates (optional)
+     * @name Item#getAvailabilities
+     * @param {Moment} from       the from date (optional)
+     * @param {Moment} to         the to date (optional)
+     * @returns {promise}
+     */
+    Item.prototype.getAvailabilities = function(from, to) {
+        return this.ds.call(this.id, 'getAvailability', {fromDate: from, toDate: to});
+    };
+
 //    /**
 //     * updates the Item
 //     * We override because Item.update does not support updating categories
@@ -281,11 +302,11 @@ define([
 
     //
     // TODO: Function calls specific for Item
-    // TODO: What with triggered events? Assume we'll handle Intercom on server side!
     //
 
     /**
-     * Duplicates an item a number of tumes
+     * Duplicates an item a number of times
+     * @name Item#duplicate
      * @param times
      * @returns {promise}
      */
@@ -299,6 +320,7 @@ define([
 
     /**
      * Expires an item, puts it in the *expired* status
+     * @name Item#expire
      * @param skipRead
      * @returns {promise}
      */
@@ -308,6 +330,7 @@ define([
 
     /**
      * Un-expires an item, puts it in the *available* status again
+     * @name Item#undoExpire
      * @param skipRead
      * @returns {promise}
      */
@@ -317,6 +340,7 @@ define([
 
     /**
      * Change the location of an item
+     * @name Item#changeLocation
      * @param skipRead
      * @returns {promise}
      */
@@ -326,6 +350,7 @@ define([
 
     /**
      * Adds a QR code to the item
+     * @name Item#addCode
      * @param code
      * @param skipRead
      * @returns {promise}
@@ -336,6 +361,7 @@ define([
 
     /**
      * Removes a QR code from the item
+     * @name Item#removeCode
      * @param code
      * @param skipRead
      * @returns {promise}
@@ -346,6 +372,7 @@ define([
 
     /**
      * Updates the geo position of an item
+     * @name Item#updateGeo
      * @param lat
      * @param lng
      * @param address
@@ -358,6 +385,7 @@ define([
 
     /**
      * Updates the name of an item
+     * @name Item#updateName
      * @param name
      * @param skipRead
      * @returns {promise}
@@ -372,6 +400,7 @@ define([
 
     /**
      * Checks if the item can be moved to another category
+     * @name Item#canChangeCategory
      * @param category
      * @returns {promise}
      */
@@ -386,6 +415,7 @@ define([
 
     /**
      * Moves the item to another category
+     * @name Item#changeCategory
      * @param category
      * @param skipRead
      * @returns {promise}
@@ -405,6 +435,7 @@ define([
 
     /**
      * Sets the flag of an item
+     * @name Item#setFlag
      * @param flag
      * @param skipRead
      * @returns {promise}

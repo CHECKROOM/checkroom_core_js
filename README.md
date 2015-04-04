@@ -59,6 +59,19 @@ dsItems.get("ANY-ITEM-ID")
         console.log(data);
     });
 
+// Finding an availability of an item
+var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
+dsItems.call("ANY-ITEM-ID", "getAvailability", {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
+    .done(function(data) {
+        console.log(data);
+    });
+
+var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
+dsAvailabilities.search({item: 'ITEM-ID'})
+    .done(function(resp) {
+        console.log(resp);
+    });
+
 //
 // Using models
 //

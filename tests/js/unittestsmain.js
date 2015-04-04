@@ -26,7 +26,8 @@ require([
     'locationTest',
     'orderTest',
     'reservationTest',
-    'userTest'
+    'userTest',
+    'availabilityTest'
     ], function(
         simpleTest,
         dateHelperTest,
@@ -35,18 +36,20 @@ require([
         locationTest,
         orderTest,
         reservationTest,
-        userTest) {
+        userTest,
+        availabilityTest) {
 
         /*simpleTest.run();
         dateHelperTest.run();
-        itemTest.run();
         contactTest.run();
         locationTest.run();
         */
 
+        itemTest.run();
         //orderTest.run();
-        reservationTest.run();
+        //reservationTest.run();
         //userTest.run();
+        availabilityTest.run();
 
         // start QUnit.
         QUnit.start();

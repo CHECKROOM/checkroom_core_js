@@ -446,7 +446,7 @@ define("../../tests/js/lib/almond/almond", function(){});
  * @module common
  * @copyright CHECKROOM NV 2015
  */
-define('common',[], function () {
+define('common',[], /** Common */ function () {
 
     // Extending the string type with some helpers
     // ----
@@ -511,7 +511,7 @@ define('common',[], function () {
  * @module dateHelper
  * @copyright CHECKROOM NV 2015
  */
-define('dateHelper',["jquery", "moment"], function ($, moment) {
+define('dateHelper',["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
     // Add a new function to moment
     moment.fn.toJSONDate = function() {
@@ -582,24 +582,43 @@ define('dateHelper',["jquery", "moment"], function ($, moment) {
      */
 
     var INCREMENT = 15;
+
+    /**
+     * @name  DateHelper
+     * @class
+     * @constructor
+     */
     var DateHelper = function(spec) {
         spec = spec || {};
         this.roundType = spec.roundType || "nearest";
         this.roundMinutes = spec.roundMinutes || INCREMENT;
     };
 
+    /**
+     * @name  DateHelper#getNow
+     * @method
+     * @return {moment}
+     */
     DateHelper.prototype.getNow = function() {
         // TODO: Use the right MomentJS constructor
         //       This one will be deprecated in the next version
         return moment();
     };
 
+    /**
+     * @name DateHelper#getFriendlyDuration
+     * @method
+     * @param  duration
+     * @return {} 
+     */
     DateHelper.prototype.getFriendlyDuration = function(duration) {
         return duration.humanize();
     };
 
     /**
      * Turns all strings that look like datetimes into moment objects recursively
+     * @name  DateHelper#fixDates
+     * @method
      * @param data
      * @returns {*}
      */
@@ -628,6 +647,8 @@ define('dateHelper',["jquery", "moment"], function ($, moment) {
 
     /**
      * roundTimeFrom uses the time rounding rules to round a begin datetime
+     * @name  DateHelper#roundTimeFrom
+     * @method
      * @param m
      */
     DateHelper.prototype.roundTimeFrom = function(m) {
@@ -636,6 +657,8 @@ define('dateHelper',["jquery", "moment"], function ($, moment) {
 
     /**
      * roundTimeTo uses the time rounding rules to round an end datetime
+     * @name  DateHelper#roundTimeTo
+     * @method
      * @param m
      */
     DateHelper.prototype.roundTimeTo = function(m) {
@@ -643,19 +666,37 @@ define('dateHelper',["jquery", "moment"], function ($, moment) {
     };
 
 
-
+    /**
+     * @name  DateHelper#roundTime
+     * @method
+     * @param  m
+     * @param  inc
+     * @param  direction
+     */
     DateHelper.prototype.roundTime = function(m, inc, direction) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
         return mom.roundTo("minute", inc || INCREMENT, direction);
     };
 
+    /**
+     * @name  DateHelper#roundTimeUp
+     * @method
+     * @param  m
+     * @param  inc
+     */
     DateHelper.prototype.roundTimeUp = function(m, inc) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
         return mom.roundTo("minute", inc || INCREMENT, "up");
     };
 
+    /**
+     * @name DateHelper#roundTimeDown
+     * @method
+     * @param  m
+     * @param  inc
+     */
     DateHelper.prototype.roundTimeDown = function(m, inc) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
@@ -689,6 +730,7 @@ define('dateHelper',["jquery", "moment"], function ($, moment) {
 /**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
+ * @namespace api
  * @copyright CHECKROOM NV 2015
  */
 define('api',[
@@ -734,6 +776,15 @@ define('api',[
     //*************
     // ApiAjax
     //*************
+
+    /**
+     * The ajax communication object which makes the request to the API
+     * @name ApiAjax
+     * @param {object} spec
+     * @param {boolean} spec.useJsonp
+     * @constructor
+     * @memberof api
+     */
     api.ApiAjax = function(spec) {
         spec = spec || {};
         this.useJsonp = (spec.useJsonp!=null) ? spec.useJsonp : true;
@@ -866,6 +917,16 @@ define('api',[
     //*************
     // ApiUser
     //*************
+
+    /**
+     * @name ApiUser
+     * @param {object} spec
+     * @param {string} spec.userId          - the users primary key
+     * @param {string} spec.userToken       - the users token
+     * @param {string} spec.tokenType       - the token type (empty for now)
+     * @constructor
+     * @memberof api
+     */
     api.ApiUser = function(spec) {
         spec = spec || {};
         this.userId = spec.userId || '';
@@ -915,6 +976,7 @@ define('api',[
     //*************
     // ApiAuth
     //*************
+
     api.ApiAuth = function(spec) {
         spec = spec || {};
         this.urlAuth = spec.urlAuth || '';
@@ -942,12 +1004,43 @@ define('api',[
     //*************
     // ApiAuth
     //*************
+
+    /**
+     * @name ApiAuthV2
+     * @param {object}  spec
+     * @param {string}  spec.urlAuth          - the api url to use when authenticating
+     * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
+     * @constructor
+     * @memberof api
+     * @example
+     * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
+     * var userName = "";
+     * var password = "";
+     *
+     * var ajax = new cr.api.ApiAjax({useJsonp: true});
+     * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
+     * var authUser = null;
+     *
+     * auth.authenticate(userName, password)
+     *     .done(function(data) {
+     *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
+     *     });
+     *
+     */
     api.ApiAuthV2 = function(spec) {
         spec = spec || {};
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
     };
 
+    /**
+     * The call to authenticate a user with userid an dpassword
+     * @method
+     * @name ApiAuthV2#authenticate
+     * @param userId
+     * @param password
+     * @returns {object}
+     */
     api.ApiAuthV2.prototype.authenticate = function(userId, password) {
         system.log('ApiAuthV2: authenticate '+userId);
         var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2});
@@ -993,6 +1086,17 @@ define('api',[
     // ApiDataSource
     // Communicates with the API using an ApiUser
     //*************
+
+    /**
+     * @name ApiDataSource
+     * @param {object} spec
+     * @param {string} spec.collection         - the collection this datasource uses, e.g. "items"
+     * @param {string} spec.urlApi             - the api url to use
+     * @param {ApiAuthUser} spec.user          - the user auth object
+     * @param {ApiAjax}  spec.ajax             - the ajax api object to use
+     * @constructor
+     * @memberof api
+     */
     api.ApiDataSource = function(spec) {
         spec = spec || {};
         this.collection = spec.collection || '';
@@ -1010,6 +1114,14 @@ define('api',[
             this.collection + '/';
     };
 
+    /**
+     * Checks if a certain document exists
+     * @method
+     * @name ApiDataSource#exists
+     * @param pk
+     * @param fields
+     * @returns {*}
+     */
     api.ApiDataSource.prototype.exists = function(pk, fields) {
         var dfd = $.Deferred();
         var that = this;
@@ -1031,6 +1143,14 @@ define('api',[
         return dfd.promise();
     };
 
+    /**
+     * Gets a certain document by its primary key
+     * @method
+     * @name ApiDataSource#get
+     * @param pk
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.get = function(pk, fields) {
         system.log('ApiDataSource: ' + this.collection + ': get ' + pk);
         var url = this.getBaseUrl() + pk;
@@ -1041,6 +1161,15 @@ define('api',[
         return this.ajax.get(url);
     };
 
+    /**
+     * Gets a certain document by its primary key, but returns null if not found
+     * instead of a rejected promise
+     * @method
+     * @name ApiDataSource#getIgnore404
+     * @param pk
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.getIgnore404 = function(pk, fields) {
         var that = this;
         var dfd = $.Deferred();
@@ -1063,6 +1192,14 @@ define('api',[
         return dfd.promise();
     };
 
+    /**
+     * Get multiple document by primary keys in a single query
+     * @method
+     * @name ApiDataSource#getMultiple
+     * @param {array} pks
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.getMultiple = function(pks, fields) {
         system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
         var url = this.getBaseUrl() + pks.join(',') + ',';
@@ -1073,12 +1210,28 @@ define('api',[
         return this.ajax.get(url);
     };
 
+    /**
+     * Deletes a document by its primary key
+     * @method
+     * @name ApiDataSource#delete
+     * @param pk
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.delete = function(pk) {
         system.log('ApiDataSource: ' + this.collection + ': delete ' + pk);
         var url = this.getBaseUrl() + pk + '/delete';
         return this.ajax.get(url);
     };
 
+    /**
+     * Updates a document by its primary key and a params objects
+     * @method
+     * @name ApiDataSource#update
+     * @param pk
+     * @param params
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.update = function(pk, params, fields) {
         system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
         var url = this.getBaseUrl() + pk + '/update';
@@ -1091,6 +1244,14 @@ define('api',[
         return this.ajax.get(url);
     };
 
+    /**
+     * Creates a document with some data in an object
+     * @method
+     * @name ApiDataSource#create
+     * @param params
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.create = function(params, fields) {
         system.log('ApiDataSource: ' + this.collection + ': create');
         var url = this.getBaseUrl() + 'create';
@@ -1104,6 +1265,14 @@ define('api',[
         return this.ajax.get(url);
     };
 
+    /**
+     * Creates multiple objects in one goe
+     * @method
+     * @name ApiDataSource#createMultiple
+     * @param objects
+     * @param fields
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.createMultiple = function(objects, fields) {
         system.log('ApiDataSource: ' + this.collection + ': createMultiple (' + objects.length + ')');
 
@@ -1132,6 +1301,17 @@ define('api',[
         return dfd.promise();
     };
 
+    /**
+     * Get a list of objects from the collection
+     * @method
+     * @name ApiDataSource#list
+     * @param name
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.list = function(name, fields, limit, skip, sort) {
         system.log('ApiDataSource: ' + this.collection + ': list ' + name);
         var url = this.getBaseUrl();
@@ -1145,6 +1325,18 @@ define('api',[
         return this.ajax.get(url);
     };
 
+    /**
+     * Searches for objects in the collection
+     * @method
+     * @name ApiDataSource#search
+     * @param params
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @param mimeType
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.search = function(params, fields, limit, skip, sort, mimeType) {
         system.log('ApiDataSource: ' + this.collection + ': search ' + params);
         var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
@@ -1162,6 +1354,18 @@ define('api',[
         return url;
     };
 
+    /**
+     * Calls a certain method on an object or on the entire collection
+     * @method
+     * @name ApiDataSource#call
+     * @param pk
+     * @param method
+     * @param params
+     * @param fields
+     * @param timeOut
+     * @param usePost
+     * @returns {promise}
+     */
     api.ApiDataSource.prototype.call = function(pk, method, params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': call ' + method);
         var url = ((pk!=null) && (pk.length>0)) ?
@@ -1177,14 +1381,37 @@ define('api',[
         }
     };
 
+    /**
+     * Gets the base url for all calls to this collection
+     * @method
+     * @name ApiDataSource#getBaseUrl
+     * @returns {string}
+     */
     api.ApiDataSource.prototype.getBaseUrl = function() {
         return this._baseUrl;
     };
 
+    /**
+     * Prepare some parameters so we can use them during a request
+     * @method
+     * @name ApiDataSource#getParams
+     * @param data
+     * @returns {object}
+     */
     api.ApiDataSource.prototype.getParams = function(data) {
         return $.param(this.ajax._prepareDict(data));
     };
 
+    /**
+     * Gets a dictionary of parameters
+     * @method
+     * @name ApiDataSource#getParamsDict
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @returns {{}}
+     */
     api.ApiDataSource.prototype.getParamsDict = function(fields, limit, skip, sort) {
         var p = {};
         if (fields) {   p['_fields'] = $.isArray(fields) ? fields.join(',') : fields; }
@@ -1197,12 +1424,415 @@ define('api',[
     return api;
 });
 /**
+ * The Document module
+ * a base class for all documents from the CHECKROOM API
+ * @module document
+ * @copyright CHECKROOM NV 2015
+ */
+define('document',[
+    'jquery',
+    'common',
+    'api'], /** @lends Document */function ($, common, api) {
+
+    // Some constant values
+    var DEFAULTS = {
+        id: ""
+    };
+
+    /**
+     * @name Document
+     * @class
+     * @constructor
+     * @property {string}  id               - The documents primary key
+     * @property {string}  raw              - The raw, unprocessed json response
+     */
+    var Document = function(spec) {
+        this.ds = spec.ds;                                              // ApiDataSource object
+        this.fields = spec.fields;                                      // e.g. [*]
+
+        this.raw = null;                                                // raw json object
+        this.id = spec.id || DEFAULTS.id;                               // doc _id
+    };
+
+    /**
+     * Resets the object
+     * @name  Document#reset
+     * @method
+     * @returns {promise}
+     */
+    Document.prototype.reset = function() {
+        // By default, reset just reads from the DEFAULTS dict again
+        return this._fromJson(this._getDefaults(), null);
+    };
+
+    /**
+     * Checks if the document exists in the database
+     * @name  Document#existsInDb
+     * @method
+     * @returns {boolean}
+     */
+    Document.prototype.existsInDb = function() {
+        // Check if we have a primary key
+        return (this.id!=null) && (this.id.length>0);
+    };
+
+    /**
+     * Checks if the object is empty
+     * @name  Document#isEmpty
+     * @method
+     * @returns {boolean}
+     */
+    Document.prototype.isEmpty = function() {
+        return true;
+    };
+
+    /**
+     * Checks if the object needs to be saved
+     * We don't check any of the keyvalues (or comments, attachments) here
+     * @name  Document#isDirty
+     * @method
+     * @returns {boolean}
+     */
+    Document.prototype.isDirty = function() {
+        return false;
+    };
+
+    /**
+     * Checks if the object is valid
+     * @name  Document#isValid
+     * @method
+     * @returns {boolean}
+     */
+    Document.prototype.isValid = function() {
+        return true;
+    };
+
+    /**
+     * Discards any changes made to the object from the previously loaded raw response
+     * or resets it when no old raw response was found
+     * @name  Document#discardChanges
+     * @method
+     * @returns {promise}
+     */
+    Document.prototype.discardChanges = function() {
+        return (this.raw) ? this._fromJson(this.raw, null) : this.reset();
+    };
+
+    /**
+     * Reloads the object from db
+     * @name  Document#reload
+     * @method
+     * @param fields
+     * @returns {promise}
+     */
+    Document.prototype.reload = function(fields) {
+        if (this.existsInDb()) {
+            return this.get(fields);
+        } else {
+            return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
+        }
+    };
+
+    /**
+     * Gets an object by the default api.get
+     * @name  Document#get
+     * @method
+     * @param fields
+     * @returns {promise}
+     */
+    Document.prototype.get = function(fields) {
+        if (this.existsInDb()) {
+            var that = this;
+            return this.ds.get(this.id, fields || this.fields)
+                .then(function(data) {
+                    return that._fromJson(data);
+                });
+        } else {
+            return $.Deferred().reject(new api.ApiError('Cannot get document, id is empty or null'));
+        }
+    };
+
+    /**
+     * Creates an object by the default api.create
+     * @name  Document#create
+     * @method
+     * @param skipRead skips reading the response via _fromJson (false)
+     * @returns {promise}
+     */
+    Document.prototype.create = function(skipRead) {
+        if (this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
+        }
+        if (this.isEmpty()) {
+            return $.Deferred().reject(new Error("Cannot create empty document"));
+        }
+        if (!this.isValid()) {
+            return $.Deferred().reject(new Error("Cannot create, invalid document"));
+        }
+
+        var that = this;
+        var data = this._toJson();
+        delete data.id;
+        return this.ds.create(data, this.fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * Updates an object by the default api.update
+     * @name  Document#update
+     * @method
+     * @param skipRead skips reading the response via _fromJson (false)
+     * @returns {promise}
+     */
+    Document.prototype.update = function(skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot update document without id"));
+        }
+        if (this.isEmpty()) {
+            return $.Deferred().reject(new Error("Cannot update to empty document"));
+        }
+        if (!this.isValid()) {
+            return $.Deferred().reject(new Error("Cannot update, invalid document"));
+        }
+
+        var that = this;
+        var data = this._toJson();
+        delete data.id;
+        return this.ds.update(this.id, data, this.fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * Deletes an object by the default api.delete
+     * @name  Document#delete
+     * @method
+     * @returns {promise}
+     */
+    Document.prototype.delete = function() {
+        // Call the api /delete on this document
+        if (this.existsInDb()) {
+            var that = this;
+            return this.ds.delete(this.id)
+                .then(function() {
+                    return that.reset();
+                });
+        } else {
+            return $.Deferred().reject(new Error("Contact does not exist"));
+        }
+    };
+
+
+    // toJson, fromJson
+    // ----
+    Document.prototype._getDefaults = function() {
+        return DEFAULTS;
+    };
+
+    /**
+     * _toJson, makes a dict of this object
+     * Possibly inheriting classes will override this method,
+     * because not all fields can be set during create / update
+     * @method
+     * @param options
+     * @returns {{}}
+     * @private
+     */
+    Document.prototype._toJson = function(options) {
+        return {
+            id: this.id
+        };
+    };
+
+    /**
+     * _fromJson: in this implementation we'll only read
+     * the data.keyValues into: comments, attachments, keyValues
+     * @method
+     * @param {object} data the json response
+     * @param {object} options dict
+     * @private
+     */
+    Document.prototype._fromJson = function(data, options) {
+        this.raw = data;
+        this.id = data._id || DEFAULTS.id;
+        return $.Deferred().resolve(data);
+    };
+
+    // Implementation stuff
+    // ---
+
+    /**
+     * Wrapping the this.ds.call method
+     * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+     * @method
+     * @param spec
+     * @returns {promise}
+     * @private
+     */
+    Document.prototype._doApiCall = function(spec) {
+        var that = this;
+        return this.ds.call(
+                (spec.collectionCall==true) ? null : (spec.pk || this.id),
+                spec.method,
+                spec.params,
+                spec.fields || this.fields,
+                spec.timeOut,
+                spec.usePost)
+            .then(function(data) {
+                return (spec.skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    return Document;
+
+});
+
+/**
+ * The Availability module
+ * @copyright CHECKROOM NV 2015
+ * @module availability
+ */
+define('Availability',[
+    'jquery',
+    'common',
+    'api',
+    'document'],  /** @lends Document */ function ($, common, api, Document) {
+
+    // Some constant values
+    var DEFAULTS = {
+            id: "",
+            planning: "",
+            item: "",
+            from: null,
+            to: null,
+            order: "",
+            reservation: ""
+        };
+
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function(){};
+    tmp.prototype = Document.prototype;
+
+    /**
+     * Availability represent the **un**availability of an Item between two dates
+     * Each of these unavailable timeslots have a reference to an Order or
+     * a Reservation for which it's or will be booked
+     *
+     * @name  Availability
+     * @class
+     * @property {string} planning     the planning primary key
+     * @property {string} item         the item primary key
+     * @property {Moment} from         the from date
+     * @property {Moment} to           the to date
+     * @property {string} order        the order primary key (if any)
+     * @property {string} reservation  the reservation primary key (if any)
+     * @constructor
+     * @extends Document
+     */
+    var Availability = function(opt) {
+        var spec = $.extend({}, opt);
+        Document.call(this, spec);
+
+        this.planning = spec.planning || DEFAULTS.planning;
+        this.item = spec.item || DEFAULTS.item;
+        this.from = spec.from || DEFAULTS.from;
+        this.to = spec.to || DEFAULTS.to;
+        this.order = spec.order || DEFAULTS.order;
+        this.reservation = spec.reservation || DEFAULTS.reservation;
+    };
+
+    Availability.prototype = new tmp();
+    Availability.prototype.constructor = Availability;
+
+    //
+    // Document overrides
+    //
+    Availability.prototype._getDefaults = function() {
+        return DEFAULTS;
+    };
+
+    /**
+     * Checks if the object is empty, it never is
+     * @name  Availability#isEmpty
+     * @method
+     * @returns {boolean}
+     * @override
+     */
+    Availability.prototype.isEmpty = function() {
+        // An Availability is never empty because it's generated on the server side
+        return false;
+    };
+
+    /**
+     * Checks via the api if we can delete the Availability document
+     * @name  Availability#canDelete
+     * @method
+     * @returns {promise}
+     * @override
+     */
+    Availability.prototype.canDelete = function() {
+        // An Availability can never be deleted
+        return $.Deferred().resolve(false);
+    };
+
+
+    // toJson, fromJson
+    // ----
+
+    /**
+     * _toJson, makes a dict of params to use during create / update
+     * @param options
+     * @returns {{}}
+     * @private
+     */
+    Availability.prototype._toJson = function(options) {
+        var data = Document.prototype._toJson.call(this, options);
+        data.planning = this.planning;
+        data.item = this.item;
+        data.fromDate = this.from;
+        data.toDate = this.to;
+        data.order = this.order;
+        data.reservation = this.reservation;
+        return data;
+    };
+
+    /**
+     * _fromJson: read some basic information
+     * @method
+     * @param {object} data the json response
+     * @param {object} options dict
+     * @returns {Promise}
+     * @private
+     */
+    Availability.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Document.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                that.planning = data.planning || DEFAULTS.planning;
+                that.item = data.item || DEFAULTS.item;
+                that.from = data.fromDate || DEFAULTS.from;
+                that.to = data.toDate || DEFAULTS.to;
+                that.order = data.order || DEFAULTS.order;
+                that.reservation = data.reservation || DEFAULTS.reservation;
+                return data;
+            });
+    };
+
+    return Availability;
+
+});
+
+/**
  * The KeyValue module
  * a helper class that can read KeyValues
  * @module KeyValue
  * @copyright CHECKROOM NV 2015
  */
-define('keyvalue',['jquery'], function ($) {
+define('keyvalue',['jquery'], /** @lends KeyValue */ function ($) {
 
     var DEFAULTS = {
         id: '',
@@ -1216,9 +1846,11 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * KeyValue class
-     * @param spec
-     * @class KeyValue
+     * @name  KeyValue
+     * @class    
      * @constructor
+     * 
+     * @param spec
      */
     var KeyValue = function(spec) {
         this.ds = spec.ds;
@@ -1236,7 +1868,8 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * Checks if the document exists in the database
-     * @method existsInDb
+     * @name  KeyValue#existsInDb
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.existsInDb = function() {
@@ -1245,7 +1878,8 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * Gets the name for this keyValue
-     * @method getName
+     * @name  KeyValue#getName
+     * @method
      * @returns {string}
      */
     KeyValue.prototype.getName = function() {
@@ -1258,7 +1892,8 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * Gets the unit for this keyValue, if no unit returns ""
-     * @method getUnit
+     * @name  KeyValue#getUnit
+     * @method
      * @returns {string}
      */
     KeyValue.prototype.getUnit = function() {
@@ -1269,7 +1904,8 @@ define('keyvalue',['jquery'], function ($) {
     /**
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
-     * @method isEmpty
+     * @name  KeyValue#isEmpty
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isEmpty = function() {
@@ -1285,7 +1921,8 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * Checks if the object has changed
-     * @method isDirty
+     * @name KeyValue#isDirty
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isDirty = function() {
@@ -1294,7 +1931,8 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * Checks if the object is valid
-     * @method isValid
+     * @name  KeyValue#isValid
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isValid = function() {
@@ -1303,7 +1941,8 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * Resets the object
-     * @method reset
+     * @name  KeyValue#reset
+     * @method
      * @returns promise
      */
     KeyValue.prototype.reset = function() {
@@ -1312,7 +1951,7 @@ define('keyvalue',['jquery'], function ($) {
 
     /**
      * _toJson, makes a dict of the object
-     * @method _toJson
+     * @method
      * @param options
      * @returns {object}
      * @private
@@ -1332,7 +1971,7 @@ define('keyvalue',['jquery'], function ($) {
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @returns promise
@@ -1361,7 +2000,7 @@ define('keyvalue',['jquery'], function ($) {
  */
 define('Attachment',[
     'jquery',
-    'keyvalue'], function ($, KeyValue) {
+    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
 
     var EXT = /(?:\.([^.]+))?$/;
     var IMAGES = ['jpg', 'png'];
@@ -1377,7 +2016,10 @@ define('Attachment',[
     tmp.prototype = KeyValue.prototype;
 
     /**
-     * @class Attachment
+     * @name  Attachment
+     * @class
+     * @property {bool} isCover        is this the cover image of a document
+     * @property {bool} canBeCover     can this attachment be the cover of a document?
      * @constructor
      * @extends KeyValue
      */
@@ -1393,6 +2035,8 @@ define('Attachment',[
 
     /**
      * Gets the extension part of a filename
+     * @name  Attachment#getExt
+     * @method
      * @param name
      * @returns {string}
      */
@@ -1403,6 +2047,8 @@ define('Attachment',[
 
     /**
      * Checks if the attachment is an image
+     * @name  Attachment#isImage
+     * @method
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
@@ -1413,6 +2059,8 @@ define('Attachment',[
 
     /**
      * Checks if the attachment has a preview
+     * @name  Attachment#hasPreview
+     * @method
      * @returns {boolean}
      */
     Attachment.prototype.hasPreview = function() {
@@ -1424,257 +2072,6 @@ define('Attachment',[
     return Attachment;
 });
 /**
- * The Document module
- * a base class for all documents from the CHECKROOM API
- * @module document
- * @copyright CHECKROOM NV 2015
- */
-define('document',[
-    'jquery',
-    'common',
-    'api'], function ($, common, api) {
-
-    // Some constant values
-    var DEFAULTS = {
-        id: ""
-    };
-
-    /**
-     * @class Document
-     * @constructor
-     */
-    var Document = function(spec) {
-        this.ds = spec.ds;                                              // ApiDataSource object
-        this.fields = spec.fields;                                      // e.g. [*]
-
-        this.raw = null;                                                // raw json object
-        this.id = spec.id || DEFAULTS.id;                               // doc _id
-    };
-
-    /**
-     * Resets the object
-     * @method reset
-     * @returns {promise}
-     */
-    Document.prototype.reset = function() {
-        // By default, reset just reads from the DEFAULTS dict again
-        return this._fromJson(this._getDefaults(), null);
-    };
-
-    /**
-     * Checks if the document exists in the database
-     * @method existsInDb
-     * @returns {boolean}
-     */
-    Document.prototype.existsInDb = function() {
-        // Check if we have a primary key
-        return (this.id!=null) && (this.id.length>0);
-    };
-
-    /**
-     * Checks if the object is empty
-     * @method isEmpty
-     * @returns {boolean}
-     */
-    Document.prototype.isEmpty = function() {
-        return true;
-    };
-
-    /**
-     * Checks if the object needs to be saved
-     * We don't check any of the keyvalues (or comments, attachments) here
-     * @method isDirty
-     * @returns {boolean}
-     */
-    Document.prototype.isDirty = function() {
-        return false;
-    };
-
-    /**
-     * Checks if the object is valid
-     * @method isValid
-     * @returns {boolean}
-     */
-    Document.prototype.isValid = function() {
-        return true;
-    };
-
-    /**
-     * Discards any changes made to the object from the previously loaded raw response
-     * or resets it when no old raw response was found
-     * @method discardChanges
-     * @returns {promise}
-     */
-    Document.prototype.discardChanges = function() {
-        return (this.raw) ? this._fromJson(this.raw, null) : this.reset();
-    };
-
-    /**
-     * Reloads the object from db
-     * @method reload
-     * @param fields
-     * @returns {promise}
-     */
-    Document.prototype.reload = function(fields) {
-        if (this.existsInDb()) {
-            return this.get(fields);
-        } else {
-            return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
-        }
-    };
-
-    /**
-     * Gets an object by the default api.get
-     * @method get
-     * @param fields
-     * @returns {promise}
-     */
-    Document.prototype.get = function(fields) {
-        if (this.existsInDb()) {
-            var that = this;
-            return this.ds.get(this.id, fields || this.fields)
-                .then(function(data) {
-                    return that._fromJson(data);
-                });
-        } else {
-            return $.Deferred().reject(new api.ApiError('Cannot get document, id is empty or null'));
-        }
-    };
-
-    /**
-     * Creates an object by the default api.create
-     * @method create
-     * @param skipRead skips reading the response via _fromJson (false)
-     * @returns {promise}
-     */
-    Document.prototype.create = function(skipRead) {
-        if (this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
-        }
-        if (this.isEmpty()) {
-            return $.Deferred().reject(new Error("Cannot create empty document"));
-        }
-        if (!this.isValid()) {
-            return $.Deferred().reject(new Error("Cannot create, invalid document"));
-        }
-
-        var that = this;
-        var data = this._toJson();
-        delete data.id;
-        return this.ds.create(data, this.fields)
-            .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
-            });
-    };
-
-    /**
-     * Updates an object by the default api.update
-     * @method update
-     * @param skipRead skips reading the response via _fromJson (false)
-     * @returns {promise}
-     */
-    Document.prototype.update = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot update document without id"));
-        }
-        if (this.isEmpty()) {
-            return $.Deferred().reject(new Error("Cannot update to empty document"));
-        }
-        if (!this.isValid()) {
-            return $.Deferred().reject(new Error("Cannot update, invalid document"));
-        }
-
-        var that = this;
-        var data = this._toJson();
-        delete data.id;
-        return this.ds.update(this.id, data, this.fields)
-            .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
-            });
-    };
-
-    /**
-     * Deletes an object by the default api.delete
-     * @method delete
-     * @returns {promise}
-     */
-    Document.prototype.delete = function() {
-        // Call the api /delete on this document
-        if (this.existsInDb()) {
-            var that = this;
-            return this.ds.delete(this.id)
-                .then(function() {
-                    return that.reset();
-                });
-        } else {
-            return $.Deferred().reject(new Error("Contact does not exist"));
-        }
-    };
-
-
-    // toJson, fromJson
-    // ----
-    Document.prototype._getDefaults = function() {
-        return DEFAULTS;
-    };
-
-    /**
-     * _toJson, makes a dict of this object
-     * Possibly inheriting classes will override this method,
-     * because not all fields can be set during create / update
-     * @param options
-     * @returns {{}}
-     * @private
-     */
-    Document.prototype._toJson = function(options) {
-        return {
-            id: this.id
-        };
-    };
-
-    /**
-     * _fromJson: in this implementation we'll only read
-     * the data.keyValues into: comments, attachments, keyValues
-     * @method _fromJson
-     * @param {object} data the json response
-     * @param {object} options dict
-     * @private
-     */
-    Document.prototype._fromJson = function(data, options) {
-        this.raw = data;
-        this.id = data._id || DEFAULTS.id;
-        return $.Deferred().resolve(data);
-    };
-
-    // Implementation stuff
-    // ---
-
-    /**
-     * Wrapping the this.ds.call method
-     * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
-     * @param spec
-     * @returns {promise}
-     * @private
-     */
-    Document.prototype._doApiCall = function(spec) {
-        var that = this;
-        return this.ds.call(
-                (spec.collectionCall==true) ? null : (spec.pk || this.id),
-                spec.method,
-                spec.params,
-                spec.fields || this.fields,
-                spec.timeOut,
-                spec.usePost)
-            .then(function(data) {
-                return (spec.skipRead==true) ? data : that._fromJson(data);
-            });
-    };
-
-    return Document;
-
-});
-
-/**
  * The Comment module
  * a helper class that can read a Comment KeyValue
  * Comment inherits from KeyValue and adds some specifics to it
@@ -1683,7 +2080,7 @@ define('document',[
  */
 define('comment',[
     'jquery',
-    'keyvalue'], function ($, KeyValue) {
+    'keyvalue'],/** Comment */ function ($, KeyValue) {
 
     var KEY = "cheqroom.Comment";
     var DEFAULTS = {
@@ -1695,7 +2092,8 @@ define('comment',[
     tmp.prototype = KeyValue.prototype;
 
     /**
-     * @class Comment
+     * @name  Comment
+     * @class
      * @constructor
      * @extends KeyValue
      */
@@ -1760,7 +2158,7 @@ define('comment',[
  */
 define('attachment',[
     'jquery',
-    'keyvalue'], function ($, KeyValue) {
+    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
 
     var EXT = /(?:\.([^.]+))?$/;
     var IMAGES = ['jpg', 'png'];
@@ -1776,7 +2174,10 @@ define('attachment',[
     tmp.prototype = KeyValue.prototype;
 
     /**
-     * @class Attachment
+     * @name  Attachment
+     * @class
+     * @property {bool} isCover        is this the cover image of a document
+     * @property {bool} canBeCover     can this attachment be the cover of a document?
      * @constructor
      * @extends KeyValue
      */
@@ -1792,6 +2193,8 @@ define('attachment',[
 
     /**
      * Gets the extension part of a filename
+     * @name  Attachment#getExt
+     * @method
      * @param name
      * @returns {string}
      */
@@ -1802,6 +2205,8 @@ define('attachment',[
 
     /**
      * Checks if the attachment is an image
+     * @name  Attachment#isImage
+     * @method
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
@@ -1812,6 +2217,8 @@ define('attachment',[
 
     /**
      * Checks if the attachment has a preview
+     * @name  Attachment#hasPreview
+     * @method
      * @returns {boolean}
      */
     Attachment.prototype.hasPreview = function() {
@@ -1836,7 +2243,7 @@ define('Base',[
     'document',
     'comment',
     'attachment',
-    'keyvalue'], function ($, common, api, Document, Comment, Attachment, KeyValue) {
+    'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
 
     // Some constant values
     var COMMENT = "cheqroom.Comment",
@@ -1858,7 +2265,8 @@ define('Base',[
     tmp.prototype = Document.prototype;
 
     /**
-     * @class Base
+     * @name  Base
+     * @class
      * @constructor
      * @extends Document
      */
@@ -1888,8 +2296,10 @@ define('Base',[
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
      * We'll only check for comments, attachments, keyValues here
-     * @method isEmpty
+     * @name  Base#isEmpty
+     * @method
      * @returns {boolean}
+     * @override
      */
     Base.prototype.isEmpty = function() {
         return (
@@ -1901,8 +2311,10 @@ define('Base',[
 
     /**
      * Checks via the api if we can delete the document
-     * @method canDelete
+     * @name  Base#canDelete
+     * @method
      * @returns {promise}
+     * @override
      */
     Base.prototype.canDelete = function() {
         // Documents can only be deleted when they have a pk
@@ -1920,6 +2332,8 @@ define('Base',[
     // ----
     /**
      * Adds a comment by string
+     * @name  Base#addComment
+     * @method
      * @param comment
      * @param skipRead
      * @returns {promise}
@@ -1930,6 +2344,8 @@ define('Base',[
 
     /**
      * Updates a comment by id
+     * @name  Base#updateComment
+     * @method
      * @param id
      * @param comment
      * @param skipRead
@@ -1941,6 +2357,8 @@ define('Base',[
 
     /**
      * Deletes a Comment by id
+     * @name  Base#deleteComment
+     * @method
      * @param id
      * @param skipRead
      * @returns {promise}
@@ -1953,6 +2371,8 @@ define('Base',[
     // ----
     /**
      * Adds a key value
+     * @name  Base#addKeyValue
+     * @method
      * @param key
      * @param value
      * @param kind
@@ -1969,6 +2389,8 @@ define('Base',[
 
     /**
      * Updates a keyvalue by id
+     * @name  Base#updateKeyValue
+     * @method
      * @param id
      * @param key
      * @param value
@@ -1986,6 +2408,8 @@ define('Base',[
 
     /**
      * Removes a keyvalue by id
+     * @name  Base#removeKeyValue
+     * @method
      * @param id
      * @param skipRead
      * @returns {promise}
@@ -2000,6 +2424,8 @@ define('Base',[
 
     /**
      * Sets a keyvalue by id
+     * @name  Base#setKeyValue
+     * @method
      * @param id
      * @param key
      * @param value
@@ -2024,6 +2450,8 @@ define('Base',[
     // ----
     /**
      * changes the cover image to another Attachment
+     * @name  Base#setCover
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -2038,6 +2466,8 @@ define('Base',[
 
     /**
      * attaches an image Attachment file, shortcut to attach
+     * @name  Base#attachImage
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -2048,6 +2478,8 @@ define('Base',[
 
     /**
      * attaches an Attachment file, shortcut to attach
+     * @name  Base#attachFile
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -2058,6 +2490,8 @@ define('Base',[
 
     /**
      * attaches an Attachment object
+     * @name  Base#attach
+     * @method
      * @param att
      * @param key
      * @param skipRead
@@ -2077,6 +2511,8 @@ define('Base',[
 
     /**
      * detaches an Attachment by kvId (guid)
+     * @name  Base#detach
+     * @method
      * @param keyId
      * @param skipRead
      * @returns {promise}
@@ -2108,7 +2544,7 @@ define('Base',[
 
     /**
      * _fromJson: read some basic information
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @private
@@ -2124,7 +2560,7 @@ define('Base',[
 
     /**
      * _fromKeyValuesJson: reads the data.keyValues
-     * @method _fromKeyValuesJson
+     * @method
      * @param data
      * @param options
      * @returns {*}
@@ -2225,7 +2661,7 @@ define('Base',[
  */
 define('Comment',[
     'jquery',
-    'keyvalue'], function ($, KeyValue) {
+    'keyvalue'],/** Comment */ function ($, KeyValue) {
 
     var KEY = "cheqroom.Comment";
     var DEFAULTS = {
@@ -2237,7 +2673,8 @@ define('Comment',[
     tmp.prototype = KeyValue.prototype;
 
     /**
-     * @class Comment
+     * @name  Comment
+     * @class
      * @constructor
      * @extends KeyValue
      */
@@ -2308,7 +2745,7 @@ define('base',[
     'document',
     'comment',
     'attachment',
-    'keyvalue'], function ($, common, api, Document, Comment, Attachment, KeyValue) {
+    'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
 
     // Some constant values
     var COMMENT = "cheqroom.Comment",
@@ -2330,7 +2767,8 @@ define('base',[
     tmp.prototype = Document.prototype;
 
     /**
-     * @class Base
+     * @name  Base
+     * @class
      * @constructor
      * @extends Document
      */
@@ -2360,8 +2798,10 @@ define('base',[
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
      * We'll only check for comments, attachments, keyValues here
-     * @method isEmpty
+     * @name  Base#isEmpty
+     * @method
      * @returns {boolean}
+     * @override
      */
     Base.prototype.isEmpty = function() {
         return (
@@ -2373,8 +2813,10 @@ define('base',[
 
     /**
      * Checks via the api if we can delete the document
-     * @method canDelete
+     * @name  Base#canDelete
+     * @method
      * @returns {promise}
+     * @override
      */
     Base.prototype.canDelete = function() {
         // Documents can only be deleted when they have a pk
@@ -2392,6 +2834,8 @@ define('base',[
     // ----
     /**
      * Adds a comment by string
+     * @name  Base#addComment
+     * @method
      * @param comment
      * @param skipRead
      * @returns {promise}
@@ -2402,6 +2846,8 @@ define('base',[
 
     /**
      * Updates a comment by id
+     * @name  Base#updateComment
+     * @method
      * @param id
      * @param comment
      * @param skipRead
@@ -2413,6 +2859,8 @@ define('base',[
 
     /**
      * Deletes a Comment by id
+     * @name  Base#deleteComment
+     * @method
      * @param id
      * @param skipRead
      * @returns {promise}
@@ -2425,6 +2873,8 @@ define('base',[
     // ----
     /**
      * Adds a key value
+     * @name  Base#addKeyValue
+     * @method
      * @param key
      * @param value
      * @param kind
@@ -2441,6 +2891,8 @@ define('base',[
 
     /**
      * Updates a keyvalue by id
+     * @name  Base#updateKeyValue
+     * @method
      * @param id
      * @param key
      * @param value
@@ -2458,6 +2910,8 @@ define('base',[
 
     /**
      * Removes a keyvalue by id
+     * @name  Base#removeKeyValue
+     * @method
      * @param id
      * @param skipRead
      * @returns {promise}
@@ -2472,6 +2926,8 @@ define('base',[
 
     /**
      * Sets a keyvalue by id
+     * @name  Base#setKeyValue
+     * @method
      * @param id
      * @param key
      * @param value
@@ -2496,6 +2952,8 @@ define('base',[
     // ----
     /**
      * changes the cover image to another Attachment
+     * @name  Base#setCover
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -2510,6 +2968,8 @@ define('base',[
 
     /**
      * attaches an image Attachment file, shortcut to attach
+     * @name  Base#attachImage
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -2520,6 +2980,8 @@ define('base',[
 
     /**
      * attaches an Attachment file, shortcut to attach
+     * @name  Base#attachFile
+     * @method
      * @param att
      * @param skipRead
      * @returns {promise}
@@ -2530,6 +2992,8 @@ define('base',[
 
     /**
      * attaches an Attachment object
+     * @name  Base#attach
+     * @method
      * @param att
      * @param key
      * @param skipRead
@@ -2549,6 +3013,8 @@ define('base',[
 
     /**
      * detaches an Attachment by kvId (guid)
+     * @name  Base#detach
+     * @method
      * @param keyId
      * @param skipRead
      * @returns {promise}
@@ -2580,7 +3046,7 @@ define('base',[
 
     /**
      * _fromJson: read some basic information
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @private
@@ -2596,7 +3062,7 @@ define('base',[
 
     /**
      * _fromKeyValuesJson: reads the data.keyValues
-     * @method _fromKeyValuesJson
+     * @method
      * @param data
      * @param options
      * @returns {*}
@@ -2696,7 +3162,7 @@ define('base',[
  */
 define('Contact',[
     'jquery',
-    'base'], function ($, Base) {
+    'base'], /** @lends Contact */ function ($, Base) {
 
     var DEFAULTS = {
         name: "",
@@ -2711,7 +3177,9 @@ define('Contact',[
     tmp.prototype = Base.prototype;
 
     /**
-     * @class Contact
+     * Contact class
+     * @name  Contact
+     * @class
      * @constructor
      * @extends Base
      */
@@ -2733,22 +3201,45 @@ define('Contact',[
 
     //
     // Specific validators
-    //
+    /**
+     * Checks if name is valid
+     * @name Contact#isValidName
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidName = function() {
         // TODO
         return ($.trim(this.name).length>=2);
     };
-
+    
+    /**
+     * Checks if company is valid
+     * @name  Contact#isValidCompany
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidCompany = function() {
         // TODO
         return ($.trim(this.company).length>=2);
     };
 
+    /**
+     * Checks if phone is valid
+     * @name  Contact#isValidPhone
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidPhone = function() {
         // TODO
         return ($.trim(this.phone).length>=2);
     };
 
+    /**
+     * Check is email is valid
+     * @name  Contact#isValidEmail
+     * @method
+     * @return {Boolean} [description]
+     */
     Contact.prototype.isValidEmail = function() {
         // TODO
         return ($.trim(this.email).length>=2);
@@ -2760,7 +3251,10 @@ define('Contact',[
 
     /**
      * Checks if the contact has any validation errors
+     * @name Contact#isValid
+     * @method 
      * @returns {boolean}
+     * @override
      */
     Contact.prototype.isValid = function() {
         return this.isValidName() &&
@@ -2772,6 +3266,7 @@ define('Contact',[
     /**
      * Checks if the contact is empty
      * @returns {boolean}
+     * @override
      */
     Contact.prototype.isEmpty = function() {
         return (
@@ -2785,6 +3280,7 @@ define('Contact',[
     /**
      * Checks if the contact is dirty and needs saving
      * @returns {boolean}
+     * @override
      */
     Contact.prototype.isDirty = function() {
         var isDirty = Base.prototype.isDirty.call(this);
@@ -2835,7 +3331,7 @@ define('Contact',[
  * @module dateHelper
  * @copyright CHECKROOM NV 2015
  */
-define('DateHelper',["jquery", "moment"], function ($, moment) {
+define('DateHelper',["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
     // Add a new function to moment
     moment.fn.toJSONDate = function() {
@@ -2906,24 +3402,43 @@ define('DateHelper',["jquery", "moment"], function ($, moment) {
      */
 
     var INCREMENT = 15;
+
+    /**
+     * @name  DateHelper
+     * @class
+     * @constructor
+     */
     var DateHelper = function(spec) {
         spec = spec || {};
         this.roundType = spec.roundType || "nearest";
         this.roundMinutes = spec.roundMinutes || INCREMENT;
     };
 
+    /**
+     * @name  DateHelper#getNow
+     * @method
+     * @return {moment}
+     */
     DateHelper.prototype.getNow = function() {
         // TODO: Use the right MomentJS constructor
         //       This one will be deprecated in the next version
         return moment();
     };
 
+    /**
+     * @name DateHelper#getFriendlyDuration
+     * @method
+     * @param  duration
+     * @return {} 
+     */
     DateHelper.prototype.getFriendlyDuration = function(duration) {
         return duration.humanize();
     };
 
     /**
      * Turns all strings that look like datetimes into moment objects recursively
+     * @name  DateHelper#fixDates
+     * @method
      * @param data
      * @returns {*}
      */
@@ -2952,6 +3467,8 @@ define('DateHelper',["jquery", "moment"], function ($, moment) {
 
     /**
      * roundTimeFrom uses the time rounding rules to round a begin datetime
+     * @name  DateHelper#roundTimeFrom
+     * @method
      * @param m
      */
     DateHelper.prototype.roundTimeFrom = function(m) {
@@ -2960,6 +3477,8 @@ define('DateHelper',["jquery", "moment"], function ($, moment) {
 
     /**
      * roundTimeTo uses the time rounding rules to round an end datetime
+     * @name  DateHelper#roundTimeTo
+     * @method
      * @param m
      */
     DateHelper.prototype.roundTimeTo = function(m) {
@@ -2967,19 +3486,37 @@ define('DateHelper',["jquery", "moment"], function ($, moment) {
     };
 
 
-
+    /**
+     * @name  DateHelper#roundTime
+     * @method
+     * @param  m
+     * @param  inc
+     * @param  direction
+     */
     DateHelper.prototype.roundTime = function(m, inc, direction) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
         return mom.roundTo("minute", inc || INCREMENT, direction);
     };
 
+    /**
+     * @name  DateHelper#roundTimeUp
+     * @method
+     * @param  m
+     * @param  inc
+     */
     DateHelper.prototype.roundTimeUp = function(m, inc) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
         return mom.roundTo("minute", inc || INCREMENT, "up");
     };
 
+    /**
+     * @name DateHelper#roundTimeDown
+     * @method
+     * @param  m
+     * @param  inc
+     */
     DateHelper.prototype.roundTimeDown = function(m, inc) {
         var mom = (moment.isMoment(m)) ? m : moment(m);
         mom.seconds(0).milliseconds(0);
@@ -3019,7 +3556,7 @@ define('DateHelper',["jquery", "moment"], function ($, moment) {
 define('Document',[
     'jquery',
     'common',
-    'api'], function ($, common, api) {
+    'api'], /** @lends Document */function ($, common, api) {
 
     // Some constant values
     var DEFAULTS = {
@@ -3027,8 +3564,11 @@ define('Document',[
     };
 
     /**
-     * @class Document
+     * @name Document
+     * @class
      * @constructor
+     * @property {string}  id               - The documents primary key
+     * @property {string}  raw              - The raw, unprocessed json response
      */
     var Document = function(spec) {
         this.ds = spec.ds;                                              // ApiDataSource object
@@ -3040,7 +3580,8 @@ define('Document',[
 
     /**
      * Resets the object
-     * @method reset
+     * @name  Document#reset
+     * @method
      * @returns {promise}
      */
     Document.prototype.reset = function() {
@@ -3050,7 +3591,8 @@ define('Document',[
 
     /**
      * Checks if the document exists in the database
-     * @method existsInDb
+     * @name  Document#existsInDb
+     * @method
      * @returns {boolean}
      */
     Document.prototype.existsInDb = function() {
@@ -3060,7 +3602,8 @@ define('Document',[
 
     /**
      * Checks if the object is empty
-     * @method isEmpty
+     * @name  Document#isEmpty
+     * @method
      * @returns {boolean}
      */
     Document.prototype.isEmpty = function() {
@@ -3070,7 +3613,8 @@ define('Document',[
     /**
      * Checks if the object needs to be saved
      * We don't check any of the keyvalues (or comments, attachments) here
-     * @method isDirty
+     * @name  Document#isDirty
+     * @method
      * @returns {boolean}
      */
     Document.prototype.isDirty = function() {
@@ -3079,7 +3623,8 @@ define('Document',[
 
     /**
      * Checks if the object is valid
-     * @method isValid
+     * @name  Document#isValid
+     * @method
      * @returns {boolean}
      */
     Document.prototype.isValid = function() {
@@ -3089,7 +3634,8 @@ define('Document',[
     /**
      * Discards any changes made to the object from the previously loaded raw response
      * or resets it when no old raw response was found
-     * @method discardChanges
+     * @name  Document#discardChanges
+     * @method
      * @returns {promise}
      */
     Document.prototype.discardChanges = function() {
@@ -3098,7 +3644,8 @@ define('Document',[
 
     /**
      * Reloads the object from db
-     * @method reload
+     * @name  Document#reload
+     * @method
      * @param fields
      * @returns {promise}
      */
@@ -3112,7 +3659,8 @@ define('Document',[
 
     /**
      * Gets an object by the default api.get
-     * @method get
+     * @name  Document#get
+     * @method
      * @param fields
      * @returns {promise}
      */
@@ -3130,7 +3678,8 @@ define('Document',[
 
     /**
      * Creates an object by the default api.create
-     * @method create
+     * @name  Document#create
+     * @method
      * @param skipRead skips reading the response via _fromJson (false)
      * @returns {promise}
      */
@@ -3156,7 +3705,8 @@ define('Document',[
 
     /**
      * Updates an object by the default api.update
-     * @method update
+     * @name  Document#update
+     * @method
      * @param skipRead skips reading the response via _fromJson (false)
      * @returns {promise}
      */
@@ -3182,7 +3732,8 @@ define('Document',[
 
     /**
      * Deletes an object by the default api.delete
-     * @method delete
+     * @name  Document#delete
+     * @method
      * @returns {promise}
      */
     Document.prototype.delete = function() {
@@ -3209,6 +3760,7 @@ define('Document',[
      * _toJson, makes a dict of this object
      * Possibly inheriting classes will override this method,
      * because not all fields can be set during create / update
+     * @method
      * @param options
      * @returns {{}}
      * @private
@@ -3222,7 +3774,7 @@ define('Document',[
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @private
@@ -3239,6 +3791,7 @@ define('Document',[
     /**
      * Wrapping the this.ds.call method
      * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+     * @method
      * @param spec
      * @returns {promise}
      * @private
@@ -3268,7 +3821,7 @@ define('Document',[
  */
 define('Item',[
     'jquery',
-    'base'], function ($, Base) {
+    'base'], /** @lends Base */ function ($, Base) {
 
     var FLAG = "cheqroom.prop.Custom",
         DEFAULT_LAT = 0.0,
@@ -3290,8 +3843,17 @@ define('Item',[
     tmp.prototype = Base.prototype;
 
     /**
+     * Item represents a single piece of equipment
+     * @name Item
      * @class Item
      * @constructor
+     * @property {string} name         the name of the item
+     * @property {status} status       the status of the item in an order, or expired
+     * @property {string} flag         the item flag
+     * @property {string} location     the item location primary key
+     * @property {string} category     the item category primary key
+     * @propery {Array} geo            the item geo position in lat lng array
+     * @propery {string} address       the item geo position address
      * @extends Base
      */
     var Item = function(opt) {
@@ -3320,6 +3882,7 @@ define('Item',[
 
     /**
      * Checks if the item is empty
+     * @name Item#isEmpty
      * @returns {boolean}
      */
     Item.prototype.isEmpty = function() {
@@ -3336,6 +3899,7 @@ define('Item',[
 
     /**
      * Checks if the item is dirty and needs saving
+     * @name Item#isDirty
      * @returns {boolean}
      */
     Item.prototype.isDirty = function() {
@@ -3482,7 +4046,17 @@ define('Item',[
     //
     // Business logic
     //
-//
+    /**
+     * Checks if the Item is unavailable between from / to dates (optional)
+     * @name Item#getAvailabilities
+     * @param {Moment} from       the from date (optional)
+     * @param {Moment} to         the to date (optional)
+     * @returns {promise}
+     */
+    Item.prototype.getAvailabilities = function(from, to) {
+        return this.ds.call(this.id, 'getAvailability', {fromDate: from, toDate: to});
+    };
+
 //    /**
 //     * updates the Item
 //     * We override because Item.update does not support updating categories
@@ -3544,11 +4118,11 @@ define('Item',[
 
     //
     // TODO: Function calls specific for Item
-    // TODO: What with triggered events? Assume we'll handle Intercom on server side!
     //
 
     /**
-     * Duplicates an item a number of tumes
+     * Duplicates an item a number of times
+     * @name Item#duplicate
      * @param times
      * @returns {promise}
      */
@@ -3562,6 +4136,7 @@ define('Item',[
 
     /**
      * Expires an item, puts it in the *expired* status
+     * @name Item#expire
      * @param skipRead
      * @returns {promise}
      */
@@ -3571,6 +4146,7 @@ define('Item',[
 
     /**
      * Un-expires an item, puts it in the *available* status again
+     * @name Item#undoExpire
      * @param skipRead
      * @returns {promise}
      */
@@ -3580,6 +4156,7 @@ define('Item',[
 
     /**
      * Change the location of an item
+     * @name Item#changeLocation
      * @param skipRead
      * @returns {promise}
      */
@@ -3589,6 +4166,7 @@ define('Item',[
 
     /**
      * Adds a QR code to the item
+     * @name Item#addCode
      * @param code
      * @param skipRead
      * @returns {promise}
@@ -3599,6 +4177,7 @@ define('Item',[
 
     /**
      * Removes a QR code from the item
+     * @name Item#removeCode
      * @param code
      * @param skipRead
      * @returns {promise}
@@ -3609,6 +4188,7 @@ define('Item',[
 
     /**
      * Updates the geo position of an item
+     * @name Item#updateGeo
      * @param lat
      * @param lng
      * @param address
@@ -3621,6 +4201,7 @@ define('Item',[
 
     /**
      * Updates the name of an item
+     * @name Item#updateName
      * @param name
      * @param skipRead
      * @returns {promise}
@@ -3635,6 +4216,7 @@ define('Item',[
 
     /**
      * Checks if the item can be moved to another category
+     * @name Item#canChangeCategory
      * @param category
      * @returns {promise}
      */
@@ -3649,6 +4231,7 @@ define('Item',[
 
     /**
      * Moves the item to another category
+     * @name Item#changeCategory
      * @param category
      * @param skipRead
      * @returns {promise}
@@ -3668,6 +4251,7 @@ define('Item',[
 
     /**
      * Sets the flag of an item
+     * @name Item#setFlag
      * @param flag
      * @param skipRead
      * @returns {promise}
@@ -3685,7 +4269,7 @@ define('Item',[
  * @module KeyValue
  * @copyright CHECKROOM NV 2015
  */
-define('KeyValue',['jquery'], function ($) {
+define('KeyValue',['jquery'], /** @lends KeyValue */ function ($) {
 
     var DEFAULTS = {
         id: '',
@@ -3699,9 +4283,11 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * KeyValue class
-     * @param spec
-     * @class KeyValue
+     * @name  KeyValue
+     * @class    
      * @constructor
+     * 
+     * @param spec
      */
     var KeyValue = function(spec) {
         this.ds = spec.ds;
@@ -3719,7 +4305,8 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * Checks if the document exists in the database
-     * @method existsInDb
+     * @name  KeyValue#existsInDb
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.existsInDb = function() {
@@ -3728,7 +4315,8 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * Gets the name for this keyValue
-     * @method getName
+     * @name  KeyValue#getName
+     * @method
      * @returns {string}
      */
     KeyValue.prototype.getName = function() {
@@ -3741,7 +4329,8 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * Gets the unit for this keyValue, if no unit returns ""
-     * @method getUnit
+     * @name  KeyValue#getUnit
+     * @method
      * @returns {string}
      */
     KeyValue.prototype.getUnit = function() {
@@ -3752,7 +4341,8 @@ define('KeyValue',['jquery'], function ($) {
     /**
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
-     * @method isEmpty
+     * @name  KeyValue#isEmpty
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isEmpty = function() {
@@ -3768,7 +4358,8 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * Checks if the object has changed
-     * @method isDirty
+     * @name KeyValue#isDirty
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isDirty = function() {
@@ -3777,7 +4368,8 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * Checks if the object is valid
-     * @method isValid
+     * @name  KeyValue#isValid
+     * @method
      * @returns {boolean}
      */
     KeyValue.prototype.isValid = function() {
@@ -3786,7 +4378,8 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * Resets the object
-     * @method reset
+     * @name  KeyValue#reset
+     * @method
      * @returns promise
      */
     KeyValue.prototype.reset = function() {
@@ -3795,7 +4388,7 @@ define('KeyValue',['jquery'], function ($) {
 
     /**
      * _toJson, makes a dict of the object
-     * @method _toJson
+     * @method
      * @param options
      * @returns {object}
      * @private
@@ -3815,7 +4408,7 @@ define('KeyValue',['jquery'], function ($) {
     /**
      * _fromJson: in this implementation we'll only read
      * the data.keyValues into: comments, attachments, keyValues
-     * @method _fromJson
+     * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @returns promise
@@ -3844,7 +4437,7 @@ define('KeyValue',['jquery'], function ($) {
  */
 define('Location',[
     'jquery',
-    'base'], function ($, Base) {
+    'base'], /** @lends Base */ function ($, Base) {
 
     var DEFAULTS = {
         name: '',
@@ -3857,9 +4450,20 @@ define('Location',[
     tmp.prototype = Base.prototype;
 
     /**
+     * @name Location
      * @class Location
      * @constructor
      * @extends Base
+     * @property {string}  name        - the location name
+     * @property {string}  address     - the location address
+     * @example
+     * var loc = new cr.api.Location({ds: dsLocations});
+     * loc.name = "Headquarters";
+     * loc.address = "4280 Express Road, Sarasota, FL 34238";
+     * loc.create()
+     *     .done(function() {
+     *         console.log(loc);
+     *     });
      */
     var Location = function(opt) {
         var spec = $.extend({
@@ -3880,6 +4484,8 @@ define('Location',[
 
     /**
      * Checks if the location is empty
+     * @method
+     * @name Location#isEmpty
      * @returns {boolean}
      */
     Location.prototype.isEmpty = function() {
@@ -3891,6 +4497,8 @@ define('Location',[
 
     /**
      * Checks if the location is dirty and needs saving
+     * @method
+     * @name Location#isDirty
      * @returns {boolean}
      */
     Location.prototype.isDirty = function() {
@@ -3942,7 +4550,7 @@ define('Location',[
 define('transaction',[
     'jquery',
     'api',
-    'base'], function ($, api, Base) {
+    'base'], /** @lends Base */ function ($, api, Base) {
 
     var DEFAULTS = {
         status: "creating",
@@ -3960,9 +4568,19 @@ define('transaction',[
     tmp.prototype = Base.prototype;
 
     /**
+     * @name Transaction
      * @class Transaction
      * @constructor
      * @extends Base
+     * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
+     * @property {Helper}  helper                     - A Helper object ref
+     * @property {string}  status                     - The transaction status
+     * @property {moment}  from                       - The transaction from date
+     * @property {moment}  to                         - The transaction to date
+     * @property {moment}  due                        - The transaction due date
+     * @property {string}  contact                    - The Contact.id for this transaction
+     * @property {string}  location                   - The Location.id for this transaction
+     * @property {Array}  items                       - A list of Item.id strings
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -3992,6 +4610,8 @@ define('transaction',[
 
     /**
      * Gets the lowest possible date to start this transaction
+     * @method
+     * @name Transaction#getMinDate
      * @returns {Moment} min date
      */
     Transaction.prototype.getMinDate = function() {
@@ -4002,6 +4622,8 @@ define('transaction',[
 
     /**
      * Gets the latest possible date to end this transaction
+     * @method
+     * @name Transaction#getMaxDate
      * @returns {Moment} max date
      */
     Transaction.prototype.getMaxDate = function() {
@@ -4014,6 +4636,8 @@ define('transaction',[
     /**
      * suggestEndDate, makes a new moment() object with a suggested end date,
      * already rounded up according to the group.profile settings
+     * @method suggestEndDate
+     * @name Transaction#suggestEndDate
      * @param {Moment} m a suggested end date for this transaction
      * @returns {*}
      */
@@ -4028,6 +4652,8 @@ define('transaction',[
     //
     /**
      * Checks if the transaction is empty
+     * @method isEmpty
+     * @name Transaction#isEmpty
      * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
      */
     Transaction.prototype.isEmpty = function() {
@@ -4045,6 +4671,8 @@ define('transaction',[
 
     /**
      * Checks if the transaction is dirty and needs saving
+     * @method
+     * @name Transaction#isDirty
      * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
      */
     Transaction.prototype.isDirty = function() {
@@ -4182,6 +4810,8 @@ define('transaction',[
 
     /**
      * Clear the transaction from date
+     * @method
+     * @name Transaction#clearFromDate
      * @param skipRead
      * @returns {promise}
      */
@@ -4192,6 +4822,8 @@ define('transaction',[
 
     /**
      * Sets the transaction from date
+     * @method
+     * @name Transaction#setFromDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -4205,6 +4837,8 @@ define('transaction',[
 
     /**
      * Clear the transaction to date
+     * @method
+     * @name Transaction#clearToDate
      * @param skipRead
      * @returns {promise}
      */
@@ -4215,6 +4849,8 @@ define('transaction',[
 
     /**
      * Sets the transaction to date
+     * @method
+     * @name Transaction#setToDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -4228,6 +4864,8 @@ define('transaction',[
 
     /**
      * Clear the transaction due date
+     * @method
+     * @name Transaction#clearDueDate
      * @param skipRead
      * @returns {promise}
      */
@@ -4238,6 +4876,8 @@ define('transaction',[
 
     /**
      * Set the transaction due date
+     * @method
+     * @name Transaction#setDueDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -4250,6 +4890,8 @@ define('transaction',[
     // Location setters
     /**
      * Sets the location for this transaction
+     * @method
+     * @name Transaction#setLocation
      * @param locationId
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
@@ -4265,6 +4907,8 @@ define('transaction',[
 
     /**
      * Clears the location for this transaction
+     * @method
+     * @name Transaction#clearLocation
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
      */
@@ -4281,6 +4925,8 @@ define('transaction',[
 
     /**
      * Sets the contact for this transaction
+     * @method
+     * @name Transaction#setContact
      * @param contactId
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
@@ -4296,6 +4942,8 @@ define('transaction',[
 
     /**
      * Clears the contact for this transaction
+     * @method
+     * @name Transaction#clearContact
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
      */
@@ -4317,6 +4965,7 @@ define('transaction',[
     /**
      * addItems; adds a bunch of Items to the transaction using a list of item ids
      * It creates the transaction if it doesn't exist yet
+     * @name Transaction#addItems
      * @method addItems
      * @param items
      * @param skipRead
@@ -4337,6 +4986,7 @@ define('transaction',[
     /**
      * removeItems; removes a bunch of Items from the transaction using a list of item ids
      * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Transaction#removeItems
      * @method removeItems
      * @param items
      * @param skipRead
@@ -4361,6 +5011,7 @@ define('transaction',[
     /**
      * clearItems; removes all Items from the transaction
      * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Transaction#clearItems
      * @method clearItems
      * @param skipRead
      * @returns {promise}
@@ -4382,6 +5033,7 @@ define('transaction',[
 
     /**
      * swapItem; swaps one item for another in a transaction
+     * @name Transaction#swapItem
      * @method swapItem
      * @param fromItem
      * @param toItem
@@ -4419,6 +5071,7 @@ define('transaction',[
      * @param useAvailabilies (uses items/searchAvailable instead of items/search)
      * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
      * @param skipItems array of item ids that should be skipped
+     * @private
      * @returns {*}
      */
     Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {
@@ -4540,7 +5193,7 @@ define('transaction',[
 define('Order',[
     "jquery",
     "api",
-    "transaction"], function ($, api, Transaction) {
+    "transaction"], /** @lends Transaction */  function ($, api, Transaction) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -4548,6 +5201,7 @@ define('Order',[
     tmp.prototype = Transaction.prototype;
 
     /**
+     * @name Order
      * @class Order
      * @constructor
      * @extends Transaction
@@ -4569,6 +5223,8 @@ define('Order',[
 
     /**
      * Overwrite only getMinDate, max date stays one year from now
+     * @method
+     * @name Order#getMindDate
      * @returns {*}
      */
     Order.prototype.getMinDate = function() {
@@ -4604,11 +5260,23 @@ define('Order',[
     //
     // Helpers
     //
+    /**
+     * Gets a friendly order duration or empty string
+     * @method
+     * @name Order#getFriendlyDuration
+     * @returns {string}
+     */
     Order.prototype.getFriendlyDuration = function() {
         var duration = this.getDuration();
         return (duration!=null) ? this._getDateHelper().getFriendlyDuration(duration) : "";
     };
 
+    /**
+     * Gets a moment duration object
+     * @method
+     * @name Order#getDuration
+     * @returns {*}
+     */
     Order.prototype.getDuration = function() {
         if (this.from!=null) {
             var to = (this.status=="closed") ? this.to : this.due;
@@ -4619,14 +5287,32 @@ define('Order',[
         return null;
     };
 
+    /**
+     * Checks if a PDF document can be generated
+     * @method
+     * @name Order#canGenerateAgreement
+     * @returns {boolean}
+     */
     Order.prototype.canGenerateAgreement = function() {
         return (this.status=="open") || (this.status=="closed");
     };
 
+    /**
+     * Checks if order can be checked in
+     * @method
+     * @name Order#canCheckin
+     * @returns {boolean}
+     */
     Order.prototype.canCheckin = function() {
         return (this.status=="open");
     };
 
+    /**
+     * Checks if order can be checked out
+     * @method
+     * @name Order#canCheckout
+     * @returns {boolean}
+     */
     Order.prototype.canCheckout = function() {
         return (
             (this.status=="creating") &&
@@ -4637,6 +5323,12 @@ define('Order',[
             (this.items.length));
     };
 
+    /**
+     * Checks if order can undo checkout
+     * @method
+     * @name Order#canUndoCheckout
+     * @returns {boolean}
+     */
     Order.prototype.canUndoCheckout = function() {
         return (this.status=="open");
     };
@@ -4651,10 +5343,12 @@ define('Order',[
 
     /**
      * Sets the Order from and due date in a single call
+     * @method
+     * @name Order#setFromDueDate
      * @param from
      * @param due (optional) if null, we'll take the default average checkout duration as due date
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.setFromDueDate = function(from, due, skipRead) {
         if (this.status!="creating") {
@@ -4678,9 +5372,11 @@ define('Order',[
 
     /**
      * Sets the Order from date
+     * @method
+     * @name Order#setFromDate
      * @param date
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.setFromDate = function(date, skipRead) {
         if (this.status!="creating") {
@@ -4697,6 +5393,13 @@ define('Order',[
             });
     };
 
+    /**
+     * Clears the order from date
+     * @method
+     * @name Order#clearFromDate
+     * @param skipRead
+     * @returns {promise}
+     */
     Order.prototype.clearFromDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear order from date, status is "+this.status));
@@ -4707,6 +5410,14 @@ define('Order',[
         return this._handleTransaction(skipRead);
     };
 
+    /**
+     * Sets the order due date
+     * @method
+     * @name Order#setDueDate
+     * @param due
+     * @param skipRead
+     * @returns {promise}
+     */
     Order.prototype.setDueDate = function(due, skipRead) {
         // Cannot change the to-date of a reservation that is not in status "creating"
         if( (this.status!="creating") &&
@@ -4727,6 +5438,13 @@ define('Order',[
             });
     };
 
+    /**
+     * Clears the order due date
+     * @method
+     * @name Order#clearDueDate
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.clearDueDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear order due date, status is "+this.status));
@@ -4748,22 +5466,61 @@ define('Order',[
     //
     // Business logic calls
     //
+    /**
+     * Searches for items that could match this order
+     * @method
+     * @name Order#searchItems
+     * @param params
+     * @param useAvailabilies
+     * @param onlyUnbooked
+     * @param skipItems
+     * @returns {*}
+     */
     Order.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
         return this._searchItems(params, "available", useAvailabilies, onlyUnbooked, skipItems || this.items);
     };
 
+    /**
+     * Checks in the order
+     * @method
+     * @name Order#checkin
+     * @param itemIds
+     * @param skipRead
+     * @returns {promise}
+     */
     Order.prototype.checkin = function(itemIds, skipRead) {
         return this._doApiCall({method: "checkin", items:itemIds, skipRead: skipRead});
     };
 
+    /**
+     * Checks out the order
+     * @method
+     * @name Order#checkout
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.checkout = function(skipRead) {
         return this._doApiCall({method: "checkout", skipRead: skipRead});
     };
 
+    /**
+     * Undoes the order checkout
+     * @method
+     * @name Order#undoCheckout
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.undoCheckout = function(skipRead) {
         return this._doApiCall({method: "undoCheckout", skipRead: skipRead});
     };
 
+    /**
+     * Generates a PDF agreement for the order
+     * @method
+     * @name Order#generateAgreement
+     * @param skipRead
+     * @returns {*}
+     */
     Order.prototype.generateAgreement = function(skipRead) {
         return this._doApiCall({method: "generateAgreement", skipRead: skipRead});
     };
@@ -4891,7 +5648,7 @@ define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHel
 define('Reservation',[
     "jquery",
     "api",
-    "transaction"], function ($, api, Transaction) {
+    "transaction"],  /** @lends Transaction */ function ($, api, Transaction) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -4899,9 +5656,11 @@ define('Reservation',[
     tmp.prototype = Transaction.prototype;
 
     /**
+     * @name Reservation
      * @class Reservation
      * @constructor
      * @extends Transaction
+     * @propery {Array}  conflicts               - The reservation conflicts
      */
     var Reservation = function(opt) {
         var spec = $.extend({
@@ -4922,7 +5681,9 @@ define('Reservation',[
 
     /**
      * Overwrite only the getMinDate, max date is one year from now
-     * @returns {*}
+     * @method
+     * @name Reservation#getMinDate
+     * @returns {moment}
      */
     Reservation.prototype.getMinDate = function() {
         // Reservations can only start from the next timeslot at the earliest
@@ -4938,6 +5699,12 @@ define('Reservation',[
     //
     // Helpers
     //
+    /**
+     * Checks if the reservation can be booked
+     * @method
+     * @name Reservation#canReserve
+     * @returns {boolean}
+     */
     Reservation.prototype.canReserve = function() {
         return (
             (this.status=="creating") &&
@@ -4949,18 +5716,42 @@ define('Reservation',[
             (this.items.length));
     };
 
+    /**
+     * Checks if the reservation can be cancelled
+     * @method
+     * @name Reservation#canCancel
+     * @returns {boolean}
+     */
     Reservation.prototype.canCancel = function() {
         return (this.status=="open");
     };
 
+    /**
+     * Checks if the reservation can be edited
+     * @method
+     * @name Reservation#canEdit
+     * @returns {boolean}
+     */
     Reservation.prototype.canEdit = function() {
         return (this.status=="creating");
     };
 
+    /**
+     * Checks if the reservation can be deleted
+     * @method
+     * @name Reservation#canDelete
+     * @returns {boolean}
+     */
     Reservation.prototype.canDelete = function() {
         return (this.status=="creating");
     };
 
+    /**
+     * Checks if the reservation can be turned into an order
+     * @method
+     * @name Reservation#canMakeOrder
+     * @returns {boolean}
+     */
     Reservation.prototype.canMakeOrder = function() {
         if (this.status=="open") {
             var unavailable = this._getUnavailableItems();
@@ -5005,6 +5796,8 @@ define('Reservation',[
 
     /**
      * Sets the reservation from / to dates in a single call
+     * @method
+     * @name Reservation#setFromToDate
      * @param from
      * @param to (optional) if null, we'll take the default average checkout duration as due date
      * @param skipRead
@@ -5035,6 +5828,8 @@ define('Reservation',[
      * - bigger than minDate
      * - smaller than maxDate
      * - at least one interval before .to date (if set)
+     * @method
+     * @name Reservation#setFromDate
      * @param date
      * @param skipRead
      * @returns {*}
@@ -5063,6 +5858,13 @@ define('Reservation',[
             });
     };
 
+    /**
+     * Clear the reservation from date
+     * @method
+     * @name Reservation#clearFromDate
+     * @param skipRead
+     * @returns {*}
+     */
     Reservation.prototype.clearFromDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation from date, status is "+this.status));
@@ -5079,6 +5881,8 @@ define('Reservation',[
      * - bigger than minDate
      * - smaller than maxDate
      * - at least one interval after the .from date (if set)
+     * @method
+     * @name Reservation#setToDate
      * @param date
      * @param skipRead
      * @returns {*}
@@ -5110,6 +5914,13 @@ define('Reservation',[
             });
     };
 
+    /**
+     * Clears the reservation to date
+     * @method
+     * @name Reservation#clearToDate
+     * @param skipRead
+     * @returns {*}
+     */
     Reservation.prototype.clearToDate = function(skipRead) {
         if (this.status!="creating") {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation to date, status is "+this.status));
@@ -5135,6 +5946,8 @@ define('Reservation',[
 
     /**
      * Searches for Items that are available for this reservation
+     * @method
+     * @name Reservation#searchItems
      * @param params
      * @param useAvailabilies (should always be true, we only use this flag for Order objects)
      * @param onlyUnbooked
@@ -5146,6 +5959,8 @@ define('Reservation',[
 
     /**
      * Books the reservation and sets the status to `open`
+     * @method
+     * @name Reservation#reserve
      * @param skipRead
      * @returns {*}
      */
@@ -5155,6 +5970,8 @@ define('Reservation',[
 
     /**
      * Unbooks the reservation and sets the status to `creating` again
+     * @method
+     * @name Reservation#undoReserve
      * @param skipRead
      * @returns {*}
      */
@@ -5164,6 +5981,8 @@ define('Reservation',[
 
     /**
      * Cancels the booked reservation and sets the status to `cancelled`
+     * @method
+     * @name Reservation#cancel
      * @param skipRead
      * @returns {*}
      */
@@ -5173,6 +5992,8 @@ define('Reservation',[
 
     /**
      * Turns an open reservation into an order (which still needs to be checked out)
+     * @method
+     * @name Reservation#makeOrder
      * @returns {*}
      */
     Reservation.prototype.makeOrder = function() {
@@ -5295,7 +6116,7 @@ define('Reservation',[
 define('Transaction',[
     'jquery',
     'api',
-    'base'], function ($, api, Base) {
+    'base'], /** @lends Base */ function ($, api, Base) {
 
     var DEFAULTS = {
         status: "creating",
@@ -5313,9 +6134,19 @@ define('Transaction',[
     tmp.prototype = Base.prototype;
 
     /**
+     * @name Transaction
      * @class Transaction
      * @constructor
      * @extends Base
+     * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
+     * @property {Helper}  helper                     - A Helper object ref
+     * @property {string}  status                     - The transaction status
+     * @property {moment}  from                       - The transaction from date
+     * @property {moment}  to                         - The transaction to date
+     * @property {moment}  due                        - The transaction due date
+     * @property {string}  contact                    - The Contact.id for this transaction
+     * @property {string}  location                   - The Location.id for this transaction
+     * @property {Array}  items                       - A list of Item.id strings
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -5345,6 +6176,8 @@ define('Transaction',[
 
     /**
      * Gets the lowest possible date to start this transaction
+     * @method
+     * @name Transaction#getMinDate
      * @returns {Moment} min date
      */
     Transaction.prototype.getMinDate = function() {
@@ -5355,6 +6188,8 @@ define('Transaction',[
 
     /**
      * Gets the latest possible date to end this transaction
+     * @method
+     * @name Transaction#getMaxDate
      * @returns {Moment} max date
      */
     Transaction.prototype.getMaxDate = function() {
@@ -5367,6 +6202,8 @@ define('Transaction',[
     /**
      * suggestEndDate, makes a new moment() object with a suggested end date,
      * already rounded up according to the group.profile settings
+     * @method suggestEndDate
+     * @name Transaction#suggestEndDate
      * @param {Moment} m a suggested end date for this transaction
      * @returns {*}
      */
@@ -5381,6 +6218,8 @@ define('Transaction',[
     //
     /**
      * Checks if the transaction is empty
+     * @method isEmpty
+     * @name Transaction#isEmpty
      * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
      */
     Transaction.prototype.isEmpty = function() {
@@ -5398,6 +6237,8 @@ define('Transaction',[
 
     /**
      * Checks if the transaction is dirty and needs saving
+     * @method
+     * @name Transaction#isDirty
      * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
      */
     Transaction.prototype.isDirty = function() {
@@ -5535,6 +6376,8 @@ define('Transaction',[
 
     /**
      * Clear the transaction from date
+     * @method
+     * @name Transaction#clearFromDate
      * @param skipRead
      * @returns {promise}
      */
@@ -5545,6 +6388,8 @@ define('Transaction',[
 
     /**
      * Sets the transaction from date
+     * @method
+     * @name Transaction#setFromDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -5558,6 +6403,8 @@ define('Transaction',[
 
     /**
      * Clear the transaction to date
+     * @method
+     * @name Transaction#clearToDate
      * @param skipRead
      * @returns {promise}
      */
@@ -5568,6 +6415,8 @@ define('Transaction',[
 
     /**
      * Sets the transaction to date
+     * @method
+     * @name Transaction#setToDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -5581,6 +6430,8 @@ define('Transaction',[
 
     /**
      * Clear the transaction due date
+     * @method
+     * @name Transaction#clearDueDate
      * @param skipRead
      * @returns {promise}
      */
@@ -5591,6 +6442,8 @@ define('Transaction',[
 
     /**
      * Set the transaction due date
+     * @method
+     * @name Transaction#setDueDate
      * @param date
      * @param skipRead
      * @returns {promise}
@@ -5603,6 +6456,8 @@ define('Transaction',[
     // Location setters
     /**
      * Sets the location for this transaction
+     * @method
+     * @name Transaction#setLocation
      * @param locationId
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
@@ -5618,6 +6473,8 @@ define('Transaction',[
 
     /**
      * Clears the location for this transaction
+     * @method
+     * @name Transaction#clearLocation
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
      */
@@ -5634,6 +6491,8 @@ define('Transaction',[
 
     /**
      * Sets the contact for this transaction
+     * @method
+     * @name Transaction#setContact
      * @param contactId
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
@@ -5649,6 +6508,8 @@ define('Transaction',[
 
     /**
      * Clears the contact for this transaction
+     * @method
+     * @name Transaction#clearContact
      * @param skipRead skip parsing the returned json response into the transaction
      * @returns {promise}
      */
@@ -5670,6 +6531,7 @@ define('Transaction',[
     /**
      * addItems; adds a bunch of Items to the transaction using a list of item ids
      * It creates the transaction if it doesn't exist yet
+     * @name Transaction#addItems
      * @method addItems
      * @param items
      * @param skipRead
@@ -5690,6 +6552,7 @@ define('Transaction',[
     /**
      * removeItems; removes a bunch of Items from the transaction using a list of item ids
      * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Transaction#removeItems
      * @method removeItems
      * @param items
      * @param skipRead
@@ -5714,6 +6577,7 @@ define('Transaction',[
     /**
      * clearItems; removes all Items from the transaction
      * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Transaction#clearItems
      * @method clearItems
      * @param skipRead
      * @returns {promise}
@@ -5735,6 +6599,7 @@ define('Transaction',[
 
     /**
      * swapItem; swaps one item for another in a transaction
+     * @name Transaction#swapItem
      * @method swapItem
      * @param fromItem
      * @param toItem
@@ -5772,6 +6637,7 @@ define('Transaction',[
      * @param useAvailabilies (uses items/searchAvailable instead of items/search)
      * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
      * @param skipItems array of item ids that should be skipped
+     * @private
      * @returns {*}
      */
     Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {
@@ -5892,7 +6758,7 @@ define('Transaction',[
  */
 define('User',[
     'jquery',
-    'base'], function ($, Base) {
+    'base'],  /** @lends User */ function ($, Base) {
 
     var DEFAULTS = {
         name: '',
@@ -5908,9 +6774,13 @@ define('User',[
     tmp.prototype = Base.prototype;
 
     /**
+     * @name User
      * @class User
      * @constructor
      * @extends Base
+     * @property {string}  name               - The name
+     * @property {string}  role               - The role (admin, user)
+     * @property {boolean} active             - Is the user active?
      */
     var User = function(opt) {
         var spec = $.extend({
@@ -5951,6 +6821,8 @@ define('User',[
 
     /**
      * Checks if the user is empty
+     * @method
+     * @name User#isEmpty
      * @returns {boolean}
      */
     User.prototype.isEmpty = function() {
@@ -5964,6 +6836,8 @@ define('User',[
 
     /**
      * Checks if the user is dirty and needs saving
+     * @method
+     * @name User#isDirty
      * @returns {boolean}
      */
     User.prototype.isDirty = function() {
@@ -6055,6 +6929,7 @@ define('User',[
  */
 define('../main',[
     'api',
+    'Availability',
     'Attachment',
     'Base',
     'Comment',
@@ -6069,7 +6944,7 @@ define('../main',[
     'helper',
     'Reservation',
     'Transaction',
-    'User'], function(api, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
+    'User'], function(api, Availability, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
 
     var core = {};
 
@@ -6077,6 +6952,7 @@ define('../main',[
     core.api = api;
 
     // Constructors
+    core.Availability = Availability;
     core.Attachment = Attachment;
     core.Base = Base;
     core.Comment = Comment;

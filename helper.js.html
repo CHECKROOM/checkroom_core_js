@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: helper.js</title>
     
     
     
@@ -1089,113 +1089,94 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="helper.js.html">Source: helper.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Helper module
+ * a Helper class which allows you to call helpers based on the settings in group.profile and user.profile
+ * @module helper
+ * @copyright CHECKROOM NV 2015
+ */
+define(["jquery", "moment", "dateHelper"], function ($, moment, DateHelper) {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    var Helper = function(spec) {
+        this.dateHelper = new DateHelper({});
+    };
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    /**
+     * Convenience method that calls the DateHelper.getNow
+     * @returns {*}
+     */
+    Helper.prototype.getNow = function() {
+        return this.dateHelper.getNow();
+    };
 
-...
+    Helper.prototype.roundTimeFrom = function(m) {
+        return this.dateHelper.roundTimeFrom(m);
+    };
 
-//
-// Using datasources
-//
+    Helper.prototype.roundTimeTo = function(m) {
+        return this.dateHelper.roundTimeTo(m);
+    };
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    Helper.prototype.addAverageDuration = function(m) {
+        // TODO: Read the average order duration from the group.profile
+        // add it to the date that was passed
+        return m.clone().add(1, 'day');
+    };
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * getImageCDNUrl gets an image by using the path to a CDN location
+     * @param settings
+     * @param groupId
+     * @param attachmentId
+     * @param size
+     * @returns {string}
+     */
+    Helper.prototype.getImageCDNUrl = function(settings, groupId, attachmentId, size) {
+        // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+        var url = "https://cheqroom-cdn.s3.amazonaws.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
+        if( (size) &&
+            (size.length>0)) {
+            var parts = url.split('.');
+            var ext = parts.pop();  // pop off the extension, we'll change it
+            url = parts.join('.') + "-" + size + ".jpg";  // resized images are always jpg
+        }
+        return url;
+    };
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * getImageUrl gets an image by using the datasource /get style and a mimeType
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
+     * @param ds
+     * @param pk
+     * @param size
+     * @param bustCache
+     * @returns {string}
+     */
+    Helper.prototype.getImageUrl = function(ds, pk, size, bustCache) {
+        var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+        if (size) {
+            url += '&size=' + size;
+        }
+        if (bustCache) {
+            url += '&_bust=' + new Date().getTime();
+        }
+        return url;
+    };
 
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
+    return Helper;
 
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
-
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
-
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
-            });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+});</code></pre>
+        </article>
     </section>
 
 

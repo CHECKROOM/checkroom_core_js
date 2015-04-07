@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: attachment.js</title>
     
     
     
@@ -1089,113 +1089,93 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="attachment.js.html">Source: attachment.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Attachment module
+ * an Attachment class inheriting from KeyValue
+ * @module attachment
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    'jquery',
+    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    var EXT = /(?:\.([^.]+))?$/;
+    var IMAGES = ['jpg', 'png'];
+    var PREVIEWS = ['jpg', 'png', 'doc', 'docx', 'pdf'];
+    var DEFAULTS = {
+        isCover: false,
+        canBeCover: true
+    };
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = KeyValue.prototype;
 
-...
+    /**
+     * @name  Attachment
+     * @class
+     * @property {bool} isCover        is this the cover image of a document
+     * @property {bool} canBeCover     can this attachment be the cover of a document?
+     * @constructor
+     * @extends KeyValue
+     */
+    var Attachment = function(spec) {
+        KeyValue.call(this, spec);
 
-//
-// Using datasources
-//
+        this.isCover = (spec.isCover!=null) ? spec.isCover : DEFAULTS.isCover;
+        this.canBeCover = (spec.canBeCover!=null) ? spec.canBeCover : DEFAULTS.canBeCover;
+    };
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    Attachment.prototype = new tmp();
+    Attachment.prototype.constructor = Attachment;
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Gets the extension part of a filename
+     * @name  Attachment#getExt
+     * @method
+     * @param name
+     * @returns {string}
+     */
+    Attachment.prototype.getExt = function(name) {
+        name = name || this.getName();
+        return EXT.exec(name)[1] || "";
+    };
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Checks if the attachment is an image
+     * @name  Attachment#isImage
+     * @method
+     * @returns {boolean}
+     */
+    Attachment.prototype.isImage = function() {
+        var name = this.getName();
+        var ext = this.getExt(name);
+        return ($.inArray(ext, IMAGES) >= 0);
+    };
 
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Checks if the attachment has a preview
+     * @name  Attachment#hasPreview
+     * @method
+     * @returns {boolean}
+     */
+    Attachment.prototype.hasPreview = function() {
+        var name = this.getName();
+        var ext = this.getExt(name);
+        return ($.inArray(ext, PREVIEWS) >= 0);
+    };
 
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
-
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
-
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
-            });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+    return Attachment;
+});</code></pre>
+        </article>
     </section>
 
 
@@ -1206,7 +1186,7 @@ contact.get()
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Sat Apr 04 2015 15:20:09 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Sat Apr 04 2015 15:20:08 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

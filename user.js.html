@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: user.js</title>
     
     
     
@@ -1089,113 +1089,185 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="user.js.html">Source: user.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The User module
+ * @module user
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    'jquery',
+    'base'],  /** @lends User */ function ($, Base) {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    var DEFAULTS = {
+        name: '',
+        email: '',
+        group: '',  // groupid
+        role: 'user',  // user, admin
+        active: true
+    };
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = Base.prototype;
 
-...
+    /**
+     * @name User
+     * @class User
+     * @constructor
+     * @extends Base
+     * @property {string}  name               - The name
+     * @property {string}  role               - The role (admin, user)
+     * @property {boolean} active             - Is the user active?
+     */
+    var User = function(opt) {
+        var spec = $.extend({
+            fields: ['*','group']
+        }, opt);
+        Base.call(this, spec);
 
-//
-// Using datasources
-//
+        this.helper = spec.helper;
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+        /*
+        from API:
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+        login = StringField(primary_key=True, min_length=4)
+        role = StringField(required=True, choices=USER_ROLE)
+        group = ReferenceField(Group)
+        password = StringField(min_length=4)
+        name = StringField(min_length=4)
+        email = EmailField(required=True, unique=True)
+        lastLogin = DateTimeField()
+        profile = EmbeddedDocumentField(UserProfile)
+        active = BooleanField(default=True)
+        picture = ReferenceField(Attachment)
+        timezone = StringField(default="Etc/GMT")  # stored as
+        */
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+        this.name = spec.name || DEFAULTS.name;
+        this.email = spec.email || DEFAULTS.email;
+        this.role = spec.role || DEFAULTS.role;
+        this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
+    };
 
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
+    User.prototype = new tmp();
+    User.prototype.constructor = User;
 
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
+    //
+    // Document overrides
+    //
 
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
+    /**
+     * Checks if the user is empty
+     * @method
+     * @name User#isEmpty
+     * @returns {boolean}
+     */
+    User.prototype.isEmpty = function() {
+        // We check: name, role
+        return (
+            (Base.prototype.isEmpty.call(this)) &&
+            (this.name==DEFAULTS.name) &&
+            (this.email==DEFAULTS.email) &&
+            (this.role==DEFAULTS.role));
+    };
 
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
+    /**
+     * Checks if the user is dirty and needs saving
+     * @method
+     * @name User#isDirty
+     * @returns {boolean}
+     */
+    User.prototype.isDirty = function() {
+        var isDirty = Base.prototype.isDirty.call(this);
+        if( (!isDirty) &&
+            (this.raw)) {
+            var name = this.raw.name || DEFAULTS.name;
+            var role = this.raw.role || DEFAULTS.role;
+            var email = this.raw.email || DEFAULTS.email;
+            var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
+            return (
+                (this.name!=name) ||
+                (this.email!=email) ||
+                (this.role!=role) ||
+                (this.active!=active)
+            );
+        }
+        return isDirty;
+    };
+
+    /**
+     * Gets an url for a user avatar
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
+     * @param size {string} default null is original size
+     * @param bustCache {boolean}
+     * @returns {string}
+     */
+    User.prototype.getImageUrl = function(size, bustCache) {
+        return (
+            (this.picture!=null) &&
+            (this.picture.length>0)) ?
+            this.helper.getImageCDNUrl({}, "groupid", this.picture, size, bustCache) :
+            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    };
+
+    User.prototype._getDefaults = function() {
+        return DEFAULTS;
+    };
+
+    /**
+     * Writes the user to a json object
+     * @param options
+     * @returns {object}
+     * @private
+     */
+    User.prototype._toJson = function(options) {
+        var data = Base.prototype._toJson.call(this, options);
+        data.name = this.name || DEFAULTS.name;
+        data.email = this.email || DEFAULTS.email;
+        data.group = this.group || DEFAULTS.group;
+        data.role = this.role || DEFAULTS.role;
+        data.active = this.active || DEFAULTS.active;
+        return data;
+    };
+
+    /**
+     * Reads the user from the json object
+     * @param data
+     * @param options
+     * @returns {promise}
+     * @private
+     */
+    User.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Base.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                // Read the group id from group or group._id
+                // depending on the fields
+                that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
+                that.name = data.name || DEFAULTS.name;
+                that.email = data.email || DEFAULTS.email;
+                that.role = data.role || DEFAULTS.role;
+                that.active = (data.active!=null) ? data.active : DEFAULTS.active;
+                $.publish('user.fromJson', data);
+                return data;
             });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+    };
+
+    return User;
+    
+});</code></pre>
+        </article>
     </section>
 
 

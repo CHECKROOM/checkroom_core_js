@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: common.js</title>
     
     
     
@@ -1089,113 +1089,78 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="common.js.html">Source: common.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * Provides some common helper functions
+ * @module common
+ * @copyright CHECKROOM NV 2015
+ */
+define([], /** Common */ function () {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    // Extending the string type with some helpers
+    // ----
+    String.prototype.startsWith = function (str){
+        return this.indexOf(str) == 0;
+    };
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    String.prototype.endsWith = function (str){
+        if (this.length&lt;str.length) {
+            return false;
+        } else {
+            return this.lastIndexOf(str) == (this.length-str.length);
+        }
+    };
 
-...
+    String.prototype.pluralize = function (count, suffix) {
+        if( (this == 'is') && (count!=1)) {
+            return 'are';
+        } else if (this.endsWith('s')) {
+            suffix = suffix || 'es';
+            return (count==1) ? this : this+suffix;
+        } else if (this.endsWith('y')) {
+            suffix = suffix || 'ies';
+            return (count==1) ? this : this.substr(0, this.length-1) + suffix;
+        } else {
+            suffix = suffix || 's';
+            return (count==1) ? this : this+suffix;
+        }
+    };
 
-//
-// Using datasources
-//
+    String.prototype.capitalize = function() {
+        return this.charAt(0).toUpperCase() + this.slice(1);
+    };
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    String.prototype.truncate = function(len){
+        len = (len!=null) ? len : 25;
+        var re = this.match(RegExp("^.{0,"+len+"}[\S]*"));
+        var l = re[0].length;
+        re = re[0].replace(/\s$/,'');
+        if(l &lt; this.length) {
+            re = re + "&hellip;";
+        }
+        return re;
+    };
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+    // Other helpers
+    // ----
+    return {
+        getUrlParam: function(name) {
+            name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+            var regexS = "[\\?&]"+name+"=([^&#]*)";
+            var regex = new RegExp( regexS );
+            var results = regex.exec( window.location.href );
+            return (results) ? decodeURIComponent(results[1].replace(/\+/g, " ")) : null;
+        }
+    };
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
-
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
-
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
-
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
-
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
-            });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+});</code></pre>
+        </article>
     </section>
 
 

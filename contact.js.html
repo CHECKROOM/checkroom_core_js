@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: contact.js</title>
     
     
     
@@ -1089,113 +1089,185 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="contact.js.html">Source: contact.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Contact module
+ * Contact class inherits from Base so it supports KeyValues (Attachment, Comment)
+ * @module contact
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    'jquery',
+    'base'], /** @lends Contact */ function ($, Base) {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    var DEFAULTS = {
+        name: "",
+        company: "",
+        phone: "",
+        email: ""
+    };
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = Base.prototype;
 
-...
+    /**
+     * Contact class
+     * @name  Contact
+     * @class
+     * @constructor
+     * @extends Base
+     */
+    var Contact = function(opt) {
+        var spec = $.extend({
+            fields: ['*'],
+            crtype: 'cheqroom.types.customer'
+        }, opt);
+        Base.call(this, spec);
 
-//
-// Using datasources
-//
+        this.name = spec.name || DEFAULTS.name;
+        this.company = spec.company || DEFAULTS.company;
+        this.phone = spec.phone || DEFAULTS.phone;
+        this.email = spec.email || DEFAULTS.email;
+    };
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    Contact.prototype = new tmp();
+    Contact.prototype.constructor = Contact;
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+    //
+    // Specific validators
+    /**
+     * Checks if name is valid
+     * @name Contact#isValidName
+     * @method
+     * @return {Boolean} [description]
+     */
+    Contact.prototype.isValidName = function() {
+        // TODO
+        return ($.trim(this.name).length>=2);
+    };
+    
+    /**
+     * Checks if company is valid
+     * @name  Contact#isValidCompany
+     * @method
+     * @return {Boolean} [description]
+     */
+    Contact.prototype.isValidCompany = function() {
+        // TODO
+        return ($.trim(this.company).length>=2);
+    };
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Checks if phone is valid
+     * @name  Contact#isValidPhone
+     * @method
+     * @return {Boolean} [description]
+     */
+    Contact.prototype.isValidPhone = function() {
+        // TODO
+        return ($.trim(this.phone).length>=2);
+    };
 
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Check is email is valid
+     * @name  Contact#isValidEmail
+     * @method
+     * @return {Boolean} [description]
+     */
+    Contact.prototype.isValidEmail = function() {
+        // TODO
+        return ($.trim(this.email).length>=2);
+    };
 
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
+    //
+    // Base overrides
+    //
 
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
+    /**
+     * Checks if the contact has any validation errors
+     * @name Contact#isValid
+     * @method 
+     * @returns {boolean}
+     * @override
+     */
+    Contact.prototype.isValid = function() {
+        return this.isValidName() &&
+            this.isValidCompany() &&
+            this.isValidPhone() &&
+            this.isValidEmail();
+    };
 
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
+    /**
+     * Checks if the contact is empty
+     * @returns {boolean}
+     * @override
+     */
+    Contact.prototype.isEmpty = function() {
+        return (
+            (Base.prototype.isEmpty.call(this)) &&
+            (this.name==DEFAULTS.name) &&
+            (this.company==DEFAULTS.company) &&
+            (this.phone==DEFAULTS.phone) &&
+            (this.email==DEFAULTS.email));
+    };
+
+    /**
+     * Checks if the contact is dirty and needs saving
+     * @returns {boolean}
+     * @override
+     */
+    Contact.prototype.isDirty = function() {
+        var isDirty = Base.prototype.isDirty.call(this);
+        if( (!isDirty) &&
+            (this.raw)) {
+            isDirty = (
+                    (this.name!=this.raw.name)||
+                    (this.company!=this.raw.company)||
+                    (this.phone!=this.raw.phone)||
+                    (this.email!=this.raw.email)
+                );
+        }
+        return isDirty;
+    };
+
+    Contact.prototype._getDefaults = function() {
+        return DEFAULTS;
+    };
+
+    Contact.prototype._toJson = function(options) {
+        var data = Base.prototype._toJson.call(this, options);
+        data.name = this.name || DEFAULTS.name;
+        data.company = this.company || DEFAULTS.company;
+        data.phone = this.phone || DEFAULTS.phone;
+        data.email = this.email || DEFAULTS.email;
+        return data;
+    };
+
+    Contact.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Base.prototype._fromJson.call(this, data, options)
+            .then(function(data) {
+                that.name = data.name || DEFAULTS.name;
+                that.company = data.company || DEFAULTS.company;
+                that.phone = data.phone || DEFAULTS.phone;
+                that.email = data.email || DEFAULTS.email;
+                $.publish('contact.fromJson', data);
+                return data;
             });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+    };
+
+    return Contact;
+    
+});</code></pre>
+        </article>
     </section>
 
 

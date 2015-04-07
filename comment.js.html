@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: comment.js</title>
     
     
     
@@ -1089,113 +1089,93 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="comment.js.html">Source: comment.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Comment module
+ * a helper class that can read a Comment KeyValue
+ * Comment inherits from KeyValue and adds some specifics to it
+ * @module comment
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    'jquery',
+    'keyvalue'],/** Comment */ function ($, KeyValue) {
+
+    var KEY = "cheqroom.Comment";
+    var DEFAULTS = {
+    };
+
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = KeyValue.prototype;
+
+    /**
+     * @name  Comment
+     * @class
+     * @constructor
+     * @extends KeyValue
+     */
+    var Comment = function(spec) {
+        KeyValue.call(this, spec);
+    };
+
+    Comment.prototype = new tmp();
+    Comment.prototype.constructor = Comment;
+
+//    Comment.prototype._fromJson = function(json) {
+//        return KeyValue.prototype._fromJson.call(this, json)
+//            .then(function() {
+//                this.comment(json.value || DEFAULTS.comment);
+//            });
+//    };
 //
-// Authenticating via username and password
+//    Comment.prototype.isEmpty = function() {
+//        // Comments have a special call for determining if they're empty or not
+//        var comment = $.trim(this.comment());
+//        return (comment.length == 0);
+//    };
 //
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
-
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
-
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
-
-...
-
+//    Comment.prototype.canDelete = function(by) {
+//        // TODO: Comments can only be deleted by the same user that made them
+//        return true;
+//    };
 //
-// Using datasources
+//    Comment.prototype.canEdit = function(by) {
+//        // TODO: Comments can only be edited by the same user that made them
+//        return true;
+//    };
 //
-
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
-
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
-
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
-
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
-
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
-
+//    /**
+//    Managing document KeyValues
+//     */
+//    Comment.prototype.addComment = function() {
+//        if (this.isEmpty()) {
+//            return $.Deferred().reject(new Error("addComment cannot add empty comment"));
+//        }
+//        return KeyValue.prototype._addKeyValue(KEY, this.comment(), 'string');
+//    };
 //
-// Using models
+//    Comment.prototype.updateComment = function() {
+//        if (this.isEmpty()) {
+//            return $.Deferred().reject(new Error("updateComment cannot update to empty comment"));
+//        }
+//        return KeyValue.prototype._updateKeyValue(KEY, this.comment(), 'string');
+//    };
 //
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
+//    Comment.prototype.deleteComment = function() {
+//        return KeyValue.prototype._removeKeyValue();
+//    };
 
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
-            });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+    return Comment;
+});</code></pre>
+        </article>
     </section>
 
 

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: order.js</title>
     
     
     
@@ -1089,113 +1089,389 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="order.js.html">Source: order.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Order module
+ * @module module
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    "jquery",
+    "api",
+    "transaction"], /** @lends Transaction */  function ($, api, Transaction) {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = Transaction.prototype;
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    /**
+     * @name Order
+     * @class Order
+     * @constructor
+     * @extends Transaction
+     */
+    var Order = function(opt) {
+        var spec = $.extend({
+            crtype: "cheqroom.types.order",
+            fields: ["*"]
+        }, opt);
+        Transaction.call(this, spec);
+    };
 
-...
+    Order.prototype = new tmp();
+    Order.prototype.constructor = Order;
 
-//
-// Using datasources
-//
+    //
+    // Date helpers; we"ll need these for sliding from / to dates during a long user session
+    //
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Overwrite only getMinDate, max date stays one year from now
+     * @method
+     * @name Order#getMindDate
+     * @returns {*}
+     */
+    Order.prototype.getMinDate = function() {
+        // Reservations can only start from the next timeslot at the earliest
+        var profileHelper = this._getHelper();
+        var now = profileHelper.getNow();
+        var next = profileHelper.roundTimeFrom(now);
+        return next;
+    };
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+    //
+    // Document overrides
+    //
+    Order.prototype._toJson = function(options) {
+        var data = Transaction.prototype._toJson.call(this, options);
+        data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
+        data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
+        return data;
+    };
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
-
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
-
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
-
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
-
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
+    Order.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Transaction.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
+                that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
+                that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
+                $.publish("order.fromJson", data);
+                return data;
             });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+    };
+
+    //
+    // Helpers
+    //
+    /**
+     * Gets a friendly order duration or empty string
+     * @method
+     * @name Order#getFriendlyDuration
+     * @returns {string}
+     */
+    Order.prototype.getFriendlyDuration = function() {
+        var duration = this.getDuration();
+        return (duration!=null) ? this._getDateHelper().getFriendlyDuration(duration) : "";
+    };
+
+    /**
+     * Gets a moment duration object
+     * @method
+     * @name Order#getDuration
+     * @returns {*}
+     */
+    Order.prototype.getDuration = function() {
+        if (this.from!=null) {
+            var to = (this.status=="closed") ? this.to : this.due;
+            if (to) {
+                return moment.duration(to - this.from);
+            }
+        }
+        return null;
+    };
+
+    /**
+     * Checks if a PDF document can be generated
+     * @method
+     * @name Order#canGenerateAgreement
+     * @returns {boolean}
+     */
+    Order.prototype.canGenerateAgreement = function() {
+        return (this.status=="open") || (this.status=="closed");
+    };
+
+    /**
+     * Checks if order can be checked in
+     * @method
+     * @name Order#canCheckin
+     * @returns {boolean}
+     */
+    Order.prototype.canCheckin = function() {
+        return (this.status=="open");
+    };
+
+    /**
+     * Checks if order can be checked out
+     * @method
+     * @name Order#canCheckout
+     * @returns {boolean}
+     */
+    Order.prototype.canCheckout = function() {
+        return (
+            (this.status=="creating") &&
+            (this.location) &&
+            (this.contact) &&
+            (this.due) &&
+            (this.items) &&
+            (this.items.length));
+    };
+
+    /**
+     * Checks if order can undo checkout
+     * @method
+     * @name Order#canUndoCheckout
+     * @returns {boolean}
+     */
+    Order.prototype.canUndoCheckout = function() {
+        return (this.status=="open");
+    };
+
+    //
+    // Base overrides
+    //
+
+    //
+    // Transaction overrides
+    //
+
+    /**
+     * Sets the Order from and due date in a single call
+     * @method
+     * @name Order#setFromDueDate
+     * @param from
+     * @param due (optional) if null, we'll take the default average checkout duration as due date
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.setFromDueDate = function(from, due, skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from / due date, status is "+this.status));
+        }
+
+        var that = this;
+        var roundedFromDate = this._getHelper().roundTimeFrom(from);
+        var roundedDueDate = (due) ?
+            this._getHelper().roundTimeTo(due) :
+            this._getHelper().addAverageDuration(roundedFromDate);
+
+
+        return this._checkFromDueDate(roundedFromDate, roundedDueDate)
+            .then(function() {
+                that.from = roundedFromDate;
+                that.due = roundedDueDate;
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * Sets the Order from date
+     * @method
+     * @name Order#setFromDate
+     * @param date
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.setFromDate = function(date, skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from date, status is "+this.status));
+        }
+
+        var that = this;
+        var roundedFromDate = this._getHelper().roundTimeFrom(date);
+
+        return this._checkFromDueDate(roundedFromDate, this.due)
+            .then(function() {
+                that.from = roundedFromDate;
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * Clears the order from date
+     * @method
+     * @name Order#clearFromDate
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.clearFromDate = function(skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear order from date, status is "+this.status));
+        }
+
+        this.from = null;
+
+        return this._handleTransaction(skipRead);
+    };
+
+    /**
+     * Sets the order due date
+     * @method
+     * @name Order#setDueDate
+     * @param due
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.setDueDate = function(due, skipRead) {
+        // Cannot change the to-date of a reservation that is not in status "creating"
+        if( (this.status!="creating") &&
+            (this.status!="open")){
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order due date, status is "+this.status));
+        }
+
+        // The to date must be:
+        // 1) at least 30 minutes into the feature
+        // 2) at least 15 minutes after the from date (if set)
+        var that = this;
+        var roundedDueDate = this._getHelper().roundTimeTo(due);
+
+        return this._checkFromDueDate(this.from, roundedDueDate)
+            .then(function() {
+                that.due = roundedDueDate;
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * Clears the order due date
+     * @method
+     * @name Order#clearDueDate
+     * @param skipRead
+     * @returns {*}
+     */
+    Order.prototype.clearDueDate = function(skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear order due date, status is "+this.status));
+        }
+
+        this.due = null;
+
+        return this._handleTransaction(skipRead);
+    };
+
+    Order.prototype.setToDate = function(date, skipRead) {
+        throw "Order.setToDate not implemented, it is set during order close";
+    };
+
+    Order.prototype.clearToDate = function(date, skipRead) {
+        throw "Order.clearToDate not implemented, it is set during order close";
+    };
+
+    //
+    // Business logic calls
+    //
+    /**
+     * Searches for items that could match this order
+     * @method
+     * @name Order#searchItems
+     * @param params
+     * @param useAvailabilies
+     * @param onlyUnbooked
+     * @param skipItems
+     * @returns {*}
+     */
+    Order.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
+        return this._searchItems(params, "available", useAvailabilies, onlyUnbooked, skipItems || this.items);
+    };
+
+    /**
+     * Checks in the order
+     * @method
+     * @name Order#checkin
+     * @param itemIds
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.checkin = function(itemIds, skipRead) {
+        return this._doApiCall({method: "checkin", items:itemIds, skipRead: skipRead});
+    };
+
+    /**
+     * Checks out the order
+     * @method
+     * @name Order#checkout
+     * @param skipRead
+     * @returns {*}
+     */
+    Order.prototype.checkout = function(skipRead) {
+        return this._doApiCall({method: "checkout", skipRead: skipRead});
+    };
+
+    /**
+     * Undoes the order checkout
+     * @method
+     * @name Order#undoCheckout
+     * @param skipRead
+     * @returns {*}
+     */
+    Order.prototype.undoCheckout = function(skipRead) {
+        return this._doApiCall({method: "undoCheckout", skipRead: skipRead});
+    };
+
+    /**
+     * Generates a PDF agreement for the order
+     * @method
+     * @name Order#generateAgreement
+     * @param skipRead
+     * @returns {*}
+     */
+    Order.prototype.generateAgreement = function(skipRead) {
+        return this._doApiCall({method: "generateAgreement", skipRead: skipRead});
+    };
+
+    //
+    // Implementation
+    //
+    Order.prototype._checkFromDueDate = function(from, due) {
+        var dateHelper = this._getDateHelper();
+        var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
+        var roundedDueDate = due; //(due) ? this._getHelper().roundTimeTo(due) : null;
+
+        if (roundedFromDate && roundedDueDate) {
+            return $.when(
+                this._checkDateBetweenMinMax(roundedFromDate),
+                this._checkDateBetweenMinMax(roundedDueDate)
+            )
+                .then(function(fromRes, dueRes) {
+                    var interval = dateHelper.roundMinutes;
+                    if (roundedDueDate.diff(roundedFromDate, "minutes") &lt; interval) {
+                        return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from date, after (or too close to) to date "+roundedDueDate.toJSONDate()));
+                    }
+                    if (roundedFromDate.diff(roundedDueDate, "minutes") > interval) {
+                        return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order due date, before (or too close to) from date "+roundedFromDate.toJSONDate()));
+                    }
+                });
+        } else if (roundedFromDate) {
+            return this._checkDateBetweenMinMax(roundedFromDate);
+        } else if (roundedDueDate) {
+            return this._checkDateBetweenMinMax(roundedDueDate);
+        } else {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot from/due date, both are null"));
+        }
+    };
+
+    return Order;
+    
+});
+</code></pre>
+        </article>
     </section>
 
 

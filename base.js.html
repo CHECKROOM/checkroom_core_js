@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Index</title>
+    <title>Source: base.js</title>
     
     
     
@@ -1089,113 +1089,437 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.html">Index</h1>
+        <h1 class="page-title" data-filename="base.js.html">Source: base.js</h1>
         
 
 
     
-
-
-    <h3> </h3>
-
-
-
-
-
-
-
-
-    
-
-
-
-
     <section>
-        <article class="readme"><h1>CHECKROOM CORE JS</h1>
-<p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
-//
-// Authenticating via username and password
-//
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-var userName = &quot;&quot;;
-var password = &quot;&quot;;
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Base module
+ * a base class for all documents that have: comments, attachments, other keyvalues
+ * it inherits from Document to support some basic actions
+ * @copyright CHECKROOM NV 2015
+ * @module base
+ */
+define([
+    'jquery',
+    'common',
+    'api',
+    'document',
+    'comment',
+    'attachment',
+    'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
-var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
-var authUser = null;
+    // Some constant values
+    var COMMENT = "cheqroom.Comment",
+        ATTACHMENT = "cheqroom.Attachment",
+        IMAGE = "cheqroom.prop.Image",
+        IMAGE_OTHER = "cheqroom.attachment.Image",
+        DEFAULTS = {
+            id: "",
+            modified: null,
+            cover: null,
+            comments: [],
+            attachments: [],
+            keyValues: []
+        };
 
-auth.authenticate(userName, password)
-    .done(function(data) {
-        authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-    });
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function(){};
+    tmp.prototype = Document.prototype;
 
-...
+    /**
+     * @name  Base
+     * @class
+     * @constructor
+     * @extends Document
+     */
+    var Base = function(opt) {
+        var spec = $.extend({}, opt);
+        Document.call(this, spec);
 
-//
-// Using datasources
-//
+        this.crtype = spec.crtype;                                              // e.g. cheqroom.types.customer
+        this.modified = spec.modified || DEFAULTS.modified;                     // last modified timestamp in momentjs
+        this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
+        this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
+        this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();          // keyValues array
+        this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
+    };
 
-// Listing open orders
-var dsOrders = new cr.api.ApiDataSource({collection: 'orders', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsOrders.list(&quot;open_orders&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    Base.prototype = new tmp();
+    Base.prototype.constructor = Base;
 
-// Finding a contact by name
-var dsContacts = new cr.api.ApiDataSource({collection: 'customers' /* !! */, ajax: ajax, user: authUser, urlApi: baseUrl});
-dsContacts.search({query: &quot;john&quot;})
-    .done(function(data) {
-        console.log(data);
-    });
+    //
+    // Document overrides
+    //
+    Base.prototype._getDefaults = function() {
+        return DEFAULTS;
+    };
 
-// Finding an item by id
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.get(&quot;ANY-ITEM-ID&quot;)
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Checks if the object is empty
+     * after calling reset() isEmpty() should return true
+     * We'll only check for comments, attachments, keyValues here
+     * @name  Base#isEmpty
+     * @method
+     * @returns {boolean}
+     * @override
+     */
+    Base.prototype.isEmpty = function() {
+        return (
+            ((this.comments==null) || (this.comments.length==0)) &&
+                ((this.attachments==null) || (this.attachments.length==0)) &&
+                ((this.keyValues==null) || (this.keyValues.length==0))
+            );
+    };
 
-// Finding an availability of an item
-var dsItems = new cr.api.ApiDataSource({collection: 'items', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsItems.call(&quot;ANY-ITEM-ID&quot;, &quot;getAvailability&quot;, {fromDate: moment().add(2, 'days'), toDate: moment().add(3, 'days')})
-    .done(function(data) {
-        console.log(data);
-    });
+    /**
+     * Checks via the api if we can delete the document
+     * @name  Base#canDelete
+     * @method
+     * @returns {promise}
+     * @override
+     */
+    Base.prototype.canDelete = function() {
+        // Documents can only be deleted when they have a pk
+        if (this.existsInDb()) {
+            return this.ds.call(this.id, 'canDelete')
+                .then(function(resp) {
+                    return resp.result;
+                });
+        } else {
+            return $.Deferred().resolve(false);
+        }
+    };
 
-var dsAvailabilities = new cr.api.ApiDataSource({collection: 'availabilities', ajax: ajax, user: authUser, urlApi: baseUrl});
-dsAvailabilities.search({item: 'ITEM-ID'})
-    .done(function(resp) {
-        console.log(resp);
-    });
+    // Comments
+    // ----
+    /**
+     * Adds a comment by string
+     * @name  Base#addComment
+     * @method
+     * @param comment
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.addComment = function(comment, skipRead) {
+        return this.addKeyValue(COMMENT, comment, "string", skipRead);
+    };
 
-//
-// Using models
-//
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
-item.get()
-    .done(function() {
-        console.log(item.name, item.status);
-    });
+    /**
+     * Updates a comment by id
+     * @name  Base#updateComment
+     * @method
+     * @param id
+     * @param comment
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.updateComment = function(id, comment, skipRead) {
+        return this.updateKeyValue(id, COMMENT, comment, "string", skipRead);
+    };
 
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
-contact.get()
-    .done(function() {
-        contact.company = &quot;New Company Name&quot;;
-        contact.update()
-            .done(function() {
-                console.log(contact.name, contact.company);
+    /**
+     * Deletes a Comment by id
+     * @name  Base#deleteComment
+     * @method
+     * @param id
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.deleteComment = function(id, skipRead) {
+        return this.removeKeyValue(id, skipRead);
+    };
+
+    // KeyValue stuff
+    // ----
+    /**
+     * Adds a key value
+     * @name  Base#addKeyValue
+     * @method
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.addKeyValue = function(key, value, kind, skipRead) {
+        return this._doApiCall({
+            method: 'addKeyValue',
+            params: {key: key, value: value, kind: kind},
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Updates a keyvalue by id
+     * @name  Base#updateKeyValue
+     * @method
+     * @param id
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.updateKeyValue = function(id, key, value, kind, skipRead) {
+        return this._doApiCall({
+            method: 'updateKeyValue',
+            params: {id: id, key: key, value: value, kind: kind},
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Removes a keyvalue by id
+     * @name  Base#removeKeyValue
+     * @method
+     * @param id
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.removeKeyValue = function(id, skipRead) {
+        return this._doApiCall({
+            method: 'removeKeyValue',
+            params: {id: id},
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Sets a keyvalue by id
+     * @name  Base#setKeyValue
+     * @method
+     * @param id
+     * @param key
+     * @param value
+     * @param kind
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setKeyValue = function(id, key, value, kind, skipRead) {
+        var params = {key: key, value: value, kind: kind};
+        if( (id!=null) &&
+            (id.length>0)) {
+            params.id = id;
+        }
+        return this._doApiCall({
+            method: 'setKeyValue',
+            params: params,
+            skipRead: skipRead
+        });
+    };
+
+    // Attachments stuff
+    // ----
+    /**
+     * changes the cover image to another Attachment
+     * @name  Base#setCover
+     * @method
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setCover = function(att, skipRead) {
+        return this._doApiCall({
+            method: 'setCover',
+            params: {kvId: att.id},
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * attaches an image Attachment file, shortcut to attach
+     * @name  Base#attachImage
+     * @method
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.attachImage = function(att, skipRead) {
+        return this.attach(att, IMAGE, skipRead);
+    };
+
+    /**
+     * attaches an Attachment file, shortcut to attach
+     * @name  Base#attachFile
+     * @method
+     * @param att
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.attachFile = function(att, skipRead) {
+        return this.attach(att, ATTACHMENT, skipRead);
+    };
+
+    /**
+     * attaches an Attachment object
+     * @name  Base#attach
+     * @method
+     * @param att
+     * @param key
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.attach = function(att, key, skipRead) {
+        if (this.existsInDb()) {
+            return this._doApiCall({
+                method: 'attach',
+                params: {attachments: [att._id], key: key},
+                skipRead: skipRead
             });
-    });</code></pre>
-<hr>
-<p>Copyright CHECKROOM NV 2015</p></article>
+        } else {
+            return $.Deferred().reject(new api.ApiError('Cannot attach attachment, id is empty or null'));
+        }
+    };
+
+    /**
+     * detaches an Attachment by kvId (guid)
+     * @name  Base#detach
+     * @method
+     * @param keyId
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.detach = function(keyId, skipRead) {
+        if (this.existsInDb()) {
+            return this._doApiCall({
+                method: 'detach',
+                params: {attachments: [keyId], kvId: keyId},
+                skipRead: skipRead
+            });
+        } else {
+            return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
+        }
+    };
+
+    // toJson, fromJson
+    // ----
+
+    /**
+     * _toJson, makes a dict of params to use during create / update
+     * @param options
+     * @returns {{}}
+     * @private
+     */
+    Base.prototype._toJson = function(options) {
+        return Document.prototype._toJson.call(this, options);
+    };
+
+    /**
+     * _fromJson: read some basic information
+     * @method
+     * @param {object} data the json response
+     * @param {object} options dict
+     * @private
+     */
+    Base.prototype._fromJson = function(data, options) {
+        var that = this;
+        return Document.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                that.modified = data.modified || DEFAULTS.modified;
+                return that._fromKeyValuesJson(data, options);
+            });
+    };
+
+    /**
+     * _fromKeyValuesJson: reads the data.keyValues
+     * @method
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Base.prototype._fromKeyValuesJson = function(data, options) {
+        // Read only the .keyValues part of the response
+        var obj = null;
+        var that = this;
+
+        this.comments = DEFAULTS.comments.slice();
+        this.attachments = DEFAULTS.attachments.slice();
+        this.keyValues = DEFAULTS.keyValues.slice();
+        this.cover = data.cover || DEFAULTS.cover;
+
+        if( (data.keyValues) &&
+            (data.keyValues.length)) {
+
+            // Reverse sorting with underscorejs
+            //var kvs = _.sortBy(data.keyValues, function(kv) { return kv.modified});
+            //kvs.reverse();
+
+            // TODO?
+            // Sort so the newest keyvalues are first in the array
+            var kvs = data.keyValues.sort(function(a, b) {
+                return b.modified > a.modified;
+            });
+
+            $.each(kvs, function(i, kv) {
+                switch(kv.key) {
+                    case COMMENT:
+                        obj = that._getComment(kv, options);
+                        if (obj) {
+                            that.comments = that.comments || [];
+                            that.comments.push(obj);
+                        }
+                        break;
+                    case IMAGE:
+                    case ATTACHMENT:
+                    case IMAGE_OTHER:
+                        obj = that._getAttachment(kv, options);
+                        if (obj) {
+                            that.attachments = that.attachments || [];
+                            that.attachments.push(obj);
+                        }
+                        break;
+                    default:
+                        obj = that._getKeyValue(kv, options);
+                        if (obj) {
+                            that.keyValues = that.keyValues || [];
+                            that.keyValues.push(obj);
+                        }
+                        break;
+                }
+            });
+        }
+
+        return $.Deferred().resolve(data);
+    };
+
+    Base.prototype._getComment = function(kv, options) {
+        var spec = $.extend({
+                ds: this.ds,
+                fields: this.fields},
+            options || {},
+            kv);
+        return new Comment(spec);
+    };
+
+    Base.prototype._getAttachment = function(kv, options) {
+        var spec = $.extend({
+                ds: this.ds,
+                fields: this.fields},
+            options || {},  // can contain; isCover, canBeCover
+            kv);
+        return new Attachment(spec);
+    };
+
+    Base.prototype._getKeyValue = function(kv, options) {
+        var spec = $.extend({
+                ds: this.ds,
+                fields: this.fields},
+            options || {},
+            kv);
+        return new KeyValue(spec);
+    };
+
+    return Base;
+
+});
+</code></pre>
+        </article>
     </section>
 
 

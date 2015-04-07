@@ -2,6 +2,10 @@
 
 A JavaScript wrapper around the CHEQROOM REST API
 
+## Repo
+
+https://github.com/CHECKROOM/checkroom_core_js
+
 ## Installation
 
 Install `sudo npm install` required npm packages

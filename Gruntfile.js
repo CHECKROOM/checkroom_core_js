@@ -81,6 +81,12 @@ module.exports = function(grunt){
                     base: '.'
                 }
             }
+        },
+        'gh-pages': {
+            options: {
+                base: 'doc'
+            },
+            src: ['**/*']
         }
     });
 
@@ -91,6 +97,7 @@ module.exports = function(grunt){
     grunt.loadNpmTasks('grunt-contrib-connect');
     grunt.loadNpmTasks('grunt-contrib-clean');
     grunt.loadNpmTasks("grunt-jsdoc");
+    grunt.loadNpmTasks('grunt-gh-pages');
 
     // this will generate the docs by typing "grunt docs" on the command line
     grunt.registerTask("docs", ["clean:jsdoc","jsdoc"]);

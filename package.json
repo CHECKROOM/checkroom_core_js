@@ -15,6 +15,7 @@
     "grunt-contrib-qunit": "^0.5.2",
     "grunt-contrib-requirejs": "^0.4.4",
     "grunt-contrib-uglify": "^0.7.0",
+    "grunt-gh-pages": "^0.10.0",
     "grunt-jsdoc": "^0.5.8",
     "jaguarjs-jsdoc": "0.0.1"
   },

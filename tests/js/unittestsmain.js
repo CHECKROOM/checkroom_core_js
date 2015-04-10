@@ -45,11 +45,11 @@ require([
         locationTest.run();
         */
 
-        itemTest.run();
+        //itemTest.run();
         //orderTest.run();
         //reservationTest.run();
-        //userTest.run();
-        availabilityTest.run();
+        userTest.run();
+        //availabilityTest.run();
 
         // start QUnit.
         QUnit.start();

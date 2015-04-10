@@ -2449,6 +2449,27 @@ define('Base',[
     // Attachments stuff
     // ----
     /**
+     * Gets an url for a user avatar
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
+     * @param size {string} default null is original size
+     * @param groupId {string} Group primary key (only when you're passing an attachment)
+     * @param att {string} attachment primary key, by default we take the cover
+     * @param bustCache {boolean}
+     * @returns {string}
+     */
+    Base.prototype.getImageUrl = function(size, groupId, att, bustCache) {
+        var attachment = att || this.cover;
+        return (
+            (attachment!=null) &&
+            (attachment.length>0)) ?
+            this.helper.getImageCDNUrl(groupId, attachment, size) :
+            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    };
+
+    /**
      * changes the cover image to another Attachment
      * @name  Base#setCover
      * @method
@@ -2950,6 +2971,27 @@ define('base',[
 
     // Attachments stuff
     // ----
+    /**
+     * Gets an url for a user avatar
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
+     * @param size {string} default null is original size
+     * @param groupId {string} Group primary key (only when you're passing an attachment)
+     * @param att {string} attachment primary key, by default we take the cover
+     * @param bustCache {boolean}
+     * @returns {string}
+     */
+    Base.prototype.getImageUrl = function(size, groupId, att, bustCache) {
+        var attachment = att || this.cover;
+        return (
+            (attachment!=null) &&
+            (attachment.length>0)) ?
+            this.helper.getImageCDNUrl(groupId, attachment, size) :
+            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    };
+
     /**
      * changes the cover image to another Attachment
      * @name  Base#setCover
@@ -5560,13 +5602,22 @@ define('Order',[
     
 });
 
+define('settings',[], function () {
+
+    return {
+        cdn: "https://cheqroom-cdn.s3.amazonaws.com",
+        amazonBucket: "app"
+    };
+
+});
+
 /**
  * The Helper module
  * a Helper class which allows you to call helpers based on the settings in group.profile and user.profile
  * @module helper
  * @copyright CHECKROOM NV 2015
  */
-define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHelper) {
+define('helper',["jquery", "moment", "dateHelper", "settings"], function ($, moment, DateHelper, settings) {
 
     var Helper = function(spec) {
         this.dateHelper = new DateHelper({});
@@ -5596,15 +5647,14 @@ define('helper',["jquery", "moment", "dateHelper"], function ($, moment, DateHel
 
     /**
      * getImageCDNUrl gets an image by using the path to a CDN location
-     * @param settings
      * @param groupId
      * @param attachmentId
      * @param size
      * @returns {string}
      */
-    Helper.prototype.getImageCDNUrl = function(settings, groupId, attachmentId, size) {
+    Helper.prototype.getImageCDNUrl = function(groupId, attachmentId, size) {
         // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-        var url = "https://cheqroom-cdn.s3.amazonaws.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
+        var url = settings.cdn + "/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
         if( (size) &&
             (size.length>0)) {
             var parts = url.split('.');
@@ -6771,6 +6821,7 @@ define('User',[
         name: '',
         email: '',
         group: '',  // groupid
+        picture: '',
         role: 'user',  // user, admin
         active: true
     };
@@ -6791,7 +6842,7 @@ define('User',[
      */
     var User = function(opt) {
         var spec = $.extend({
-            fields: ['*','group']
+            fields: ['*', 'group', 'picture']
         }, opt);
         Base.call(this, spec);
 
@@ -6814,6 +6865,7 @@ define('User',[
         */
 
         this.name = spec.name || DEFAULTS.name;
+        this.picture = spec.picture || DEFAULTS.picture;
         this.email = spec.email || DEFAULTS.email;
         this.role = spec.role || DEFAULTS.role;
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
@@ -6879,7 +6931,7 @@ define('User',[
         return (
             (this.picture!=null) &&
             (this.picture.length>0)) ?
-            this.helper.getImageCDNUrl({}, "groupid", this.picture, size, bustCache) :
+            this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) :
             this.helper.getImageUrl(this.ds, this.id, size, bustCache);
     };
 
@@ -6918,6 +6970,7 @@ define('User',[
                 // depending on the fields
                 that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
                 that.name = data.name || DEFAULTS.name;
+                that.picture = data.picture || DEFAULTS.picture;
                 that.email = data.email || DEFAULTS.email;
                 that.role = data.role || DEFAULTS.role;
                 that.active = (data.active!=null) ? data.active : DEFAULTS.active;

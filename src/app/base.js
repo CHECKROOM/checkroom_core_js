@@ -218,6 +218,27 @@ define([
     // Attachments stuff
     // ----
     /**
+     * Gets an url for a user avatar
+     * 'XS': (64, 64),
+     * 'S': (128, 128),
+     * 'M': (256, 256),
+     * 'L': (512, 512)
+     * @param size {string} default null is original size
+     * @param groupId {string} Group primary key (only when you're passing an attachment)
+     * @param att {string} attachment primary key, by default we take the cover
+     * @param bustCache {boolean}
+     * @returns {string}
+     */
+    Base.prototype.getImageUrl = function(size, groupId, att, bustCache) {
+        var attachment = att || this.cover;
+        return (
+            (attachment!=null) &&
+            (attachment.length>0)) ?
+            this.helper.getImageCDNUrl(groupId, attachment, size) :
+            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    };
+
+    /**
      * changes the cover image to another Attachment
      * @name  Base#setCover
      * @method

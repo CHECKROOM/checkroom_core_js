@@ -4,7 +4,7 @@
  * @module helper
  * @copyright CHECKROOM NV 2015
  */
-define(["jquery", "moment", "dateHelper"], function ($, moment, DateHelper) {
+define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, DateHelper, settings) {
 
     var Helper = function(spec) {
         this.dateHelper = new DateHelper({});
@@ -34,15 +34,14 @@ define(["jquery", "moment", "dateHelper"], function ($, moment, DateHelper) {
 
     /**
      * getImageCDNUrl gets an image by using the path to a CDN location
-     * @param settings
      * @param groupId
      * @param attachmentId
      * @param size
      * @returns {string}
      */
-    Helper.prototype.getImageCDNUrl = function(settings, groupId, attachmentId, size) {
+    Helper.prototype.getImageCDNUrl = function(groupId, attachmentId, size) {
         // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-        var url = "https://cheqroom-cdn.s3.amazonaws.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
+        var url = settings.cdn + "/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
         if( (size) &&
             (size.length>0)) {
             var parts = url.split('.');

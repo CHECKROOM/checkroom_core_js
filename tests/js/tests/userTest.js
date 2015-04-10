@@ -63,7 +63,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     asyncTest("get user imageUrl", function() {
                         getAnyUser()
                             .then(function(user) {
-                                ok(user.getImageUrl());
+                                var url = user.getImageUrl();
+                                ok(url);
                             })
                             .always(function(){
                                 start();

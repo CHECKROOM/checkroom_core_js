@@ -11,6 +11,7 @@ define([
         name: '',
         email: '',
         group: '',  // groupid
+        picture: '',
         role: 'user',  // user, admin
         active: true
     };
@@ -31,7 +32,7 @@ define([
      */
     var User = function(opt) {
         var spec = $.extend({
-            fields: ['*','group']
+            fields: ['*', 'group', 'picture']
         }, opt);
         Base.call(this, spec);
 
@@ -54,6 +55,7 @@ define([
         */
 
         this.name = spec.name || DEFAULTS.name;
+        this.picture = spec.picture || DEFAULTS.picture;
         this.email = spec.email || DEFAULTS.email;
         this.role = spec.role || DEFAULTS.role;
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
@@ -119,7 +121,7 @@ define([
         return (
             (this.picture!=null) &&
             (this.picture.length>0)) ?
-            this.helper.getImageCDNUrl({}, "groupid", this.picture, size, bustCache) :
+            this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) :
             this.helper.getImageUrl(this.ds, this.id, size, bustCache);
     };
 
@@ -158,6 +160,7 @@ define([
                 // depending on the fields
                 that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
                 that.name = data.name || DEFAULTS.name;
+                that.picture = data.picture || DEFAULTS.picture;
                 that.email = data.email || DEFAULTS.email;
                 that.role = data.role || DEFAULTS.role;
                 that.active = (data.active!=null) ? data.active : DEFAULTS.active;

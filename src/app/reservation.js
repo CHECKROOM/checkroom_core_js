@@ -134,13 +134,20 @@ define([
         var that = this;
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
-                return that._loadConflicts(data, options)
-                    .then(function() {
-                        that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
-                        that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
-                        that.due = null;
-                        $.publish("reservation.fromJson", data);
-                    });
+                if (that.existsInDb()) {
+                    return that._loadConflicts(data, options)
+                        .then(function() {
+                            that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
+                            that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
+                            that.due = null;
+                            $.publish("reservation.fromJson", data);
+                        });
+                } else {
+                    that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
+                    that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
+                    that.due = null;
+                    $.publish("reservation.fromJson", data);
+                }
             });
     };
 

@@ -2,7 +2,7 @@
 .name
 .idea
 .idea/
-settings.js
+tests/js/tests/settings.js
 node_modules
 bower_components/jquery-tiny-pubsub/.bower.json
 bower_components/jquery-tiny-pubsub/.gitignore

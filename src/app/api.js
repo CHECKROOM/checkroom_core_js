@@ -685,7 +685,7 @@ define([
      */
     api.ApiDataSource.prototype.getParamsDict = function(fields, limit, skip, sort) {
         var p = {};
-        if (fields) {   p['_fields'] = $.isArray(fields) ? fields.join(',') : fields; }
+        if (fields) {   p['_fields'] = $.isArray(fields) ? fields.join(',') : fields.replace(/\s/g, ""); }
         if (limit) {    p['_limit'] = limit; }
         if (skip) {     p['_skip'] = skip; }
         if (sort) {     p['_sort'] = sort; }

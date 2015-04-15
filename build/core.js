@@ -6136,18 +6136,33 @@ define('Reservation',[
 
         } else if (this.status == "open") {
 
+            this.conflicts = [];
+
             // The reservation is already open,
-            // so the only conflicts we can have is for making an order
+            // so the only conflicts we can have
+            // are for turning it into an order
             $.each(this.raw.items, function(i, item) {
-               if (item.status!="available") {
-                   // TODO
-                   console.log("open reservation has conflict, unavailable item ", item._id);
+               if (item.status=="expired") {
+                    that.conflicts.push({
+                        item: (item._id) ? item._id : item,
+                        kind: "status",
+                        friendlyKind: "Item is expired"
+                    });
+               } else if (item.status!="available") {
+                    that.conflicts.push({
+                        item: (item._id) ? item._id : item,
+                        kind: "status",
+                        friendlyKind: "Item is checked out in an order"
+                    });
                } else if(item.location!=that.location) {
-                   // TODO
-                   console.log("open reservation has conflict, item at wrong location ", item._id);
+                    that.conflicts.push({
+                        item: (item._id) ? item._id : item,
+                        kind: "location",
+                        friendlyKind: "Item is at wrong location"
+                    });
                }
             });
-            this.conflicts = [];  // TODO!!
+
             return $.Deferred().resolve(data);
 
         } else {

@@ -196,7 +196,7 @@ define([
                     return that.reset();
                 });
         } else {
-            return $.Deferred().reject(new Error("Contact does not exist"));
+            return $.Deferred().reject(new Error("Document does not exist"));
         }
     };
 

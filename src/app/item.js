@@ -18,7 +18,8 @@ define([
         location: "",
         category: "",
         geo: [DEFAULT_LAT,DEFAULT_LONG],
-        address: ""
+        address: "",
+        order: null
     };
     
     // Allow overriding the ctor during inheritance
@@ -38,6 +39,7 @@ define([
      * @property {string} category     the item category primary key
      * @propery {Array} geo            the item geo position in lat lng array
      * @propery {string} address       the item geo position address
+     * @propery {string} order         the order pk, if the item is currently in an order
      * @extends Base
      */
     var Item = function(opt) {
@@ -55,6 +57,7 @@ define([
         this.category = spec.category || DEFAULTS.category;     // category._id
         this.geo = spec.geo || DEFAULTS.geo.slice();            // null or an array with 2 floats
         this.address = spec.address || DEFAULTS.address;
+        this.order = spec.order || DEFAULTS.order;
     };
 
     Item.prototype = new tmp();
@@ -131,6 +134,12 @@ define([
                     catId = (data.category._id) ? data.category._id : data.category;
                 }
                 that.category = catId;
+
+                var orderId = DEFAULTS.order;
+                if (data.order) {
+                    orderId = (data.order._id) ? data.order._id : data.order;
+                }
+                that.order = orderId;
 
                 // Read the flag from the keyvalues
                 return that._fromJsonFlag(data, options)

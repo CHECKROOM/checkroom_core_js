@@ -250,6 +250,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             .done(function(data) {
                                 item._fromJson(data)
                                     .done(function() {
+                                        ok(item.order==null);
                                         item.expire()
                                             .done(function() {
                                                 ok(item.status=="expired");
@@ -478,6 +479,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                         getAnyCheckedOutItem()
                             .done(function(data) {
                                 ok(data._id);
+                                ok(data.order);
                                 item.id = data._id;
 
                                 item.getAvailabilities(null, null)

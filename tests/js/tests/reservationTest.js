@@ -209,6 +209,38 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
 
                     });
 
+                    // swap item
+                    $.when(
+                        helper.getAnyContact(),
+                        helper.getAnyLocation(),
+                        helper.getAnyAvailableItem(),
+                        helper.getAnyCheckedOutItem()
+                    )
+                        .then(function(contact, location, available, checkedout) {
+
+                            asyncTest("Reservation - swapItem", function() {
+                                var r = getNewReservation();
+                                r.contact = contact._id;
+                                r.location = location._id;
+
+                                var oldItem = checkedout._id;
+                                var newItem = available._id;
+                                r.addItems([oldItem])
+                                    .done(function() {
+                                        r.swapItem(oldItem, newItem)
+                                            .done(function() {
+                                                ok(r.items[0]!=oldItem);
+                                                ok(r.items[0]==newItem);
+                                            })
+                                            .always(function() {
+                                                start();
+                                                r.delete();
+                                            });
+                                    });
+
+                            });
+                        });
+
                     // make reservation
                     // ----
                     $.when(helper.getAnyContact(), helper.getAnyLocation())

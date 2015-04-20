@@ -1621,7 +1621,7 @@ define('document',[
                     return that.reset();
                 });
         } else {
-            return $.Deferred().reject(new Error("Contact does not exist"));
+            return $.Deferred().reject(new Error("Document does not exist"));
         }
     };
 
@@ -3787,7 +3787,7 @@ define('Document',[
                     return that.reset();
                 });
         } else {
-            return $.Deferred().reject(new Error("Contact does not exist"));
+            return $.Deferred().reject(new Error("Document does not exist"));
         }
     };
 

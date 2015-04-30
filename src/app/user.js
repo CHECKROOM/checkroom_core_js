@@ -129,6 +129,43 @@ define([
         return DEFAULTS;
     };
 
+    // OVERRIDE BASE: addKeyValue not implemented
+    User.prototype.addKeyValue = function(key, value, kind, skipRead) {
+        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
+    };
+
+    // OVERRIDE BASE: addKeyValue not implemented
+    User.prototype.addKeyValue = function(id, key, value, kind, skipRead) {
+        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
+    };
+
+    // OVERRIDE BASE: removeKeyValue not implemented
+    User.prototype.removeKeyValue = function(id, skipRead) {
+        return $.Deferred().reject("Not implemented for User, use clearPicture instead?");
+    };
+
+    User.prototype.setPicture = function(attachmentId, skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject("User does not exist in database");
+        }
+        this.picture = attachmentId;
+        return this._doApiCall({
+            method: 'setPicture',
+            params: {attachment: attachmentId},
+            skipRead: skipRead
+        });
+    };
+
+    User.prototype.clearPicture = function(skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject("User does not exist in database");
+        }
+        return this._doApiCall({
+            method: 'clearPicture',
+            skipRead: skipRead
+        });
+    };
+
     /**
      * Writes the user to a json object
      * @param options

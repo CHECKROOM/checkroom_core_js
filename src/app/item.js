@@ -66,6 +66,25 @@ define([
     //
     // Base overrides
     //
+    Item.prototype.isValidName = function() {
+        this.name = $.trim(this.name);
+        return (this.name.length>=3);
+    };
+
+    Item.prototype.isValidCategory = function() {
+        return ($.trim(this.category).length>0);
+    };
+
+    Item.prototype.isValidLocation = function() {
+        return ($.trim(this.location).length>0);
+    };
+
+    Item.prototype.isValid = function() {
+        return (
+            this.isValidName() &&
+            this.isValidCategory() &&
+            this.isValidLocation());
+    };
 
     /**
      * Checks if the item is empty

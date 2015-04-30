@@ -312,6 +312,41 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             });
                     });
 
+                    test("isValid Item object", function() {
+                        var item = new cr.Item({
+                            ds: ds
+                        });
+
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==false);
+                        ok(item.isValidCategory()==false);
+                        ok(item.isValidLocation()==false);
+
+                        item.name = "Testing";
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==true);
+                        ok(item.isValidCategory()==false);
+                        ok(item.isValidLocation()==false);
+
+                        item.category = "FakeCategoryId";
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==true);
+                        ok(item.isValidCategory()==true);
+                        ok(item.isValidLocation()==false);
+
+                        item.location = "FakeLocationId";
+                        ok(item.isValid()==true);
+                        ok(item.isValidName()==true);
+                        ok(item.isValidCategory()==true);
+                        ok(item.isValidLocation()==true);
+
+                        item.reset();
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==false);
+                        ok(item.isValidCategory()==false);
+                        ok(item.isValidLocation()==false);
+                    });
+
                     asyncTest("change location Item object", function() {
                         var item = new cr.Item({
                             ds: ds

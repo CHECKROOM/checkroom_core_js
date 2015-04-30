@@ -5547,7 +5547,7 @@ define('Order',[
      * @returns {promise}
      */
     Order.prototype.checkin = function(itemIds, skipRead) {
-        return this._doApiCall({method: "checkin", items:itemIds, skipRead: skipRead});
+        return this._doApiCall({method: "checkin", params: {items: itemIds}, skipRead: skipRead});
     };
 
     /**

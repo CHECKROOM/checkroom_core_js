@@ -3250,10 +3250,10 @@ define('Contact',[
      * @return {Boolean} [description]
      */
     Contact.prototype.isValidName = function() {
-        // TODO
-        return ($.trim(this.name).length>=2);
+        this.name = $.trim(this.name);
+        return (this.name.length>=3);
     };
-    
+
     /**
      * Checks if company is valid
      * @name  Contact#isValidCompany
@@ -3261,8 +3261,8 @@ define('Contact',[
      * @return {Boolean} [description]
      */
     Contact.prototype.isValidCompany = function() {
-        // TODO
-        return ($.trim(this.company).length>=2);
+        this.company = $.trim(this.company);
+        return (this.company.length>=3);
     };
 
     /**
@@ -3272,8 +3272,14 @@ define('Contact',[
      * @return {Boolean} [description]
      */
     Contact.prototype.isValidPhone = function() {
-        // TODO
-        return ($.trim(this.phone).length>=2);
+        this.phone = $.trim(this.phone);
+        var isnum = /^\d{9,}$/.test(this.phone);
+        if (isnum) {
+            return true;
+        }
+
+        var m = this.phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+        return ((m!=null) && (m.length>0));
     };
 
     /**
@@ -3283,8 +3289,9 @@ define('Contact',[
      * @return {Boolean} [description]
      */
     Contact.prototype.isValidEmail = function() {
-        // TODO
-        return ($.trim(this.email).length>=2);
+        var re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+        this.email = $.trim(this.email);
+        return re.test(this.email);
     };
 
     //
@@ -3294,7 +3301,7 @@ define('Contact',[
     /**
      * Checks if the contact has any validation errors
      * @name Contact#isValid
-     * @method 
+     * @method
      * @returns {boolean}
      * @override
      */
@@ -3313,10 +3320,10 @@ define('Contact',[
     Contact.prototype.isEmpty = function() {
         return (
             (Base.prototype.isEmpty.call(this)) &&
-            (this.name==DEFAULTS.name) &&
-            (this.company==DEFAULTS.company) &&
-            (this.phone==DEFAULTS.phone) &&
-            (this.email==DEFAULTS.email));
+                (this.name==DEFAULTS.name) &&
+                (this.company==DEFAULTS.company) &&
+                (this.phone==DEFAULTS.phone) &&
+                (this.email==DEFAULTS.email));
     };
 
     /**
@@ -3329,7 +3336,7 @@ define('Contact',[
         if( (!isDirty) &&
             (this.raw)) {
             isDirty = (
-                    (this.name!=this.raw.name)||
+                (this.name!=this.raw.name)||
                     (this.company!=this.raw.company)||
                     (this.phone!=this.raw.phone)||
                     (this.email!=this.raw.email)
@@ -3365,7 +3372,7 @@ define('Contact',[
     };
 
     return Contact;
-    
+
 });
 /**
  * The DateHelper module

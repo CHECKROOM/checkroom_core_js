@@ -98,6 +98,10 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
         return helper.apiGet(null, "customers");
     };
 
+    helper.getAnyAttachment = function() {
+        return helper.apiGet(null, "attachments");
+    };
+
     helper.getAnyLocation = function() {
         return helper.apiGet(null, "locations");
     };

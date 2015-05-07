@@ -67,6 +67,45 @@ define([
     //
     // Document overrides
     //
+    User.prototype.isValidName = function() {
+        this.name = $.trim(this.name);
+        return (this.name.length>=4);
+    };
+
+    User.prototype.isValidEmail = function() {
+        var re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+        this.email = $.trim(this.email);
+        return re.test(this.email);
+    };
+
+    User.prototype.isValidRole = function() {
+        switch(this.role) {
+            case "user":
+            case "admin":
+            case "root":
+                return true;
+            default:
+                return false;
+        }
+    };
+
+    User.prototype.isValidPassword = function() {
+        this.password = $.trim(this.password);
+        var length = this.password.length;
+        var hasDigit = this.password.match(/[0-9]/);
+        return (length>=4) && (hasDigit);
+    };
+
+    /**
+     * Checks if the user is valid
+     * @returns {boolean}
+     */
+    User.prototype.isValid = function() {
+        return (
+            this.isValidName() &&
+            this.isValidEmail() &&
+            this.isValidRole());
+    };
 
     /**
      * Checks if the user is empty

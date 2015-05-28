@@ -4627,7 +4627,8 @@ define('Location',[
 define('transaction',[
     'jquery',
     'api',
-    'base'], /** @lends Base */ function ($, api, Base) {
+    'base',
+    'Location'], /** @lends Base */ function ($, api, Base, Location) {
 
     var DEFAULTS = {
         status: "creating",
@@ -6223,7 +6224,8 @@ define('Reservation',[
 define('Transaction',[
     'jquery',
     'api',
-    'base'], /** @lends Base */ function ($, api, Base) {
+    'base',
+    'Location'], /** @lends Base */ function ($, api, Base, Location) {
 
     var DEFAULTS = {
         status: "creating",

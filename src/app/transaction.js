@@ -9,7 +9,8 @@
 define([
     'jquery',
     'api',
-    'base'], /** @lends Base */ function ($, api, Base) {
+    'base',
+    'Location'], /** @lends Base */ function ($, api, Base, Location) {
 
     var DEFAULTS = {
         status: "creating",

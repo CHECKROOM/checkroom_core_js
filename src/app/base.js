@@ -249,7 +249,7 @@ define([
     Base.prototype.setCover = function(att, skipRead) {
         return this._doApiCall({
             method: 'setCover',
-            params: {kvId: att.id},
+            params: {kvId: att._id},
             skipRead: skipRead
         });
     };
@@ -303,7 +303,7 @@ define([
      * detaches an Attachment by kvId (guid)
      * @name  Base#detach
      * @method
-     * @param keyId
+     * @param keyId (usually the attachment._id)
      * @param skipRead
      * @returns {promise}
      */

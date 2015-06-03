@@ -100,7 +100,7 @@ define([
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
                 that.address = data.address || DEFAULTS.address;
-                $.publish('contact.fromJson', data);
+                $.publish('location.fromJson', data);
                 return data;
             });
     };

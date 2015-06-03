@@ -72,6 +72,36 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     )
                         .done(function(contact, location) {
 
+                            asyncTest("create Order object -- due date bug", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true,
+                                    location: location._id
+                                });
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.due==null);
+                                        ok(order.existsInDb());
+                                        ok(order.status=="creating");
+
+                                        helper.getAnyAvailableItem()
+                                            .done(function(item) {
+
+                                                order.addItems([item._id])
+                                                    .done(function() {
+                                                        ok(order.due==null);
+                                                        ok(order.existsInDb());
+                                                        ok(order.status=="creating");
+                                                        ok(order.items.length==1);
+                                                    })
+                                                    .always(function(){
+                                                        start();
+                                                    });
+                                            });
+                                    });
+                            });
+
                             asyncTest("create Order object with contact, autoclean on delete", function() {
                                 var order = new cr.Order({
                                     ds: ds,
@@ -142,7 +172,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                         ok(order.status=="creating");
 
                                         order.searchItems()
-                                            .done(function(items) {
+                                            .done(function(searchResp) {
+                                                var items = searchResp.docs;
                                                 ok(items!=null);
                                                 ok(items.length>0);
 
@@ -188,9 +219,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                             });
                                     });
                             });
-
                         });
-
                 });
 
         };

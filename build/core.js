@@ -4635,7 +4635,7 @@ define('Location',[
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
                 that.address = data.address || DEFAULTS.address;
-                $.publish('contact.fromJson', data);
+                $.publish('location.fromJson', data);
                 return data;
             });
     };
@@ -5347,6 +5347,7 @@ define('Order',[
         var data = Transaction.prototype._toJson.call(this, options);
         data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
         data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
+        data.due = (this.due!=null) ? this.due.toJSONDate() : "null";
         return data;
     };
 

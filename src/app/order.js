@@ -245,7 +245,11 @@ define([
         var that = this;
         var roundedDueDate = this._getHelper().roundTimeTo(due);
 
-        return this._checkFromDueDate(this.from, roundedDueDate)
+        // Don't use _checkFromDueDate,
+        // Use _checkDateBetweenMinMax directly, so it works extending order.due on "open" orders
+        var min = this.getMinDate();
+        var max = this.getMaxDate();
+        return this._checkDateBetweenMinMax(roundedDueDate, min, max)
             .then(function() {
                 that.due = roundedDueDate;
                 return that._handleTransaction(skipRead);

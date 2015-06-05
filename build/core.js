@@ -5231,9 +5231,9 @@ define('transaction',[
      * @returns {*}
      * @private
      */
-    Transaction.prototype._checkDateBetweenMinMax = function(date) {
-        var minDate = this.getMinDate();
-        var maxDate = this.getMaxDate();
+    Transaction.prototype._checkDateBetweenMinMax = function(date, minDate, maxDate) {
+        minDate = minDate || this.getMinDate();
+        maxDate = maxDate || this.getMaxDate();
         if( (date<minDate) || 
             (date>maxDate)) {
             var msg = "date is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
@@ -5537,7 +5537,9 @@ define('Order',[
         var that = this;
         var roundedDueDate = this._getHelper().roundTimeTo(due);
 
-        return this._checkFromDueDate(this.from, roundedDueDate)
+        var min = this.getMinDate();
+        var max = this.getMaxDate();
+        return this._checkDateBetweenMinMax(roundedDueDate, min, max)
             .then(function() {
                 that.due = roundedDueDate;
                 return that._handleTransaction(skipRead);
@@ -6829,9 +6831,9 @@ define('Transaction',[
      * @returns {*}
      * @private
      */
-    Transaction.prototype._checkDateBetweenMinMax = function(date) {
-        var minDate = this.getMinDate();
-        var maxDate = this.getMaxDate();
+    Transaction.prototype._checkDateBetweenMinMax = function(date, minDate, maxDate) {
+        minDate = minDate || this.getMinDate();
+        maxDate = maxDate || this.getMaxDate();
         if( (date<minDate) || 
             (date>maxDate)) {
             var msg = "date is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();

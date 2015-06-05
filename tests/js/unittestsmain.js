@@ -45,8 +45,8 @@ require([
         locationTest.run();
         */
 
-        itemTest.run();
-        //orderTest.run();
+        //itemTest.run();
+        orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

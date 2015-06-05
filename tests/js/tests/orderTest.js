@@ -72,6 +72,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     )
                         .done(function(contact, location) {
 
+                            /*
                             asyncTest("create Order object -- due date bug", function() {
                                 var order = new cr.Order({
                                     ds: ds,
@@ -147,7 +148,31 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                             });
                                     });
                             });
+                            */
 
+                            asyncTest("BUG: Set due date on open order", function() {
+                                helper.getAnyOpenOrder()
+                                    .done(function(data) {
+                                        var order = new cr.Order({
+                                            ds: ds,
+                                            dsItems: dsItems,
+                                            helper: new cr.Helper()
+                                        });
+
+                                        order._fromJson(data)
+                                            .done(function() {
+                                                var due = moment().add(3, 'days');
+                                                order.setDueDate(due)
+                                                    .done(function() {
+                                                        ok(due==order.due);
+                                                    }).always(function() {
+                                                        start();
+                                                    });
+                                            });
+                                    });
+                            });
+
+                            /*
                             asyncTest("create Order object via constructor, searchItems", function() {
                                 var helper = new cr.Helper();
                                 var order = new cr.Order({
@@ -219,6 +244,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                             });
                                     });
                             });
+                            */
                         });
                 });
 

@@ -586,9 +586,9 @@ define([
      * @returns {*}
      * @private
      */
-    Transaction.prototype._checkDateBetweenMinMax = function(date) {
-        var minDate = this.getMinDate();
-        var maxDate = this.getMaxDate();
+    Transaction.prototype._checkDateBetweenMinMax = function(date, minDate, maxDate) {
+        minDate = minDate || this.getMinDate();
+        maxDate = maxDate || this.getMaxDate();
         if( (date<minDate) || 
             (date>maxDate)) {
             var msg = "date is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();

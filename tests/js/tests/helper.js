@@ -106,6 +106,13 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
         return helper.apiGet(null, "locations");
     };
 
+    helper.getAnyOpenOrder = function() {
+        return helper.apiSearch({listName: "open"}, "orders", "*")
+            .then(function(resp) {
+                return (resp!=null) && (resp.docs!=null) && (resp.docs.length>0) ? resp.docs[0] : null;
+            });
+    };
+
     helper.getAnyCheckedOutItem = function() {
         return helper.apiSearch({listName: "checkedout"}, "items", "*,location,category")
             .then(function(resp) {

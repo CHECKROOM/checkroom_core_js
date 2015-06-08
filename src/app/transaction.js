@@ -222,10 +222,13 @@ define([
         //data.finished = this.to;  // VT: Will be set during final checkin
         data.due = this.due;
         if (this.location) {
-            data.location = this.location;
+            // Make sure we send the location as id, not the entire object
+            data.location = (typeof this.location === 'string') ? this.location : this.location._id;
         }
         if (this.contact) {
-            data.customer = this.contact;  // Vincent: It's still called the "customer" field!
+            // Make sure we send the contact as id, not the entire object
+            // VT: It's still called the "customer" field on the backend!
+            data.customer = (typeof this.contact === 'string') ? this.contact : this.contact._id;
         }
         return data;
     };
@@ -257,15 +260,7 @@ define([
 
     // Setters
     // ----
-    /*
-    TransactionModel.prototype.setFromDate = function(date) {
-        var roundDate = helper.roundFromTime(date, this.global.groupProfile);
-        system.log('TransactionModel: setFromDate '+date.calendar() + ' -- rounded to ' + roundDate.calendar());
-        this.from(roundDate);
-        return this._handleTransaction();
-    };
-    */
-
+    
     // From date setters
 
     /**

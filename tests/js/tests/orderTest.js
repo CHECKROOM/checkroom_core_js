@@ -72,6 +72,42 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     )
                         .done(function(contact, location) {
 
+                            asyncTest("create Order object -- with location and contact objects set", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true,
+                                    location: location,
+                                    contact: contact
+                                });
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.location!=null);
+                                        ok(order.contact!=null);
+                                    })
+                                    .always(function() {
+                                        start();
+                                    });
+                            });
+
+                            asyncTest("create Order object -- with location and contact object ids set", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true,
+                                    location: location._id,
+                                    contact: contact._id
+                                });
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.location!=null);
+                                        ok(order.contact!=null);
+                                    })
+                                    .always(function() {
+                                        start();
+                                    });
+                            });
+
                             /*
                             asyncTest("create Order object -- due date bug", function() {
                                 var order = new cr.Order({

@@ -39,15 +39,13 @@ require([
         userTest,
         availabilityTest) {
 
-        /*simpleTest.run();
-        dateHelperTest.run();
-        contactTest.run();
-        locationTest.run();
-        */
-
+        //simpleTest.run();
+        //dateHelperTest.run();
+        //contactTest.run();
+        //locationTest.run();
         //itemTest.run();
-        orderTest.run();
-        //reservationTest.run();
+        //orderTest.run();
+        reservationTest.run();
         //userTest.run();
         //availabilityTest.run();
 

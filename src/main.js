@@ -10,6 +10,7 @@ define([
     'Base',
     'Comment',
     'common',
+    'Conflict',
     'Contact',
     'DateHelper',
     'Document',
@@ -20,7 +21,7 @@ define([
     'helper',
     'Reservation',
     'Transaction',
-    'User'], function(api, Availability, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
+    'User'], function(api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
 
     var core = {};
 
@@ -32,6 +33,7 @@ define([
     core.Attachment = Attachment;
     core.Base = Base;
     core.Comment = Comment;
+    core.Conflict = Conflict;
     core.Contact = Contact;
     core.DateHelper = DateHelper;
     core.Document = Document;

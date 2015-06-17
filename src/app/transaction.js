@@ -10,7 +10,8 @@ define([
     'jquery',
     'api',
     'base',
-    'Location'], /** @lends Base */ function ($, api, Base, Location) {
+    'Location',
+    'Conflict'], /** @lends Base */ function ($, api, Base, Location, Conflict) {
 
     var DEFAULTS = {
         status: "creating",
@@ -19,7 +20,8 @@ define([
         due: null,
         contact: "",
         location: "",
-        items: []
+        items: [],
+        conflicts: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -41,6 +43,7 @@ define([
      * @property {string}  contact                    - The Contact.id for this transaction
      * @property {string}  location                   - The Location.id for this transaction
      * @property {Array}  items                       - A list of Item.id strings
+     * @property {Array}  conflicts                   - A list of conflict hashes
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -52,13 +55,14 @@ define([
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.helper = spec.helper;
 
-        this.status = spec.status || DEFAULTS.status;        // the status of the order or reservation
-        this.from = spec.from || DEFAULTS.from;              // a date in the future
-        this.to = spec.to || DEFAULTS.to;                    // a date in the future
-        this.due = spec.due || DEFAULTS.due;                 // a date even further in the future, we suggest some standard avg durations
-        this.contact = spec.contact || DEFAULTS.contact;     // a contact id
-        this.location = spec.location || DEFAULTS.location;  // a location id
-        this.items = spec.items || DEFAULTS.items.slice();   // an array of item ids
+        this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
+        this.from = spec.from || DEFAULTS.from;                           // a date in the future
+        this.to = spec.to || DEFAULTS.to;                                 // a date in the future
+        this.due = spec.due || DEFAULTS.due;                              // a date even further in the future, we suggest some standard avg durations
+        this.contact = spec.contact || DEFAULTS.contact;                  // a contact id
+        this.location = spec.location || DEFAULTS.location;               // a location id
+        this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
+        this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
     };
 
     Transaction.prototype = new tmp();
@@ -223,12 +227,12 @@ define([
         data.due = this.due;
         if (this.location) {
             // Make sure we send the location as id, not the entire object
-            data.location = (typeof this.location === 'string') ? this.location : this.location._id;
+            data.location = this._getId(this.location);
         }
         if (this.contact) {
             // Make sure we send the contact as id, not the entire object
             // VT: It's still called the "customer" field on the backend!
-            data.customer = (typeof this.contact === 'string') ? this.contact : this.contact._id;
+            data.customer = this._getId(this.contact);
         }
         return data;
     };
@@ -248,6 +252,10 @@ define([
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();
+                return that._getConflicts()
+                    .then(function(conflicts) {
+                        that.conflicts = conflicts;
+                    });
             });
     };
 
@@ -511,6 +519,16 @@ define([
     //
     // Implementation stuff
     //
+    /**
+     * Gets a list of Conflict objects for this transaction
+     * Will be overriden by inheriting classes
+     * @returns {promise}
+     * @private
+     */
+    Transaction.prototype._getConflicts = function() {
+        return $.Deferred().resolve([]);
+    };
+
     Transaction.prototype._getHelper = function() {
         return this.helper;
     };
@@ -523,13 +541,13 @@ define([
      * Searches for Items that are available for this transaction
      * @param params: a dict with params, just like items/search
      * @param listName: restrict search to a certain list
-     * @param useAvailabilies (uses items/searchAvailable instead of items/search)
-     * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
+     * @param useAvailabilities (uses items/searchAvailable instead of items/search)
+     * @param onlyUnbooked (true by default, only used when useAvailabilities=true)
      * @param skipItems array of item ids that should be skipped
      * @private
      * @returns {*}
      */
-    Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {
+    Transaction.prototype._searchItems = function(params, listName, useAvailabilities, onlyUnbooked, skipItems) {
         if (this.dsItems==null) {
             return $.Deferred().reject(new api.ApiBadRequest(this.crtype+" has no DataSource for items"));
         }

@@ -6,7 +6,8 @@
 define([
     "jquery",
     "api",
-    "transaction"], /** @lends Transaction */  function ($, api, Transaction) {
+    "transaction",
+    "conflict"], /** @lends Transaction */  function ($, api, Transaction, Conflict) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -31,7 +32,7 @@ define([
     Order.prototype.constructor = Order;
 
     //
-    // Date helpers; we"ll need these for sliding from / to dates during a long user session
+    // Date helpers; we'll need these for sliding from / to dates during a long user session
     //
 
     /**
@@ -154,6 +155,80 @@ define([
     //
     // Transaction overrides
     //
+    /**
+     * Gets a list of Conflict objects
+     * used during Transaction._fromJson
+     * @returns {promise}
+     * @private
+     */
+    Order.prototype._getConflicts = function() {
+        var conflicts = [];
+
+        // Only orders which are incomplete,
+        // but have items and / or due date can have conflicts
+        if( (this.status=="creating") &&
+            (this.items.length>0)) {
+
+            // Check if all the items are at the right location
+            var locId = this._getId(this.location);
+            if (locId) {
+                $.each(this.items, function(i, item) {
+                    if (item.location != locId) {
+                        conflicts.push(new Conflict({
+                            kind: "location",
+                            item: item._id,
+                            itemName: item.name,
+                            locationCurrent: item.location,
+                            locationDesired: locId
+                        }));
+                    }
+                });
+            }
+
+            // If we have a due date,
+            // check if it conflicts with any reservations
+            if (this.due) {
+                var that = this;
+                var kind = "";
+                var transItem = null;
+
+                // Get the availabilities for these items
+                return this.dsItems.call(null, "getAvailabilities", {
+                    items: $.map(this.items, function(item) { return item._id; }),
+                    fromDate: this.from,
+                    toDate: this.due})
+                    .then(function(data) {
+
+                        // Run over unavailabilties for these items
+                        $.each(data, function(i, av) {
+                            // Lookup the more complete item object via transaction.items
+                            // It has useful info like item.name we can use in the conflict message
+                            transItem = _.find(that.items, function(item) { return item._id == av.item});
+
+                            // Order cannot conflict with itself
+                            if (av.order != that.id) {
+                                kind = "";
+                                kind = kind || (av.order) ? "order" : "";
+                                kind = kind || (av.reservation) ? "reservation" : "";
+
+                                conflicts.push(new Conflict({
+                                    kind: kind,
+                                    item: transItem._id,
+                                    itemName: transItem.name,
+                                    fromDate: av.fromDate,
+                                    toDate: av.toDate,
+                                    doc: av.order || av.reservation
+                                }));
+                            }
+                        });
+
+                        return conflicts;
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
 
     /**
      * Sets the Order from and due date in a single call

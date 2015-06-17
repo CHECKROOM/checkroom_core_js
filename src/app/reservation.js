@@ -66,12 +66,12 @@ define([
     Reservation.prototype.canReserve = function() {
         return (
             (this.status=="creating") &&
-            (this.location) &&
-            (this.contact) &&
-            (this.from) &&
-            (this.to) &&
-            (this.items) &&
-            (this.items.length));
+                (this.location) &&
+                (this.contact) &&
+                (this.from) &&
+                (this.to) &&
+                (this.items) &&
+                (this.items.length));
     };
 
     /**
@@ -158,6 +158,82 @@ define([
     //
     // Transaction overrides
     //
+    /**
+     * Gets a list of Conflict objects
+     * used during Transaction._fromJson
+     * @returns {promise}
+     * @private
+     */
+    Reservation.prototype._getConflicts = function() {
+        var conflicts = [];
+        var conflict = null;
+
+        // Reservations can only have conflicts
+        // when we have a (location OR (from AND to)) AND at least 1 item
+        if( (this.items) &&
+            (this.items.length) &&
+            ((this.location) || (this.from && this.to))) {
+
+            if (this.status == "open") {
+                // Reservations in "open" status,
+                // can use the Items' current status and location
+                // to see if there are any conflicts for fullfilling into an Order
+                var locId = this._getId(this.location);
+
+                $.each(this.items, function(i, item) {
+                    if (item.status!="available") {
+                        conflicts.push(new Conflict({
+                            kind: "status",
+                            item: item._id,
+                            itemName: item.name,
+                            doc: item.order
+                        }));
+                    } else if (item.location!=locId) {
+                        conflicts.push(new Conflict({
+                            kind: "location",
+                            item: item._id,
+                            itemName: item.name,
+                            locationCurrent: item.location,
+                            locationDesired: locId,
+                            doc: item.order
+                        }));
+                    }
+                });
+
+            } else if (this.status == "creating") {
+                var that = this;
+
+                // Reservations in "creating" status,
+                // use a server side check
+                return this.ds.call(this.id, "getConflicts")
+                    .then(function(cnflcts) {
+                        if( (cnflcts) &&
+                            (cnflcts.length)) {
+
+                            // Now we have the conflicts for this reservation
+                            // run over the items again and find the conflict for each item
+                            $.each(that.items, function(i, item) {
+                                conflict = _.find(cnflcts, function(c) { return c.item==item._id});
+                                if (conflict) {
+                                    var kind = "";
+                                    kind = kind || (conflict.order) ? "order" : "";
+                                    kind = kind || (conflict.reservation) ? "reservation" : "";
+
+                                    conflicts.push(new Conflict({
+                                        kind: kind,
+                                        item: item._id,
+                                        itemName: item.name,
+                                        doc: conflict.conflictsWith
+                                    }));
+                                }
+                            });
+                        }
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
 
     /**
      * Sets the reservation from / to dates in a single call
@@ -296,18 +372,18 @@ define([
         return this._handleTransaction(skipRead);
     };
 
-    // Reservation does not use due dates
+// Reservation does not use due dates
     Reservation.prototype.clearDueDate = function(skipRead) {
         throw "Reservation.clearDueDate not implemented";
     };
-    
+
     Reservation.prototype.setDueDate = function(date, skipRead) {
         throw "Reservation.setDueDate not implemented";
     };
 
-    //
-    // Business logic calls
-    //
+//
+// Business logic calls
+//
 
     /**
      * Searches for Items that are available for this reservation
@@ -365,9 +441,9 @@ define([
         return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
     };
 
-    //
-    // Implementation
-    //
+//
+// Implementation
+//
     Reservation.prototype._checkFromToDate = function(from, to) {
         var dateHelper = this._getDateHelper();
         var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
@@ -375,9 +451,9 @@ define([
 
         if (roundedFromDate && roundedToDate) {
             return $.when(
-                this._checkDateBetweenMinMax(roundedFromDate),
-                this._checkDateBetweenMinMax(roundedToDate)
-            )
+                    this._checkDateBetweenMinMax(roundedFromDate),
+                    this._checkDateBetweenMinMax(roundedToDate)
+                )
                 .then(function(fromRes, toRes) {
                     var interval = dateHelper.roundMinutes;
                     if (roundedToDate.diff(roundedFromDate, "minutes") < interval) {
@@ -426,7 +502,7 @@ define([
         var hasAnyItem = (this.items!=null) && (this.items.length>0);
         var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
 
-        if( (hasNonConflictStatus) || 
+        if( (hasNonConflictStatus) ||
             (!hasLocation && !hasAnyDate && !hasAnyItem)) {
 
             // We cannot have conflicts, so make the conflicts array empty
@@ -450,25 +526,25 @@ define([
             // so the only conflicts we can have
             // are for turning it into an order
             $.each(this.raw.items, function(i, item) {
-               if (item.status=="expired") {
+                if (item.status=="expired") {
                     that.conflicts.push({
                         item: (item._id) ? item._id : item,
                         kind: "status",
                         friendlyKind: "Item is expired"
                     });
-               } else if (item.status!="available") {
+                } else if (item.status!="available") {
                     that.conflicts.push({
                         item: (item._id) ? item._id : item,
                         kind: "status",
                         friendlyKind: "Item is checked out in an order"
                     });
-               } else if(item.location!=that.location) {
+                } else if(item.location!=that.location) {
                     that.conflicts.push({
                         item: (item._id) ? item._id : item,
                         kind: "location",
                         friendlyKind: "Item is at wrong location"
                     });
-               }
+                }
             });
 
             return $.Deferred().resolve(data);
@@ -483,5 +559,5 @@ define([
     };
 
     return Reservation;
-    
+
 });

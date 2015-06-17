@@ -200,7 +200,9 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                                 var due = moment().add(3, 'days');
                                                 order.setDueDate(due)
                                                     .done(function() {
-                                                        ok(due==order.due);
+                                                        console.log(due);
+                                                        console.log(order.due);
+                                                        ok(order.due.diff(due, 'minutes')==0);
                                                     }).always(function() {
                                                         start();
                                                     });
@@ -208,7 +210,6 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                     });
                             });
 
-                            /*
                             asyncTest("create Order object via constructor, searchItems", function() {
                                 var helper = new cr.Helper();
                                 var order = new cr.Order({
@@ -280,7 +281,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                             });
                                     });
                             });
-                            */
+
                         });
                 });
 

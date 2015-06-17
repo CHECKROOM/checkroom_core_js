@@ -2790,6 +2790,97 @@ define('Comment',[
     return Comment;
 });
 /**
+ * The Conflict module
+ * a helper class that can read Conflicts
+ * @module Conflict
+ * @copyright CHECKROOM NV 2015
+ */
+define('Conflict',['jquery'], /** @lends Conflict */ function ($) {
+
+    var DEFAULTS = {
+        kind: '',
+        doc: '',
+        item: '',
+        itemName: '',
+        locationCurrent: '',
+        locationDesired: '',
+        fromDate: null,
+        toDate: null
+    };
+
+    /**
+     * Conflict class
+     * @name  Conflict
+     * @class    
+     * @constructor
+     * 
+     * @param spec
+     * @property {string}  kind                   - The conflict kind (status, order, reservation, location)
+     * @property {string}  doc                    - The id of the document with which it conflicts
+     * @property {string}  item                   - The Item id for this conflict
+     * @property {string}  itemName               - The Item name for this conflict
+     * @property {string}  locationCurrent        - The Location the item is now
+     * @property {string}  locationDesired        - The Location where the item should be
+     * @property {moment}  fromDate               - From when does the conflict start
+     * @property {moment}  toDate                 - Until when does the conflict end
+     */
+    var Conflict = function(spec) {
+        this.ds = spec.ds;
+        this.fields = spec.fields;
+
+        this.raw = null; // the raw json object
+        this.kind = spec.kind || DEFAULTS.kind;
+        this.doc = spec.doc || DEFAULTS.doc;
+        this.item = spec.item || DEFAULTS.item;
+        this.itemName = spec.itemName || DEFAULTS.itemName;
+        this.locationCurrent = spec.locationCurrent || DEFAULTS.locationCurrent;
+        this.locationDesired = spec.locationDesired || DEFAULTS.locationDesired;
+        this.fromDate = spec.fromDate || DEFAULTS.fromDate;
+        this.toDate = spec.toDate || DEFAULTS.toDate;
+    };
+
+    /**
+     * _toJson, makes a dict of the object
+     * @method
+     * @param {object} opt dict
+     * @returns {object}
+     * @private
+     */
+    Conflict.prototype._toJson = function(opt) {
+        return {
+            kind: this.kind,
+            doc: this.doc,
+            item: this.item,
+            itemName: this.itemName,
+            locationCurrent: this.locationCurrent,
+            locationDesired: this.locationDesired,
+            fromDate: this.fromDate,
+            toDate: this.toDate
+        };
+    };
+
+    /**
+     * _fromJson
+     * @method
+     * @param {object} data the json response
+     * @param {object} opt dict
+     * @returns promise
+     * @private
+     */
+    Conflict.prototype._fromJson = function(data, opt) {
+        this.raw = data;
+        this.kind = data.kind || DEFAULTS.kind;
+        this.item = data.item || DEFAULTS.item;
+        this.itemName = data.itemName || DEFAULTS.itemName;
+        this.fromDate = data.fromDate || DEFAULTS.fromDate;
+        this.toDate = data.toDate || DEFAULTS.toDate;
+        return $.Deferred().resolve(data);
+    };
+
+    return Conflict;
+
+});
+/**
  * The Base module
  * a base class for all documents that have: comments, attachments, other keyvalues
  * it inherits from Document to support some basic actions
@@ -4675,7 +4766,8 @@ define('transaction',[
     'jquery',
     'api',
     'base',
-    'Location'], /** @lends Base */ function ($, api, Base, Location) {
+    'Location',
+    'Conflict'], /** @lends Base */ function ($, api, Base, Location, Conflict) {
 
     var DEFAULTS = {
         status: "creating",
@@ -4684,7 +4776,8 @@ define('transaction',[
         due: null,
         contact: "",
         location: "",
-        items: []
+        items: [],
+        conflicts: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -4706,6 +4799,7 @@ define('transaction',[
      * @property {string}  contact                    - The Contact.id for this transaction
      * @property {string}  location                   - The Location.id for this transaction
      * @property {Array}  items                       - A list of Item.id strings
+     * @property {Array}  conflicts                   - A list of conflict hashes
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -4717,13 +4811,14 @@ define('transaction',[
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.helper = spec.helper;
 
-        this.status = spec.status || DEFAULTS.status;        // the status of the order or reservation
-        this.from = spec.from || DEFAULTS.from;              // a date in the future
-        this.to = spec.to || DEFAULTS.to;                    // a date in the future
-        this.due = spec.due || DEFAULTS.due;                 // a date even further in the future, we suggest some standard avg durations
-        this.contact = spec.contact || DEFAULTS.contact;     // a contact id
-        this.location = spec.location || DEFAULTS.location;  // a location id
-        this.items = spec.items || DEFAULTS.items.slice();   // an array of item ids
+        this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
+        this.from = spec.from || DEFAULTS.from;                           // a date in the future
+        this.to = spec.to || DEFAULTS.to;                                 // a date in the future
+        this.due = spec.due || DEFAULTS.due;                              // a date even further in the future, we suggest some standard avg durations
+        this.contact = spec.contact || DEFAULTS.contact;                  // a contact id
+        this.location = spec.location || DEFAULTS.location;               // a location id
+        this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
+        this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
     };
 
     Transaction.prototype = new tmp();
@@ -4888,12 +4983,12 @@ define('transaction',[
         data.due = this.due;
         if (this.location) {
             // Make sure we send the location as id, not the entire object
-            data.location = (typeof this.location === 'string') ? this.location : this.location._id;
+            data.location = this._getId(this.location);
         }
         if (this.contact) {
             // Make sure we send the contact as id, not the entire object
             // VT: It's still called the "customer" field on the backend!
-            data.customer = (typeof this.contact === 'string') ? this.contact : this.contact._id;
+            data.customer = this._getId(this.contact);
         }
         return data;
     };
@@ -4913,6 +5008,10 @@ define('transaction',[
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();
+                return that._getConflicts()
+                    .then(function(conflicts) {
+                        that.conflicts = conflicts;
+                    });
             });
     };
 
@@ -5176,6 +5275,16 @@ define('transaction',[
     //
     // Implementation stuff
     //
+    /**
+     * Gets a list of Conflict objects for this transaction
+     * Will be overriden by inheriting classes
+     * @returns {promise}
+     * @private
+     */
+    Transaction.prototype._getConflicts = function() {
+        return $.Deferred().resolve([]);
+    };
+
     Transaction.prototype._getHelper = function() {
         return this.helper;
     };
@@ -5188,13 +5297,13 @@ define('transaction',[
      * Searches for Items that are available for this transaction
      * @param params: a dict with params, just like items/search
      * @param listName: restrict search to a certain list
-     * @param useAvailabilies (uses items/searchAvailable instead of items/search)
-     * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
+     * @param useAvailabilities (uses items/searchAvailable instead of items/search)
+     * @param onlyUnbooked (true by default, only used when useAvailabilities=true)
      * @param skipItems array of item ids that should be skipped
      * @private
      * @returns {*}
      */
-    Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {
+    Transaction.prototype._searchItems = function(params, listName, useAvailabilities, onlyUnbooked, skipItems) {
         if (this.dsItems==null) {
             return $.Deferred().reject(new api.ApiBadRequest(this.crtype+" has no DataSource for items"));
         }
@@ -5318,6 +5427,97 @@ define('transaction',[
 });
 
 /**
+ * The Conflict module
+ * a helper class that can read Conflicts
+ * @module Conflict
+ * @copyright CHECKROOM NV 2015
+ */
+define('conflict',['jquery'], /** @lends Conflict */ function ($) {
+
+    var DEFAULTS = {
+        kind: '',
+        doc: '',
+        item: '',
+        itemName: '',
+        locationCurrent: '',
+        locationDesired: '',
+        fromDate: null,
+        toDate: null
+    };
+
+    /**
+     * Conflict class
+     * @name  Conflict
+     * @class    
+     * @constructor
+     * 
+     * @param spec
+     * @property {string}  kind                   - The conflict kind (status, order, reservation, location)
+     * @property {string}  doc                    - The id of the document with which it conflicts
+     * @property {string}  item                   - The Item id for this conflict
+     * @property {string}  itemName               - The Item name for this conflict
+     * @property {string}  locationCurrent        - The Location the item is now
+     * @property {string}  locationDesired        - The Location where the item should be
+     * @property {moment}  fromDate               - From when does the conflict start
+     * @property {moment}  toDate                 - Until when does the conflict end
+     */
+    var Conflict = function(spec) {
+        this.ds = spec.ds;
+        this.fields = spec.fields;
+
+        this.raw = null; // the raw json object
+        this.kind = spec.kind || DEFAULTS.kind;
+        this.doc = spec.doc || DEFAULTS.doc;
+        this.item = spec.item || DEFAULTS.item;
+        this.itemName = spec.itemName || DEFAULTS.itemName;
+        this.locationCurrent = spec.locationCurrent || DEFAULTS.locationCurrent;
+        this.locationDesired = spec.locationDesired || DEFAULTS.locationDesired;
+        this.fromDate = spec.fromDate || DEFAULTS.fromDate;
+        this.toDate = spec.toDate || DEFAULTS.toDate;
+    };
+
+    /**
+     * _toJson, makes a dict of the object
+     * @method
+     * @param {object} opt dict
+     * @returns {object}
+     * @private
+     */
+    Conflict.prototype._toJson = function(opt) {
+        return {
+            kind: this.kind,
+            doc: this.doc,
+            item: this.item,
+            itemName: this.itemName,
+            locationCurrent: this.locationCurrent,
+            locationDesired: this.locationDesired,
+            fromDate: this.fromDate,
+            toDate: this.toDate
+        };
+    };
+
+    /**
+     * _fromJson
+     * @method
+     * @param {object} data the json response
+     * @param {object} opt dict
+     * @returns promise
+     * @private
+     */
+    Conflict.prototype._fromJson = function(data, opt) {
+        this.raw = data;
+        this.kind = data.kind || DEFAULTS.kind;
+        this.item = data.item || DEFAULTS.item;
+        this.itemName = data.itemName || DEFAULTS.itemName;
+        this.fromDate = data.fromDate || DEFAULTS.fromDate;
+        this.toDate = data.toDate || DEFAULTS.toDate;
+        return $.Deferred().resolve(data);
+    };
+
+    return Conflict;
+
+});
+/**
  * The Order module
  * @module module
  * @copyright CHECKROOM NV 2015
@@ -5325,7 +5525,8 @@ define('transaction',[
 define('Order',[
     "jquery",
     "api",
-    "transaction"], /** @lends Transaction */  function ($, api, Transaction) {
+    "transaction",
+    "conflict"], /** @lends Transaction */  function ($, api, Transaction, Conflict) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5350,7 +5551,7 @@ define('Order',[
     Order.prototype.constructor = Order;
 
     //
-    // Date helpers; we"ll need these for sliding from / to dates during a long user session
+    // Date helpers; we'll need these for sliding from / to dates during a long user session
     //
 
     /**
@@ -5473,6 +5674,80 @@ define('Order',[
     //
     // Transaction overrides
     //
+    /**
+     * Gets a list of Conflict objects
+     * used during Transaction._fromJson
+     * @returns {promise}
+     * @private
+     */
+    Order.prototype._getConflicts = function() {
+        var conflicts = [];
+
+        // Only orders which are incomplete,
+        // but have items and / or due date can have conflicts
+        if( (this.status=="creating") &&
+            (this.items.length>0)) {
+
+            // Check if all the items are at the right location
+            var locId = this._getId(this.location);
+            if (locId) {
+                $.each(this.items, function(i, item) {
+                    if (item.location != locId) {
+                        conflicts.push(new Conflict({
+                            kind: "location",
+                            item: item._id,
+                            itemName: item.name,
+                            locationCurrent: item.location,
+                            locationDesired: locId
+                        }));
+                    }
+                });
+            }
+
+            // If we have a due date,
+            // check if it conflicts with any reservations
+            if (this.due) {
+                var that = this;
+                var kind = "";
+                var transItem = null;
+
+                // Get the availabilities for these items
+                return this.dsItems.call(null, "getAvailabilities", {
+                    items: $.map(this.items, function(item) { return item._id; }),
+                    fromDate: this.from,
+                    toDate: this.due})
+                    .then(function(data) {
+
+                        // Run over unavailabilties for these items
+                        $.each(data, function(i, av) {
+                            // Lookup the more complete item object via transaction.items
+                            // It has useful info like item.name we can use in the conflict message
+                            transItem = _.find(that.items, function(item) { return item._id == av.item});
+
+                            // Order cannot conflict with itself
+                            if (av.order != that.id) {
+                                kind = "";
+                                kind = kind || (av.order) ? "order" : "";
+                                kind = kind || (av.reservation) ? "reservation" : "";
+
+                                conflicts.push(new Conflict({
+                                    kind: kind,
+                                    item: transItem._id,
+                                    itemName: transItem.name,
+                                    fromDate: av.fromDate,
+                                    toDate: av.toDate,
+                                    doc: av.order || av.reservation
+                                }));
+                            }
+                        });
+
+                        return conflicts;
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
 
     /**
      * Sets the Order from and due date in a single call
@@ -5853,12 +6128,12 @@ define('Reservation',[
     Reservation.prototype.canReserve = function() {
         return (
             (this.status=="creating") &&
-            (this.location) &&
-            (this.contact) &&
-            (this.from) &&
-            (this.to) &&
-            (this.items) &&
-            (this.items.length));
+                (this.location) &&
+                (this.contact) &&
+                (this.from) &&
+                (this.to) &&
+                (this.items) &&
+                (this.items.length));
     };
 
     /**
@@ -5945,6 +6220,82 @@ define('Reservation',[
     //
     // Transaction overrides
     //
+    /**
+     * Gets a list of Conflict objects
+     * used during Transaction._fromJson
+     * @returns {promise}
+     * @private
+     */
+    Reservation.prototype._getConflicts = function() {
+        var conflicts = [];
+        var conflict = null;
+
+        // Reservations can only have conflicts
+        // when we have a (location OR (from AND to)) AND at least 1 item
+        if( (this.items) &&
+            (this.items.length) &&
+            ((this.location) || (this.from && this.to))) {
+
+            if (this.status == "open") {
+                // Reservations in "open" status,
+                // can use the Items' current status and location
+                // to see if there are any conflicts for fullfilling into an Order
+                var locId = this._getId(this.location);
+
+                $.each(this.items, function(i, item) {
+                    if (item.status!="available") {
+                        conflicts.push(new Conflict({
+                            kind: "status",
+                            item: item._id,
+                            itemName: item.name,
+                            doc: item.order
+                        }));
+                    } else if (item.location!=locId) {
+                        conflicts.push(new Conflict({
+                            kind: "location",
+                            item: item._id,
+                            itemName: item.name,
+                            locationCurrent: item.location,
+                            locationDesired: locId,
+                            doc: item.order
+                        }));
+                    }
+                });
+
+            } else if (this.status == "creating") {
+                var that = this;
+
+                // Reservations in "creating" status,
+                // use a server side check
+                return this.ds.call(this.id, "getConflicts")
+                    .then(function(cnflcts) {
+                        if( (cnflcts) &&
+                            (cnflcts.length)) {
+
+                            // Now we have the conflicts for this reservation
+                            // run over the items again and find the conflict for each item
+                            $.each(that.items, function(i, item) {
+                                conflict = _.find(cnflcts, function(c) { return c.item==item._id});
+                                if (conflict) {
+                                    var kind = "";
+                                    kind = kind || (conflict.order) ? "order" : "";
+                                    kind = kind || (conflict.reservation) ? "reservation" : "";
+
+                                    conflicts.push(new Conflict({
+                                        kind: kind,
+                                        item: item._id,
+                                        itemName: item.name,
+                                        doc: conflict.conflictsWith
+                                    }));
+                                }
+                            });
+                        }
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
 
     /**
      * Sets the reservation from / to dates in a single call
@@ -6083,18 +6434,18 @@ define('Reservation',[
         return this._handleTransaction(skipRead);
     };
 
-    // Reservation does not use due dates
+// Reservation does not use due dates
     Reservation.prototype.clearDueDate = function(skipRead) {
         throw "Reservation.clearDueDate not implemented";
     };
-    
+
     Reservation.prototype.setDueDate = function(date, skipRead) {
         throw "Reservation.setDueDate not implemented";
     };
 
-    //
-    // Business logic calls
-    //
+//
+// Business logic calls
+//
 
     /**
      * Searches for Items that are available for this reservation
@@ -6152,9 +6503,9 @@ define('Reservation',[
         return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
     };
 
-    //
-    // Implementation
-    //
+//
+// Implementation
+//
     Reservation.prototype._checkFromToDate = function(from, to) {
         var dateHelper = this._getDateHelper();
         var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
@@ -6162,9 +6513,9 @@ define('Reservation',[
 
         if (roundedFromDate && roundedToDate) {
             return $.when(
-                this._checkDateBetweenMinMax(roundedFromDate),
-                this._checkDateBetweenMinMax(roundedToDate)
-            )
+                    this._checkDateBetweenMinMax(roundedFromDate),
+                    this._checkDateBetweenMinMax(roundedToDate)
+                )
                 .then(function(fromRes, toRes) {
                     var interval = dateHelper.roundMinutes;
                     if (roundedToDate.diff(roundedFromDate, "minutes") < interval) {
@@ -6213,7 +6564,7 @@ define('Reservation',[
         var hasAnyItem = (this.items!=null) && (this.items.length>0);
         var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
 
-        if( (hasNonConflictStatus) || 
+        if( (hasNonConflictStatus) ||
             (!hasLocation && !hasAnyDate && !hasAnyItem)) {
 
             // We cannot have conflicts, so make the conflicts array empty
@@ -6237,25 +6588,25 @@ define('Reservation',[
             // so the only conflicts we can have
             // are for turning it into an order
             $.each(this.raw.items, function(i, item) {
-               if (item.status=="expired") {
+                if (item.status=="expired") {
                     that.conflicts.push({
                         item: (item._id) ? item._id : item,
                         kind: "status",
                         friendlyKind: "Item is expired"
                     });
-               } else if (item.status!="available") {
+                } else if (item.status!="available") {
                     that.conflicts.push({
                         item: (item._id) ? item._id : item,
                         kind: "status",
                         friendlyKind: "Item is checked out in an order"
                     });
-               } else if(item.location!=that.location) {
+                } else if(item.location!=that.location) {
                     that.conflicts.push({
                         item: (item._id) ? item._id : item,
                         kind: "location",
                         friendlyKind: "Item is at wrong location"
                     });
-               }
+                }
             });
 
             return $.Deferred().resolve(data);
@@ -6270,7 +6621,7 @@ define('Reservation',[
     };
 
     return Reservation;
-    
+
 });
 /**
  * The Transaction module
@@ -6284,7 +6635,8 @@ define('Transaction',[
     'jquery',
     'api',
     'base',
-    'Location'], /** @lends Base */ function ($, api, Base, Location) {
+    'Location',
+    'Conflict'], /** @lends Base */ function ($, api, Base, Location, Conflict) {
 
     var DEFAULTS = {
         status: "creating",
@@ -6293,7 +6645,8 @@ define('Transaction',[
         due: null,
         contact: "",
         location: "",
-        items: []
+        items: [],
+        conflicts: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -6315,6 +6668,7 @@ define('Transaction',[
      * @property {string}  contact                    - The Contact.id for this transaction
      * @property {string}  location                   - The Location.id for this transaction
      * @property {Array}  items                       - A list of Item.id strings
+     * @property {Array}  conflicts                   - A list of conflict hashes
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -6326,13 +6680,14 @@ define('Transaction',[
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.helper = spec.helper;
 
-        this.status = spec.status || DEFAULTS.status;        // the status of the order or reservation
-        this.from = spec.from || DEFAULTS.from;              // a date in the future
-        this.to = spec.to || DEFAULTS.to;                    // a date in the future
-        this.due = spec.due || DEFAULTS.due;                 // a date even further in the future, we suggest some standard avg durations
-        this.contact = spec.contact || DEFAULTS.contact;     // a contact id
-        this.location = spec.location || DEFAULTS.location;  // a location id
-        this.items = spec.items || DEFAULTS.items.slice();   // an array of item ids
+        this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
+        this.from = spec.from || DEFAULTS.from;                           // a date in the future
+        this.to = spec.to || DEFAULTS.to;                                 // a date in the future
+        this.due = spec.due || DEFAULTS.due;                              // a date even further in the future, we suggest some standard avg durations
+        this.contact = spec.contact || DEFAULTS.contact;                  // a contact id
+        this.location = spec.location || DEFAULTS.location;               // a location id
+        this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
+        this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
     };
 
     Transaction.prototype = new tmp();
@@ -6497,12 +6852,12 @@ define('Transaction',[
         data.due = this.due;
         if (this.location) {
             // Make sure we send the location as id, not the entire object
-            data.location = (typeof this.location === 'string') ? this.location : this.location._id;
+            data.location = this._getId(this.location);
         }
         if (this.contact) {
             // Make sure we send the contact as id, not the entire object
             // VT: It's still called the "customer" field on the backend!
-            data.customer = (typeof this.contact === 'string') ? this.contact : this.contact._id;
+            data.customer = this._getId(this.contact);
         }
         return data;
     };
@@ -6522,6 +6877,10 @@ define('Transaction',[
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();
+                return that._getConflicts()
+                    .then(function(conflicts) {
+                        that.conflicts = conflicts;
+                    });
             });
     };
 
@@ -6785,6 +7144,16 @@ define('Transaction',[
     //
     // Implementation stuff
     //
+    /**
+     * Gets a list of Conflict objects for this transaction
+     * Will be overriden by inheriting classes
+     * @returns {promise}
+     * @private
+     */
+    Transaction.prototype._getConflicts = function() {
+        return $.Deferred().resolve([]);
+    };
+
     Transaction.prototype._getHelper = function() {
         return this.helper;
     };
@@ -6797,13 +7166,13 @@ define('Transaction',[
      * Searches for Items that are available for this transaction
      * @param params: a dict with params, just like items/search
      * @param listName: restrict search to a certain list
-     * @param useAvailabilies (uses items/searchAvailable instead of items/search)
-     * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
+     * @param useAvailabilities (uses items/searchAvailable instead of items/search)
+     * @param onlyUnbooked (true by default, only used when useAvailabilities=true)
      * @param skipItems array of item ids that should be skipped
      * @private
      * @returns {*}
      */
-    Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {
+    Transaction.prototype._searchItems = function(params, listName, useAvailabilities, onlyUnbooked, skipItems) {
         if (this.dsItems==null) {
             return $.Deferred().reject(new api.ApiBadRequest(this.crtype+" has no DataSource for items"));
         }
@@ -7188,6 +7557,7 @@ define('../main',[
     'Base',
     'Comment',
     'common',
+    'Conflict',
     'Contact',
     'DateHelper',
     'Document',
@@ -7198,7 +7568,7 @@ define('../main',[
     'helper',
     'Reservation',
     'Transaction',
-    'User'], function(api, Availability, Attachment, Base, Comment, common, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
+    'User'], function(api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
 
     var core = {};
 
@@ -7210,6 +7580,7 @@ define('../main',[
     core.Attachment = Attachment;
     core.Base = Base;
     core.Comment = Comment;
+    core.Conflict = Conflict;
     core.Contact = Contact;
     core.DateHelper = DateHelper;
     core.Document = Document;

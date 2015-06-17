@@ -575,7 +575,7 @@ define([
             });
         }
 
-        if (useAvailabilies==true) {
+        if (useAvailabilities==true) {
             // We'll use a more advanced API call /items/searchAvailable
             // It's a bit slower and the .count result is not usable
 

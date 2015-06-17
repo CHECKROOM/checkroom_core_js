@@ -238,6 +238,16 @@ define([
 
     // Implementation stuff
     // ---
+    /**
+     * Gets the id of a document
+     * @param obj
+     * @param prop
+     * @returns {string}
+     * @private
+     */
+    Document.prototype._getId = function(obj, prop) {
+        return (typeof obj === 'string') ? obj : obj[prop || "_id"];
+    };
 
     /**
      * Wrapping the this.ds.call method

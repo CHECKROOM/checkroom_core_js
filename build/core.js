@@ -1690,6 +1690,16 @@ define('document',[
 
     // Implementation stuff
     // ---
+    /**
+     * Gets the id of a document
+     * @param obj
+     * @param prop
+     * @returns {string}
+     * @private
+     */
+    Document.prototype._getId = function(obj, prop) {
+        return (typeof obj === 'string') ? obj : obj[prop || "_id"];
+    };
 
     /**
      * Wrapping the this.ds.call method
@@ -3863,6 +3873,16 @@ define('Document',[
 
     // Implementation stuff
     // ---
+    /**
+     * Gets the id of a document
+     * @param obj
+     * @param prop
+     * @returns {string}
+     * @private
+     */
+    Document.prototype._getId = function(obj, prop) {
+        return (typeof obj === 'string') ? obj : obj[prop || "_id"];
+    };
 
     /**
      * Wrapping the this.ds.call method
@@ -5183,11 +5203,23 @@ define('transaction',[
         // - at this location
         // - in the specified list (if any)
         params = params || {};
-        params.location = this.location;
+        params.location = this._getId(this.location);
 
         if( (listName!=null) &&
             (listName.length>0)) {
             params.listName = listName
+        }
+
+        // Make sure we only pass the item ids,
+        // and not the entire items
+        var that = this;
+        var skipList = null;
+        if( (skipItems) &&
+            (skipItems.length)) {
+            skipList = skipItems.slice(0);
+            $.each(skipList, function(i, item) {
+                skipList[i] = that._getId(item);
+            });
         }
 
         if (useAvailabilies==true) {
@@ -5200,9 +5232,9 @@ define('transaction',[
             params.toDate = this.to;
             params._limit = 20;  // TODO
             params._skip = 0;  // TODO
-            if( (skipItems) &&
-                (skipItems.length)) {
-                params.skipItems = skipItems;
+            if( (skipList) &&
+                (skipList.length)) {
+                params.skipItems = skipList;
             }
 
             return this.dsItems.call(null, 'searchAvailable', params);
@@ -5210,9 +5242,9 @@ define('transaction',[
             // We don't need to use availabilities,
             // we should better use the regular /search
             // it's faster and has better paging :)
-            if( (skipItems) &&
-                (skipItems.length)) {
-                params.pk__nin = skipItems;
+            if( (skipList) &&
+                (skipList.length)) {
+                params.pk__nin = skipList;
             }
             return this.dsItems.search(params);
         }
@@ -6780,11 +6812,23 @@ define('Transaction',[
         // - at this location
         // - in the specified list (if any)
         params = params || {};
-        params.location = this.location;
+        params.location = this._getId(this.location);
 
         if( (listName!=null) &&
             (listName.length>0)) {
             params.listName = listName
+        }
+
+        // Make sure we only pass the item ids,
+        // and not the entire items
+        var that = this;
+        var skipList = null;
+        if( (skipItems) &&
+            (skipItems.length)) {
+            skipList = skipItems.slice(0);
+            $.each(skipList, function(i, item) {
+                skipList[i] = that._getId(item);
+            });
         }
 
         if (useAvailabilies==true) {
@@ -6797,9 +6841,9 @@ define('Transaction',[
             params.toDate = this.to;
             params._limit = 20;  // TODO
             params._skip = 0;  // TODO
-            if( (skipItems) &&
-                (skipItems.length)) {
-                params.skipItems = skipItems;
+            if( (skipList) &&
+                (skipList.length)) {
+                params.skipItems = skipList;
             }
 
             return this.dsItems.call(null, 'searchAvailable', params);
@@ -6807,9 +6851,9 @@ define('Transaction',[
             // We don't need to use availabilities,
             // we should better use the regular /search
             // it's faster and has better paging :)
-            if( (skipItems) &&
-                (skipItems.length)) {
-                params.pk__nin = skipItems;
+            if( (skipList) &&
+                (skipList.length)) {
+                params.pk__nin = skipList;
             }
             return this.dsItems.search(params);
         }

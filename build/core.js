@@ -5722,7 +5722,7 @@ define('Order',[
                         $.each(data, function(i, av) {
                             // Lookup the more complete item object via transaction.items
                             // It has useful info like item.name we can use in the conflict message
-                            transItem = _.find(that.items, function(item) { return item._id == av.item});
+                            transItem = $.grep(that.items, function(item) { return item._id == av.item});
 
                             // Order cannot conflict with itself
                             if (av.order != that.id) {
@@ -6275,7 +6275,7 @@ define('Reservation',[
                             // Now we have the conflicts for this reservation
                             // run over the items again and find the conflict for each item
                             $.each(that.items, function(i, item) {
-                                conflict = _.find(cnflcts, function(c) { return c.item==item._id});
+                                conflict = $.grep(cnflcts, function(c) { return c.item==item._id});
                                 if (conflict) {
                                     var kind = "";
                                     kind = kind || (conflict.order) ? "order" : "";

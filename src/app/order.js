@@ -203,7 +203,7 @@ define([
                         $.each(data, function(i, av) {
                             // Lookup the more complete item object via transaction.items
                             // It has useful info like item.name we can use in the conflict message
-                            transItem = _.find(that.items, function(item) { return item._id == av.item});
+                            transItem = $.grep(that.items, function(item) { return item._id == av.item});
 
                             // Order cannot conflict with itself
                             if (av.order != that.id) {

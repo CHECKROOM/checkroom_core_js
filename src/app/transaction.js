@@ -7,11 +7,10 @@
  * @copyright CHECKROOM NV 2015
  */
 define([
-    'jquery',
-    'api',
-    'base',
-    'Location',
-    'Conflict'], /** @lends Base */ function ($, api, Base, Location, Conflict) {
+    "jquery",
+    "api",
+    "base",
+    "location"], /** @lends Base */ function ($, api, Base, Location) {
 
     var DEFAULTS = {
         status: "creating",

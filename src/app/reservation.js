@@ -6,7 +6,8 @@
 define([
     "jquery",
     "api",
-    "transaction"],  /** @lends Transaction */ function ($, api, Transaction) {
+    "transaction",
+    "conflict"],  /** @lends Transaction */ function ($, api, Transaction, Conflict) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain

@@ -158,7 +158,6 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         return (this.roundMinutes<=1) ? m : this.roundTime(m, this.roundMinutes, this._typeToDirection(this.roundType, "to"));
     };
 
-
     /**
      * @name  DateHelper#roundTime
      * @method

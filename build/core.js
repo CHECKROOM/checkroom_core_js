@@ -692,7 +692,6 @@ define('dateHelper',["jquery", "moment"], /** @lends DateHelper */ function ($, 
         return (this.roundMinutes<=1) ? m : this.roundTime(m, this.roundMinutes, this._typeToDirection(this.roundType, "to"));
     };
 
-
     /**
      * @name  DateHelper#roundTime
      * @method
@@ -3661,7 +3660,6 @@ define('DateHelper',["jquery", "moment"], /** @lends DateHelper */ function ($, 
     DateHelper.prototype.roundTimeTo = function(m) {
         return (this.roundMinutes<=1) ? m : this.roundTime(m, this.roundMinutes, this._typeToDirection(this.roundType, "to"));
     };
-
 
     /**
      * @name  DateHelper#roundTime
@@ -6651,11 +6649,13 @@ define('Reservation',[
             (this.location) &&
             (this.items!=null) &&
             (this.items.length>0)) {
+            var that = this;
+            var locId = that._getId(that.location);
             $.each(this.items, function(i, item) {
                 if (item.status!="available") {
                     unavailable["status"] = unavailable["status"] || [];
                     unavailable["status"].push(item._id);
-                } else if (item.location!=location._id) {
+                } else if (item.location!=locId) {
                     unavailable["location"] = unavailable["location"] || [];
                     unavailable["location"].push(item._id);
                 }

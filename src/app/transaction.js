@@ -582,8 +582,8 @@ define([
             params.onlyUnbooked = (onlyUnbooked!=null) ? onlyUnbooked : true;
             params.fromDate = this.from;
             params.toDate = this.to;
-            params._limit = 20;  // TODO
-            params._skip = 0;  // TODO
+            params._limit = params._limit || 20;
+            params._skip = params._skip || 0;
             if( (skipList) &&
                 (skipList.length)) {
                 params.skipItems = skipList;

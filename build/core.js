@@ -779,25 +779,26 @@ define('api',[
     //*************
     // ApiErrors
     //*************
-    api.ApiNetworkNotConnected = function(msg) {       this.code=999; this.message = msg || "Connection interrupted"; };
-    api.ApiNetworkNotConnected.prototype = new Error();
-    api.ApiNetworkTimeout = function(msg) {            this.code=408; this.message = msg || "Could not reach the server in time"; };
-    api.ApiNetworkTimeout.prototype = new Error();
-
-    api.ApiError = function(msg) {                  this.code=500; this.message = msg || "Something went wrong on the server"; };
+    // Network
+    api.NetworkNotConnected = function (msg, opt) {       this.code = 999; this.message = msg || "Connection interrupted"; this.opt = opt; };
+    api.NetworkNotConnected.prototype = new Error();
+    api.NetworkTimeout = function (msg, opt) {            this.code = 408; this.message = msg || "Could not reach the server in time"; this.opt = opt; };
+    api.NetworkTimeout.prototype = new Error();
+    // Api
+    api.ApiError = function (msg, opt) {                  this.code = 500; this.message = msg || "Something went wrong on the server"; this.opt = opt; };
     api.ApiError.prototype = new Error();
-    api.ApiNotFound = function(msg) {               this.code=404; this.message = msg || "Could not find what you're looking for"; };
+    api.ApiNotFound = function (msg, opt) {               this.code = 404; this.message = msg || "Could not find what you're looking for"; this.opt = opt; };
     api.ApiNotFound.prototype = new Error();
-    api.ApiBadRequest = function(msg) {             this.code=400; this.message = msg || "The server did not understand your request"; };
+    api.ApiBadRequest = function (msg, opt) {             this.code = 400; this.message = msg || "The server did not understand your request"; this.opt = opt; };
     api.ApiBadRequest.prototype = new Error();
-    api.ApiUnauthorized = function(msg) {           this.code=401; this.message = msg || "Your session has expired"; };
+    api.ApiUnauthorized = function (msg, opt) {           this.code = 401; this.message = msg || "Your session has expired"; this.opt = opt; };
     api.ApiUnauthorized.prototype = new Error();
-    api.ApiPaymentRequired = function(msg) {        this.code=402; this.message = msg || "Your subscription has expired"; };
-    api.ApiPaymentRequired.prototype = new Error();
-    api.ApiForbidden = function(msg) {              this.code=403; this.message = msg || "You have insufficient rights"; };
+    api.ApiForbidden = function (msg, opt) {              this.code = 403; this.message = msg || "You don't have sufficient rights"; this.opt = opt; };
     api.ApiForbidden.prototype = new Error();
-    api.ApiUnprocessableEntity = function(msg) {    this.code=422; this.message = msg || "Some data is invalid"; };
+    api.ApiUnprocessableEntity = function (msg, opt) {    this.code = 422; this.message = msg || "Some data is invalid"; this.opt = opt; };
     api.ApiUnprocessableEntity.prototype = new Error();
+    api.ApiPaymentRequired = function (msg, opt) {        this.code = 402; this.message = msg || "Your subscription has expired"; this.opt = opt; };
+    api.ApiPaymentRequired.prototype = new Error();
 
     //*************
     // ApiAjax
@@ -833,30 +834,33 @@ define('api',[
 
     // Implementation
     // ----
-    api.ApiAjax.prototype._handleAjaxSuccess = function(dfd, data) {
+    api.ApiAjax.prototype._handleAjaxSuccess = function(dfd, data, opt) {
         if (this.responseInTz) {
             data = this._fixDates(data);
         }
         return dfd.resolve(data);
     };
 
-    api.ApiAjax.prototype._handleAjaxError = function(dfd, x, t, m) {
+    api.ApiAjax.prototype._handleAjaxError = function(dfd, x, t, m, opt) {
+        var msg = null;
         if (m==="timeout") {
-            dfd.reject(new api.ApiNetworkTimeout());
+            dfd.reject(new api.ApiNetworkTimeout(msg, opt));
         } else {
             switch(x.status) {
-                case 400: dfd.reject(new api.ApiBadRequest()); break;
-                case 401: dfd.reject(new api.ApiUnauthorized()); break;
-                case 403: dfd.reject(new api.ApiForbidden()); break;
-                case 404: dfd.reject(new api.ApiNotFound()); break;
-                case 422: dfd.reject(new api.ApiUnprocessableEntity()); break;
+                case 400: dfd.reject(new api.ApiBadRequest(msg, opt)); break;
+                case 401: dfd.reject(new api.ApiUnauthorized(msg, opt)); break;
+                case 402: dfd.reject(new api.ApiPaymentRequired(msg, opt)); break;
+                case 403: dfd.reject(new api.ApiForbidden(msg, opt)); break;
+                case 404: dfd.reject(new api.ApiNotFound(msg, opt)); break;
+                case 408: dfd.reject(new api.NetworkTimeout(msg, opt)); break;
+                case 422: dfd.reject(new api.ApiUnprocessableEntity(msg, opt)); break;
                 case 500:
-                default: dfd.reject(new api.ApiError()); break;
+                default: dfd.reject(new api.ApiError(msg, opt)); break;
             }
         }
     };
 
-    api.ApiAjax.prototype._postAjax = function(url, data, timeOut) {
+    api.ApiAjax.prototype._postAjax = function(url, data, timeOut, opt) {
         var dfd = $.Deferred();
         var that = this;
 
@@ -866,28 +870,28 @@ define('api',[
             data: JSON.stringify(this._prepareDict(data)),
             contentType: "application/json; charset=utf-8",
             timeout: timeOut || this.timeOut,
-            success: function(data) {return that._handleAjaxSuccess(dfd, data);},
-            error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m);}
+            success: function(data) {return that._handleAjaxSuccess(dfd, data, opt);},
+            error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
         });
 
         return dfd.promise();
     };
 
-    api.ApiAjax.prototype._getAjax = function(url, timeOut) {
+    api.ApiAjax.prototype._getAjax = function(url, timeOut,  opt) {
         var dfd = $.Deferred();
         var that = this;
 
         $.ajax({
             url: url,
             timeout: timeOut || this.timeOut,
-            success: function(data) {return that._handleAjaxSuccess(dfd, data);},
-            error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m);}
+            success: function(data) {return that._handleAjaxSuccess(dfd, data, opt);},
+            error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
         });
 
         return dfd.promise();
     };
 
-    api.ApiAjax.prototype._getJsonp = function(url, timeOut) {
+    api.ApiAjax.prototype._getJsonp = function(url, timeOut, opt) {
         var dfd = $.Deferred();
         var that = this;
 
@@ -902,7 +906,7 @@ define('api',[
                 // JSONP doesn't support HTTP status codes
                 // https://github.com/jaubourg/jquery-jsonp/issues/37
                 // so we can only return a simple error
-                dfd.reject(new api.ApiError());
+                dfd.reject(new api.ApiError(null, opt));
             }
         });
 
@@ -1097,7 +1101,7 @@ define('api',[
         this.urlApi = spec.urlApi || '';
     };
 
-    api.ApiAnonymous.prototype.call = function(method, params, timeOut) {
+    api.ApiAnonymous.prototype.call = function(method, params, timeOut, opt) {
         system.log('ApiAnonymous: call ' + method);
         var url =
             this.urlApi +
@@ -1105,7 +1109,7 @@ define('api',[
             method +
             '?' +
             $.param(this.ajax._prepareDict(params));
-        return this.ajax.get(url, timeOut);
+        return this.ajax.get(url, timeOut, opt);
     };
 
     //*************
@@ -1129,6 +1133,7 @@ define('api',[
         this.urlApi = spec.urlApi || '';
         this.user = spec.user;
         this.ajax = spec.ajax;
+        this.version = spec.version;
 
         // Make the baseurl only once, we assume the collection and user never changes
         var tokenType = ((this.user.tokenType != null) && (this.user.tokenType.length>0)) ? this.user.tokenType : 'null';
@@ -1149,9 +1154,21 @@ define('api',[
      * @returns {*}
      */
     api.ApiDataSource.prototype.exists = function(pk, fields) {
+        system.log('ApiDataSource: ' + this.collection + ': exists ' + pk);
+        var cmd = "exists";
         var dfd = $.Deferred();
         var that = this;
-        this.get(pk, fields)
+
+        // We're actually doing a API get
+        // and resolve to an object,
+        // so we also pass the fields
+        var url = this.getBaseUrl() + pk;
+        var p = this.getParams(fields);
+        if (!$.isEmptyObject(p)) {
+            url += '?' + this.getParams(p);
+        }
+
+        this._ajaxGet(cmd, url)
             .done(function(data) {
                 dfd.resolve(data);
             }).fail(function(error) {
@@ -1179,12 +1196,13 @@ define('api',[
      */
     api.ApiDataSource.prototype.get = function(pk, fields) {
         system.log('ApiDataSource: ' + this.collection + ': get ' + pk);
+        var cmd = "get";
         var url = this.getBaseUrl() + pk;
         var p = this.getParamsDict(fields);
         if (!$.isEmptyObject(p)) {
             url += '?' + this.getParams(p);
         }
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     /**
@@ -1197,6 +1215,7 @@ define('api',[
      * @returns {promise}
      */
     api.ApiDataSource.prototype.getIgnore404 = function(pk, fields) {
+        system.log('ApiDataSource: ' + this.collection + ': getIgnore404 ' + pk);
         var that = this;
         var dfd = $.Deferred();
         this.get(pk, fields)
@@ -1228,12 +1247,13 @@ define('api',[
      */
     api.ApiDataSource.prototype.getMultiple = function(pks, fields) {
         system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
+        var cmd = "getMultiple";
         var url = this.getBaseUrl() + pks.join(',') + ',';
         var p = this.getParamsDict(fields);
         if (!$.isEmptyObject(p)) {
             url += '?' + this.getParams(p);
         }
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     /**
@@ -1245,8 +1265,9 @@ define('api',[
      */
     api.ApiDataSource.prototype.delete = function(pk) {
         system.log('ApiDataSource: ' + this.collection + ': delete ' + pk);
+        var cmd = "delete";
         var url = this.getBaseUrl() + pk + '/delete';
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     /**
@@ -1260,6 +1281,7 @@ define('api',[
      */
     api.ApiDataSource.prototype.update = function(pk, params, fields) {
         system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
+        var cmd = "update";
         var url = this.getBaseUrl() + pk + '/update';
         var p = $.extend({}, params);
         if( (fields!=null) &&
@@ -1267,7 +1289,7 @@ define('api',[
             p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
         }
         url += '?' + this.getParams(p);
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     /**
@@ -1280,6 +1302,7 @@ define('api',[
      */
     api.ApiDataSource.prototype.create = function(params, fields) {
         system.log('ApiDataSource: ' + this.collection + ': create');
+        var cmd = "create";
         var url = this.getBaseUrl() + 'create';
         var p = $.extend({}, params);
         if( (fields!=null) &&
@@ -1288,7 +1311,7 @@ define('api',[
         }
 
         url += '?' + this.getParams(p);
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     /**
@@ -1339,7 +1362,10 @@ define('api',[
      * @returns {promise}
      */
     api.ApiDataSource.prototype.list = function(name, fields, limit, skip, sort) {
+        name = name || "";
+
         system.log('ApiDataSource: ' + this.collection + ': list ' + name);
+        var cmd = "list." + name;
         var url = this.getBaseUrl();
         if( (name!=null) && (name.length>0)) {
             url += 'list/' + name + '/';
@@ -1348,7 +1374,7 @@ define('api',[
         if (!$.isEmptyObject(p)) {
             url += '?' + this.getParams(p);
         }
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     /**
@@ -1365,8 +1391,9 @@ define('api',[
      */
     api.ApiDataSource.prototype.search = function(params, fields, limit, skip, sort, mimeType) {
         system.log('ApiDataSource: ' + this.collection + ': search ' + params);
+        var cmd = "search";
         var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
-        return this.ajax.get(url);
+        return this._ajaxGet(cmd, url);
     };
 
     api.ApiDataSource.prototype.searchUrl = function(params, fields, limit, skip, sort, mimeType) {
@@ -1394,16 +1421,17 @@ define('api',[
      */
     api.ApiDataSource.prototype.call = function(pk, method, params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': call ' + method);
+        var cmd = "call." + method;
         var url = ((pk!=null) && (pk.length>0)) ?
             this.getBaseUrl() + pk + '/call/' + method :
             this.getBaseUrl() + 'call/' + method;
         var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
 
         if (usePost) {
-            return this.ajax.post(url, p, timeOut);
+            return this._ajaxPost(cmd, url, p, timeOut);
         } else {
             url += '?' + this.getParams(p);
-            return this.ajax.get(url, timeOut);
+            return this._ajaxGet(cmd, url, timeOut);
         }
     };
 
@@ -1445,6 +1473,31 @@ define('api',[
         if (skip) {     p['_skip'] = skip; }
         if (sort) {     p['_sort'] = sort; }
         return p;
+    };
+
+    /**
+     * Does an ajax GET call using the api.ApiAjax object
+     * @param cmd
+     * @param url
+     * @param timeout
+     * @returns {promise}
+     * @private
+     */
+    api.ApiDataSource.prototype._ajaxGet = function(cmd, url, timeout) {
+        return this.ajax.get(url, timeout, {coll: this.collection, cmd: cmd});
+    };
+
+    /**
+     * Does an ajax POST call using the api.ApiAjax object
+     * @param cmd
+     * @param url
+     * @param data
+     * @param timeout
+     * @returns {promise}
+     * @private
+     */
+    api.ApiDataSource.prototype._ajaxPost = function(cmd, url, data, timeout) {
+        return this.ajax.post(url, data, timeout, {coll: this.collection, cmd: cmd});
     };
 
     return api;

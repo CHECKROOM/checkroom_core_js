@@ -138,7 +138,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
     /**
      * getFriendlyFromTo
-     * returns {fromDate:"", fromTime: "", toDate: "", toTime: "", text: ""}
+     * returns {fromDate:"", fromTime: "", fromText: "", toDate: "", toTime: "", toText: "", text: ""}
      * @param from
      * @param to
      * @param useHours
@@ -153,28 +153,31 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         var sep = separator || " - ",
             fromParts = this.getFriendlyDateParts(from, now, format),
             toParts = this.getFriendlyDateParts(to, now, format),
-            dayDiff = from.diff(to, 'days'),
-            sameDay = (dayDiff==0),
             result = {
+                dayDiff: from.diff(to, 'days'),
                 fromDate: fromParts[0],
                 fromTime: (useHours) ? fromParts[1] : "",
                 toDate: toParts[0],
                 toTime: (useHours) ? toParts[1] : ""
             };
 
+        result.fromText = result.fromDate;
+        result.toText = result.toDate;
+        if (useHours) {
+            result.fromText += " " + result.fromTime;
+            result.toText += " " + result.toTime;
+        }
+
+
         // Build a text based on the dates and times we have
-        if (sameDay) {
-            if (useHours==true) {
-                result.text = result.fromDate + " " + result.fromTime + sep + result.toTime;
+        if (result.dayDiff==0) {
+            if (useHours) {
+                result.text = result.fromText + sep + result.toTime;
             } else {
-                result.text = result.fromDate;
+                result.text = result.fromText;
             }
         } else {
-            if (useHours==true) {
-                result.text = result.fromDate + " " + result.fromTime + sep + result.toDate + " " + result.toTime;
-            } else {
-                result.text = result.fromDate + sep + result.toDate;
-            }
+            result.text = result.fromText + sep + result.toText;
         }
 
         return result;

@@ -40,12 +40,12 @@ require([
         availabilityTest) {
 
         //simpleTest.run();
-        //dateHelperTest.run();
+        dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
         //itemTest.run();
         //orderTest.run();
-        reservationTest.run();
+        //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();
 

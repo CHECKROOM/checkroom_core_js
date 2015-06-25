@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Source: contact.js</title>
+    <title>Class: Conflict</title>
     
     
     
@@ -1112,194 +1112,370 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="contact.js.html">Source: contact.js</h1>
+        <h1 class="page-title" data-filename="Conflict.html">Class: Conflict</h1>
         
 
 
+
+<section>
     
-    <section>
-        <article>
-            <pre class="prettyprint source "><code>/**
- * The Contact module
- * Contact class inherits from Base so it supports KeyValues (Attachment, Comment)
- * @module contact
- * @copyright CHECKROOM NV 2015
- */
-define([
-    'jquery',
-    'base'], /** @lends Contact */ function ($, Base) {
+<header>
+    <h2>
+    Conflict
+    </h2>
+    
+</header>  
 
-    var DEFAULTS = {
-        name: "",
-        company: "",
-        phone: "",
-        email: ""
-    };
+<article>
+    <div class="container-overview">
+    
+    
+    
+        
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="Conflict">
+            
+            new Conflict<span class="signature">(spec)</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="conflict.js.html">conflict.js</a>, <a href="conflict.js.html#line20">line 20</a>
+        </div>
+        
+    </div>
 
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = Base.prototype;
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Conflict class</p>
+    </div>
+    
 
-    /**
-     * Contact class
-     * @name  Contact
-     * @class
-     * @constructor
-     * @extends Base
-     */
-    var Contact = function(opt) {
-        var spec = $.extend({
-            fields: ['*'],
-            crtype: 'cheqroom.types.customer'
-        }, opt);
-        Base.call(this, spec);
+    
+    
+    
+    
+    
+        
 
-        this.name = spec.name || DEFAULTS.name;
-        this.company = spec.company || DEFAULTS.company;
-        this.phone = spec.phone || DEFAULTS.phone;
-        this.email = spec.email || DEFAULTS.email;
-    };
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>spec</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+        <h5 class="subsection-title">Properties:</h5>
+        
+        <dl>
 
-    Contact.prototype = new tmp();
-    Contact.prototype.constructor = Contact;
+<table class="props">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>kind</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
-    //
-    // Specific validators
-    /**
-     * Checks if name is valid
-     * @name Contact#isValidName
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidName = function() {
-        this.name = $.trim(this.name);
-        return (this.name.length>=3);
-    };
 
-    /**
-     * Checks if company is valid
-     * @name  Contact#isValidCompany
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidCompany = function() {
-        this.company = $.trim(this.company);
-        return (this.company.length>=3);
-    };
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The conflict kind (status, order, reservation, location)</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>doc</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
-    /**
-     * Checks if phone is valid
-     * @name  Contact#isValidPhone
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidPhone = function() {
-        this.phone = $.trim(this.phone);
-        var isnum = /^\d{9,}$/.test(this.phone);
-        if (isnum) {
-            return true;
-        }
 
-        var m = this.phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
-        return ((m!=null) && (m.length>0));
-    };
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The id of the document with which it conflicts</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>item</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
-    /**
-     * Check is email is valid
-     * @name  Contact#isValidEmail
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidEmail = function() {
-        var re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-        this.email = $.trim(this.email);
-        return re.test(this.email);
-    };
 
-    //
-    // Base overrides
-    //
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The Item id for this conflict</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>itemName</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
-    /**
-     * Checks if the contact has any validation errors
-     * @name Contact#isValid
-     * @method
-     * @returns {boolean}
-     * @override
-     */
-    Contact.prototype.isValid = function() {
-        return this.isValidName() &&
-            this.isValidCompany() &&
-            this.isValidPhone() &&
-            this.isValidEmail();
-    };
 
-    /**
-     * Checks if the contact is empty
-     * @returns {boolean}
-     * @override
-     */
-    Contact.prototype.isEmpty = function() {
-        return (
-            (Base.prototype.isEmpty.call(this)) &&
-                (this.name==DEFAULTS.name) &&
-                (this.company==DEFAULTS.company) &&
-                (this.phone==DEFAULTS.phone) &&
-                (this.email==DEFAULTS.email));
-    };
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The Item name for this conflict</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>locationCurrent</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
-    /**
-     * Checks if the contact is dirty and needs saving
-     * @returns {boolean}
-     * @override
-     */
-    Contact.prototype.isDirty = function() {
-        var isDirty = Base.prototype.isDirty.call(this);
-        if( (!isDirty) &&
-            (this.raw)) {
-            isDirty = (
-                (this.name!=this.raw.name)||
-                    (this.company!=this.raw.company)||
-                    (this.phone!=this.raw.phone)||
-                    (this.email!=this.raw.email)
-                );
-        }
-        return isDirty;
-    };
 
-    Contact.prototype._getDefaults = function() {
-        return DEFAULTS;
-    };
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The Location the item is now</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>locationDesired</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
 
-    Contact.prototype._toJson = function(options) {
-        var data = Base.prototype._toJson.call(this, options);
-        data.name = this.name || DEFAULTS.name;
-        data.company = this.company || DEFAULTS.company;
-        data.phone = this.phone || DEFAULTS.phone;
-        data.email = this.email || DEFAULTS.email;
-        return data;
-    };
 
-    Contact.prototype._fromJson = function(data, options) {
-        var that = this;
-        return Base.prototype._fromJson.call(this, data, options)
-            .then(function(data) {
-                that.name = data.name || DEFAULTS.name;
-                that.company = data.company || DEFAULTS.company;
-                that.phone = data.phone || DEFAULTS.phone;
-                that.email = data.email || DEFAULTS.email;
-                $.publish('contact.fromJson', data);
-                return data;
-            });
-    };
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>The Location where the item should be</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>fromDate</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">moment</span>
 
-    return Contact;
 
-});</code></pre>
-        </article>
-    </section>
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>From when does the conflict start</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>toDate</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">moment</span>
 
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>Until when does the conflict end</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table></dl>
+        
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+</dd>
+
+    
+    </div>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</article>
+
+</section>  
 
 
 
@@ -1308,7 +1484,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Jun 25 2015 09:29:29 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Jun 25 2015 09:29:31 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

@@ -330,6 +330,25 @@
             </ul>
         </li>
     
+        <li class="item" data-name="Conflict">
+            <span class="title">
+                <a href="Conflict.html">Conflict</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
         <li class="item" data-name="Contact">
             <span class="title">
                 <a href="Contact.html">Contact</a>
@@ -413,6 +432,10 @@
                 
             </span>
             <ul class="members itemMembers">
+            
+            <span class="subtitle">Members</span>
+            
+                <li data-name="DateHelper#getFriendlyDateParts"><a href="DateHelper.html#getFriendlyDateParts">getFriendlyDateParts</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1105,10 +1128,10 @@
  * @copyright CHECKROOM NV 2015
  */
 define([
-    'jquery',
-    'api',
-    'base',
-    'Location'], /** @lends Base */ function ($, api, Base, Location) {
+    "jquery",
+    "api",
+    "base",
+    "location"], /** @lends Base */ function ($, api, Base, Location) {
 
     var DEFAULTS = {
         status: "creating",
@@ -1117,7 +1140,8 @@ define([
         due: null,
         contact: "",
         location: "",
-        items: []
+        items: [],
+        conflicts: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -1139,6 +1163,7 @@ define([
      * @property {string}  contact                    - The Contact.id for this transaction
      * @property {string}  location                   - The Location.id for this transaction
      * @property {Array}  items                       - A list of Item.id strings
+     * @property {Array}  conflicts                   - A list of conflict hashes
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -1150,13 +1175,14 @@ define([
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.helper = spec.helper;
 
-        this.status = spec.status || DEFAULTS.status;        // the status of the order or reservation
-        this.from = spec.from || DEFAULTS.from;              // a date in the future
-        this.to = spec.to || DEFAULTS.to;                    // a date in the future
-        this.due = spec.due || DEFAULTS.due;                 // a date even further in the future, we suggest some standard avg durations
-        this.contact = spec.contact || DEFAULTS.contact;     // a contact id
-        this.location = spec.location || DEFAULTS.location;  // a location id
-        this.items = spec.items || DEFAULTS.items.slice();   // an array of item ids
+        this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
+        this.from = spec.from || DEFAULTS.from;                           // a date in the future
+        this.to = spec.to || DEFAULTS.to;                                 // a date in the future
+        this.due = spec.due || DEFAULTS.due;                              // a date even further in the future, we suggest some standard avg durations
+        this.contact = spec.contact || DEFAULTS.contact;                  // a contact id
+        this.location = spec.location || DEFAULTS.location;               // a location id
+        this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
+        this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
     };
 
     Transaction.prototype = new tmp();
@@ -1320,10 +1346,13 @@ define([
         //data.finished = this.to;  // VT: Will be set during final checkin
         data.due = this.due;
         if (this.location) {
-            data.location = this.location;
+            // Make sure we send the location as id, not the entire object
+            data.location = this._getId(this.location);
         }
         if (this.contact) {
-            data.customer = this.contact;  // Vincent: It's still called the "customer" field!
+            // Make sure we send the contact as id, not the entire object
+            // VT: It's still called the "customer" field on the backend!
+            data.customer = this._getId(this.contact);
         }
         return data;
     };
@@ -1343,6 +1372,10 @@ define([
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();
+                return that._getConflicts()
+                    .then(function(conflicts) {
+                        that.conflicts = conflicts;
+                    });
             });
     };
 
@@ -1355,15 +1388,7 @@ define([
 
     // Setters
     // ----
-    /*
-    TransactionModel.prototype.setFromDate = function(date) {
-        var roundDate = helper.roundFromTime(date, this.global.groupProfile);
-        system.log('TransactionModel: setFromDate '+date.calendar() + ' -- rounded to ' + roundDate.calendar());
-        this.from(roundDate);
-        return this._handleTransaction();
-    };
-    */
-
+    
     // From date setters
 
     /**
@@ -1614,6 +1639,16 @@ define([
     //
     // Implementation stuff
     //
+    /**
+     * Gets a list of Conflict objects for this transaction
+     * Will be overriden by inheriting classes
+     * @returns {promise}
+     * @private
+     */
+    Transaction.prototype._getConflicts = function() {
+        return $.Deferred().resolve([]);
+    };
+
     Transaction.prototype._getHelper = function() {
         return this.helper;
     };
@@ -1626,13 +1661,13 @@ define([
      * Searches for Items that are available for this transaction
      * @param params: a dict with params, just like items/search
      * @param listName: restrict search to a certain list
-     * @param useAvailabilies (uses items/searchAvailable instead of items/search)
-     * @param onlyUnbooked (true by default, only used when useAvailabilies=true)
+     * @param useAvailabilities (uses items/searchAvailable instead of items/search)
+     * @param onlyUnbooked (true by default, only used when useAvailabilities=true)
      * @param skipItems array of item ids that should be skipped
      * @private
      * @returns {*}
      */
-    Transaction.prototype._searchItems = function(params, listName, useAvailabilies, onlyUnbooked, skipItems) {
+    Transaction.prototype._searchItems = function(params, listName, useAvailabilities, onlyUnbooked, skipItems) {
         if (this.dsItems==null) {
             return $.Deferred().reject(new api.ApiBadRequest(this.crtype+" has no DataSource for items"));
         }
@@ -1641,14 +1676,26 @@ define([
         // - at this location
         // - in the specified list (if any)
         params = params || {};
-        params.location = this.location;
+        params.location = this._getId(this.location);
 
         if( (listName!=null) &&
             (listName.length>0)) {
             params.listName = listName
         }
 
-        if (useAvailabilies==true) {
+        // Make sure we only pass the item ids,
+        // and not the entire items
+        var that = this;
+        var skipList = null;
+        if( (skipItems) &&
+            (skipItems.length)) {
+            skipList = skipItems.slice(0);
+            $.each(skipList, function(i, item) {
+                skipList[i] = that._getId(item);
+            });
+        }
+
+        if (useAvailabilities==true) {
             // We'll use a more advanced API call /items/searchAvailable
             // It's a bit slower and the .count result is not usable
 
@@ -1656,11 +1703,11 @@ define([
             params.onlyUnbooked = (onlyUnbooked!=null) ? onlyUnbooked : true;
             params.fromDate = this.from;
             params.toDate = this.to;
-            params._limit = 20;  // TODO
-            params._skip = 0;  // TODO
-            if( (skipItems) &&
-                (skipItems.length)) {
-                params.skipItems = skipItems;
+            params._limit = params._limit || 20;
+            params._skip = params._skip || 0;
+            if( (skipList) &&
+                (skipList.length)) {
+                params.skipItems = skipList;
             }
 
             return this.dsItems.call(null, 'searchAvailable', params);
@@ -1668,9 +1715,9 @@ define([
             // We don't need to use availabilities,
             // we should better use the regular /search
             // it's faster and has better paging :)
-            if( (skipItems) &&
-                (skipItems.length)) {
-                params.pk__nin = skipItems;
+            if( (skipList) &&
+                (skipList.length)) {
+                params.pk__nin = skipList;
             }
             return this.dsItems.search(params);
         }
@@ -1684,9 +1731,9 @@ define([
      * @returns {*}
      * @private
      */
-    Transaction.prototype._checkDateBetweenMinMax = function(date) {
-        var minDate = this.getMinDate();
-        var maxDate = this.getMaxDate();
+    Transaction.prototype._checkDateBetweenMinMax = function(date, minDate, maxDate) {
+        minDate = minDate || this.getMinDate();
+        maxDate = maxDate || this.getMaxDate();
         if( (date&lt;minDate) || 
             (date>maxDate)) {
             var msg = "date is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
@@ -1754,7 +1801,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon Jun 01 2015 18:52:30 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Jun 25 2015 09:29:29 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

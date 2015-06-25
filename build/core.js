@@ -5998,21 +5998,30 @@ define('Order',[
         if( (this.status=="creating") &&
             (this.items.length>0)) {
 
-            // Check if all the items are at the right location
+            // Check if all the items are:
+            // - at the right location
+            // - not expired
             var locId = this._getId(this.location);
-            if (locId) {
-                $.each(this.items, function(i, item) {
-                    if (item.location != locId) {
-                        conflicts.push(new Conflict({
-                            kind: "location",
-                            item: item._id,
-                            itemName: item.name,
-                            locationCurrent: item.location,
-                            locationDesired: locId
-                        }));
-                    }
-                });
-            }
+
+            $.each(this.items, function(i, item) {
+                if (item.status == "expired") {
+                    conflicts.push(new Conflict({
+                        kind: "expired",
+                        item: item._id,
+                        itemName: item.name,
+                        locationCurrent: item.location,
+                        locationDesired: locId
+                    }));
+                } else if (item.location != locId) {
+                    conflicts.push(new Conflict({
+                        kind: "location",
+                        item: item._id,
+                        itemName: item.name,
+                        locationCurrent: item.location,
+                        locationDesired: locId
+                    }));
+                }
+            });
 
             // If we have a due date,
             // check if it conflicts with any reservations
@@ -6034,20 +6043,24 @@ define('Order',[
                             // It has useful info like item.name we can use in the conflict message
                             transItem = $.grep(that.items, function(item) { return item._id == av.item});
 
-                            // Order cannot conflict with itself
-                            if (av.order != that.id) {
-                                kind = "";
-                                kind = kind || (av.order) ? "order" : "";
-                                kind = kind || (av.reservation) ? "reservation" : "";
+                            if( (transItem!=null) &&
+                                (transItem.status!="expired")) {
 
-                                conflicts.push(new Conflict({
-                                    kind: kind,
-                                    item: transItem._id,
-                                    itemName: transItem.name,
-                                    fromDate: av.fromDate,
-                                    toDate: av.toDate,
-                                    doc: av.order || av.reservation
-                                }));
+                                // Order cannot conflict with itself
+                                if (av.order != that.id) {
+                                    kind = "";
+                                    kind = kind || (av.order) ? "order" : "";
+                                    kind = kind || (av.reservation) ? "reservation" : "";
+
+                                    conflicts.push(new Conflict({
+                                        kind: kind,
+                                        item: transItem._id,
+                                        itemName: transItem.name,
+                                        fromDate: av.fromDate,
+                                        toDate: av.toDate,
+                                        doc: av.order || av.reservation
+                                    }));
+                                }
                             }
                         });
 
@@ -6902,23 +6915,20 @@ define('Reservation',[
             // are for turning it into an order
             $.each(this.raw.items, function(i, item) {
                 if (item.status=="expired") {
-                    that.conflicts.push({
-                        item: (item._id) ? item._id : item,
-                        kind: "status",
-                        friendlyKind: "Item is expired"
-                    });
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "expired"
+                    }));
                 } else if (item.status!="available") {
-                    that.conflicts.push({
-                        item: (item._id) ? item._id : item,
-                        kind: "status",
-                        friendlyKind: "Item is checked out in an order"
-                    });
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "status"
+                    }));
                 } else if(item.location!=that.location) {
-                    that.conflicts.push({
-                        item: (item._id) ? item._id : item,
-                        kind: "location",
-                        friendlyKind: "Item is at wrong location"
-                    });
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "location"
+                    }));
                 }
             });
 

@@ -530,23 +530,20 @@ define([
             // are for turning it into an order
             $.each(this.raw.items, function(i, item) {
                 if (item.status=="expired") {
-                    that.conflicts.push({
-                        item: (item._id) ? item._id : item,
-                        kind: "status",
-                        friendlyKind: "Item is expired"
-                    });
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "expired"
+                    }));
                 } else if (item.status!="available") {
-                    that.conflicts.push({
-                        item: (item._id) ? item._id : item,
-                        kind: "status",
-                        friendlyKind: "Item is checked out in an order"
-                    });
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "status"
+                    }));
                 } else if(item.location!=that.location) {
-                    that.conflicts.push({
-                        item: (item._id) ? item._id : item,
-                        kind: "location",
-                        friendlyKind: "Item is at wrong location"
-                    });
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "location"
+                    }));
                 }
             });
 

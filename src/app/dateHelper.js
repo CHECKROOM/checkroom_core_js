@@ -109,6 +109,78 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     };
 
     /**
+     * @name DateHelper#getFriendlyDateParts
+     * @param date
+     * @param now (optional)
+     * @param format (optional)
+     * @returns [date string,time string]
+     */
+    DateHelper.prototype.getFriendlyDateParts = function(date, now, format) {
+        /*
+        moment().calendar() shows friendlier dates
+        - when the date is <=7d away:
+          - Today at 4:15 PM
+          - Yesterday at 4:15 PM
+          - Last Monday at 4:15 PM
+          - Wednesday at 4:15 PM
+        - when the date is >7d away:
+          - 07/25/2015
+        */
+        now = now || this.getNow();
+        format = format || "MMM D [at] h:mm a";
+        var diff = now.diff(date, 'days');
+        var str = (Math.abs(diff) < 7) ? date.calendar() : date.format(format);
+        return str
+                .replace("AM", "am")
+                .replace("PM", "pm")
+                .split(" at ");
+    };
+
+    /**
+     * getFriendlyFromTo
+     * returns {fromDate:"", fromTime: "", toDate: "", toTime: "", text: ""}
+     * @param from
+     * @param to
+     * @param useHours
+     * @param now
+     * @param separator
+     * @param format
+     * @returns {}
+     */
+    DateHelper.prototype.getFriendlyFromTo = function(from, to, useHours, now, separator, format) {
+        now = now || this.getNow();
+
+        var sep = separator || " - ",
+            fromParts = this.getFriendlyDateParts(from, now, format),
+            toParts = this.getFriendlyDateParts(to, now, format),
+            dayDiff = from.diff(to, 'days'),
+            sameDay = (dayDiff==0),
+            result = {
+                fromDate: fromParts[0],
+                fromTime: (useHours) ? fromParts[1] : "",
+                toDate: toParts[0],
+                toTime: (useHours) ? toParts[1] : ""
+            };
+
+        // Build a text based on the dates and times we have
+        if (sameDay) {
+            if (useHours==true) {
+                result.text = result.fromDate + " " + result.fromTime + sep + result.toTime;
+            } else {
+                result.text = result.fromDate;
+            }
+        } else {
+            if (useHours==true) {
+                result.text = result.fromDate + " " + result.fromTime + sep + result.toDate + " " + result.toTime;
+            } else {
+                result.text = result.fromDate + sep + result.toDate;
+            }
+        }
+
+        return result;
+    };
+
+    /**
      * Turns all strings that look like datetimes into moment objects recursively
      * @name  DateHelper#fixDates
      * @method

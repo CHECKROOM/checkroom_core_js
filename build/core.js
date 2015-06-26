@@ -6885,7 +6885,8 @@ define('Reservation',[
         // Only load conflicts when it"s possible to have conflicts
         // location, at least 1 date and at least 1 item
         var that = this;
-        var hasLocation = (this.location!=null);
+        var locId = this._getId(this.location);
+        var hasLocation = (locId!=null) && (locId.length>0);
         var hasAnyDate = (this.from!=null) || (this.to!=null);
         var hasAnyItem = (this.items!=null) && (this.items.length>0);
         var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
@@ -6924,7 +6925,7 @@ define('Reservation',[
                         item: that._getId(item),
                         kind: "status"
                     }));
-                } else if(item.location!=that.location) {
+                } else if(item.location!=locId) {
                     that.conflicts.push(new Conflict({
                         item: that._getId(item),
                         kind: "location"

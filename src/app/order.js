@@ -218,7 +218,8 @@ define([
                                 (transItem.status!="expired")) {
 
                                 // Order cannot conflict with itself
-                                if (av.order != that.id) {
+                                if( (av.order != null) &&
+                                    (av.order != that.id)) {
                                     kind = "";
                                     kind = kind || (av.order) ? "order" : "";
                                     kind = kind || (av.reservation) ? "reservation" : "";

@@ -62,11 +62,15 @@ define([
 
     Order.prototype._fromJson = function(data, options) {
         var that = this;
+
+        // Already set the from, to and due dates
+        // Transaction._fromJson might need it during _getConflicts
+        that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
+        that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
+        that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
+
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
-                that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
-                that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
-                that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
                 $.publish("order.fromJson", data);
                 return data;
             });

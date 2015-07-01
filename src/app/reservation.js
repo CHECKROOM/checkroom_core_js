@@ -133,20 +133,23 @@ define([
 
     Reservation.prototype._fromJson = function(data, options) {
         var that = this;
+
+        // Already set the from, to and due dates
+        // Transaction._fromJson might need it during _getConflicts
+        that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
+        that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
+        that.due = null;
+
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
+                // TODO: existsInDb should always return true?
+                // If that is the case we can simplify the part below
                 if (that.existsInDb()) {
                     return that._loadConflicts(data, options)
                         .then(function() {
-                            that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
-                            that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
-                            that.due = null;
                             $.publish("reservation.fromJson", data);
                         });
                 } else {
-                    that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
-                    that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
-                    that.due = null;
                     $.publish("reservation.fromJson", data);
                 }
             });

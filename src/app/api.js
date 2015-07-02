@@ -89,7 +89,7 @@ define([
     api.ApiAjax.prototype._handleAjaxError = function(dfd, x, t, m, opt) {
         var msg = null;
         if (m==="timeout") {
-            dfd.reject(new api.ApiNetworkTimeout(msg, opt));
+            dfd.reject(new api.NetworkTimeout(msg, opt));
         } else {
             switch(x.status) {
                 case 400: dfd.reject(new api.ApiBadRequest(msg, opt)); break;

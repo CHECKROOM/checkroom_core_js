@@ -1183,11 +1183,15 @@ define([
 
     Order.prototype._fromJson = function(data, options) {
         var that = this;
+
+        // Already set the from, to and due dates
+        // Transaction._fromJson might need it during _getConflicts
+        that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
+        that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
+        that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
+
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
-                that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
-                that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
-                that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
                 $.publish("order.fromJson", data);
                 return data;
             });
@@ -1290,21 +1294,30 @@ define([
         if( (this.status=="creating") &&
             (this.items.length>0)) {
 
-            // Check if all the items are at the right location
+            // Check if all the items are:
+            // - at the right location
+            // - not expired
             var locId = this._getId(this.location);
-            if (locId) {
-                $.each(this.items, function(i, item) {
-                    if (item.location != locId) {
-                        conflicts.push(new Conflict({
-                            kind: "location",
-                            item: item._id,
-                            itemName: item.name,
-                            locationCurrent: item.location,
-                            locationDesired: locId
-                        }));
-                    }
-                });
-            }
+
+            $.each(this.items, function(i, item) {
+                if (item.status == "expired") {
+                    conflicts.push(new Conflict({
+                        kind: "expired",
+                        item: item._id,
+                        itemName: item.name,
+                        locationCurrent: item.location,
+                        locationDesired: locId
+                    }));
+                } else if (item.location != locId) {
+                    conflicts.push(new Conflict({
+                        kind: "location",
+                        item: item._id,
+                        itemName: item.name,
+                        locationCurrent: item.location,
+                        locationDesired: locId
+                    }));
+                }
+            });
 
             // If we have a due date,
             // check if it conflicts with any reservations
@@ -1326,20 +1339,25 @@ define([
                             // It has useful info like item.name we can use in the conflict message
                             transItem = $.grep(that.items, function(item) { return item._id == av.item});
 
-                            // Order cannot conflict with itself
-                            if (av.order != that.id) {
-                                kind = "";
-                                kind = kind || (av.order) ? "order" : "";
-                                kind = kind || (av.reservation) ? "reservation" : "";
+                            if( (transItem!=null) &&
+                                (transItem.status!="expired")) {
 
-                                conflicts.push(new Conflict({
-                                    kind: kind,
-                                    item: transItem._id,
-                                    itemName: transItem.name,
-                                    fromDate: av.fromDate,
-                                    toDate: av.toDate,
-                                    doc: av.order || av.reservation
-                                }));
+                                // Order cannot conflict with itself
+                                if( (av.order != null) &&
+                                    (av.order != that.id)) {
+                                    kind = "";
+                                    kind = kind || (av.order) ? "order" : "";
+                                    kind = kind || (av.reservation) ? "reservation" : "";
+
+                                    conflicts.push(new Conflict({
+                                        kind: kind,
+                                        item: transItem._id,
+                                        itemName: transItem.name,
+                                        fromDate: av.fromDate,
+                                        toDate: av.toDate,
+                                        doc: av.order || av.reservation
+                                    }));
+                                }
                             }
                         });
 
@@ -1585,7 +1603,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Jun 25 2015 09:29:29 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Jul 02 2015 16:34:09 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

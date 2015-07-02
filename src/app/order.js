@@ -218,12 +218,16 @@ define([
                             // It has useful info like item.name we can use in the conflict message
                             transItem = $.grep(that.items, function(item) { return item._id == av.item});
 
+                            // $.grep returns an array with 1 item, we need reference to the item for transItem
+                            if(transItem && transItem.length > 0){
+                                transItem = transItem[0];
+                            }
+
                             if( (transItem!=null) &&
                                 (transItem.status!="expired")) {
 
                                 // Order cannot conflict with itself
-                                if( (av.order != null) &&
-                                    (av.order != that.id)) {
+                                if(av.order != that.id) {
                                     kind = "";
                                     kind = kind || (av.order) ? "order" : "";
                                     kind = kind || (av.reservation) ? "reservation" : "";

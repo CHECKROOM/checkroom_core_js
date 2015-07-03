@@ -70,6 +70,32 @@ define([
     //
     // Date helpers (possibly overwritten)
     //
+
+    /**
+     * Gets the now time
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNow = function() {
+        return this._getDateHelper().getNow();
+    };
+
+    /**
+     * Gets the now time rounded
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNowRounded = function() {
+        return this._getDateHelper().roundTimeFrom(this.getNow());
+    };
+
+    /**
+     * Gets the next time slot after a date, by default after now
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNextTimeSlot = function(d) {
+        d = d || this.getNowRounded();
+        return d.add(this._getDateHelper().roundMinutes, "minutes");
+    };
+
     /**
      * Gets the lowest possible from date, by default now
      * @method
@@ -97,9 +123,8 @@ define([
      * @returns {Moment}
      */
     Transaction.prototype.getMinDateTo = function() {
-        // Reservations can only be due one timeslot after the min from date
-        var dateHelper = this._getDateHelper();
-        return moment(this.getMinDateFrom()).add(dateHelper.roundMinutes, "minutes");
+        // to can only be one timeslot after the min from date
+        return this.getNextTimeSlot(this.getMinDateFrom());
     };
 
     /**
@@ -140,9 +165,7 @@ define([
      * @returns {Moment} min date
      */
     Transaction.prototype.getMinDate = function() {
-        var helper = this._getHelper();
-        var now = helper.getNow();
-        return now;
+        return this.getNow();
     };
 
     /**

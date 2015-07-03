@@ -5137,6 +5137,32 @@ define('transaction',[
     //
     // Date helpers (possibly overwritten)
     //
+
+    /**
+     * Gets the now time
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNow = function() {
+        return this._getDateHelper().getNow();
+    };
+
+    /**
+     * Gets the now time rounded
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNowRounded = function() {
+        return this._getDateHelper().roundTimeFrom(this.getNow());
+    };
+
+    /**
+     * Gets the next time slot after a date, by default after now
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNextTimeSlot = function(d) {
+        d = d || this.getNowRounded();
+        return d.add(this._getDateHelper().roundMinutes, "minutes");
+    };
+
     /**
      * Gets the lowest possible from date, by default now
      * @method
@@ -5164,9 +5190,8 @@ define('transaction',[
      * @returns {Moment}
      */
     Transaction.prototype.getMinDateTo = function() {
-        // Reservations can only be due one timeslot after the min from date
-        var dateHelper = this._getDateHelper();
-        return moment(this.getMinDateFrom()).add(dateHelper.roundMinutes, "minutes");
+        // to can only be one timeslot after the min from date
+        return this.getNextTimeSlot(this.getMinDateFrom());
     };
 
     /**
@@ -5207,9 +5232,7 @@ define('transaction',[
      * @returns {Moment} min date
      */
     Transaction.prototype.getMinDate = function() {
-        var helper = this._getHelper();
-        var now = helper.getNow();
-        return now;
+        return this.getNow();
     };
 
     /**
@@ -5953,11 +5976,7 @@ define('Order',[
      * While an order is creating, we'll always overwrite its from date
      */
     Order.prototype.getMinDateFrom = function() {
-        // Orders start now
-        var dateHelper = this._getDateHelper();
-        var now = dateHelper.getNow();
-        var next = dateHelper.roundTimeFrom(now);
-        return next;
+        return this.getNowRounded();
     };
 
     /**
@@ -5969,7 +5988,7 @@ define('Order',[
             // Open orders can set their date to be due
             // at least 1 timeslot from now,
             // we can just call the default getMinDateTo function
-            return Transaction.prototype.getMinDateTo.call(this);
+            return this.getNextTimeSlot();
         } else {
             return Transaction.prototype.getMinDateDue.call(this);
         }
@@ -6538,14 +6557,7 @@ define('Reservation',[
      * Min date is a timeslot after now
      */
     Reservation.prototype.getMinDateFrom = function() {
-        // Reservations can only start from the next timeslot at the earliest
-        var dateHelper = this._getDateHelper();
-        var now = dateHelper.getNow();
-        var next = dateHelper.roundTimeUp(now, dateHelper.roundMinutes);
-        if (next==now) {
-            next = next.add(dateHelper.roundMinutes, "minutes");
-        }
-        return next;
+        return this.getNextTimeSlot();
     };
 
     //
@@ -7132,6 +7144,32 @@ define('Transaction',[
     //
     // Date helpers (possibly overwritten)
     //
+
+    /**
+     * Gets the now time
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNow = function() {
+        return this._getDateHelper().getNow();
+    };
+
+    /**
+     * Gets the now time rounded
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNowRounded = function() {
+        return this._getDateHelper().roundTimeFrom(this.getNow());
+    };
+
+    /**
+     * Gets the next time slot after a date, by default after now
+     * @returns {Moment}
+     */
+    Transaction.prototype.getNextTimeSlot = function(d) {
+        d = d || this.getNowRounded();
+        return d.add(this._getDateHelper().roundMinutes, "minutes");
+    };
+
     /**
      * Gets the lowest possible from date, by default now
      * @method
@@ -7159,9 +7197,8 @@ define('Transaction',[
      * @returns {Moment}
      */
     Transaction.prototype.getMinDateTo = function() {
-        // Reservations can only be due one timeslot after the min from date
-        var dateHelper = this._getDateHelper();
-        return moment(this.getMinDateFrom()).add(dateHelper.roundMinutes, "minutes");
+        // to can only be one timeslot after the min from date
+        return this.getNextTimeSlot(this.getMinDateFrom());
     };
 
     /**
@@ -7202,9 +7239,7 @@ define('Transaction',[
      * @returns {Moment} min date
      */
     Transaction.prototype.getMinDate = function() {
-        var helper = this._getHelper();
-        var now = helper.getNow();
-        return now;
+        return this.getNow();
     };
 
     /**

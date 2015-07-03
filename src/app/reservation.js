@@ -47,14 +47,7 @@ define([
      * Min date is a timeslot after now
      */
     Reservation.prototype.getMinDateFrom = function() {
-        // Reservations can only start from the next timeslot at the earliest
-        var dateHelper = this._getDateHelper();
-        var now = dateHelper.getNow();
-        var next = dateHelper.roundTimeUp(now, dateHelper.roundMinutes);
-        if (next==now) {
-            next = next.add(dateHelper.roundMinutes, "minutes");
-        }
-        return next;
+        return this.getNextTimeSlot();
     };
 
     //

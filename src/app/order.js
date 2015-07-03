@@ -45,11 +45,7 @@ define([
      * While an order is creating, we'll always overwrite its from date
      */
     Order.prototype.getMinDateFrom = function() {
-        // Orders start now
-        var dateHelper = this._getDateHelper();
-        var now = dateHelper.getNow();
-        var next = dateHelper.roundTimeFrom(now);
-        return next;
+        return this.getNowRounded();
     };
 
     /**
@@ -61,7 +57,7 @@ define([
             // Open orders can set their date to be due
             // at least 1 timeslot from now,
             // we can just call the default getMinDateTo function
-            return Transaction.prototype.getMinDateTo.call(this);
+            return this.getNextTimeSlot();
         } else {
             return Transaction.prototype.getMinDateDue.call(this);
         }

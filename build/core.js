@@ -5137,8 +5137,70 @@ define('transaction',[
     //
     // Date helpers (possibly overwritten)
     //
+    /**
+     * Gets the lowest possible from date, by default now
+     * @method
+     * @name Transaction#getMinDateFrom
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateFrom = function() {
+        return this.getMinDate();
+    };
 
     /**
+     * Gets the highest possible from date, by default years from now
+     * @method
+     * @name Transaction#getMaxDateFrom
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateFrom = function() {
+        return this.getMaxDate();
+    };
+
+    /**
+     * Gets the lowest possible to date, by default from +1 timeslot
+     * @method
+     * @name Transaction#getMinDateTo
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateTo = function() {
+        // Reservations can only be due one timeslot after the min from date
+        var dateHelper = this._getDateHelper();
+        return moment(this.getMinDateFrom()).add(dateHelper.roundMinutes, "minutes");
+    };
+
+    /**
+     * Gets the highest possible to date, by default years from now
+     * @method
+     * @name Transaction#getMaxDateTo
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateTo = function() {
+        return this.getMaxDate();
+    };
+
+    /**
+     * Gets the lowest possible due date, by default same as getMinDateTo
+     * @method
+     * @name Transaction#getMinDateDue
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateDue = function() {
+        return this.getMinDateTo();
+    };
+
+    /**
+     * Gets the highest possible due date, by default same as getMaxDateDue
+     * @method
+     * @name Transaction#getMaxDateDue
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateDue = function() {
+        return this.getMaxDateTo();
+    };
+
+    /**
+     * DEPRECATED
      * Gets the lowest possible date to start this transaction
      * @method
      * @name Transaction#getMinDate
@@ -5151,6 +5213,7 @@ define('transaction',[
     };
 
     /**
+     * DEPRECATED
      * Gets the latest possible date to end this transaction
      * @method
      * @name Transaction#getMaxDate
@@ -5327,9 +5390,25 @@ define('transaction',[
 
     Transaction.prototype._toLog = function(options) {
         var obj = this._toJson(options);
-        obj.minDate = this.getMinDate().toJSONDate();
-        obj.maxDate = this.getMaxDate().toJSONDate();
+        obj.minDateFrom = this.getMinDateFrom().toJSONDate();
+        obj.maxDateFrom = this.getMaxDateFrom().toJSONDate();
+        obj.minDateDue = this.getMinDateDue().toJSONDate();
+        obj.maxDateDue = this.getMaxDateDue().toJSONDate();
+        obj.minDateTo = this.getMinDateTo().toJSONDate();
+        obj.maxDateTo = this.getMaxDateTo().toJSONDate();
         console.log(obj);
+    };
+
+    Transaction.prototype._checkFromDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateFrom(), this.getMaxDateFrom());
+    };
+
+    Transaction.prototype._checkDueDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateDue(), this.getMaxDateDue());
+    };
+
+    Transaction.prototype._checkToDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
     };
 
     // Setters
@@ -5863,19 +5942,37 @@ define('Order',[
     //
     // Date helpers; we'll need these for sliding from / to dates during a long user session
     //
+    // getMinDateFrom (overwritten)
+    // getMaxDateFrom (default)
+    // getMinDateDue (default, same as getMinDateTo)
+    // getMaxDateDue (default, same as getMinDateTo)
 
     /**
-     * Overwrite only getMinDate, max date stays one year from now
-     * @method
-     * @name Order#getMindDate
-     * @returns {*}
+     * Overwrite min date for order so it is rounded by default
+     * Although it's really the server who sets the actual date
+     * While an order is creating, we'll always overwrite its from date
      */
-    Order.prototype.getMinDate = function() {
-        // Reservations can only start from the next timeslot at the earliest
-        var profileHelper = this._getHelper();
-        var now = profileHelper.getNow();
-        var next = profileHelper.roundTimeFrom(now);
+    Order.prototype.getMinDateFrom = function() {
+        // Orders start now
+        var dateHelper = this._getDateHelper();
+        var now = dateHelper.getNow();
+        var next = dateHelper.roundTimeFrom(now);
         return next;
+    };
+
+    /**
+     * Overwrite how the Order.due min date works
+     * We want "open" orders to be set due at least 1 timeslot from now
+     */
+    Order.prototype.getMinDateDue = function() {
+        if (this.status=="open") {
+            // Open orders can set their date to be due
+            // at least 1 timeslot from now,
+            // we can just call the default getMinDateTo function
+            return Transaction.prototype.getMinDateTo.call(this);
+        } else {
+            return Transaction.prototype.getMinDateDue.call(this);
+        }
     };
 
     //
@@ -6083,6 +6180,7 @@ define('Order',[
 
     /**
      * Sets the Order from and due date in a single call
+     * _checkFromDueDate will handle the special check for when the order is open
      * @method
      * @name Order#setFromDueDate
      * @param from
@@ -6096,11 +6194,10 @@ define('Order',[
         }
 
         var that = this;
-        var roundedFromDate = this._getHelper().roundTimeFrom(from);
+        var roundedFromDate = this.getMinDateFrom();
         var roundedDueDate = (due) ?
             this._getHelper().roundTimeTo(due) :
             this._getHelper().addAverageDuration(roundedFromDate);
-
 
         return this._checkFromDueDate(roundedFromDate, roundedDueDate)
             .then(function() {
@@ -6124,6 +6221,7 @@ define('Order',[
         }
 
         var that = this;
+
         var roundedFromDate = this._getHelper().roundTimeFrom(date);
 
         return this._checkFromDueDate(roundedFromDate, this.due)
@@ -6152,6 +6250,7 @@ define('Order',[
 
     /**
      * Sets the order due date
+     * _checkFromDueDate will handle the special check for when the order is open
      * @method
      * @name Order#setDueDate
      * @param due
@@ -6171,11 +6270,9 @@ define('Order',[
         var that = this;
         var roundedDueDate = this._getHelper().roundTimeTo(due);
 
-        // Don't use _checkFromDueDate,
-        // Use _checkDateBetweenMinMax directly, so it works extending order.due on "open" orders
-        var min = this.getMinDate();
-        var max = this.getMaxDate();
-        return this._checkDateBetweenMinMax(roundedDueDate, min, max)
+        this.from = this.getMinDateFrom();
+
+        return this._checkDueDateBetweenMinMax(roundedDueDate)
             .then(function() {
                 that.due = roundedDueDate;
                 return that._handleTransaction(skipRead);
@@ -6431,14 +6528,16 @@ define('Reservation',[
     //
     // Date helpers; we'll need these for sliding from / to dates during a long user session
     //
+    // getMinDateFrom (overwritten)
+    // getMaxDateFrom (default)
+    // getMinDateTo (default)
+    // getMaxDateTo (default)
 
     /**
-     * Overwrite only the getMinDate, max date is one year from now
-     * @method
-     * @name Reservation#getMinDate
-     * @returns {moment}
+     * Overwrite how we get a min date for reservation
+     * Min date is a timeslot after now
      */
-    Reservation.prototype.getMinDate = function() {
+    Reservation.prototype.getMinDateFrom = function() {
         // Reservations can only start from the next timeslot at the earliest
         var dateHelper = this._getDateHelper();
         var now = dateHelper.getNow();
@@ -6683,8 +6782,9 @@ define('Reservation',[
         var interval = dateHelper.roundMinutes;
         var roundedFromDate = this._getHelper().roundTimeFrom(date);
 
-        return this._checkDateBetweenMinMax(roundedFromDate)
+        return this._checkFromDateBetweenMinMax(roundedFromDate)
             .then(function() {
+                // TODO: Should never get here
                 // Must be at least 1 interval before to date, if it's already set
                 if( (that.to) &&
                     (that.to.diff(roundedFromDate, "minutes") < interval)) {
@@ -6740,7 +6840,7 @@ define('Reservation',[
         var interval = dateHelper.roundMinutes;
         var roundedToDate = this._getHelper().roundTimeTo(date);
 
-        return this._checkDateBetweenMinMax(roundedToDate)
+        return this._checkToDateBetweenMinMax(roundedToDate)
             .then(function() {
                 if( (that.from) &&
                     (that.from.diff(roundedToDate, "minutes") > interval)) {
@@ -6770,7 +6870,7 @@ define('Reservation',[
         return this._handleTransaction(skipRead);
     };
 
-// Reservation does not use due dates
+    // Reservation does not use due dates
     Reservation.prototype.clearDueDate = function(skipRead) {
         throw "Reservation.clearDueDate not implemented";
     };
@@ -6849,11 +6949,12 @@ define('Reservation',[
 
         if (roundedFromDate && roundedToDate) {
             return $.when(
-                    this._checkDateBetweenMinMax(roundedFromDate),
-                    this._checkDateBetweenMinMax(roundedToDate)
+                    this._checkFromDateBetweenMinMax(roundedFromDate),
+                    this._checkToDateBetweenMinMax(roundedToDate)
                 )
                 .then(function(fromRes, toRes) {
                     var interval = dateHelper.roundMinutes;
+                    // TODO: We should never get here
                     if (roundedToDate.diff(roundedFromDate, "minutes") < interval) {
                         return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from date, after (or too close to) to date "+roundedToDate.toJSONDate()));
                     }
@@ -6862,9 +6963,9 @@ define('Reservation',[
                     }
                 });
         } else if (roundedFromDate) {
-            return this._checkDateBetweenMinMax(roundedFromDate);
+            return this._checkFromDateBetweenMinMax(roundedFromDate);
         } else if (roundedToDate) {
-            return this._checkDateBetweenMinMax(roundedToDate);
+            return this._checkToDateBetweenMinMax(roundedToDate);
         } else {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot from/due date, both are null"));
         }
@@ -7031,8 +7132,70 @@ define('Transaction',[
     //
     // Date helpers (possibly overwritten)
     //
+    /**
+     * Gets the lowest possible from date, by default now
+     * @method
+     * @name Transaction#getMinDateFrom
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateFrom = function() {
+        return this.getMinDate();
+    };
 
     /**
+     * Gets the highest possible from date, by default years from now
+     * @method
+     * @name Transaction#getMaxDateFrom
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateFrom = function() {
+        return this.getMaxDate();
+    };
+
+    /**
+     * Gets the lowest possible to date, by default from +1 timeslot
+     * @method
+     * @name Transaction#getMinDateTo
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateTo = function() {
+        // Reservations can only be due one timeslot after the min from date
+        var dateHelper = this._getDateHelper();
+        return moment(this.getMinDateFrom()).add(dateHelper.roundMinutes, "minutes");
+    };
+
+    /**
+     * Gets the highest possible to date, by default years from now
+     * @method
+     * @name Transaction#getMaxDateTo
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateTo = function() {
+        return this.getMaxDate();
+    };
+
+    /**
+     * Gets the lowest possible due date, by default same as getMinDateTo
+     * @method
+     * @name Transaction#getMinDateDue
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateDue = function() {
+        return this.getMinDateTo();
+    };
+
+    /**
+     * Gets the highest possible due date, by default same as getMaxDateDue
+     * @method
+     * @name Transaction#getMaxDateDue
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateDue = function() {
+        return this.getMaxDateTo();
+    };
+
+    /**
+     * DEPRECATED
      * Gets the lowest possible date to start this transaction
      * @method
      * @name Transaction#getMinDate
@@ -7045,6 +7208,7 @@ define('Transaction',[
     };
 
     /**
+     * DEPRECATED
      * Gets the latest possible date to end this transaction
      * @method
      * @name Transaction#getMaxDate
@@ -7221,9 +7385,25 @@ define('Transaction',[
 
     Transaction.prototype._toLog = function(options) {
         var obj = this._toJson(options);
-        obj.minDate = this.getMinDate().toJSONDate();
-        obj.maxDate = this.getMaxDate().toJSONDate();
+        obj.minDateFrom = this.getMinDateFrom().toJSONDate();
+        obj.maxDateFrom = this.getMaxDateFrom().toJSONDate();
+        obj.minDateDue = this.getMinDateDue().toJSONDate();
+        obj.maxDateDue = this.getMaxDateDue().toJSONDate();
+        obj.minDateTo = this.getMinDateTo().toJSONDate();
+        obj.maxDateTo = this.getMaxDateTo().toJSONDate();
         console.log(obj);
+    };
+
+    Transaction.prototype._checkFromDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateFrom(), this.getMaxDateFrom());
+    };
+
+    Transaction.prototype._checkDueDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateDue(), this.getMaxDateDue());
+    };
+
+    Transaction.prototype._checkToDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
     };
 
     // Setters

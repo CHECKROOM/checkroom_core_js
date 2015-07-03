@@ -34,19 +34,37 @@ define([
     //
     // Date helpers; we'll need these for sliding from / to dates during a long user session
     //
+    // getMinDateFrom (overwritten)
+    // getMaxDateFrom (default)
+    // getMinDateDue (default, same as getMinDateTo)
+    // getMaxDateDue (default, same as getMinDateTo)
 
     /**
-     * Overwrite only getMinDate, max date stays one year from now
-     * @method
-     * @name Order#getMindDate
-     * @returns {*}
+     * Overwrite min date for order so it is rounded by default
+     * Although it's really the server who sets the actual date
+     * While an order is creating, we'll always overwrite its from date
      */
-    Order.prototype.getMinDate = function() {
-        // Reservations can only start from the next timeslot at the earliest
-        var profileHelper = this._getHelper();
-        var now = profileHelper.getNow();
-        var next = profileHelper.roundTimeFrom(now);
+    Order.prototype.getMinDateFrom = function() {
+        // Orders start now
+        var dateHelper = this._getDateHelper();
+        var now = dateHelper.getNow();
+        var next = dateHelper.roundTimeFrom(now);
         return next;
+    };
+
+    /**
+     * Overwrite how the Order.due min date works
+     * We want "open" orders to be set due at least 1 timeslot from now
+     */
+    Order.prototype.getMinDateDue = function() {
+        if (this.status=="open") {
+            // Open orders can set their date to be due
+            // at least 1 timeslot from now,
+            // we can just call the default getMinDateTo function
+            return Transaction.prototype.getMinDateTo.call(this);
+        } else {
+            return Transaction.prototype.getMinDateDue.call(this);
+        }
     };
 
     //
@@ -254,6 +272,7 @@ define([
 
     /**
      * Sets the Order from and due date in a single call
+     * _checkFromDueDate will handle the special check for when the order is open
      * @method
      * @name Order#setFromDueDate
      * @param from
@@ -267,11 +286,10 @@ define([
         }
 
         var that = this;
-        var roundedFromDate = this._getHelper().roundTimeFrom(from);
+        var roundedFromDate = this.getMinDateFrom();
         var roundedDueDate = (due) ?
             this._getHelper().roundTimeTo(due) :
             this._getHelper().addAverageDuration(roundedFromDate);
-
 
         return this._checkFromDueDate(roundedFromDate, roundedDueDate)
             .then(function() {
@@ -295,6 +313,7 @@ define([
         }
 
         var that = this;
+
         var roundedFromDate = this._getHelper().roundTimeFrom(date);
 
         return this._checkFromDueDate(roundedFromDate, this.due)
@@ -323,6 +342,7 @@ define([
 
     /**
      * Sets the order due date
+     * _checkFromDueDate will handle the special check for when the order is open
      * @method
      * @name Order#setDueDate
      * @param due
@@ -342,11 +362,9 @@ define([
         var that = this;
         var roundedDueDate = this._getHelper().roundTimeTo(due);
 
-        // Don't use _checkFromDueDate,
-        // Use _checkDateBetweenMinMax directly, so it works extending order.due on "open" orders
-        var min = this.getMinDate();
-        var max = this.getMaxDate();
-        return this._checkDateBetweenMinMax(roundedDueDate, min, max)
+        this.from = this.getMinDateFrom();
+
+        return this._checkDueDateBetweenMinMax(roundedDueDate)
             .then(function() {
                 that.due = roundedDueDate;
                 return that._handleTransaction(skipRead);

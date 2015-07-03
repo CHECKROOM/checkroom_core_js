@@ -37,14 +37,16 @@ define([
     //
     // Date helpers; we'll need these for sliding from / to dates during a long user session
     //
+    // getMinDateFrom (overwritten)
+    // getMaxDateFrom (default)
+    // getMinDateTo (default)
+    // getMaxDateTo (default)
 
     /**
-     * Overwrite only the getMinDate, max date is one year from now
-     * @method
-     * @name Reservation#getMinDate
-     * @returns {moment}
+     * Overwrite how we get a min date for reservation
+     * Min date is a timeslot after now
      */
-    Reservation.prototype.getMinDate = function() {
+    Reservation.prototype.getMinDateFrom = function() {
         // Reservations can only start from the next timeslot at the earliest
         var dateHelper = this._getDateHelper();
         var now = dateHelper.getNow();
@@ -289,8 +291,9 @@ define([
         var interval = dateHelper.roundMinutes;
         var roundedFromDate = this._getHelper().roundTimeFrom(date);
 
-        return this._checkDateBetweenMinMax(roundedFromDate)
+        return this._checkFromDateBetweenMinMax(roundedFromDate)
             .then(function() {
+                // TODO: Should never get here
                 // Must be at least 1 interval before to date, if it's already set
                 if( (that.to) &&
                     (that.to.diff(roundedFromDate, "minutes") < interval)) {
@@ -346,7 +349,7 @@ define([
         var interval = dateHelper.roundMinutes;
         var roundedToDate = this._getHelper().roundTimeTo(date);
 
-        return this._checkDateBetweenMinMax(roundedToDate)
+        return this._checkToDateBetweenMinMax(roundedToDate)
             .then(function() {
                 if( (that.from) &&
                     (that.from.diff(roundedToDate, "minutes") > interval)) {
@@ -376,7 +379,7 @@ define([
         return this._handleTransaction(skipRead);
     };
 
-// Reservation does not use due dates
+    // Reservation does not use due dates
     Reservation.prototype.clearDueDate = function(skipRead) {
         throw "Reservation.clearDueDate not implemented";
     };
@@ -455,11 +458,12 @@ define([
 
         if (roundedFromDate && roundedToDate) {
             return $.when(
-                    this._checkDateBetweenMinMax(roundedFromDate),
-                    this._checkDateBetweenMinMax(roundedToDate)
+                    this._checkFromDateBetweenMinMax(roundedFromDate),
+                    this._checkToDateBetweenMinMax(roundedToDate)
                 )
                 .then(function(fromRes, toRes) {
                     var interval = dateHelper.roundMinutes;
+                    // TODO: We should never get here
                     if (roundedToDate.diff(roundedFromDate, "minutes") < interval) {
                         return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from date, after (or too close to) to date "+roundedToDate.toJSONDate()));
                     }
@@ -468,9 +472,9 @@ define([
                     }
                 });
         } else if (roundedFromDate) {
-            return this._checkDateBetweenMinMax(roundedFromDate);
+            return this._checkFromDateBetweenMinMax(roundedFromDate);
         } else if (roundedToDate) {
-            return this._checkDateBetweenMinMax(roundedToDate);
+            return this._checkToDateBetweenMinMax(roundedToDate);
         } else {
             return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot from/due date, both are null"));
         }

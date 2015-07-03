@@ -70,8 +70,70 @@ define([
     //
     // Date helpers (possibly overwritten)
     //
+    /**
+     * Gets the lowest possible from date, by default now
+     * @method
+     * @name Transaction#getMinDateFrom
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateFrom = function() {
+        return this.getMinDate();
+    };
 
     /**
+     * Gets the highest possible from date, by default years from now
+     * @method
+     * @name Transaction#getMaxDateFrom
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateFrom = function() {
+        return this.getMaxDate();
+    };
+
+    /**
+     * Gets the lowest possible to date, by default from +1 timeslot
+     * @method
+     * @name Transaction#getMinDateTo
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateTo = function() {
+        // Reservations can only be due one timeslot after the min from date
+        var dateHelper = this._getDateHelper();
+        return moment(this.getMinDateFrom()).add(dateHelper.roundMinutes, "minutes");
+    };
+
+    /**
+     * Gets the highest possible to date, by default years from now
+     * @method
+     * @name Transaction#getMaxDateTo
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateTo = function() {
+        return this.getMaxDate();
+    };
+
+    /**
+     * Gets the lowest possible due date, by default same as getMinDateTo
+     * @method
+     * @name Transaction#getMinDateDue
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMinDateDue = function() {
+        return this.getMinDateTo();
+    };
+
+    /**
+     * Gets the highest possible due date, by default same as getMaxDateDue
+     * @method
+     * @name Transaction#getMaxDateDue
+     * @returns {Moment}
+     */
+    Transaction.prototype.getMaxDateDue = function() {
+        return this.getMaxDateTo();
+    };
+
+    /**
+     * DEPRECATED
      * Gets the lowest possible date to start this transaction
      * @method
      * @name Transaction#getMinDate
@@ -84,6 +146,7 @@ define([
     };
 
     /**
+     * DEPRECATED
      * Gets the latest possible date to end this transaction
      * @method
      * @name Transaction#getMaxDate
@@ -260,9 +323,25 @@ define([
 
     Transaction.prototype._toLog = function(options) {
         var obj = this._toJson(options);
-        obj.minDate = this.getMinDate().toJSONDate();
-        obj.maxDate = this.getMaxDate().toJSONDate();
+        obj.minDateFrom = this.getMinDateFrom().toJSONDate();
+        obj.maxDateFrom = this.getMaxDateFrom().toJSONDate();
+        obj.minDateDue = this.getMinDateDue().toJSONDate();
+        obj.maxDateDue = this.getMaxDateDue().toJSONDate();
+        obj.minDateTo = this.getMinDateTo().toJSONDate();
+        obj.maxDateTo = this.getMaxDateTo().toJSONDate();
         console.log(obj);
+    };
+
+    Transaction.prototype._checkFromDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateFrom(), this.getMaxDateFrom());
+    };
+
+    Transaction.prototype._checkDueDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateDue(), this.getMaxDateDue());
+    };
+
+    Transaction.prototype._checkToDateBetweenMinMax = function(d) {
+        return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
     };
 
     // Setters

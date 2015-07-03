@@ -5784,7 +5784,7 @@ define('transaction',[
         maxDate = maxDate || this.getMaxDate();
         if( (date<minDate) || 
             (date>maxDate)) {
-            var msg = "date is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
+            var msg = "date " + date.toJSONDate() + " is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
             return $.Deferred().reject(new api.ApiUnprocessableEntity(msg));
         } else {
             return $.Deferred().resolve(date);
@@ -7791,7 +7791,7 @@ define('Transaction',[
         maxDate = maxDate || this.getMaxDate();
         if( (date<minDate) || 
             (date>maxDate)) {
-            var msg = "date is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
+            var msg = "date " + date.toJSONDate() + " is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
             return $.Deferred().reject(new api.ApiUnprocessableEntity(msg));
         } else {
             return $.Deferred().resolve(date);

@@ -218,6 +218,48 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     )
                         .then(function(contact, location, available, checkedout) {
 
+                            asyncTest("Reservation - from date round down", function() {
+                                var r = getNewReservation();
+
+                                // Hack: overwrite the getNow function to always return the same date
+                                r.helper.dateHelper.getNow = function() {
+                                    var d1 = new Date(2013, 11, 13, 11, 32, 30, 0);
+                                    return moment(d1)
+                                };
+
+                                r.from = r.getMinDateFrom();
+                                var t = "2013-12-13T11:45:00.000Z";
+                                equal(r.from.toJSONDate(), t);
+
+                                r._checkFromDateBetweenMinMax()
+                                    .done(function() {
+                                        ok(true);
+                                    }).always(function() {
+                                        start();
+                                    });
+                            });
+
+                            asyncTest("Reservation - from date round up", function() {
+                                var r = getNewReservation();
+
+                                // Hack: overwrite the getNow function to always return the same date
+                                r.helper.dateHelper.getNow = function() {
+                                    var d1 = new Date(2013, 11, 13, 11, 44, 30, 0);
+                                    return moment(d1)
+                                };
+
+                                r.from = r.getMinDateFrom();
+                                var t = "2013-12-13T12:00:00.000Z";
+                                equal(r.from.toJSONDate(), t);
+
+                                r._checkFromDateBetweenMinMax()
+                                    .done(function() {
+                                        ok(true);
+                                    }).always(function() {
+                                        start();
+                                    });
+                            });
+
                             asyncTest("Reservation - swapItem", function() {
                                 var r = getNewReservation();
                                 r.contact = contact._id;

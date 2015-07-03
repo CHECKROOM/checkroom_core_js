@@ -93,8 +93,8 @@ define([
      */
     Transaction.prototype.getNextTimeSlot = function(d) {
         d = d || this.getNowRounded();
-        var next = d.add(this._getDateHelper().roundMinutes, "minutes");
-        if (next == d) {
+        var next = moment(d).add(this._getDateHelper().roundMinutes, "minutes");
+        if (next.isSame(d)) {
             next = next.add(this._getDateHelper().roundMinutes, "minutes");
         }
         return next

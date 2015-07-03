@@ -93,7 +93,11 @@ define([
      */
     Transaction.prototype.getNextTimeSlot = function(d) {
         d = d || this.getNowRounded();
-        return d.add(this._getDateHelper().roundMinutes, "minutes");
+        var next = d.add(this._getDateHelper().roundMinutes, "minutes");
+        if (next == d) {
+            next = next.add(this._getDateHelper().roundMinutes, "minutes");
+        }
+        return next
     };
 
     /**

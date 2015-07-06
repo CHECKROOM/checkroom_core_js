@@ -6,7 +6,8 @@
  */
 define([
     'jquery',
-    'base'], /** @lends Contact */ function ($, Base) {
+    'base',
+    'helper'], /** @lends Contact */ function ($, Base, Helper) {
 
     var DEFAULTS = {
         name: "",
@@ -75,13 +76,7 @@ define([
      */
     Contact.prototype.isValidPhone = function() {
         this.phone = $.trim(this.phone);
-        var isnum = /^\d{9,}$/.test(this.phone);
-        if (isnum) {
-            return true;
-        }
-
-        var m = this.phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
-        return ((m!=null) && (m.length>0));
+        return new Helper().isValidPhone(this.phone);
     };
 
     /**
@@ -91,9 +86,8 @@ define([
      * @return {Boolean} [description]
      */
     Contact.prototype.isValidEmail = function() {
-        var re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
         this.email = $.trim(this.email);
-        return re.test(this.email);
+        return new Helper().isValidEmail(this.email);
     };
 
     //

@@ -74,6 +74,31 @@ define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, Date
         return url;
     };
 
+    /**
+     * isValidEmail checks if an email address is valid
+     * @param email
+     * @returns {boolean}
+     */
+    Helper.prototype.isValidEmail = function(email) {
+        var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+        return re.test(email);
+    };
+
+    /**
+     * isValidPhone checks if a phone number is valid
+     * @param phone
+     * @returns {boolean}
+    */
+    Helper.prototype.isValidPhone = function(phone) {
+        var isnum = /^\d{9,}$/.test(phone);
+        if (isnum) {
+            return true;
+        }
+
+        var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+        return ((m!=null) && (m.length>0));
+    };
+
     return Helper;
 
 });

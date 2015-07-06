@@ -5,7 +5,8 @@
  */
 define([
     'jquery',
-    'base'],  /** @lends User */ function ($, Base) {
+    'base',
+    'helper'],  /** @lends User */ function ($, Base, Helper) {
 
     var DEFAULTS = {
         name: '',
@@ -73,9 +74,8 @@ define([
     };
 
     User.prototype.isValidEmail = function() {
-        var re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
         this.email = $.trim(this.email);
-        return re.test(this.email);
+        return new Helper().isValidEmail(this.email);
     };
 
     User.prototype.isValidRole = function() {

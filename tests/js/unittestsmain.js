@@ -19,6 +19,7 @@ requirejs.config({
 
 // require the unit tests.
 require([
+    'helperTest',
     'simpleTest',
     'dateHelperTest',
     'contactTest',
@@ -29,6 +30,7 @@ require([
     'userTest',
     'availabilityTest'
     ], function(
+        helperTest,
         simpleTest,
         dateHelperTest,
         contactTest,
@@ -39,8 +41,11 @@ require([
         userTest,
         availabilityTest) {
 
+
+        helperTest.run();
+
         //simpleTest.run();
-        dateHelperTest.run();
+        //dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
         //itemTest.run();

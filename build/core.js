@@ -1097,7 +1097,8 @@ define('api',[
                 if (resp.status=="OK") {
                     dfd.resolve(resp.data);
                 } else {
-                    dfd.reject(new Error("Your username or password is not correct"));
+                    var error = new Error("Your username or password is not correct");
+                    dfd.reject(error);
                 }
             }).fail(function(err) {
                 dfd.reject(err);
@@ -1157,7 +1158,18 @@ define('api',[
                 if (resp.status=="OK") {
                     dfd.resolve(resp.data);
                 } else {
-                    dfd.reject(new Error("Your username or password is not correct"));
+                    // When account expired, /authenticate will respond with
+                    //{"status": "ERROR",
+                    // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
+                    // "data": {...}}
+                    var error = null;
+                    if( (resp.message) &&
+                        (resp.message.indexOf("expired")>0)) {
+                        error = new api.ApiPaymentRequired(resp.message);
+                    } else {
+                        error = new Error("Your username or password is not correct");
+                    }
+                    dfd.reject(error);
                 }
             }).fail(function(err) {
                 dfd.reject(err);
@@ -6640,9 +6652,15 @@ define('Reservation',[
      * @returns {boolean}
      */
     Reservation.prototype.canMakeOrder = function() {
-        if (this.status=="open") {
+        // Only reservations that meet the following conditions can be made into an order
+        // - status: open
+        // - to date: is in the future
+        // - items: all are available
+        if( (this.status=="open") &&
+            (this.to!=null) &&
+            (this.to.isAfter(this.getNow()))) {
             var unavailable = this._getUnavailableItems();
-            var len = $.map(unavailable, function(n, i) { return i; }).length;
+            var len = $.map(unavailable, function(n, i) { return i; }).length;  // TODO: Why do we need this?
             return (len==0);
         } else {
             return false;

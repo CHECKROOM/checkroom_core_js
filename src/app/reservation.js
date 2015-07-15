@@ -107,9 +107,15 @@ define([
      * @returns {boolean}
      */
     Reservation.prototype.canMakeOrder = function() {
-        if (this.status=="open") {
+        // Only reservations that meet the following conditions can be made into an order
+        // - status: open
+        // - to date: is in the future
+        // - items: all are available
+        if( (this.status=="open") &&
+            (this.to!=null) &&
+            (this.to.isAfter(this.getNow()))) {
             var unavailable = this._getUnavailableItems();
-            var len = $.map(unavailable, function(n, i) { return i; }).length;
+            var len = $.map(unavailable, function(n, i) { return i; }).length;  // TODO: Why do we need this?
             return (len==0);
         } else {
             return false;

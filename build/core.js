@@ -6206,6 +6206,7 @@ define('Order',[
             (this.location) &&
             (this.contact) &&
             (this.due) &&
+            (this.due.isAfter(this._getHelper().getNow())) &&
             (this.items) &&
             (this.items.length));
     };

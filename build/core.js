@@ -5523,6 +5523,7 @@ define('transaction',[
         var that = this;
         return Base.prototype._fromJson.call(this, data, options)
             .then(function() {
+                that.cover = null;  // don't read cover property for Transactions
                 that.status = data.status || DEFAULTS.status;
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
@@ -6585,7 +6586,7 @@ define('Reservation',[
     //
     // getMinDateFrom (overwritten)
     // getMaxDateFrom (default)
-    // getMinDateTo (default)
+    // getMinDateTo (overwritten)
     // getMaxDateTo (default)
 
     /**
@@ -7457,6 +7458,7 @@ define('Transaction',[
         var that = this;
         return Base.prototype._fromJson.call(this, data, options)
             .then(function() {
+                that.cover = null;  // don't read cover property for Transactions
                 that.status = data.status || DEFAULTS.status;
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;

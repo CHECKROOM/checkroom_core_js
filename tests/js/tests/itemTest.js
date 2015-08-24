@@ -136,7 +136,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             // Create a simple Item
                             item.create()
                                 .done(function(resp) {
-                                    ok(resp != undefined)
+                                    ok(resp != undefined);
                                     ok(item.existsInDb());                                    
                                 })
                                 .always(function(){

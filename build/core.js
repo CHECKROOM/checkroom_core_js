@@ -5251,7 +5251,7 @@ define('transaction',[
     };
 
     Transaction.prototype = new tmp();
-    Transaction.prototype.constructor = Location;
+    Transaction.prototype.constructor = Base;
 
     //
     // Date helpers (possibly overwritten)
@@ -6596,6 +6596,10 @@ define('Reservation',[
         return this.getNextTimeSlot();
     };
 
+    Reservation.prototype.getMinDateTo = function() {
+        return this.getNextTimeSlot(this.from);
+    };
+
     //
     // Helpers
     //
@@ -7181,7 +7185,7 @@ define('Transaction',[
     };
 
     Transaction.prototype = new tmp();
-    Transaction.prototype.constructor = Location;
+    Transaction.prototype.constructor = Base;
 
     //
     // Date helpers (possibly overwritten)

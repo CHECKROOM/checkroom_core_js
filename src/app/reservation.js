@@ -39,7 +39,7 @@ define([
     //
     // getMinDateFrom (overwritten)
     // getMaxDateFrom (default)
-    // getMinDateTo (default)
+    // getMinDateTo (overwritten)
     // getMaxDateTo (default)
 
     /**
@@ -48,6 +48,10 @@ define([
      */
     Reservation.prototype.getMinDateFrom = function() {
         return this.getNextTimeSlot();
+    };
+
+    Reservation.prototype.getMinDateTo = function() {
+        return this.getNextTimeSlot(this.from);
     };
 
     //

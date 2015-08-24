@@ -65,7 +65,7 @@ define([
     };
 
     Transaction.prototype = new tmp();
-    Transaction.prototype.constructor = Location;
+    Transaction.prototype.constructor = Base;
 
     //
     // Date helpers (possibly overwritten)

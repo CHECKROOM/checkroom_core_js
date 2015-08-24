@@ -149,6 +149,27 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
                     });
 
+                    asyncTest("Reservation getMinDateTo when a from date is set", function() {
+                        $.when(
+                                helper.getAnyContact(),
+                                helper.getAnyLocation()
+                            )
+                            .then(function(contact, location) {
+                                var r = getNewReservation({location: location._id});
+                                var from = moment().add(1, 'days');
+                                from.set({hour: 13, minute: 0, second: 0});
+                                r.setFromDate(from)
+                                    .then(function() {
+                                        var minTo = r.getMinDateTo();
+                                        var next = r.getNextTimeSlot(from);
+                                        ok(minTo.isSame(next));
+                                    })
+                                    .always(function(){
+                                        start();
+                                    });
+                            });
+                    });
+
                     asyncTest("Reservation - errors when in wrong status", function() {
                         var r = new cr.Reservation({"status": "closed"});
 

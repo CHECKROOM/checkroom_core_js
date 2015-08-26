@@ -6459,7 +6459,7 @@ define('Order',[
      * @param useAvailabilies
      * @param onlyUnbooked
      * @param skipItems
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
         return this._searchItems(params, "available", useAvailabilies, onlyUnbooked, skipItems || this.items);
@@ -6470,11 +6470,12 @@ define('Order',[
      * @method
      * @name Order#checkin
      * @param itemIds
+     * @param location
      * @param skipRead
      * @returns {promise}
      */
-    Order.prototype.checkin = function(itemIds, skipRead) {
-        return this._doApiCall({method: "checkin", params: {items: itemIds}, skipRead: skipRead});
+    Order.prototype.checkin = function(itemIds, location, skipRead) {
+        return this._doApiCall({method: "checkin", params: {items: itemIds, location: location}, skipRead: skipRead});
     };
 
     /**
@@ -6482,7 +6483,7 @@ define('Order',[
      * @method
      * @name Order#checkout
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.checkout = function(skipRead) {
         return this._doApiCall({method: "checkout", skipRead: skipRead});
@@ -6493,7 +6494,7 @@ define('Order',[
      * @method
      * @name Order#undoCheckout
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.undoCheckout = function(skipRead) {
         return this._doApiCall({method: "undoCheckout", skipRead: skipRead});
@@ -6504,7 +6505,7 @@ define('Order',[
      * @method
      * @name Order#generateAgreement
      * @param skipRead
-     * @returns {*}
+     * @returns {promise}
      */
     Order.prototype.generateAgreement = function(skipRead) {
         return this._doApiCall({method: "generateAgreement", skipRead: skipRead});

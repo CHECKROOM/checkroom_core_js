@@ -17,7 +17,8 @@
     "package.json",
     "README.md",
     "jsdoc.conf.json",
-    "LICENSE"
+    "LICENSE",
+    "doc"
   ],
   "dependencies": {
     "jquery": "~2.1.3",

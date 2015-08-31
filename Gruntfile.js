@@ -32,7 +32,7 @@ module.exports = function(grunt){
                 options: {
                     baseUrl: "src/app",
                     out: "build/<%= pkg.name %>.js",
-                    include: ['../main', '../../tests/js/lib/almond/almond'],
+                    include: ['../core'],
                     exclude:['jquery', 'jquery-jsonp', 'jquery-pubsub', 'moment'],
                     paths:{
                         "jquery": "empty:",
@@ -40,11 +40,20 @@ module.exports = function(grunt){
                         "moment": "empty:",
                         "jquery-pubsub": "empty:"
                     },
-                    wrap: {
-                        "startFile": "wrap.start",
-                        "endFile": "wrap.end"
-                    },
-                    optimize: "none"
+                    optimize: "none",
+                    onModuleBundleComplete: function (data) {
+                        var fs = require('fs'),
+                          amdclean = require('amdclean'),
+                          outputFile = data.path;
+
+                        fs.writeFileSync(outputFile, amdclean.clean({
+                            'filePath': outputFile,
+                            wrap: {
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jsonp, pubsub);\n}\n}(function (jquery, moment, jquery_jsonp, jquery_pubsub) {",
+                                "end": '\nreturn core;\n}))'
+                            },
+                        }));
+                    }
                 }
             }
         },

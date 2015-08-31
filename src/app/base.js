@@ -73,9 +73,9 @@ define([
     Base.prototype.isEmpty = function() {
         return (
             ((this.comments==null) || (this.comments.length==0)) &&
-                ((this.attachments==null) || (this.attachments.length==0)) &&
-                ((this.keyValues==null) || (this.keyValues.length==0))
-            );
+            ((this.attachments==null) || (this.attachments.length==0)) &&
+            ((this.keyValues==null) || (this.keyValues.length==0))
+        );
     };
 
     /**
@@ -215,6 +215,26 @@ define([
         });
     };
 
+    /**
+     * Moves a keyvalue by its id to a new position
+     * @name Base#moveKeyValueIndex
+     * @method
+     * @param id
+     * @param pos
+     * @returns {promise}
+     */
+    Base.prototype.moveKeyValueIndex = function(id, pos) {
+        /*
+        // def moveKeyValueById(self, model, kvId, toPos, kvList=None, validate=True):
+        var that = this;
+        var pk = this.itemId();
+        return this.ds.call(pk, "moveKeyValueById", {kvId: kvId, toPos: newPos})
+            .pipe(function(item) {
+                return that._updateFromItemResponse(item);
+            });
+        */
+    };
+
     // Attachments stuff
     // ----
     /**
@@ -232,8 +252,8 @@ define([
     Base.prototype.getImageUrl = function(size, groupId, att, bustCache) {
         var attachment = att || this.cover;
         return (
-            (attachment!=null) &&
-            (attachment.length>0)) ?
+        (attachment!=null) &&
+        (attachment.length>0)) ?
             this.helper.getImageCDNUrl(groupId, attachment, size) :
             this.helper.getImageUrl(this.ds, this.id, size, bustCache);
     };

@@ -3659,6 +3659,67 @@ helper = function ($, moment, DateHelper, settings) {
     var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
     return m != null && m.length > 0;
   };
+  /**
+   * getAccessRights returns access rights based on the user role, profile settings 
+   * and account limits 
+   * @param  role   
+   * @param  profile 
+   * @param  limits
+   * @return {object}       
+   */
+  Helper.prototype.getAccessRights = function (role, profile, limits) {
+    var isRootOrAdmin = role == 'root' || role == 'admin';
+    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+    var useReservations = limits.allowReservations && profile.useReservations;
+    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
+    var useWebHooks = limits.allowWebHooks;
+    return {
+      contacts: {
+        create: isRootOrAdminOrUser,
+        remove: isRootOrAdminOrUser,
+        update: true
+      },
+      items: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateFlag: true,
+        updateLocation: true
+      },
+      orders: {
+        create: true,
+        remove: true,
+        update: true,
+        updateContact: role != 'selfservice',
+        updateLocation: true,
+        generatePdf: useOrderAgreements && isRootOrAdmin
+      },
+      reservations: {
+        create: useReservations,
+        remove: useReservations,
+        update: useReservations,
+        updateContact: useReservations && role != 'selfservice',
+        updateLocation: useReservations
+      },
+      locations: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      users: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateOther: isRootOrAdmin,
+        updateOwn: true
+      },
+      webHooks: {
+        create: useWebHooks && isRootOrAdmin,
+        remove: useWebHooks && isRootOrAdmin,
+        update: useWebHooks && isRootOrAdmin
+      }
+    };
+  };
   return Helper;
 }(jquery, moment, dateHelper, settings);
 Contact = function ($, Base, Helper) {

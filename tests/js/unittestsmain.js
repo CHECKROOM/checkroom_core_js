@@ -41,7 +41,6 @@ require([
         userTest,
         availabilityTest) {
 
-
         helperTest.run();
 
         //simpleTest.run();

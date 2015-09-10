@@ -100,6 +100,26 @@ define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, Date
     };
 
     /**
+     * getNumItemsLeft
+     * @param limits {maxItems: 100, ...}
+     * @param stats {detailed: {production: {items: {expired: 10, total: 100}}}
+     * @return {Number}
+     */
+    Helper.prototype.getNumItemsLeft = function(limits, stats) {
+        return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
+    };
+
+    /**
+     * getNumUsersLeft
+     * @param limits {maxUsers: 10, ...}
+     * @param stats {detailed: {production: {users: {active: 3}}}
+     * @return {Number}
+     */
+    Helper.prototype.getNumUsersLeft = function(limits, stats) {
+        return limits.maxUsers - stats.detailed.production.users.active;
+    };
+
+    /**
      * getAccessRights returns access rights based on the user role, profile settings 
      * and account limits 
      * @param  role   

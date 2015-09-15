@@ -622,6 +622,32 @@ define([
         });
     };
 
+     /**
+     * hasItems; Gets a list of items that are already part of the transaction
+     * @name Transaction#addItems
+     * @method addItems
+     * @param itemIds        array of string values
+     * @returns {Array}
+     */
+    Transaction.prototype.hasItems = function(itemIds) {
+        var allItems = this.items || [];
+        var duplicates = [];
+        var found = null;
+        $.each(itemIds, function(i, itemId) {
+            $.each(allItems, function(i,it){
+                if(it._id == itemId){
+                    found = itemId;
+                    return false;
+                }
+            });
+            if (found!=null) {
+                duplicates.push(found);
+            }
+        });
+
+        return duplicates;
+    };
+
     //
     // Implementation stuff
     //

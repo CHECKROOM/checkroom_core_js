@@ -3741,6 +3741,27 @@ helper = function ($, moment, DateHelper, settings) {
       }
     };
   };
+  /**
+   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
+   * @param  obj   
+   * @param  prop        
+   * @return {string}       
+   */
+  Helper.prototype.ensureValue = function (obj, prop) {
+    return typeof obj === 'string' ? obj : obj[prop];
+  };
+  /**
+   * ensureId, returns id value of object or if you pass a string it returns that exact string 
+   * For example:
+   * ensureId("abc123") --> "abc123"
+   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
+   * 
+   * @param  obj   
+   * @return {string}       
+   */
+  Helper.prototype.ensureId = function (obj) {
+    return this.ensureValue(obj, 'id');
+  };
   return Helper;
 }(jquery, moment, dateHelper, settings);
 Contact = function ($, Base, Helper) {

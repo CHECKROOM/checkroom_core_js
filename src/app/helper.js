@@ -202,7 +202,7 @@ define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, Date
      * @return {string}       
      */
     Helper.prototype.ensureId = function(obj){
-        return this.ensureValue(obj, "id");
+        return this.ensureValue(obj, "_id");
     }
 
     return Helper;

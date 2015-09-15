@@ -17,7 +17,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
 
             test('ensureId', function(){
                 equal(crHelper.ensureId("abc123"), "abc123");
-                equal(crHelper.ensureId({id:"abc123", name:"test"}), "abc123");
+                equal(crHelper.ensureId({_id:"abc123", name:"test"}), "abc123");
             })
 
             asyncTest("getAccessRights", function(){

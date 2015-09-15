@@ -3760,7 +3760,7 @@ helper = function ($, moment, DateHelper, settings) {
    * @return {string}       
    */
   Helper.prototype.ensureId = function (obj) {
-    return this.ensureValue(obj, 'id');
+    return this.ensureValue(obj, '_id');
   };
   return Helper;
 }(jquery, moment, dateHelper, settings);

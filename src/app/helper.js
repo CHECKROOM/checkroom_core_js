@@ -145,7 +145,8 @@ define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, Date
                 remove: isRootOrAdmin,
                 update: isRootOrAdmin,
                 updateFlag: isRootOrAdmin,
-                updateLocation: isRootOrAdmin
+                updateLocation: isRootOrAdmin,
+                updateGeo: true
             },
             orders: {
                 create: true,

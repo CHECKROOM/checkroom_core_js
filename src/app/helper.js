@@ -179,6 +179,17 @@ define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, Date
                 create: useWebHooks && isRootOrAdmin,
                 remove: useWebHooks && isRootOrAdmin,
                 update: useWebHooks && isRootOrAdmin
+            },
+            stickers: {
+                print: isRootOrAdmin,
+                buy: isRootOrAdmin
+            },
+            categories: {
+                create: isRootOrAdmin,
+                update: isRootOrAdmin
+            },
+            account: {
+                update: isRootOrAdmin
             }
         }
     };

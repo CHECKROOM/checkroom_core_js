@@ -693,6 +693,21 @@ define([
     };
 
     /**
+     * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+     * @method
+     * @name ApiDataSource#longCall
+     * @param pk
+     * @param method
+     * @param params
+     * @param fields
+     * @param usePost
+     * @returns {promise}
+     */
+    api.ApiDataSource.prototype.longCall = function(pk, method, params, fields, usePost) {
+        return this.call(pk, method, params, fields, 30000, usePost);
+    };
+
+    /**
      * Gets the base url for all calls to this collection
      * @method
      * @name ApiDataSource#getBaseUrl

@@ -3753,7 +3753,16 @@ helper = function ($, moment, DateHelper, settings) {
         create: useWebHooks && isRootOrAdmin,
         remove: useWebHooks && isRootOrAdmin,
         update: useWebHooks && isRootOrAdmin
-      }
+      },
+      stickers: {
+        print: isRootOrAdmin,
+        buy: isRootOrAdmin
+      },
+      categories: {
+        create: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      account: { update: isRootOrAdmin }
     };
   };
   /**

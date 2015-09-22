@@ -352,12 +352,31 @@ define([
     // ApiAnonymous
     // Communicates with the API without having token authentication
     //*************
+
+    /**
+     * @name ApiAnonymous
+     * @param {object} spec
+     * @param {ApiAjax} spec.ajax
+     * @param {string} spec.urlApi
+     * @constructor
+     * @memberof api
+     */
     api.ApiAnonymous = function(spec) {
         spec = spec || {};
         this.ajax = spec.ajax;
         this.urlApi = spec.urlApi || '';
     };
 
+    /**
+     * Makes a call to the API which doesn't require a token
+     * @method
+     * @name ApiAnonymous#call
+     * @param method
+     * @param params
+     * @param timeOut
+     * @param opt
+     * @returns {*}
+     */
     api.ApiAnonymous.prototype.call = function(method, params, timeOut, opt) {
         system.log('ApiAnonymous: call ' + method);
         var url =
@@ -367,6 +386,20 @@ define([
             '?' +
             $.param(this.ajax._prepareDict(params));
         return this.ajax.get(url, timeOut, opt);
+    };
+
+    /**
+     * Makes a long call (timeout 30s) to the API which doesn't require a token
+     * @method
+     * @name ApiAnonymous#longCall
+     * @param method
+     * @param params
+     * @param opt
+     * @returns {*}
+     */
+    api.ApiAnonymous.prototype.longCall = function(method, params, opt) {
+        system.log('ApiAnonymous: longCall ' + method);
+        return this.call(method, params, 30000, opt);
     };
 
     //*************
@@ -379,7 +412,7 @@ define([
      * @param {object} spec
      * @param {string} spec.collection         - the collection this datasource uses, e.g. "items"
      * @param {string} spec.urlApi             - the api url to use
-     * @param {ApiAuthUser} spec.user          - the user auth object
+     * @param {ApiUser} spec.user              - the user auth object
      * @param {ApiAjax}  spec.ajax             - the ajax api object to use
      * @constructor
      * @memberof api

@@ -1544,15 +1544,44 @@ api = function ($, jsonp, moment, common, DateHelper) {
   // ApiAnonymous
   // Communicates with the API without having token authentication
   //*************
+  /**
+   * @name ApiAnonymous
+   * @param {object} spec
+   * @param {ApiAjax} spec.ajax
+   * @param {string} spec.urlApi
+   * @constructor
+   * @memberof api
+   */
   api.ApiAnonymous = function (spec) {
     spec = spec || {};
     this.ajax = spec.ajax;
     this.urlApi = spec.urlApi || '';
   };
+  /**
+   * @method
+   * @name ApiAnonymous#call
+   * @param method
+   * @param params
+   * @param timeOut
+   * @param opt
+   * @returns {*}
+   */
   api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
     system.log('ApiAnonymous: call ' + method);
     var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
     return this.ajax.get(url, timeOut, opt);
+  };
+  /**
+   * @method
+   * @name ApiAnonymous#longCall
+   * @param method
+   * @param params
+   * @param opt
+   * @returns {*}
+   */
+  api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
+    system.log('ApiAnonymous: longCall ' + method);
+    return this.call(method, params, 30000, opt);
   };
   //*************
   // ApiDataSource
@@ -3678,7 +3707,7 @@ helper = function ($, moment, DateHelper, settings) {
   };
   /**
    * getNumItemsLeft
-   * @param limits {maxItems: 100, ...}
+   * @param limits {maxItems: 100}
    * @param stats {detailed: {production: {items: {expired: 10, total: 100}}}
    * @return {Number}
    */
@@ -3687,7 +3716,7 @@ helper = function ($, moment, DateHelper, settings) {
   };
   /**
    * getNumUsersLeft
-   * @param limits {maxUsers: 10, ...}
+   * @param limits {maxUsers: 10}
    * @param stats {detailed: {production: {users: {active: 3}}}
    * @return {Number}
    */

@@ -154,7 +154,7 @@ define(["jquery", "moment", "dateHelper", "settings"], function ($, moment, Date
                 update: true,
                 updateContact: (role != "selfservice"),
                 updateLocation: true,
-                generatePdf: useOrderAgreements && isRootOrAdmin
+                generatePdf: useOrderAgreements && isRootOrAdminOrUser
             },
             reservations: {
                 create: useReservations,

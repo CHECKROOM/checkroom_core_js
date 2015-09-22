@@ -1558,6 +1558,7 @@ api = function ($, jsonp, moment, common, DateHelper) {
     this.urlApi = spec.urlApi || '';
   };
   /**
+   * Makes a call to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#call
    * @param method
@@ -1572,6 +1573,7 @@ api = function ($, jsonp, moment, common, DateHelper) {
     return this.ajax.get(url, timeOut, opt);
   };
   /**
+   * Makes a long call (timeout 30s) to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#longCall
    * @param method
@@ -1592,7 +1594,7 @@ api = function ($, jsonp, moment, common, DateHelper) {
    * @param {object} spec
    * @param {string} spec.collection         - the collection this datasource uses, e.g. "items"
    * @param {string} spec.urlApi             - the api url to use
-   * @param {ApiAuthUser} spec.user          - the user auth object
+   * @param {ApiUser} spec.user              - the user auth object
    * @param {ApiAjax}  spec.ajax             - the ajax api object to use
    * @constructor
    * @memberof api
@@ -3707,8 +3709,8 @@ helper = function ($, moment, DateHelper, settings) {
   };
   /**
    * getNumItemsLeft
-   * @param limits {maxItems: 100}
-   * @param stats {detailed: {production: {items: {expired: 10, total: 100}}}
+   * @param limits
+   * @param stats
    * @return {Number}
    */
   Helper.prototype.getNumItemsLeft = function (limits, stats) {
@@ -3716,8 +3718,8 @@ helper = function ($, moment, DateHelper, settings) {
   };
   /**
    * getNumUsersLeft
-   * @param limits {maxUsers: 10}
-   * @param stats {detailed: {production: {users: {active: 3}}}
+   * @param limits
+   * @param stats
    * @return {Number}
    */
   Helper.prototype.getNumUsersLeft = function (limits, stats) {
@@ -3757,7 +3759,7 @@ helper = function ($, moment, DateHelper, settings) {
         update: true,
         updateContact: role != 'selfservice',
         updateLocation: true,
-        generatePdf: useOrderAgreements && isRootOrAdmin
+        generatePdf: useOrderAgreements && isRootOrAdminOrUser
       },
       reservations: {
         create: useReservations,

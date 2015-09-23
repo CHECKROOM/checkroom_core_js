@@ -198,7 +198,7 @@ define([
             ($.isArray(data))) {
             var that = this;
             $.each(data, function(k, v) {
-                data[k] = that.fixDates(v);
+                data[k] = that._fixDates(v);
             });
         }
         return data;

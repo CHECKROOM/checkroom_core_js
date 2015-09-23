@@ -19,6 +19,10 @@ define([
         }
     };
 
+    // Disable caching AJAX requests in IE
+    // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
+    $.ajaxSetup({cache: false});
+
     var api = {};
 
     //*************

@@ -7,14 +7,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
         var run = function() {
 
             var crHelper = new cr.Helper();
-                
-            test('checkEmail', function() {
-                equal(crHelper.isValidEmail("jeroenjul1000@cheqroom.com"), true);
-                equal(crHelper.isValidEmail("jeroen+jul1000@cheqroom.com"), true);
-                equal(crHelper.isValidEmail("jeroen.verhoest+jul1000@cheqroom.com"), true);
-                equal(crHelper.isValidEmail("jeroen.verhoest+jul1000@cheqroom"), false);
-            });
-
+         
             test('ensureId', function(){
                 equal(crHelper.ensureId("abc123"), "abc123");
                 equal(crHelper.ensureId({_id:"abc123", name:"test"}), "abc123");

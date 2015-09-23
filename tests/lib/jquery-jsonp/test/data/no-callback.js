@@ -1,1 +1,0 @@
-window.bob = 33;

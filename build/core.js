@@ -5,866 +5,631 @@ define(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);
 factory($, moment, jsonp, pubsub);
 }
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
- * Provides some common helper functions
- * @module common
- * @copyright CHECKROOM NV 2015
+ * QR and barcode helpers
  */
-var common, dateHelper, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, settings, helper, Contact, DateHelper, Document, Item, KeyValue, Location, location, transaction, conflict, Order, Reservation, Transaction, User, core;
-common = function () {
-  // latinize; replaces all accented characters in a string
-  // http://stackoverflow.com/questions/286921/efficiently-replace-all-accented-characters-in-a-string
-  // ----
-  var Latinise = {};
-  Latinise.latin_map = {
-    'Á': 'A',
-    'Ă': 'A',
-    'Ắ': 'A',
-    'Ặ': 'A',
-    'Ằ': 'A',
-    'Ẳ': 'A',
-    'Ẵ': 'A',
-    'Ǎ': 'A',
-    'Â': 'A',
-    'Ấ': 'A',
-    'Ậ': 'A',
-    'Ầ': 'A',
-    'Ẩ': 'A',
-    'Ẫ': 'A',
-    'Ä': 'A',
-    'Ǟ': 'A',
-    'Ȧ': 'A',
-    'Ǡ': 'A',
-    'Ạ': 'A',
-    'Ȁ': 'A',
-    'À': 'A',
-    'Ả': 'A',
-    'Ȃ': 'A',
-    'Ā': 'A',
-    'Ą': 'A',
-    'Å': 'A',
-    'Ǻ': 'A',
-    'Ḁ': 'A',
-    'Ⱥ': 'A',
-    'Ã': 'A',
-    'Ꜳ': 'AA',
-    'Æ': 'AE',
-    'Ǽ': 'AE',
-    'Ǣ': 'AE',
-    'Ꜵ': 'AO',
-    'Ꜷ': 'AU',
-    'Ꜹ': 'AV',
-    'Ꜻ': 'AV',
-    'Ꜽ': 'AY',
-    'Ḃ': 'B',
-    'Ḅ': 'B',
-    'Ɓ': 'B',
-    'Ḇ': 'B',
-    'Ƀ': 'B',
-    'Ƃ': 'B',
-    'Ć': 'C',
-    'Č': 'C',
-    'Ç': 'C',
-    'Ḉ': 'C',
-    'Ĉ': 'C',
-    'Ċ': 'C',
-    'Ƈ': 'C',
-    'Ȼ': 'C',
-    'Ď': 'D',
-    'Ḑ': 'D',
-    'Ḓ': 'D',
-    'Ḋ': 'D',
-    'Ḍ': 'D',
-    'Ɗ': 'D',
-    'Ḏ': 'D',
-    'ǲ': 'D',
-    'ǅ': 'D',
-    'Đ': 'D',
-    'Ƌ': 'D',
-    'Ǳ': 'DZ',
-    'Ǆ': 'DZ',
-    'É': 'E',
-    'Ĕ': 'E',
-    'Ě': 'E',
-    'Ȩ': 'E',
-    'Ḝ': 'E',
-    'Ê': 'E',
-    'Ế': 'E',
-    'Ệ': 'E',
-    'Ề': 'E',
-    'Ể': 'E',
-    'Ễ': 'E',
-    'Ḙ': 'E',
-    'Ë': 'E',
-    'Ė': 'E',
-    'Ẹ': 'E',
-    'Ȅ': 'E',
-    'È': 'E',
-    'Ẻ': 'E',
-    'Ȇ': 'E',
-    'Ē': 'E',
-    'Ḗ': 'E',
-    'Ḕ': 'E',
-    'Ę': 'E',
-    'Ɇ': 'E',
-    'Ẽ': 'E',
-    'Ḛ': 'E',
-    'Ꝫ': 'ET',
-    'Ḟ': 'F',
-    'Ƒ': 'F',
-    'Ǵ': 'G',
-    'Ğ': 'G',
-    'Ǧ': 'G',
-    'Ģ': 'G',
-    'Ĝ': 'G',
-    'Ġ': 'G',
-    'Ɠ': 'G',
-    'Ḡ': 'G',
-    'Ǥ': 'G',
-    'Ḫ': 'H',
-    'Ȟ': 'H',
-    'Ḩ': 'H',
-    'Ĥ': 'H',
-    'Ⱨ': 'H',
-    'Ḧ': 'H',
-    'Ḣ': 'H',
-    'Ḥ': 'H',
-    'Ħ': 'H',
-    'Í': 'I',
-    'Ĭ': 'I',
-    'Ǐ': 'I',
-    'Î': 'I',
-    'Ï': 'I',
-    'Ḯ': 'I',
-    'İ': 'I',
-    'Ị': 'I',
-    'Ȉ': 'I',
-    'Ì': 'I',
-    'Ỉ': 'I',
-    'Ȋ': 'I',
-    'Ī': 'I',
-    'Į': 'I',
-    'Ɨ': 'I',
-    'Ĩ': 'I',
-    'Ḭ': 'I',
-    'Ꝺ': 'D',
-    'Ꝼ': 'F',
-    'Ᵹ': 'G',
-    'Ꞃ': 'R',
-    'Ꞅ': 'S',
-    'Ꞇ': 'T',
-    'Ꝭ': 'IS',
-    'Ĵ': 'J',
-    'Ɉ': 'J',
-    'Ḱ': 'K',
-    'Ǩ': 'K',
-    'Ķ': 'K',
-    'Ⱪ': 'K',
-    'Ꝃ': 'K',
-    'Ḳ': 'K',
-    'Ƙ': 'K',
-    'Ḵ': 'K',
-    'Ꝁ': 'K',
-    'Ꝅ': 'K',
-    'Ĺ': 'L',
-    'Ƚ': 'L',
-    'Ľ': 'L',
-    'Ļ': 'L',
-    'Ḽ': 'L',
-    'Ḷ': 'L',
-    'Ḹ': 'L',
-    'Ⱡ': 'L',
-    'Ꝉ': 'L',
-    'Ḻ': 'L',
-    'Ŀ': 'L',
-    'Ɫ': 'L',
-    'ǈ': 'L',
-    'Ł': 'L',
-    'Ǉ': 'LJ',
-    'Ḿ': 'M',
-    'Ṁ': 'M',
-    'Ṃ': 'M',
-    'Ɱ': 'M',
-    'Ń': 'N',
-    'Ň': 'N',
-    'Ņ': 'N',
-    'Ṋ': 'N',
-    'Ṅ': 'N',
-    'Ṇ': 'N',
-    'Ǹ': 'N',
-    'Ɲ': 'N',
-    'Ṉ': 'N',
-    'Ƞ': 'N',
-    'ǋ': 'N',
-    'Ñ': 'N',
-    'Ǌ': 'NJ',
-    'Ó': 'O',
-    'Ŏ': 'O',
-    'Ǒ': 'O',
-    'Ô': 'O',
-    'Ố': 'O',
-    'Ộ': 'O',
-    'Ồ': 'O',
-    'Ổ': 'O',
-    'Ỗ': 'O',
-    'Ö': 'O',
-    'Ȫ': 'O',
-    'Ȯ': 'O',
-    'Ȱ': 'O',
-    'Ọ': 'O',
-    'Ő': 'O',
-    'Ȍ': 'O',
-    'Ò': 'O',
-    'Ỏ': 'O',
-    'Ơ': 'O',
-    'Ớ': 'O',
-    'Ợ': 'O',
-    'Ờ': 'O',
-    'Ở': 'O',
-    'Ỡ': 'O',
-    'Ȏ': 'O',
-    'Ꝋ': 'O',
-    'Ꝍ': 'O',
-    'Ō': 'O',
-    'Ṓ': 'O',
-    'Ṑ': 'O',
-    'Ɵ': 'O',
-    'Ǫ': 'O',
-    'Ǭ': 'O',
-    'Ø': 'O',
-    'Ǿ': 'O',
-    'Õ': 'O',
-    'Ṍ': 'O',
-    'Ṏ': 'O',
-    'Ȭ': 'O',
-    'Ƣ': 'OI',
-    'Ꝏ': 'OO',
-    'Ɛ': 'E',
-    'Ɔ': 'O',
-    'Ȣ': 'OU',
-    'Ṕ': 'P',
-    'Ṗ': 'P',
-    'Ꝓ': 'P',
-    'Ƥ': 'P',
-    'Ꝕ': 'P',
-    'Ᵽ': 'P',
-    'Ꝑ': 'P',
-    'Ꝙ': 'Q',
-    'Ꝗ': 'Q',
-    'Ŕ': 'R',
-    'Ř': 'R',
-    'Ŗ': 'R',
-    'Ṙ': 'R',
-    'Ṛ': 'R',
-    'Ṝ': 'R',
-    'Ȑ': 'R',
-    'Ȓ': 'R',
-    'Ṟ': 'R',
-    'Ɍ': 'R',
-    'Ɽ': 'R',
-    'Ꜿ': 'C',
-    'Ǝ': 'E',
-    'Ś': 'S',
-    'Ṥ': 'S',
-    'Š': 'S',
-    'Ṧ': 'S',
-    'Ş': 'S',
-    'Ŝ': 'S',
-    'Ș': 'S',
-    'Ṡ': 'S',
-    'Ṣ': 'S',
-    'Ṩ': 'S',
-    'Ť': 'T',
-    'Ţ': 'T',
-    'Ṱ': 'T',
-    'Ț': 'T',
-    'Ⱦ': 'T',
-    'Ṫ': 'T',
-    'Ṭ': 'T',
-    'Ƭ': 'T',
-    'Ṯ': 'T',
-    'Ʈ': 'T',
-    'Ŧ': 'T',
-    'Ɐ': 'A',
-    'Ꞁ': 'L',
-    'Ɯ': 'M',
-    'Ʌ': 'V',
-    'Ꜩ': 'TZ',
-    'Ú': 'U',
-    'Ŭ': 'U',
-    'Ǔ': 'U',
-    'Û': 'U',
-    'Ṷ': 'U',
-    'Ü': 'U',
-    'Ǘ': 'U',
-    'Ǚ': 'U',
-    'Ǜ': 'U',
-    'Ǖ': 'U',
-    'Ṳ': 'U',
-    'Ụ': 'U',
-    'Ű': 'U',
-    'Ȕ': 'U',
-    'Ù': 'U',
-    'Ủ': 'U',
-    'Ư': 'U',
-    'Ứ': 'U',
-    'Ự': 'U',
-    'Ừ': 'U',
-    'Ử': 'U',
-    'Ữ': 'U',
-    'Ȗ': 'U',
-    'Ū': 'U',
-    'Ṻ': 'U',
-    'Ų': 'U',
-    'Ů': 'U',
-    'Ũ': 'U',
-    'Ṹ': 'U',
-    'Ṵ': 'U',
-    'Ꝟ': 'V',
-    'Ṿ': 'V',
-    'Ʋ': 'V',
-    'Ṽ': 'V',
-    'Ꝡ': 'VY',
-    'Ẃ': 'W',
-    'Ŵ': 'W',
-    'Ẅ': 'W',
-    'Ẇ': 'W',
-    'Ẉ': 'W',
-    'Ẁ': 'W',
-    'Ⱳ': 'W',
-    'Ẍ': 'X',
-    'Ẋ': 'X',
-    'Ý': 'Y',
-    'Ŷ': 'Y',
-    'Ÿ': 'Y',
-    'Ẏ': 'Y',
-    'Ỵ': 'Y',
-    'Ỳ': 'Y',
-    'Ƴ': 'Y',
-    'Ỷ': 'Y',
-    'Ỿ': 'Y',
-    'Ȳ': 'Y',
-    'Ɏ': 'Y',
-    'Ỹ': 'Y',
-    'Ź': 'Z',
-    'Ž': 'Z',
-    'Ẑ': 'Z',
-    'Ⱬ': 'Z',
-    'Ż': 'Z',
-    'Ẓ': 'Z',
-    'Ȥ': 'Z',
-    'Ẕ': 'Z',
-    'Ƶ': 'Z',
-    'Ĳ': 'IJ',
-    'Œ': 'OE',
-    'ᴀ': 'A',
-    'ᴁ': 'AE',
-    'ʙ': 'B',
-    'ᴃ': 'B',
-    'ᴄ': 'C',
-    'ᴅ': 'D',
-    'ᴇ': 'E',
-    'ꜰ': 'F',
-    'ɢ': 'G',
-    'ʛ': 'G',
-    'ʜ': 'H',
-    'ɪ': 'I',
-    'ʁ': 'R',
-    'ᴊ': 'J',
-    'ᴋ': 'K',
-    'ʟ': 'L',
-    'ᴌ': 'L',
-    'ᴍ': 'M',
-    'ɴ': 'N',
-    'ᴏ': 'O',
-    'ɶ': 'OE',
-    'ᴐ': 'O',
-    'ᴕ': 'OU',
-    'ᴘ': 'P',
-    'ʀ': 'R',
-    'ᴎ': 'N',
-    'ᴙ': 'R',
-    'ꜱ': 'S',
-    'ᴛ': 'T',
-    'ⱻ': 'E',
-    'ᴚ': 'R',
-    'ᴜ': 'U',
-    'ᴠ': 'V',
-    'ᴡ': 'W',
-    'ʏ': 'Y',
-    'ᴢ': 'Z',
-    'á': 'a',
-    'ă': 'a',
-    'ắ': 'a',
-    'ặ': 'a',
-    'ằ': 'a',
-    'ẳ': 'a',
-    'ẵ': 'a',
-    'ǎ': 'a',
-    'â': 'a',
-    'ấ': 'a',
-    'ậ': 'a',
-    'ầ': 'a',
-    'ẩ': 'a',
-    'ẫ': 'a',
-    'ä': 'a',
-    'ǟ': 'a',
-    'ȧ': 'a',
-    'ǡ': 'a',
-    'ạ': 'a',
-    'ȁ': 'a',
-    'à': 'a',
-    'ả': 'a',
-    'ȃ': 'a',
-    'ā': 'a',
-    'ą': 'a',
-    'ᶏ': 'a',
-    'ẚ': 'a',
-    'å': 'a',
-    'ǻ': 'a',
-    'ḁ': 'a',
-    'ⱥ': 'a',
-    'ã': 'a',
-    'ꜳ': 'aa',
-    'æ': 'ae',
-    'ǽ': 'ae',
-    'ǣ': 'ae',
-    'ꜵ': 'ao',
-    'ꜷ': 'au',
-    'ꜹ': 'av',
-    'ꜻ': 'av',
-    'ꜽ': 'ay',
-    'ḃ': 'b',
-    'ḅ': 'b',
-    'ɓ': 'b',
-    'ḇ': 'b',
-    'ᵬ': 'b',
-    'ᶀ': 'b',
-    'ƀ': 'b',
-    'ƃ': 'b',
-    'ɵ': 'o',
-    'ć': 'c',
-    'č': 'c',
-    'ç': 'c',
-    'ḉ': 'c',
-    'ĉ': 'c',
-    'ɕ': 'c',
-    'ċ': 'c',
-    'ƈ': 'c',
-    'ȼ': 'c',
-    'ď': 'd',
-    'ḑ': 'd',
-    'ḓ': 'd',
-    'ȡ': 'd',
-    'ḋ': 'd',
-    'ḍ': 'd',
-    'ɗ': 'd',
-    'ᶑ': 'd',
-    'ḏ': 'd',
-    'ᵭ': 'd',
-    'ᶁ': 'd',
-    'đ': 'd',
-    'ɖ': 'd',
-    'ƌ': 'd',
-    'ı': 'i',
-    'ȷ': 'j',
-    'ɟ': 'j',
-    'ʄ': 'j',
-    'ǳ': 'dz',
-    'ǆ': 'dz',
-    'é': 'e',
-    'ĕ': 'e',
-    'ě': 'e',
-    'ȩ': 'e',
-    'ḝ': 'e',
-    'ê': 'e',
-    'ế': 'e',
-    'ệ': 'e',
-    'ề': 'e',
-    'ể': 'e',
-    'ễ': 'e',
-    'ḙ': 'e',
-    'ë': 'e',
-    'ė': 'e',
-    'ẹ': 'e',
-    'ȅ': 'e',
-    'è': 'e',
-    'ẻ': 'e',
-    'ȇ': 'e',
-    'ē': 'e',
-    'ḗ': 'e',
-    'ḕ': 'e',
-    'ⱸ': 'e',
-    'ę': 'e',
-    'ᶒ': 'e',
-    'ɇ': 'e',
-    'ẽ': 'e',
-    'ḛ': 'e',
-    'ꝫ': 'et',
-    'ḟ': 'f',
-    'ƒ': 'f',
-    'ᵮ': 'f',
-    'ᶂ': 'f',
-    'ǵ': 'g',
-    'ğ': 'g',
-    'ǧ': 'g',
-    'ģ': 'g',
-    'ĝ': 'g',
-    'ġ': 'g',
-    'ɠ': 'g',
-    'ḡ': 'g',
-    'ᶃ': 'g',
-    'ǥ': 'g',
-    'ḫ': 'h',
-    'ȟ': 'h',
-    'ḩ': 'h',
-    'ĥ': 'h',
-    'ⱨ': 'h',
-    'ḧ': 'h',
-    'ḣ': 'h',
-    'ḥ': 'h',
-    'ɦ': 'h',
-    'ẖ': 'h',
-    'ħ': 'h',
-    'ƕ': 'hv',
-    'í': 'i',
-    'ĭ': 'i',
-    'ǐ': 'i',
-    'î': 'i',
-    'ï': 'i',
-    'ḯ': 'i',
-    'ị': 'i',
-    'ȉ': 'i',
-    'ì': 'i',
-    'ỉ': 'i',
-    'ȋ': 'i',
-    'ī': 'i',
-    'į': 'i',
-    'ᶖ': 'i',
-    'ɨ': 'i',
-    'ĩ': 'i',
-    'ḭ': 'i',
-    'ꝺ': 'd',
-    'ꝼ': 'f',
-    'ᵹ': 'g',
-    'ꞃ': 'r',
-    'ꞅ': 's',
-    'ꞇ': 't',
-    'ꝭ': 'is',
-    'ǰ': 'j',
-    'ĵ': 'j',
-    'ʝ': 'j',
-    'ɉ': 'j',
-    'ḱ': 'k',
-    'ǩ': 'k',
-    'ķ': 'k',
-    'ⱪ': 'k',
-    'ꝃ': 'k',
-    'ḳ': 'k',
-    'ƙ': 'k',
-    'ḵ': 'k',
-    'ᶄ': 'k',
-    'ꝁ': 'k',
-    'ꝅ': 'k',
-    'ĺ': 'l',
-    'ƚ': 'l',
-    'ɬ': 'l',
-    'ľ': 'l',
-    'ļ': 'l',
-    'ḽ': 'l',
-    'ȴ': 'l',
-    'ḷ': 'l',
-    'ḹ': 'l',
-    'ⱡ': 'l',
-    'ꝉ': 'l',
-    'ḻ': 'l',
-    'ŀ': 'l',
-    'ɫ': 'l',
-    'ᶅ': 'l',
-    'ɭ': 'l',
-    'ł': 'l',
-    'ǉ': 'lj',
-    'ſ': 's',
-    'ẜ': 's',
-    'ẛ': 's',
-    'ẝ': 's',
-    'ḿ': 'm',
-    'ṁ': 'm',
-    'ṃ': 'm',
-    'ɱ': 'm',
-    'ᵯ': 'm',
-    'ᶆ': 'm',
-    'ń': 'n',
-    'ň': 'n',
-    'ņ': 'n',
-    'ṋ': 'n',
-    'ȵ': 'n',
-    'ṅ': 'n',
-    'ṇ': 'n',
-    'ǹ': 'n',
-    'ɲ': 'n',
-    'ṉ': 'n',
-    'ƞ': 'n',
-    'ᵰ': 'n',
-    'ᶇ': 'n',
-    'ɳ': 'n',
-    'ñ': 'n',
-    'ǌ': 'nj',
-    'ó': 'o',
-    'ŏ': 'o',
-    'ǒ': 'o',
-    'ô': 'o',
-    'ố': 'o',
-    'ộ': 'o',
-    'ồ': 'o',
-    'ổ': 'o',
-    'ỗ': 'o',
-    'ö': 'o',
-    'ȫ': 'o',
-    'ȯ': 'o',
-    'ȱ': 'o',
-    'ọ': 'o',
-    'ő': 'o',
-    'ȍ': 'o',
-    'ò': 'o',
-    'ỏ': 'o',
-    'ơ': 'o',
-    'ớ': 'o',
-    'ợ': 'o',
-    'ờ': 'o',
-    'ở': 'o',
-    'ỡ': 'o',
-    'ȏ': 'o',
-    'ꝋ': 'o',
-    'ꝍ': 'o',
-    'ⱺ': 'o',
-    'ō': 'o',
-    'ṓ': 'o',
-    'ṑ': 'o',
-    'ǫ': 'o',
-    'ǭ': 'o',
-    'ø': 'o',
-    'ǿ': 'o',
-    'õ': 'o',
-    'ṍ': 'o',
-    'ṏ': 'o',
-    'ȭ': 'o',
-    'ƣ': 'oi',
-    'ꝏ': 'oo',
-    'ɛ': 'e',
-    'ᶓ': 'e',
-    'ɔ': 'o',
-    'ᶗ': 'o',
-    'ȣ': 'ou',
-    'ṕ': 'p',
-    'ṗ': 'p',
-    'ꝓ': 'p',
-    'ƥ': 'p',
-    'ᵱ': 'p',
-    'ᶈ': 'p',
-    'ꝕ': 'p',
-    'ᵽ': 'p',
-    'ꝑ': 'p',
-    'ꝙ': 'q',
-    'ʠ': 'q',
-    'ɋ': 'q',
-    'ꝗ': 'q',
-    'ŕ': 'r',
-    'ř': 'r',
-    'ŗ': 'r',
-    'ṙ': 'r',
-    'ṛ': 'r',
-    'ṝ': 'r',
-    'ȑ': 'r',
-    'ɾ': 'r',
-    'ᵳ': 'r',
-    'ȓ': 'r',
-    'ṟ': 'r',
-    'ɼ': 'r',
-    'ᵲ': 'r',
-    'ᶉ': 'r',
-    'ɍ': 'r',
-    'ɽ': 'r',
-    'ↄ': 'c',
-    'ꜿ': 'c',
-    'ɘ': 'e',
-    'ɿ': 'r',
-    'ś': 's',
-    'ṥ': 's',
-    'š': 's',
-    'ṧ': 's',
-    'ş': 's',
-    'ŝ': 's',
-    'ș': 's',
-    'ṡ': 's',
-    'ṣ': 's',
-    'ṩ': 's',
-    'ʂ': 's',
-    'ᵴ': 's',
-    'ᶊ': 's',
-    'ȿ': 's',
-    'ɡ': 'g',
-    'ᴑ': 'o',
-    'ᴓ': 'o',
-    'ᴝ': 'u',
-    'ť': 't',
-    'ţ': 't',
-    'ṱ': 't',
-    'ț': 't',
-    'ȶ': 't',
-    'ẗ': 't',
-    'ⱦ': 't',
-    'ṫ': 't',
-    'ṭ': 't',
-    'ƭ': 't',
-    'ṯ': 't',
-    'ᵵ': 't',
-    'ƫ': 't',
-    'ʈ': 't',
-    'ŧ': 't',
-    'ᵺ': 'th',
-    'ɐ': 'a',
-    'ᴂ': 'ae',
-    'ǝ': 'e',
-    'ᵷ': 'g',
-    'ɥ': 'h',
-    'ʮ': 'h',
-    'ʯ': 'h',
-    'ᴉ': 'i',
-    'ʞ': 'k',
-    'ꞁ': 'l',
-    'ɯ': 'm',
-    'ɰ': 'm',
-    'ᴔ': 'oe',
-    'ɹ': 'r',
-    'ɻ': 'r',
-    'ɺ': 'r',
-    'ⱹ': 'r',
-    'ʇ': 't',
-    'ʌ': 'v',
-    'ʍ': 'w',
-    'ʎ': 'y',
-    'ꜩ': 'tz',
-    'ú': 'u',
-    'ŭ': 'u',
-    'ǔ': 'u',
-    'û': 'u',
-    'ṷ': 'u',
-    'ü': 'u',
-    'ǘ': 'u',
-    'ǚ': 'u',
-    'ǜ': 'u',
-    'ǖ': 'u',
-    'ṳ': 'u',
-    'ụ': 'u',
-    'ű': 'u',
-    'ȕ': 'u',
-    'ù': 'u',
-    'ủ': 'u',
-    'ư': 'u',
-    'ứ': 'u',
-    'ự': 'u',
-    'ừ': 'u',
-    'ử': 'u',
-    'ữ': 'u',
-    'ȗ': 'u',
-    'ū': 'u',
-    'ṻ': 'u',
-    'ų': 'u',
-    'ᶙ': 'u',
-    'ů': 'u',
-    'ũ': 'u',
-    'ṹ': 'u',
-    'ṵ': 'u',
-    'ᵫ': 'ue',
-    'ꝸ': 'um',
-    'ⱴ': 'v',
-    'ꝟ': 'v',
-    'ṿ': 'v',
-    'ʋ': 'v',
-    'ᶌ': 'v',
-    'ⱱ': 'v',
-    'ṽ': 'v',
-    'ꝡ': 'vy',
-    'ẃ': 'w',
-    'ŵ': 'w',
-    'ẅ': 'w',
-    'ẇ': 'w',
-    'ẉ': 'w',
-    'ẁ': 'w',
-    'ⱳ': 'w',
-    'ẘ': 'w',
-    'ẍ': 'x',
-    'ẋ': 'x',
-    'ᶍ': 'x',
-    'ý': 'y',
-    'ŷ': 'y',
-    'ÿ': 'y',
-    'ẏ': 'y',
-    'ỵ': 'y',
-    'ỳ': 'y',
-    'ƴ': 'y',
-    'ỷ': 'y',
-    'ỿ': 'y',
-    'ȳ': 'y',
-    'ẙ': 'y',
-    'ɏ': 'y',
-    'ỹ': 'y',
-    'ź': 'z',
-    'ž': 'z',
-    'ẑ': 'z',
-    'ʑ': 'z',
-    'ⱬ': 'z',
-    'ż': 'z',
-    'ẓ': 'z',
-    'ȥ': 'z',
-    'ẕ': 'z',
-    'ᵶ': 'z',
-    'ᶎ': 'z',
-    'ʐ': 'z',
-    'ƶ': 'z',
-    'ɀ': 'z',
-    'ﬀ': 'ff',
-    'ﬃ': 'ffi',
-    'ﬄ': 'ffl',
-    'ﬁ': 'fi',
-    'ﬂ': 'fl',
-    'ĳ': 'ij',
-    'œ': 'oe',
-    'ﬆ': 'st',
-    'ₐ': 'a',
-    'ₑ': 'e',
-    'ᵢ': 'i',
-    'ⱼ': 'j',
-    'ₒ': 'o',
-    'ᵣ': 'r',
-    'ᵤ': 'u',
-    'ᵥ': 'v',
-    'ₓ': 'x'
-  };
-  String.prototype.latinise = function () {
-    return this.replace(/[^A-Za-z0-9\[\] ]/g, function (a) {
-      return Latinise.latin_map[a] || a;
-    });
-  };
-  String.prototype.latinize = String.prototype.latinise;
-  String.prototype.isLatin = function () {
-    return this == this.latinise();
-  };
-  // Extending the string type with some helpers
-  // ----
-  String.prototype.startsWith = function (str) {
-    return this.indexOf(str) == 0;
-  };
-  String.prototype.endsWith = function (str) {
-    if (this.length < str.length) {
-      return false;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common, dateHelper, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Location, location, transaction, conflict, Order, settings, helper, Reservation, Transaction, User, core;
+common_code = {
+  /**
+     * isCodeValid
+     *
+     * @memberOf common
+     * @name  common#isCodeValid
+     * @method
+     * 
+  * @param  codeId
+  * @return {Boolean}       
+  */
+  isCodeValid: function (codeId) {
+    // Checks if a code is syntactically valid
+    // This does not mean that it is an official code issued by CHEQROOM
+    return codeId.trim().match(/^[a-z0-9]{8}$/i) != null;
+  },
+  /**
+   * isCodeFromScanner
+   *
+   * @memberOf common
+   * @name  common#isCodeFromScanner
+   * @method
+   * 
+   * @param  urlPart
+   * @return {Boolean}        
+   */
+  isCodeFromScanner: function (urlPart) {
+    var prefix = urlPart.substring(0, 23);
+    var index = 'http://cheqroom.com/qr/'.indexOf(prefix);
+    return index == 0;
+  },
+  /**
+   * getCheqRoomRedirectUrl
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrl
+   * @method
+   * 
+   * @param  codeId 
+   * @return {string}       
+   */
+  getCheqRoomRedirectUrl: function (codeId) {
+    return this.isCodeValid(codeId) ? 'http://cheqroom.com/qr/' + codeId.trim() : '';
+  },
+  /**
+   * getCheqRoomRedirectUrlQR 
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrlQR
+   * @method
+   * 
+   * @param  codeId 
+   * @param  size   
+   * @return {string}      
+   */
+  getCheqRoomRedirectUrlQR: function (codeId, size) {
+    if (this.isCodeValid(codeId)) {
+      //https://chart.googleapis.com/chart?chs=200x200&cht=qr&choe=UTF-8&chld=L|0&chl=http://cheqroom.com/qr/c4ab3a6a
+      var url = encodeURI(this.getCheqRoomRedirectUrl(codeId));
+      return 'https://chart.googleapis.com/chart?chs=' + size + 'x' + size + '&cht=qr&choe=UTF-8&chld=L|0&chl=' + url;
     } else {
-      return this.lastIndexOf(str) == this.length - str.length;
+      return '';
+    }
+  }
+};
+common_order = function (moment) {
+  return {
+    /**
+     * getFriendlyOrderStatus
+     *
+     * @memberOf common
+     * @name  common#getFriendlyOrderStatus
+     * @method
+     * 
+     * @param  {string} status
+     * @return {string}        
+     */
+    getFriendlyOrderStatus: function (status) {
+      // ORDER_STATUS = ('creating', 'open', 'closed')
+      switch (status) {
+      case 'creating':
+        return 'Incomplete';
+      case 'open':
+        return 'Open';
+      case 'closed':
+        return 'Closed';
+      default:
+        return 'Unknown';
+      }
+    },
+    /**
+    * getFriendlyOrderCss
+    *
+    * @memberOf common
+    * @name  common#getFriendlyOrderCss
+    * @method
+    * 
+    * @param  {string} status 
+    * @return {string}        
+    */
+    getFriendlyOrderCss: function (status) {
+      switch (status) {
+      case 'creating':
+        return 'label-creating';
+      case 'open':
+        return 'label-open';
+      case 'closed':
+        return 'label-closed';
+      default:
+        return '';
+      }
+    },
+    /**
+    * getFriendlyOrderSize
+    *
+    * @memberOf common
+    * @name  common#getFriendlyOrderSize
+    * @method
+    * 
+    * @param  {object} order
+    * @return {string}      
+    */
+    getFriendlyOrderSize: function (order) {
+      if (order.items && order.items.length > 0) {
+        var str = order.items.length + ' item';
+        if (order.items.length > 1) {
+          str += 's';
+        }
+        return str;
+      } else {
+        return 'No items';
+      }
+    },
+    /**
+    * isOrderOverdue
+    *
+    * @memberOf common
+    * @name  common#isOrderOverdue
+    * @method
+    * 
+    * @param  {object}  order 
+    * @param  {moment}  now   
+    * @return {Boolean}       
+    */
+    isOrderOverdue: function (order, now) {
+      now = now || moment();
+      return order.status == 'open' && now.isAfter(order.due);
+    },
+    /**
+    * getOrderStatus
+    *
+    * @memberOf common
+    * @name  common#getOrderStatus
+    * @method
+    * 
+    * @param  {object} order 
+    * @param  {moment} now   
+    * @return {string}       
+    */
+    getOrderStatus: function (order, now) {
+      now = now || moment();
+      return this.isOrderOverdue(order, now) ? 'Overdue' : this.getFriendlyOrderStatus(order.status);
+    },
+    /**
+    * getOrderCss
+    *
+    * @memberOf common
+    * @name  common#getOrderCss
+    * @method
+    * 
+    * @param  {object} order 
+    * @param  {moment} now   
+    * @return {string}       
+    */
+    getOrderCss: function (order, now) {
+      now = now || moment();
+      return this.isOrderOverdue(order, now) ? 'label-overdue' : this.getFriendlyOrderCss(order.status);
     }
   };
+}(moment);
+common_reservation = {
+  /**
+   * getFriendlyReservationCss
+   *
+   * @memberOf common
+   * @name  common#getFriendlyReservationCss
+   * @method
+   * 
+   * @param  {string} status 
+   * @return {string}        
+   */
+  getFriendlyReservationCss: function (status) {
+    switch (status) {
+    case 'creating':
+      return 'label-creating';
+    case 'open':
+      return 'label-open';
+    case 'closed':
+      return 'label-closed';
+    case 'cancelled':
+      return 'label-cancelled';
+    default:
+      return '';
+    }
+  },
+  /**
+   * getFriendlyReservationStatus 
+   *
+   * @memberOf common
+   * @name  common#getFriendlyReservationStatus
+   * @method
+   * 
+   * @param  {string} status 
+   * @return {string}        
+   */
+  getFriendlyReservationStatus: function (status) {
+    switch (status) {
+    case 'creating':
+      return 'Incomplete';
+    case 'open':
+      return 'Open';
+    case 'closed':
+      return 'Closed';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return 'Unknown';
+    }
+  }
+};
+common_item = {
+  /**
+   * getFriendlyItemStatus 
+   *
+   * @memberOf common
+   * @name  common#getFriendlyItemStatus
+   * @method
+   * 
+   * @param  status
+   * @return {string}        
+   */
+  getFriendlyItemStatus: function (status) {
+    // ITEM_STATUS = ('available', 'checkedout', 'await_checkout', 'in_transit', 'maintenance', 'repair', 'inspection', 'expired')
+    switch (status) {
+    case 'available':
+      return 'Available';
+    case 'checkedout':
+      return 'Checked out';
+    case 'await_checkout':
+      return 'Checking out';
+    case 'in_transit':
+      return 'In transit';
+    case 'maintenance':
+      return 'Maintenance';
+    case 'repair':
+      return 'Repair';
+    case 'inspection':
+      return 'Inspection';
+    case 'expired':
+      return 'Expired';
+    default:
+      return 'Unknown';
+    }
+  },
+  /**
+  * getItemStatusCss
+  *
+  * @memberOf common
+  * @name  common#getItemStatusCss
+  * @method
+  * 
+  * @param  status 
+  * @return {string}       
+  */
+  getItemStatusCss: function (status) {
+    switch (status) {
+    case 'available':
+      return 'label-available';
+    case 'checkedout':
+      return 'label-checkedout';
+    case 'await_checkout':
+      return 'label-awaitcheckout';
+    case 'in_transit':
+      return 'label-transit';
+    case 'maintenance':
+      return 'label-maintenance';
+    case 'repair':
+      return 'label-repair';
+    case 'inspection':
+      return 'label-inspection';
+    case 'expired':
+      return 'label-expired';
+    default:
+      return '';
+    }
+  },
+  /**
+  * getItemStatusIcon
+  *
+  * @memberOf common
+  * @name  common#getItemStatusIcon
+  * @method
+  * 
+  * @param  status
+  * @return {string}       
+  */
+  getItemStatusIcon: function (status) {
+    switch (status) {
+    case 'available':
+      return 'fa fa-check-circle';
+    case 'checkedout':
+      return 'fa fa-times-circle';
+    case 'await_checkout':
+      return 'fa fa-ellipsis-h';
+    case 'in_transit':
+      return 'fa fa-truck';
+    case 'maintenance':
+      return 'fa fa-wrench';
+    case 'repair':
+      return 'fa fa-wrench';
+    case 'inspection':
+      return 'fa fa-stethoscope';
+    case 'expired':
+      return 'fa fa-bug';
+    default:
+      return '';
+    }
+  }
+};
+common_conflicts = {
+  /**
+   * getFriendlyConflictKind
+   *
+   * @memberOf  common
+   * @name  common#getFriendlyConflictKind
+   * @method
+   * 
+   * @param  kind 
+   * @return {string}    
+   */
+  getFriendlyConflictKind: function (kind) {
+    switch (kind) {
+    case 'location':
+      return 'At wrong location';
+    case 'order':
+      return 'Checked out in order';
+    case 'reservation':
+      return 'Already reserved';
+    default:
+      return '';
+    }
+  }
+};
+common_keyValues = function () {
+  var _getCategoryName = function (obj) {
+    return typeof obj === 'string' ? obj : obj['name'];
+  };
+  return {
+    /**
+     * Creates a category key from a friendly name
+     *
+     * @memberOf  common
+     * @name  common#getCategoryKeyFromName
+     * @method
+     * 
+     * @param  {string} name 
+     * @return {string}   
+     */
+    getCategoryKeyFromName: function (name) {
+      return 'cheqroom.types.item.' + name.split(' ').join('_').split('.').join('').toLowerCase();
+    },
+    /**
+     * Creates a name from a category key
+     *
+     * @memberOf common
+     * @name  common#getCategoryNameFromKey
+     * @method
+     * 
+     * @param  {string} key
+     * @return {string}
+     */
+    getCategoryNameFromKey: function (key) {
+      var re = new RegExp('_', 'g');
+      return key.split('.').pop().replace(re, ' ');
+    },
+    /**
+     * getCategorySummary
+     *
+     * @memberOf common
+     * @name  common#getCategorySummary
+     * @method
+     * 
+     * @param  {array} items 
+     * @return {string}      
+     */
+    getCategorySummary: function (items) {
+      items = items || [];
+      if (items.length == 0)
+        return 'No items';
+      var catSummary = {};
+      var firstKey = '';
+      var firstKeyCount = 0;
+      var that = this;
+      for (var i = 0, len = items.length; i < len; i++) {
+        var item = items[i];
+        var key = item.category ? that.getCategoryNameFromKey(_getCategoryName(item.category)) : '';
+        if (!catSummary[key]) {
+          catSummary[key] = 1;
+        } else {
+          catSummary[key] += 1;
+        }
+        // first key should be category with largest number of items
+        if (catSummary[key] > firstKeyCount) {
+          firstKey = key;
+          firstKeyCount = catSummary[key];
+        }
+      }
+      var summ = catSummary[firstKey] + ' ';
+      if (firstKeyCount == 1 && String.prototype.singularize) {
+        summ += firstKey.singularize();
+      } else {
+        summ += firstKey;
+      }
+      if (items.length > catSummary[firstKey]) {
+        var other = items.length - catSummary[firstKey];
+        summ += ' + ' + other + ' other';
+      }
+      return summ;
+    }
+  };
+}();
+common_image = function ($) {
+  return {
+    /**
+     * Returns an avatar image with the initials of the user
+     * source: http://codepen.io/leecrossley/pen/CBHca 
+     *
+     * @memberOf  common
+     * @name  common#getAvatarInitial
+     * @method
+     * 
+     * @param  {string} name name for which to display the initials
+     * @param  {string} size Possible values XS,S,M,L,XL
+     * @return {string}	base64 image url    
+     */
+    getAvatarInitial: function (name, size) {
+      var sizes = {
+        'XS': 32,
+        'S': 64,
+        'M': 128,
+        'L': 256,
+        'XL': 512
+      };
+      var colours = [
+        '#1abc9c',
+        '#2ecc71',
+        '#3498db',
+        '#9b59b6',
+        '#34495e',
+        '#16a085',
+        '#27ae60',
+        '#2980b9',
+        '#8e44ad',
+        '#2c3e50',
+        '#f1c40f',
+        '#e67e22',
+        '#e74c3c',
+        '#95a5a6',
+        '#f39c12',
+        '#d35400',
+        '#c0392b',
+        '#bdc3c7'
+      ];
+      var nameSplit = name.split(' '), initials = nameSplit.length == 2 ? nameSplit[0].charAt(0).toUpperCase() + nameSplit[1].charAt(0).toUpperCase() : nameSplit[0].charAt(0).toUpperCase();
+      var charIndex = initials.charCodeAt(0) - 65, colourIndex = charIndex % colours.length;
+      var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
+      var $canvas = $('<canvas />').attr({
+        width: canvasWidth,
+        height: canvasHeight
+      });
+      var context = $canvas.get(0).getContext('2d');
+      if (window.devicePixelRatio) {
+        $canvas.attr('width', canvasWidth * window.devicePixelRatio);
+        $canvas.attr('height', canvasHeight * window.devicePixelRatio);
+        $canvas.css('width', canvasCssWidth);
+        $canvas.css('height', canvasCssHeight);
+        context.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+      context.fillStyle = colours[colourIndex];
+      context.fillRect(0, 0, canvasWidth, canvasHeight);
+      context.font = canvasWidth / 2 + 'px Arial';
+      context.textAlign = 'center';
+      context.fillStyle = '#FFF';
+      context.fillText(initials, canvasCssWidth / 2, canvasCssHeight / 1.5);
+      return $canvas.get(0).toDataURL();
+    },
+    /**
+     * getImageUrl 
+     *
+     * @memberOf  common
+     * @name common#getImageUrl  
+     * @method
+     * 
+     * @param  ds        
+     * @param  pk        
+     * @param  size      
+     * @param  bustCache 
+     * @return {string}           
+     */
+    getImageUrl: function (ds, pk, size, bustCache) {
+      var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+      if (size) {
+        url += '&size=' + size;
+      }
+      if (bustCache) {
+        url += '&_bust=' + new Date().getTime();
+      }
+      return url;
+    },
+    /**
+     * getImageCDNUrl 
+     *
+     * @memberOf  common
+     * @name  common#getImageCDNUrl
+     * @method
+     * 
+     * @param  settings     
+     * @param  groupId      
+     * @param  attachmentId 
+     * @param  size         
+     * @return {string}              
+     */
+    getImageCDNUrl: function (settings, groupId, attachmentId, size) {
+      // Makes a CDN url for Item using the Item.cover property
+      // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+      var url = 'https://cheqroom-cdn.s3.amazonaws.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+      if (size && size.length > 0) {
+        var parts = url.split('.');
+        var ext = parts.pop();
+        url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
+      }
+      return url;
+    }
+  };
+}(jquery);
+common_attachment = function (moment) {
+  /**
+   * Provides attachment related helper methods
+   */
+  return {
+    /**
+     * getImgFileNameFromName
+     *
+     * @memberOf common
+     * @name  common#getImgFileNameFromName
+     * @method
+     * 
+     * @param  name 
+     * @return {string}      
+     */
+    getImgFileNameFromName: function (name) {
+      if (name != null && name.length > 0) {
+        return name.split(' ').join('_').split('.').join('_') + '.jpg';
+      } else {
+        // upload 2014-03-10 at 11.41.45 am.png
+        return 'upload ' + moment().format('YYYY-MM-DD at hh:mm:ss a') + '.jpg';
+      }
+    },
+    /**
+     * makeFileNameJpg
+     *
+     * @memberOf common
+     * @name  common#makeFileNameJpg
+     * @method
+     * 
+     * @param  name
+     * @return {string}    
+     */
+    makeFileNameJpg: function (name) {
+      return name.indexOf('.') >= 0 ? name.substr(0, name.lastIndexOf('.')) + '.jpg' : name;
+    },
+    /**
+     * getFileNameFromUrl
+     *
+     * @memberOf common
+     * @name  common#getFileNameFromUrl
+     * @method
+     * 
+     * @param  url
+     * @return {string}  
+     */
+    getFileNameFromUrl: function (url) {
+      if (url) {
+        var m = url.toString().match(/.*\/(.+?)\./);
+        if (m && m.length > 1) {
+          return m[1];
+        }
+      }
+      return '';
+    }
+  };
+}(moment);
+common_inflection = function () {
+  /**
+  * STRING EXTENSIONS
+  */
+  /**
+  * pluralize
+  *
+  * @memberOf String
+  * @name  String#pluralize
+  * @method
+  * 
+  * @param  {int} count  
+  * @param  {string} suffix 
+  * @return {string}        
+  */
   String.prototype.pluralize = function (count, suffix) {
     if (this == 'is' && count != 1) {
       return 'are';
+    } else if (this == 'this') {
+      return count == 1 ? this : 'these';
     } else if (this.endsWith('s')) {
       suffix = suffix || 'es';
       return count == 1 ? this : this + suffix;
@@ -876,43 +641,1280 @@ common = function () {
       return count == 1 ? this : this + suffix;
     }
   };
-  String.prototype.capitalize = function () {
-    return this.charAt(0).toUpperCase() + this.slice(1);
+  /**
+  * capitalize 
+  *
+  * @memberOf String
+  * @name  String#capitalize
+  * @method
+  * 
+  * @param  {Boolean} lower 
+  * @return {string}       
+  */
+  String.prototype.capitalize = function (lower) {
+    return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function (a) {
+      return a.toUpperCase();
+    });
   };
-  String.prototype.truncate = function (len) {
-    len = len != null ? len : 25;
-    var re = this.match(RegExp('^.{0,' + len + '}[S]*'));
-    var l = re[0].length;
-    re = re[0].replace(/\s$/, '');
-    if (l < this.length) {
-      re = re + '&hellip;';
-    }
-    return re;
+  if (!String.prototype.startsWith) {
+    /**
+     * startsWith
+     *
+     * @memberOf String
+     * @name  String#startsWith
+     * @method
+     * 
+     * @param  {string} str 
+     * @return {Boolean}     
+     */
+    String.prototype.startsWith = function (str) {
+      return this.indexOf(str) == 0;
+    };
+  }
+  if (!String.prototype.endsWith) {
+    /**
+     * endsWith
+     *
+     * @memberOf String
+     * @name  String#endsWith
+     * @method
+     * 
+     * @param  {string} str 
+     * @return {Boolean}     
+     */
+    String.prototype.endsWith = function (str) {
+      if (this.length < str.length) {
+        return false;
+      } else {
+        return this.lastIndexOf(str) == this.length - str.length;
+      }
+    };
+  }
+  if (!String.prototype.truncate) {
+    /**
+     * truncate 
+     *
+     * @memberOf String
+     * @name  String#truncate
+     * @method 
+     * 
+     * @param  {int} len 
+     * @return {string}     
+     */
+    String.prototype.truncate = function (len) {
+      len = len != null ? len : 25;
+      var re = this.match(RegExp('^.{0,' + len + '}[S]*'));
+      var l = re[0].length;
+      re = re[0].replace(/\s$/, '');
+      if (l < this.length)
+        re = re + '&hellip;';
+      return re;
+    };
+  }
+  if (!String.prototype.isValidUrl) {
+    /**
+     * isValidUrl
+     *
+     * @memberOf String
+     * @name  String#isValidUrl
+     * @method  
+     * 
+     * @return {Boolean} 
+     */
+    String.prototype.isValidUrl = function () {
+      var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+      '(\\#[-a-z\\d_]*)?$', 'i');
+      // fragment locator
+      if (!pattern.test(this)) {
+        return false;
+      } else {
+        return true;
+      }
+    };
+  }
+  if (!String.prototype.hashCode) {
+    /**
+    * hashCode 
+    * http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+    *
+    * @memberOf String
+    * @name  String#hashCode
+    * @method
+    * 
+    * @return {string} 
+    */
+    String.prototype.hashCode = function () {
+      var hash = 0, i, chr, len;
+      if (this.length == 0)
+        return hash;
+      for (i = 0, len = this.length; i < len; i++) {
+        chr = this.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0;  // Convert to 32bit integer
+      }
+      return hash;
+    };
+  }
+  //http://stackoverflow.com/questions/286921/efficiently-replace-all-accented-characters-in-a-string
+  var Latinise = {};
+  Latinise.latin_map = {
+    '\xC1': 'A',
+    '\u0102': 'A',
+    '\u1EAE': 'A',
+    '\u1EB6': 'A',
+    '\u1EB0': 'A',
+    '\u1EB2': 'A',
+    '\u1EB4': 'A',
+    '\u01CD': 'A',
+    '\xC2': 'A',
+    '\u1EA4': 'A',
+    '\u1EAC': 'A',
+    '\u1EA6': 'A',
+    '\u1EA8': 'A',
+    '\u1EAA': 'A',
+    '\xC4': 'A',
+    '\u01DE': 'A',
+    '\u0226': 'A',
+    '\u01E0': 'A',
+    '\u1EA0': 'A',
+    '\u0200': 'A',
+    '\xC0': 'A',
+    '\u1EA2': 'A',
+    '\u0202': 'A',
+    '\u0100': 'A',
+    '\u0104': 'A',
+    '\xC5': 'A',
+    '\u01FA': 'A',
+    '\u1E00': 'A',
+    '\u023A': 'A',
+    '\xC3': 'A',
+    '\uA732': 'AA',
+    '\xC6': 'AE',
+    '\u01FC': 'AE',
+    '\u01E2': 'AE',
+    '\uA734': 'AO',
+    '\uA736': 'AU',
+    '\uA738': 'AV',
+    '\uA73A': 'AV',
+    '\uA73C': 'AY',
+    '\u1E02': 'B',
+    '\u1E04': 'B',
+    '\u0181': 'B',
+    '\u1E06': 'B',
+    '\u0243': 'B',
+    '\u0182': 'B',
+    '\u0106': 'C',
+    '\u010C': 'C',
+    '\xC7': 'C',
+    '\u1E08': 'C',
+    '\u0108': 'C',
+    '\u010A': 'C',
+    '\u0187': 'C',
+    '\u023B': 'C',
+    '\u010E': 'D',
+    '\u1E10': 'D',
+    '\u1E12': 'D',
+    '\u1E0A': 'D',
+    '\u1E0C': 'D',
+    '\u018A': 'D',
+    '\u1E0E': 'D',
+    '\u01F2': 'D',
+    '\u01C5': 'D',
+    '\u0110': 'D',
+    '\u018B': 'D',
+    '\u01F1': 'DZ',
+    '\u01C4': 'DZ',
+    '\xC9': 'E',
+    '\u0114': 'E',
+    '\u011A': 'E',
+    '\u0228': 'E',
+    '\u1E1C': 'E',
+    '\xCA': 'E',
+    '\u1EBE': 'E',
+    '\u1EC6': 'E',
+    '\u1EC0': 'E',
+    '\u1EC2': 'E',
+    '\u1EC4': 'E',
+    '\u1E18': 'E',
+    '\xCB': 'E',
+    '\u0116': 'E',
+    '\u1EB8': 'E',
+    '\u0204': 'E',
+    '\xC8': 'E',
+    '\u1EBA': 'E',
+    '\u0206': 'E',
+    '\u0112': 'E',
+    '\u1E16': 'E',
+    '\u1E14': 'E',
+    '\u0118': 'E',
+    '\u0246': 'E',
+    '\u1EBC': 'E',
+    '\u1E1A': 'E',
+    '\uA76A': 'ET',
+    '\u1E1E': 'F',
+    '\u0191': 'F',
+    '\u01F4': 'G',
+    '\u011E': 'G',
+    '\u01E6': 'G',
+    '\u0122': 'G',
+    '\u011C': 'G',
+    '\u0120': 'G',
+    '\u0193': 'G',
+    '\u1E20': 'G',
+    '\u01E4': 'G',
+    '\u1E2A': 'H',
+    '\u021E': 'H',
+    '\u1E28': 'H',
+    '\u0124': 'H',
+    '\u2C67': 'H',
+    '\u1E26': 'H',
+    '\u1E22': 'H',
+    '\u1E24': 'H',
+    '\u0126': 'H',
+    '\xCD': 'I',
+    '\u012C': 'I',
+    '\u01CF': 'I',
+    '\xCE': 'I',
+    '\xCF': 'I',
+    '\u1E2E': 'I',
+    '\u0130': 'I',
+    '\u1ECA': 'I',
+    '\u0208': 'I',
+    '\xCC': 'I',
+    '\u1EC8': 'I',
+    '\u020A': 'I',
+    '\u012A': 'I',
+    '\u012E': 'I',
+    '\u0197': 'I',
+    '\u0128': 'I',
+    '\u1E2C': 'I',
+    '\uA779': 'D',
+    '\uA77B': 'F',
+    '\uA77D': 'G',
+    '\uA782': 'R',
+    '\uA784': 'S',
+    '\uA786': 'T',
+    '\uA76C': 'IS',
+    '\u0134': 'J',
+    '\u0248': 'J',
+    '\u1E30': 'K',
+    '\u01E8': 'K',
+    '\u0136': 'K',
+    '\u2C69': 'K',
+    '\uA742': 'K',
+    '\u1E32': 'K',
+    '\u0198': 'K',
+    '\u1E34': 'K',
+    '\uA740': 'K',
+    '\uA744': 'K',
+    '\u0139': 'L',
+    '\u023D': 'L',
+    '\u013D': 'L',
+    '\u013B': 'L',
+    '\u1E3C': 'L',
+    '\u1E36': 'L',
+    '\u1E38': 'L',
+    '\u2C60': 'L',
+    '\uA748': 'L',
+    '\u1E3A': 'L',
+    '\u013F': 'L',
+    '\u2C62': 'L',
+    '\u01C8': 'L',
+    '\u0141': 'L',
+    '\u01C7': 'LJ',
+    '\u1E3E': 'M',
+    '\u1E40': 'M',
+    '\u1E42': 'M',
+    '\u2C6E': 'M',
+    '\u0143': 'N',
+    '\u0147': 'N',
+    '\u0145': 'N',
+    '\u1E4A': 'N',
+    '\u1E44': 'N',
+    '\u1E46': 'N',
+    '\u01F8': 'N',
+    '\u019D': 'N',
+    '\u1E48': 'N',
+    '\u0220': 'N',
+    '\u01CB': 'N',
+    '\xD1': 'N',
+    '\u01CA': 'NJ',
+    '\xD3': 'O',
+    '\u014E': 'O',
+    '\u01D1': 'O',
+    '\xD4': 'O',
+    '\u1ED0': 'O',
+    '\u1ED8': 'O',
+    '\u1ED2': 'O',
+    '\u1ED4': 'O',
+    '\u1ED6': 'O',
+    '\xD6': 'O',
+    '\u022A': 'O',
+    '\u022E': 'O',
+    '\u0230': 'O',
+    '\u1ECC': 'O',
+    '\u0150': 'O',
+    '\u020C': 'O',
+    '\xD2': 'O',
+    '\u1ECE': 'O',
+    '\u01A0': 'O',
+    '\u1EDA': 'O',
+    '\u1EE2': 'O',
+    '\u1EDC': 'O',
+    '\u1EDE': 'O',
+    '\u1EE0': 'O',
+    '\u020E': 'O',
+    '\uA74A': 'O',
+    '\uA74C': 'O',
+    '\u014C': 'O',
+    '\u1E52': 'O',
+    '\u1E50': 'O',
+    '\u019F': 'O',
+    '\u01EA': 'O',
+    '\u01EC': 'O',
+    '\xD8': 'O',
+    '\u01FE': 'O',
+    '\xD5': 'O',
+    '\u1E4C': 'O',
+    '\u1E4E': 'O',
+    '\u022C': 'O',
+    '\u01A2': 'OI',
+    '\uA74E': 'OO',
+    '\u0190': 'E',
+    '\u0186': 'O',
+    '\u0222': 'OU',
+    '\u1E54': 'P',
+    '\u1E56': 'P',
+    '\uA752': 'P',
+    '\u01A4': 'P',
+    '\uA754': 'P',
+    '\u2C63': 'P',
+    '\uA750': 'P',
+    '\uA758': 'Q',
+    '\uA756': 'Q',
+    '\u0154': 'R',
+    '\u0158': 'R',
+    '\u0156': 'R',
+    '\u1E58': 'R',
+    '\u1E5A': 'R',
+    '\u1E5C': 'R',
+    '\u0210': 'R',
+    '\u0212': 'R',
+    '\u1E5E': 'R',
+    '\u024C': 'R',
+    '\u2C64': 'R',
+    '\uA73E': 'C',
+    '\u018E': 'E',
+    '\u015A': 'S',
+    '\u1E64': 'S',
+    '\u0160': 'S',
+    '\u1E66': 'S',
+    '\u015E': 'S',
+    '\u015C': 'S',
+    '\u0218': 'S',
+    '\u1E60': 'S',
+    '\u1E62': 'S',
+    '\u1E68': 'S',
+    '\u0164': 'T',
+    '\u0162': 'T',
+    '\u1E70': 'T',
+    '\u021A': 'T',
+    '\u023E': 'T',
+    '\u1E6A': 'T',
+    '\u1E6C': 'T',
+    '\u01AC': 'T',
+    '\u1E6E': 'T',
+    '\u01AE': 'T',
+    '\u0166': 'T',
+    '\u2C6F': 'A',
+    '\uA780': 'L',
+    '\u019C': 'M',
+    '\u0245': 'V',
+    '\uA728': 'TZ',
+    '\xDA': 'U',
+    '\u016C': 'U',
+    '\u01D3': 'U',
+    '\xDB': 'U',
+    '\u1E76': 'U',
+    '\xDC': 'U',
+    '\u01D7': 'U',
+    '\u01D9': 'U',
+    '\u01DB': 'U',
+    '\u01D5': 'U',
+    '\u1E72': 'U',
+    '\u1EE4': 'U',
+    '\u0170': 'U',
+    '\u0214': 'U',
+    '\xD9': 'U',
+    '\u1EE6': 'U',
+    '\u01AF': 'U',
+    '\u1EE8': 'U',
+    '\u1EF0': 'U',
+    '\u1EEA': 'U',
+    '\u1EEC': 'U',
+    '\u1EEE': 'U',
+    '\u0216': 'U',
+    '\u016A': 'U',
+    '\u1E7A': 'U',
+    '\u0172': 'U',
+    '\u016E': 'U',
+    '\u0168': 'U',
+    '\u1E78': 'U',
+    '\u1E74': 'U',
+    '\uA75E': 'V',
+    '\u1E7E': 'V',
+    '\u01B2': 'V',
+    '\u1E7C': 'V',
+    '\uA760': 'VY',
+    '\u1E82': 'W',
+    '\u0174': 'W',
+    '\u1E84': 'W',
+    '\u1E86': 'W',
+    '\u1E88': 'W',
+    '\u1E80': 'W',
+    '\u2C72': 'W',
+    '\u1E8C': 'X',
+    '\u1E8A': 'X',
+    '\xDD': 'Y',
+    '\u0176': 'Y',
+    '\u0178': 'Y',
+    '\u1E8E': 'Y',
+    '\u1EF4': 'Y',
+    '\u1EF2': 'Y',
+    '\u01B3': 'Y',
+    '\u1EF6': 'Y',
+    '\u1EFE': 'Y',
+    '\u0232': 'Y',
+    '\u024E': 'Y',
+    '\u1EF8': 'Y',
+    '\u0179': 'Z',
+    '\u017D': 'Z',
+    '\u1E90': 'Z',
+    '\u2C6B': 'Z',
+    '\u017B': 'Z',
+    '\u1E92': 'Z',
+    '\u0224': 'Z',
+    '\u1E94': 'Z',
+    '\u01B5': 'Z',
+    '\u0132': 'IJ',
+    '\u0152': 'OE',
+    '\u1D00': 'A',
+    '\u1D01': 'AE',
+    '\u0299': 'B',
+    '\u1D03': 'B',
+    '\u1D04': 'C',
+    '\u1D05': 'D',
+    '\u1D07': 'E',
+    '\uA730': 'F',
+    '\u0262': 'G',
+    '\u029B': 'G',
+    '\u029C': 'H',
+    '\u026A': 'I',
+    '\u0281': 'R',
+    '\u1D0A': 'J',
+    '\u1D0B': 'K',
+    '\u029F': 'L',
+    '\u1D0C': 'L',
+    '\u1D0D': 'M',
+    '\u0274': 'N',
+    '\u1D0F': 'O',
+    '\u0276': 'OE',
+    '\u1D10': 'O',
+    '\u1D15': 'OU',
+    '\u1D18': 'P',
+    '\u0280': 'R',
+    '\u1D0E': 'N',
+    '\u1D19': 'R',
+    '\uA731': 'S',
+    '\u1D1B': 'T',
+    '\u2C7B': 'E',
+    '\u1D1A': 'R',
+    '\u1D1C': 'U',
+    '\u1D20': 'V',
+    '\u1D21': 'W',
+    '\u028F': 'Y',
+    '\u1D22': 'Z',
+    '\xE1': 'a',
+    '\u0103': 'a',
+    '\u1EAF': 'a',
+    '\u1EB7': 'a',
+    '\u1EB1': 'a',
+    '\u1EB3': 'a',
+    '\u1EB5': 'a',
+    '\u01CE': 'a',
+    '\xE2': 'a',
+    '\u1EA5': 'a',
+    '\u1EAD': 'a',
+    '\u1EA7': 'a',
+    '\u1EA9': 'a',
+    '\u1EAB': 'a',
+    '\xE4': 'a',
+    '\u01DF': 'a',
+    '\u0227': 'a',
+    '\u01E1': 'a',
+    '\u1EA1': 'a',
+    '\u0201': 'a',
+    '\xE0': 'a',
+    '\u1EA3': 'a',
+    '\u0203': 'a',
+    '\u0101': 'a',
+    '\u0105': 'a',
+    '\u1D8F': 'a',
+    '\u1E9A': 'a',
+    '\xE5': 'a',
+    '\u01FB': 'a',
+    '\u1E01': 'a',
+    '\u2C65': 'a',
+    '\xE3': 'a',
+    '\uA733': 'aa',
+    '\xE6': 'ae',
+    '\u01FD': 'ae',
+    '\u01E3': 'ae',
+    '\uA735': 'ao',
+    '\uA737': 'au',
+    '\uA739': 'av',
+    '\uA73B': 'av',
+    '\uA73D': 'ay',
+    '\u1E03': 'b',
+    '\u1E05': 'b',
+    '\u0253': 'b',
+    '\u1E07': 'b',
+    '\u1D6C': 'b',
+    '\u1D80': 'b',
+    '\u0180': 'b',
+    '\u0183': 'b',
+    '\u0275': 'o',
+    '\u0107': 'c',
+    '\u010D': 'c',
+    '\xE7': 'c',
+    '\u1E09': 'c',
+    '\u0109': 'c',
+    '\u0255': 'c',
+    '\u010B': 'c',
+    '\u0188': 'c',
+    '\u023C': 'c',
+    '\u010F': 'd',
+    '\u1E11': 'd',
+    '\u1E13': 'd',
+    '\u0221': 'd',
+    '\u1E0B': 'd',
+    '\u1E0D': 'd',
+    '\u0257': 'd',
+    '\u1D91': 'd',
+    '\u1E0F': 'd',
+    '\u1D6D': 'd',
+    '\u1D81': 'd',
+    '\u0111': 'd',
+    '\u0256': 'd',
+    '\u018C': 'd',
+    '\u0131': 'i',
+    '\u0237': 'j',
+    '\u025F': 'j',
+    '\u0284': 'j',
+    '\u01F3': 'dz',
+    '\u01C6': 'dz',
+    '\xE9': 'e',
+    '\u0115': 'e',
+    '\u011B': 'e',
+    '\u0229': 'e',
+    '\u1E1D': 'e',
+    '\xEA': 'e',
+    '\u1EBF': 'e',
+    '\u1EC7': 'e',
+    '\u1EC1': 'e',
+    '\u1EC3': 'e',
+    '\u1EC5': 'e',
+    '\u1E19': 'e',
+    '\xEB': 'e',
+    '\u0117': 'e',
+    '\u1EB9': 'e',
+    '\u0205': 'e',
+    '\xE8': 'e',
+    '\u1EBB': 'e',
+    '\u0207': 'e',
+    '\u0113': 'e',
+    '\u1E17': 'e',
+    '\u1E15': 'e',
+    '\u2C78': 'e',
+    '\u0119': 'e',
+    '\u1D92': 'e',
+    '\u0247': 'e',
+    '\u1EBD': 'e',
+    '\u1E1B': 'e',
+    '\uA76B': 'et',
+    '\u1E1F': 'f',
+    '\u0192': 'f',
+    '\u1D6E': 'f',
+    '\u1D82': 'f',
+    '\u01F5': 'g',
+    '\u011F': 'g',
+    '\u01E7': 'g',
+    '\u0123': 'g',
+    '\u011D': 'g',
+    '\u0121': 'g',
+    '\u0260': 'g',
+    '\u1E21': 'g',
+    '\u1D83': 'g',
+    '\u01E5': 'g',
+    '\u1E2B': 'h',
+    '\u021F': 'h',
+    '\u1E29': 'h',
+    '\u0125': 'h',
+    '\u2C68': 'h',
+    '\u1E27': 'h',
+    '\u1E23': 'h',
+    '\u1E25': 'h',
+    '\u0266': 'h',
+    '\u1E96': 'h',
+    '\u0127': 'h',
+    '\u0195': 'hv',
+    '\xED': 'i',
+    '\u012D': 'i',
+    '\u01D0': 'i',
+    '\xEE': 'i',
+    '\xEF': 'i',
+    '\u1E2F': 'i',
+    '\u1ECB': 'i',
+    '\u0209': 'i',
+    '\xEC': 'i',
+    '\u1EC9': 'i',
+    '\u020B': 'i',
+    '\u012B': 'i',
+    '\u012F': 'i',
+    '\u1D96': 'i',
+    '\u0268': 'i',
+    '\u0129': 'i',
+    '\u1E2D': 'i',
+    '\uA77A': 'd',
+    '\uA77C': 'f',
+    '\u1D79': 'g',
+    '\uA783': 'r',
+    '\uA785': 's',
+    '\uA787': 't',
+    '\uA76D': 'is',
+    '\u01F0': 'j',
+    '\u0135': 'j',
+    '\u029D': 'j',
+    '\u0249': 'j',
+    '\u1E31': 'k',
+    '\u01E9': 'k',
+    '\u0137': 'k',
+    '\u2C6A': 'k',
+    '\uA743': 'k',
+    '\u1E33': 'k',
+    '\u0199': 'k',
+    '\u1E35': 'k',
+    '\u1D84': 'k',
+    '\uA741': 'k',
+    '\uA745': 'k',
+    '\u013A': 'l',
+    '\u019A': 'l',
+    '\u026C': 'l',
+    '\u013E': 'l',
+    '\u013C': 'l',
+    '\u1E3D': 'l',
+    '\u0234': 'l',
+    '\u1E37': 'l',
+    '\u1E39': 'l',
+    '\u2C61': 'l',
+    '\uA749': 'l',
+    '\u1E3B': 'l',
+    '\u0140': 'l',
+    '\u026B': 'l',
+    '\u1D85': 'l',
+    '\u026D': 'l',
+    '\u0142': 'l',
+    '\u01C9': 'lj',
+    '\u017F': 's',
+    '\u1E9C': 's',
+    '\u1E9B': 's',
+    '\u1E9D': 's',
+    '\u1E3F': 'm',
+    '\u1E41': 'm',
+    '\u1E43': 'm',
+    '\u0271': 'm',
+    '\u1D6F': 'm',
+    '\u1D86': 'm',
+    '\u0144': 'n',
+    '\u0148': 'n',
+    '\u0146': 'n',
+    '\u1E4B': 'n',
+    '\u0235': 'n',
+    '\u1E45': 'n',
+    '\u1E47': 'n',
+    '\u01F9': 'n',
+    '\u0272': 'n',
+    '\u1E49': 'n',
+    '\u019E': 'n',
+    '\u1D70': 'n',
+    '\u1D87': 'n',
+    '\u0273': 'n',
+    '\xF1': 'n',
+    '\u01CC': 'nj',
+    '\xF3': 'o',
+    '\u014F': 'o',
+    '\u01D2': 'o',
+    '\xF4': 'o',
+    '\u1ED1': 'o',
+    '\u1ED9': 'o',
+    '\u1ED3': 'o',
+    '\u1ED5': 'o',
+    '\u1ED7': 'o',
+    '\xF6': 'o',
+    '\u022B': 'o',
+    '\u022F': 'o',
+    '\u0231': 'o',
+    '\u1ECD': 'o',
+    '\u0151': 'o',
+    '\u020D': 'o',
+    '\xF2': 'o',
+    '\u1ECF': 'o',
+    '\u01A1': 'o',
+    '\u1EDB': 'o',
+    '\u1EE3': 'o',
+    '\u1EDD': 'o',
+    '\u1EDF': 'o',
+    '\u1EE1': 'o',
+    '\u020F': 'o',
+    '\uA74B': 'o',
+    '\uA74D': 'o',
+    '\u2C7A': 'o',
+    '\u014D': 'o',
+    '\u1E53': 'o',
+    '\u1E51': 'o',
+    '\u01EB': 'o',
+    '\u01ED': 'o',
+    '\xF8': 'o',
+    '\u01FF': 'o',
+    '\xF5': 'o',
+    '\u1E4D': 'o',
+    '\u1E4F': 'o',
+    '\u022D': 'o',
+    '\u01A3': 'oi',
+    '\uA74F': 'oo',
+    '\u025B': 'e',
+    '\u1D93': 'e',
+    '\u0254': 'o',
+    '\u1D97': 'o',
+    '\u0223': 'ou',
+    '\u1E55': 'p',
+    '\u1E57': 'p',
+    '\uA753': 'p',
+    '\u01A5': 'p',
+    '\u1D71': 'p',
+    '\u1D88': 'p',
+    '\uA755': 'p',
+    '\u1D7D': 'p',
+    '\uA751': 'p',
+    '\uA759': 'q',
+    '\u02A0': 'q',
+    '\u024B': 'q',
+    '\uA757': 'q',
+    '\u0155': 'r',
+    '\u0159': 'r',
+    '\u0157': 'r',
+    '\u1E59': 'r',
+    '\u1E5B': 'r',
+    '\u1E5D': 'r',
+    '\u0211': 'r',
+    '\u027E': 'r',
+    '\u1D73': 'r',
+    '\u0213': 'r',
+    '\u1E5F': 'r',
+    '\u027C': 'r',
+    '\u1D72': 'r',
+    '\u1D89': 'r',
+    '\u024D': 'r',
+    '\u027D': 'r',
+    '\u2184': 'c',
+    '\uA73F': 'c',
+    '\u0258': 'e',
+    '\u027F': 'r',
+    '\u015B': 's',
+    '\u1E65': 's',
+    '\u0161': 's',
+    '\u1E67': 's',
+    '\u015F': 's',
+    '\u015D': 's',
+    '\u0219': 's',
+    '\u1E61': 's',
+    '\u1E63': 's',
+    '\u1E69': 's',
+    '\u0282': 's',
+    '\u1D74': 's',
+    '\u1D8A': 's',
+    '\u023F': 's',
+    '\u0261': 'g',
+    '\u1D11': 'o',
+    '\u1D13': 'o',
+    '\u1D1D': 'u',
+    '\u0165': 't',
+    '\u0163': 't',
+    '\u1E71': 't',
+    '\u021B': 't',
+    '\u0236': 't',
+    '\u1E97': 't',
+    '\u2C66': 't',
+    '\u1E6B': 't',
+    '\u1E6D': 't',
+    '\u01AD': 't',
+    '\u1E6F': 't',
+    '\u1D75': 't',
+    '\u01AB': 't',
+    '\u0288': 't',
+    '\u0167': 't',
+    '\u1D7A': 'th',
+    '\u0250': 'a',
+    '\u1D02': 'ae',
+    '\u01DD': 'e',
+    '\u1D77': 'g',
+    '\u0265': 'h',
+    '\u02AE': 'h',
+    '\u02AF': 'h',
+    '\u1D09': 'i',
+    '\u029E': 'k',
+    '\uA781': 'l',
+    '\u026F': 'm',
+    '\u0270': 'm',
+    '\u1D14': 'oe',
+    '\u0279': 'r',
+    '\u027B': 'r',
+    '\u027A': 'r',
+    '\u2C79': 'r',
+    '\u0287': 't',
+    '\u028C': 'v',
+    '\u028D': 'w',
+    '\u028E': 'y',
+    '\uA729': 'tz',
+    '\xFA': 'u',
+    '\u016D': 'u',
+    '\u01D4': 'u',
+    '\xFB': 'u',
+    '\u1E77': 'u',
+    '\xFC': 'u',
+    '\u01D8': 'u',
+    '\u01DA': 'u',
+    '\u01DC': 'u',
+    '\u01D6': 'u',
+    '\u1E73': 'u',
+    '\u1EE5': 'u',
+    '\u0171': 'u',
+    '\u0215': 'u',
+    '\xF9': 'u',
+    '\u1EE7': 'u',
+    '\u01B0': 'u',
+    '\u1EE9': 'u',
+    '\u1EF1': 'u',
+    '\u1EEB': 'u',
+    '\u1EED': 'u',
+    '\u1EEF': 'u',
+    '\u0217': 'u',
+    '\u016B': 'u',
+    '\u1E7B': 'u',
+    '\u0173': 'u',
+    '\u1D99': 'u',
+    '\u016F': 'u',
+    '\u0169': 'u',
+    '\u1E79': 'u',
+    '\u1E75': 'u',
+    '\u1D6B': 'ue',
+    '\uA778': 'um',
+    '\u2C74': 'v',
+    '\uA75F': 'v',
+    '\u1E7F': 'v',
+    '\u028B': 'v',
+    '\u1D8C': 'v',
+    '\u2C71': 'v',
+    '\u1E7D': 'v',
+    '\uA761': 'vy',
+    '\u1E83': 'w',
+    '\u0175': 'w',
+    '\u1E85': 'w',
+    '\u1E87': 'w',
+    '\u1E89': 'w',
+    '\u1E81': 'w',
+    '\u2C73': 'w',
+    '\u1E98': 'w',
+    '\u1E8D': 'x',
+    '\u1E8B': 'x',
+    '\u1D8D': 'x',
+    '\xFD': 'y',
+    '\u0177': 'y',
+    '\xFF': 'y',
+    '\u1E8F': 'y',
+    '\u1EF5': 'y',
+    '\u1EF3': 'y',
+    '\u01B4': 'y',
+    '\u1EF7': 'y',
+    '\u1EFF': 'y',
+    '\u0233': 'y',
+    '\u1E99': 'y',
+    '\u024F': 'y',
+    '\u1EF9': 'y',
+    '\u017A': 'z',
+    '\u017E': 'z',
+    '\u1E91': 'z',
+    '\u0291': 'z',
+    '\u2C6C': 'z',
+    '\u017C': 'z',
+    '\u1E93': 'z',
+    '\u0225': 'z',
+    '\u1E95': 'z',
+    '\u1D76': 'z',
+    '\u1D8E': 'z',
+    '\u0290': 'z',
+    '\u01B6': 'z',
+    '\u0240': 'z',
+    '\uFB00': 'ff',
+    '\uFB03': 'ffi',
+    '\uFB04': 'ffl',
+    '\uFB01': 'fi',
+    '\uFB02': 'fl',
+    '\u0133': 'ij',
+    '\u0153': 'oe',
+    '\uFB06': 'st',
+    '\u2090': 'a',
+    '\u2091': 'e',
+    '\u1D62': 'i',
+    '\u2C7C': 'j',
+    '\u2092': 'o',
+    '\u1D63': 'r',
+    '\u1D64': 'u',
+    '\u1D65': 'v',
+    '\u2093': 'x'
   };
+  /**
+  * latinise 
+  *
+  * @memberOf  String
+  * @name  String#latinise
+  * @method
+  * 
+  * @return {string} 
+  */
+  String.prototype.latinise = function () {
+    return this.replace(/[^A-Za-z0-9\[\] ]/g, function (a) {
+      return Latinise.latin_map[a] || a;
+    });
+  };
+  /**
+  * latinize 
+  *
+  * @memberOf  String
+  * @name  String#latinize
+  * @method
+  * 
+  * @return {string} 
+  */
+  String.prototype.latinize = String.prototype.latinise;
+  /**
+  * isLatin 
+  *
+  * @memberOf  String
+  * @name  String#isLatin
+  * @method
+  * 
+  * @return {Boolean} 
+  */
+  String.prototype.isLatin = function () {
+    return this == this.latinise();
+  };
+  /**
+  * OnlyAlphaNumSpaceAndUnderscore
+  *
+  * @memberOf String
+  * @name  String#OnlyAlphaNumSpaceAndUnderscore
+  * @method
+  * 
+  */
   String.prototype.OnlyAlphaNumSpaceAndUnderscore = function () {
     // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
     // \W Matches any character that is not a word character from the basic Latin alphabet. Equivalent to [^A-Za-z0-9_]
     // Preceding or trailing whitespaces are removed, and words are also latinised
     return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[\W]/g, '');
   };
+  /**
+  * OnlyAlphaNumSpaceUnderscoreAndDot
+  *
+  * @memberOf String
+  * @name  String#OnlyAlphaNumSpaceUnderscoreAndDot
+  * @method
+  * 
+  */
   String.prototype.OnlyAlphaNumSpaceUnderscoreAndDot = function () {
     // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
     // \W Matches any character that is not a word character from the basic Latin alphabet. Equivalent to [^A-Za-z0-9_]
     // Preceding or trailing whitespaces are removed, and words are also latinised
     return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[^a-z0-9_\.]/g, '');
   };
-  // Other helpers
-  // ----
-  return {
-    getUrlParam: function (name) {
-      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-      var regexS = '[\\?&]' + name + '=([^&#]*)';
-      var regex = new RegExp(regexS);
-      var results = regex.exec(window.location.href);
-      return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+  /**
+  * NUMBER EXTENSIONS
+  */
+  if (!Number.prototype.between) {
+    /**
+     * between
+     *
+     * @memberOf  Number
+     * @name  Number#between
+     * @method
+     * 
+     * @param  {int} a 
+     * @param  {int} b 
+     * @return {Boolean}   
+     */
+    Number.prototype.between = function (a, b) {
+      var min = Math.min(a, b), max = Math.max(a, b);
+      return this >= min && this <= max;
+    };
+  }
+}();
+common_validation = {
+  /**
+   * isValidEmail
+   *
+   * @memberOf common
+   * @name  common#isValidEmail
+   * @method
+   * 
+   * @param  {string}  email 
+   * @return {Boolean}       
+   */
+  isValidEmail: function (email) {
+    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+    return re.test(email);
+  },
+  /**
+   * isValidPhone
+   *
+   * @memberOf common
+   * @name  common#isValidPhone
+   * @method
+   * 
+   * @param  {string}  phone 
+   * @return {Boolean}       
+   */
+  isValidPhone: function (phone) {
+    var isnum = /^\d{9,}$/.test(phone);
+    if (isnum) {
+      return true;
+    }
+    var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+    return m != null && m.length > 0;
+  }
+};
+common_utils = {
+  /**
+   * Turns an integer into a compact text to show in a badge
+   *
+   * @memberOf  common
+   * @name  common#badgeify
+   * @method         
+   * 
+   * @param  {int} count 
+   * @return {string}       
+   */
+  badgeify: function (count) {
+    if (count > 100) {
+      return '100+';
+    } else if (count > 10) {
+      return '10+';
+    } else if (count > 0) {
+      return '' + count;
+    } else {
+      return '';
+    }
+  },
+  /**
+   * getLoginName
+   *
+   * @memberOf common
+   * @name  common#getLoginName
+   * @method
+   * 
+   * @param  {string} firstName 
+   * @param  {string} lastName  
+   * @return {string}           
+   */
+  getLoginName: function (firstName, lastName) {
+    var patt = /[\s-]*/gim;
+    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+  },
+  /**
+   * getUrlParam
+   *
+   * @memberOf common
+   * @name  common#getUrlParam
+   * @method
+   * 
+   * @param  {string} name 
+   * @return {string}      
+   */
+  getUrlParam: function (name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regexS = '[\\?&]' + name + '=([^&#]*)';
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.href);
+    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+  }
+};
+common_slimdown = function () {
+  /**
+  * Javascript version of https://gist.github.com/jbroadway/2836900
+  *
+  * Slimdown - A very basic regex-based Markdown parser. Supports the
+  * following elements (and can be extended via Slimdown::add_rule()):
+  *
+  * - Headers
+  * - Links
+  * - Bold
+  * - Emphasis
+  * - Deletions
+  * - Quotes
+  * - Inline code
+  * - Blockquotes
+  * - Ordered/unordered lists
+  * - Horizontal rules
+  *
+  * Author: Johnny Broadway <johnny@johnnybroadway.com>
+  * Website: https://gist.github.com/jbroadway/2836900
+  * License: MIT
+  *
+  * @global
+  * @name  Slimdown
+  */
+  var Slimdown = function () {
+    // Rules
+    this.rules = [
+      {
+        regex: /(#+)(.*)/g,
+        replacement: header
+      },
+      // headers
+      {
+        regex: /!\[([^\[]+)\]\(([^\)]+)\)/g,
+        replacement: '<img src=\'$2\' alt=\'$1\'>'
+      },
+      // image
+      {
+        regex: /\[([^\[]+)\]\(([^\)]+)\)/g,
+        replacement: '<a href=\'$2\'>$1</a>'
+      },
+      // hyperlink
+      {
+        regex: /(\*\*|__)(.*?)\1/g,
+        replacement: '<strong>$2</strong>'
+      },
+      // bold
+      {
+        regex: /(\*|_)(.*?)\1/g,
+        replacement: '<em>$2</em>'
+      },
+      // emphasis
+      {
+        regex: /\~\~(.*?)\~\~/g,
+        replacement: '<del>$1</del>'
+      },
+      // del
+      {
+        regex: /\:\"(.*?)\"\:/g,
+        replacement: '<q>$1</q>'
+      },
+      // quote
+      {
+        regex: /`(.*?)`/g,
+        replacement: '<code>$1</code>'
+      },
+      // inline code
+      {
+        regex: /\n\*(.*)/g,
+        replacement: ulList
+      },
+      // ul lists
+      {
+        regex: /\n[0-9]+\.(.*)/g,
+        replacement: olList
+      },
+      // ol lists
+      {
+        regex: /\n(&gt;|\>)(.*)/g,
+        replacement: blockquote
+      },
+      // blockquotes
+      {
+        regex: /\n-{5,}/g,
+        replacement: '\n<hr />'
+      },
+      // horizontal rule
+      {
+        regex: /\n([^\n]+)\n/g,
+        replacement: para
+      },
+      // add paragraphs
+      {
+        regex: /<\/ul>\s?<ul>/g,
+        replacement: ''
+      },
+      // fix extra ul
+      {
+        regex: /<\/ol>\s?<ol>/g,
+        replacement: ''
+      },
+      // fix extra ol
+      {
+        regex: /<\/blockquote><blockquote>/g,
+        replacement: '\n'
+      }  // fix extra blockquote
+    ];
+    // Add a rule.
+    this.addRule = function (regex, replacement) {
+      regex.global = true;
+      regex.multiline = false;
+      this.rules.push({
+        regex: regex,
+        replacement: replacement
+      });
+    };
+    // Render some Markdown into HTML.
+    this.render = function (text) {
+      text = '\n' + text + '\n';
+      this.rules.forEach(function (rule) {
+        text = text.replace(rule.regex, rule.replacement);
+      });
+      return text.trim();
+    };
+    function para(text, line) {
+      var trimmed = line.trim();
+      if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
+        return '\n' + line + '\n';
+      }
+      return '\n<p>' + trimmed + '</p>\n';
+    }
+    function ulList(text, item) {
+      return '\n<ul>\n\t<li>' + item.trim() + '</li>\n</ul>';
+    }
+    function olList(text, item) {
+      return '\n<ol>\n\t<li>' + item.trim() + '</li>\n</ol>';
+    }
+    function blockquote(text, tmp, item) {
+      return '\n<blockquote>' + item.trim() + '</blockquote>';
+    }
+    function header(text, chars, content) {
+      var level = chars.length;
+      return '<h' + level + '>' + content.trim() + '</h' + level + '>';
     }
   };
+  window.Slimdown = Slimdown;
 }();
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown) {
+  /**
+   * Return common object with different helper methods
+   */
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown);
 dateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
@@ -1071,6 +2073,41 @@ dateHelper = function ($, moment) {
     return result;
   };
   /**
+   * @deprecated use getFriendlyFromToInfo
+   * [getFriendlyFromToOld]
+   * @param  fromDate    
+   * @param  toDate       
+   * @param  groupProfile 
+   * @return {}              
+   */
+  DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
+    var mFrom = this.roundFromTime(fromDate, groupProfile);
+    var mTo = this.roundToTime(toDate, groupProfile);
+    return {
+      from: mFrom,
+      to: mTo,
+      daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
+      duration: moment.duration(mFrom - mTo).humanize(),
+      fromText: mFrom.calendar().replace(' at ', ' '),
+      toText: mTo.calendar().replace(' at ', ' ')
+    };
+  };
+  /**
+   * [getFriendlyDateText]
+   * @param  date    
+   * @param  useHours 
+   * @param  now     
+   * @param  format  
+   * @return {string}         
+   */
+  DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
+    if (date == null) {
+      return 'Not set';
+    }
+    var parts = this.getFriendlyDateParts(date, now, format);
+    return useHours ? parts.join('') : parts[0];
+  };
+  /**
    * Turns all strings that look like datetimes into moment objects recursively
    * @name  DateHelper#fixDates
    * @method
@@ -1096,6 +2133,16 @@ dateHelper = function ($, moment) {
       });
     }
     return data;
+  };
+  /**
+   * [addAverageDuration]
+   * @param m
+   * @returns {moment}
+   */
+  DateHelper.prototype.addAverageDuration = function (m) {
+    // TODO: Read the average order duration from the group.profile
+    // add it to the date that was passed
+    return m.clone().add(1, 'day');
   };
   /**
    * roundTimeFrom uses the time rounding rules to round a begin datetime
@@ -1184,6 +2231,9 @@ api = function ($, jsonp, moment, common, DateHelper) {
     log: function () {
     }
   };
+  // Disable caching AJAX requests in IE
+  // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
+  $.ajaxSetup({ cache: false });
   var api = {};
   //*************
   // ApiErrors
@@ -1276,7 +2326,7 @@ api = function ($, jsonp, moment, common, DateHelper) {
   // ----
   api.ApiAjax.prototype._handleAjaxSuccess = function (dfd, data, opt) {
     if (this.responseInTz) {
-      data = this._fixDates(data);
+      data = new DateHelper().fixDates(data);
     }
     return dfd.resolve(data);
   };
@@ -1375,26 +2425,6 @@ api = function ($, jsonp, moment, common, DateHelper) {
         data[key] = value.toJSONDate();
       }
     });
-    return data;
-  };
-  api.ApiAjax.prototype._fixDates = function (data) {
-    if (typeof data == 'string' || data instanceof String) {
-      // "2014-04-03T12:15:00+00:00" (length 25)
-      // "2014-04-03T09:32:43.841000+00:00" (length 32)
-      if (data.endsWith('+00:00')) {
-        var len = data.length;
-        if (len == 25) {
-          return moment(data.substring(0, len - 6));
-        } else if (len == 32) {
-          return moment(data.substring(0, len - 6).split('.')[0]);
-        }
-      }
-    } else if (data instanceof Object || $.isArray(data)) {
-      var that = this;
-      $.each(data, function (k, v) {
-        data[k] = that._fixDates(v);
-      });
-    }
     return data;
   };
   //*************
@@ -3619,207 +4649,7 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   };
   return Base;
 }(jquery, common, api, document, comment, attachment, keyvalue);
-settings = {
-  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
-  amazonBucket: 'app'
-};
-helper = function ($, moment, DateHelper, settings) {
-  var Helper = function (spec) {
-    this.dateHelper = new DateHelper({});
-  };
-  /**
-   * Convenience method that calls the DateHelper.getNow
-   * @returns {*}
-   */
-  Helper.prototype.getNow = function () {
-    return this.dateHelper.getNow();
-  };
-  Helper.prototype.roundTimeFrom = function (m) {
-    return this.dateHelper.roundTimeFrom(m);
-  };
-  Helper.prototype.roundTimeTo = function (m) {
-    return this.dateHelper.roundTimeTo(m);
-  };
-  Helper.prototype.addAverageDuration = function (m) {
-    // TODO: Read the average order duration from the group.profile
-    // add it to the date that was passed
-    return m.clone().add(1, 'day');
-  };
-  /**
-   * getImageCDNUrl gets an image by using the path to a CDN location
-   * @param groupId
-   * @param attachmentId
-   * @param size
-   * @returns {string}
-   */
-  Helper.prototype.getImageCDNUrl = function (groupId, attachmentId, size) {
-    // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-    var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
-    if (size && size.length > 0) {
-      var parts = url.split('.');
-      var ext = parts.pop();
-      // pop off the extension, we'll change it
-      url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
-    }
-    return url;
-  };
-  /**
-   * getImageUrl gets an image by using the datasource /get style and a mimeType
-   * 'XS': (64, 64),
-   * 'S': (128, 128),
-   * 'M': (256, 256),
-   * 'L': (512, 512)
-   * @param ds
-   * @param pk
-   * @param size
-   * @param bustCache
-   * @returns {string}
-   */
-  Helper.prototype.getImageUrl = function (ds, pk, size, bustCache) {
-    var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-    if (size) {
-      url += '&size=' + size;
-    }
-    if (bustCache) {
-      url += '&_bust=' + new Date().getTime();
-    }
-    return url;
-  };
-  /**
-   * isValidEmail checks if an email address is valid
-   * @param email
-   * @returns {boolean}
-   */
-  Helper.prototype.isValidEmail = function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-    return re.test(email);
-  };
-  /**
-   * isValidPhone checks if a phone number is valid
-   * @param phone
-   * @returns {boolean}
-  */
-  Helper.prototype.isValidPhone = function (phone) {
-    var isnum = /^\d{9,}$/.test(phone);
-    if (isnum) {
-      return true;
-    }
-    var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
-    return m != null && m.length > 0;
-  };
-  /**
-   * getNumItemsLeft
-   * @param limits
-   * @param stats
-   * @return {Number}
-   */
-  Helper.prototype.getNumItemsLeft = function (limits, stats) {
-    return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
-  };
-  /**
-   * getNumUsersLeft
-   * @param limits
-   * @param stats
-   * @return {Number}
-   */
-  Helper.prototype.getNumUsersLeft = function (limits, stats) {
-    return limits.maxUsers - stats.detailed.production.users.active;
-  };
-  /**
-   * getAccessRights returns access rights based on the user role, profile settings 
-   * and account limits 
-   * @param  role   
-   * @param  profile 
-   * @param  limits
-   * @return {object}       
-   */
-  Helper.prototype.getAccessRights = function (role, profile, limits) {
-    var isRootOrAdmin = role == 'root' || role == 'admin';
-    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
-    var useReservations = limits.allowReservations && profile.useReservations;
-    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
-    var useWebHooks = limits.allowWebHooks;
-    return {
-      contacts: {
-        create: isRootOrAdminOrUser,
-        remove: isRootOrAdminOrUser,
-        update: true
-      },
-      items: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin,
-        updateFlag: isRootOrAdmin,
-        updateLocation: isRootOrAdmin,
-        updateGeo: true
-      },
-      orders: {
-        create: true,
-        remove: true,
-        update: true,
-        updateContact: role != 'selfservice',
-        updateLocation: true,
-        generatePdf: useOrderAgreements && isRootOrAdminOrUser
-      },
-      reservations: {
-        create: useReservations,
-        remove: useReservations,
-        update: useReservations,
-        updateContact: useReservations && role != 'selfservice',
-        updateLocation: useReservations
-      },
-      locations: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin
-      },
-      users: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin,
-        updateOther: isRootOrAdmin,
-        updateOwn: true
-      },
-      webHooks: {
-        create: useWebHooks && isRootOrAdmin,
-        remove: useWebHooks && isRootOrAdmin,
-        update: useWebHooks && isRootOrAdmin
-      },
-      stickers: {
-        print: isRootOrAdmin,
-        buy: isRootOrAdmin
-      },
-      categories: {
-        create: isRootOrAdmin,
-        update: isRootOrAdmin
-      },
-      account: { update: isRootOrAdmin }
-    };
-  };
-  /**
-   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
-   * @param  obj   
-   * @param  prop        
-   * @return {string}       
-   */
-  Helper.prototype.ensureValue = function (obj, prop) {
-    return typeof obj === 'string' ? obj : obj[prop];
-  };
-  /**
-   * ensureId, returns id value of object or if you pass a string it returns that exact string 
-   * For example:
-   * ensureId("abc123") --> "abc123"
-   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
-   * 
-   * @param  obj   
-   * @return {string}       
-   */
-  Helper.prototype.ensureId = function (obj) {
-    return this.ensureValue(obj, '_id');
-  };
-  return Helper;
-}(jquery, moment, dateHelper, settings);
-Contact = function ($, Base, Helper) {
+Contact = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     company: '',
@@ -3881,7 +4711,7 @@ Contact = function ($, Base, Helper) {
    */
   Contact.prototype.isValidPhone = function () {
     this.phone = $.trim(this.phone);
-    return new Helper().isValidPhone(this.phone);
+    return common.isValidPhone(this.phone);
   };
   /**
    * Check is email is valid
@@ -3891,7 +4721,7 @@ Contact = function ($, Base, Helper) {
    */
   Contact.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
-    return new Helper().isValidEmail(this.email);
+    return common.isValidEmail(this.email);
   };
   //
   // Base overrides
@@ -3949,7 +4779,7 @@ Contact = function ($, Base, Helper) {
     });
   };
   return Contact;
-}(jquery, base, helper);
+}(jquery, base, common);
 DateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
@@ -4108,6 +4938,41 @@ DateHelper = function ($, moment) {
     return result;
   };
   /**
+   * @deprecated use getFriendlyFromToInfo
+   * [getFriendlyFromToOld]
+   * @param  fromDate    
+   * @param  toDate       
+   * @param  groupProfile 
+   * @return {}              
+   */
+  DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
+    var mFrom = this.roundFromTime(fromDate, groupProfile);
+    var mTo = this.roundToTime(toDate, groupProfile);
+    return {
+      from: mFrom,
+      to: mTo,
+      daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
+      duration: moment.duration(mFrom - mTo).humanize(),
+      fromText: mFrom.calendar().replace(' at ', ' '),
+      toText: mTo.calendar().replace(' at ', ' ')
+    };
+  };
+  /**
+   * [getFriendlyDateText]
+   * @param  date    
+   * @param  useHours 
+   * @param  now     
+   * @param  format  
+   * @return {string}         
+   */
+  DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
+    if (date == null) {
+      return 'Not set';
+    }
+    var parts = this.getFriendlyDateParts(date, now, format);
+    return useHours ? parts.join('') : parts[0];
+  };
+  /**
    * Turns all strings that look like datetimes into moment objects recursively
    * @name  DateHelper#fixDates
    * @method
@@ -4133,6 +4998,16 @@ DateHelper = function ($, moment) {
       });
     }
     return data;
+  };
+  /**
+   * [addAverageDuration]
+   * @param m
+   * @returns {moment}
+   */
+  DateHelper.prototype.addAverageDuration = function (m) {
+    // TODO: Read the average order duration from the group.profile
+    // add it to the date that was passed
+    return m.clone().add(1, 'day');
   };
   /**
    * roundTimeFrom uses the time rounding rules to round a begin datetime
@@ -5191,7 +6066,7 @@ location = function ($, Base) {
   };
   return Location;
 }(jquery, base);
-transaction = function ($, api, Base, Location) {
+transaction = function ($, api, Base, Location, DateHelper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
@@ -5214,6 +6089,7 @@ transaction = function ($, api, Base, Location) {
    * @extends Base
    * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
    * @property {Helper}  helper                     - A Helper object ref
+   * @property {DateHelper} dateHelper              - A DateHelper object ref
    * @property {string}  status                     - The transaction status
    * @property {moment}  from                       - The transaction from date
    * @property {moment}  to                         - The transaction to date
@@ -5231,6 +6107,7 @@ transaction = function ($, api, Base, Location) {
     // should we automatically delete the transaction from the database?
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.helper = spec.helper;
+    this.dateHelper = spec.dateHelper || new DateHelper();
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -5351,9 +6228,9 @@ transaction = function ($, api, Base, Location) {
    * @returns {Moment} max date
    */
   Transaction.prototype.getMaxDate = function () {
-    var helper = this._getHelper();
-    var now = helper.getNow();
-    var next = helper.roundTimeTo(now);
+    var dateHelper = this._getDateHelper();
+    var now = dateHelper.getNow();
+    var next = dateHelper.roundTimeTo(now);
     return next.add(365, 'day');  // TODO: Is this a sensible date?
   };
   /**
@@ -5365,9 +6242,9 @@ transaction = function ($, api, Base, Location) {
    * @returns {*}
    */
   Transaction.prototype.suggestEndDate = function (m) {
-    var helper = this._getHelper();
-    var end = helper.addAverageDuration(m || helper.getNow());
-    return helper.roundTimeTo(end);
+    var dateHelper = this._getDateHelper();
+    var end = dateHelper.addAverageDuration(m || dateHelper.getNow());
+    return dateHelper.roundTimeTo(end);
   };
   //
   // Base overrides
@@ -5530,7 +6407,7 @@ transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setFromDate = function (date, skipRead) {
-    this.from = this.helper.roundTimeFrom(date);
+    this.from = this._getDateHelper().roundTimeFrom(date);
     return this._handleTransaction(skipRead);
   };
   // To date setters
@@ -5554,7 +6431,7 @@ transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setToDate = function (date, skipRead) {
-    this.to = this.helper.roundTimeTo(date);
+    this.to = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Due date setters
@@ -5578,7 +6455,7 @@ transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setDueDate = function (date, skipRead) {
-    this.due = this.helper.roundTimeTo(date);
+    this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Location setters
@@ -5665,7 +6542,7 @@ transaction = function ($, api, Base, Location) {
    * addItems; adds a bunch of Items to the transaction using a list of item ids
    * It creates the transaction if it doesn't exist yet
    * @name Transaction#addItems
-   * @method addItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -5684,7 +6561,7 @@ transaction = function ($, api, Base, Location) {
    * removeItems; removes a bunch of Items from the transaction using a list of item ids
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#removeItems
-   * @method removeItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -5706,7 +6583,7 @@ transaction = function ($, api, Base, Location) {
    * clearItems; removes all Items from the transaction
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#clearItems
-   * @method clearItems
+   * @method
    * @param skipRead
    * @returns {promise}
    */
@@ -5725,7 +6602,7 @@ transaction = function ($, api, Base, Location) {
   /**
    * swapItem; swaps one item for another in a transaction
    * @name Transaction#swapItem
-   * @method swapItem
+   * @method
    * @param fromItem
    * @param toItem
    * @param skipRead
@@ -5747,8 +6624,8 @@ transaction = function ($, api, Base, Location) {
   };
   /**
    * hasItems; Gets a list of items that are already part of the transaction
-   * @name Transaction#addItems
-   * @method addItems
+   * @name Transaction#hasItems
+   * @method
    * @param itemIds        array of string values
    * @returns {Array}
    */
@@ -5785,7 +6662,7 @@ transaction = function ($, api, Base, Location) {
     return this.helper;
   };
   Transaction.prototype._getDateHelper = function () {
-    return this._getHelper().dateHelper;
+    return this.dateHelper;
   };
   /**
    * Searches for Items that are available for this transaction
@@ -5899,7 +6776,7 @@ transaction = function ($, api, Base, Location) {
     return this.isEmpty() && this.autoCleanup ? this._deleteTransaction() : $.Deferred().resolve();
   };
   return Transaction;
-}(jquery, api, base, location);
+}(jquery, api, base, location, dateHelper);
 conflict = function ($) {
   var DEFAULTS = {
     kind: '',
@@ -6104,7 +6981,7 @@ Order = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Order.prototype.canCheckout = function () {
-    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getHelper().getNow()) && this.items && this.items.length;
+    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length;
   };
   /**
    * Checks if order can undo checkout
@@ -6219,7 +7096,7 @@ Order = function ($, api, Transaction, Conflict) {
     }
     var that = this;
     var roundedFromDate = this.getMinDateFrom();
-    var roundedDueDate = due ? this._getHelper().roundTimeTo(due) : this._getHelper().addAverageDuration(roundedFromDate);
+    var roundedDueDate = due ? this._getDateHelper().roundTimeTo(due) : this._getDateHelper().addAverageDuration(roundedFromDate);
     return this._checkFromDueDate(roundedFromDate, roundedDueDate).then(function () {
       that.from = roundedFromDate;
       that.due = roundedDueDate;
@@ -6239,7 +7116,7 @@ Order = function ($, api, Transaction, Conflict) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set order from date, status is ' + this.status));
     }
     var that = this;
-    var roundedFromDate = this._getHelper().roundTimeFrom(date);
+    var roundedFromDate = this._getDateHelper().roundTimeFrom(date);
     return this._checkFromDueDate(roundedFromDate, this.due).then(function () {
       that.from = roundedFromDate;
       return that._handleTransaction(skipRead);
@@ -6277,7 +7154,7 @@ Order = function ($, api, Transaction, Conflict) {
     // 1) at least 30 minutes into the feature
     // 2) at least 15 minutes after the from date (if set)
     var that = this;
-    var roundedDueDate = this._getHelper().roundTimeTo(due);
+    var roundedDueDate = this._getDateHelper().roundTimeTo(due);
     this.from = this.getMinDateFrom();
     return this._checkDueDateBetweenMinMax(roundedDueDate).then(function () {
       that.due = roundedDueDate;
@@ -6407,6 +7284,194 @@ Order = function ($, api, Transaction, Conflict) {
   };
   return Order;
 }(jquery, api, transaction, conflict);
+settings = {
+  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
+  amazonBucket: 'app'
+};
+helper = function ($, settings) {
+  /**
+   * @name Helper
+   * @class
+   * @constructor
+   */
+  var Helper = function (spec) {
+  };
+  /**
+   * getImageCDNUrl gets an image by using the path to a CDN location
+   * @method
+   * @name  Helper#getImageCDNUrl
+   * @param groupId
+   * @param attachmentId
+   * @param size
+   * @returns {string}
+   */
+  Helper.prototype.getImageCDNUrl = function (groupId, attachmentId, size) {
+    // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+    var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+    if (size && size.length > 0) {
+      var parts = url.split('.');
+      var ext = parts.pop();
+      // pop off the extension, we'll change it
+      url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
+    }
+    return url;
+  };
+  /**
+   * getImageUrl gets an image by using the datasource /get style and a mimeType
+   * 'XS': (64, 64),
+   * 'S': (128, 128),
+   * 'M': (256, 256),
+   * 'L': (512, 512)
+   * @method
+   * @name  Helper#getImageUrl
+   * @param ds
+   * @param pk
+   * @param size
+   * @param bustCache
+   * @returns {string}
+   */
+  Helper.prototype.getImageUrl = function (ds, pk, size, bustCache) {
+    var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+    if (size) {
+      url += '&size=' + size;
+    }
+    if (bustCache) {
+      url += '&_bust=' + new Date().getTime();
+    }
+    return url;
+  };
+  /**
+       * getNumItemsLeft
+  <<<<<<< HEAD:src/app/helper.js
+       * @param limits
+       * @param stats
+  =======
+       * @method
+       * @name  Helper#getNumItemsLeft
+       * @param limits
+       * @param stats 
+  >>>>>>> feature/use_common_library:src/core/helper.js
+       * @return {Number}
+       */
+  Helper.prototype.getNumItemsLeft = function (limits, stats) {
+    return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
+  };
+  /**
+       * getNumUsersLeft
+  <<<<<<< HEAD:src/app/helper.js
+       * @param limits
+       * @param stats
+  =======
+       * @method
+       * @name  Helper#getNumUsersLeft 
+       * @param limits
+       * @param stats 
+  >>>>>>> feature/use_common_library:src/core/helper.js
+       * @return {Number}
+       */
+  Helper.prototype.getNumUsersLeft = function (limits, stats) {
+    return limits.maxUsers - stats.detailed.production.users.active;
+  };
+  /**
+   * getAccessRights returns access rights based on the user role, profile settings 
+   * and account limits 
+   * @method
+   * @name  Helper#getAccessRights 
+   * @param  role   
+   * @param  profile 
+   * @param  limits
+   * @return {object}       
+   */
+  Helper.prototype.getAccessRights = function (role, profile, limits) {
+    var isRootOrAdmin = role == 'root' || role == 'admin';
+    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+    var useReservations = limits.allowReservations && profile.useReservations;
+    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
+    var useWebHooks = limits.allowWebHooks;
+    return {
+      contacts: {
+        create: isRootOrAdminOrUser,
+        remove: isRootOrAdminOrUser,
+        update: true
+      },
+      items: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateFlag: isRootOrAdmin,
+        updateLocation: isRootOrAdmin,
+        updateGeo: true
+      },
+      orders: {
+        create: true,
+        remove: true,
+        update: true,
+        updateContact: role != 'selfservice',
+        updateLocation: true,
+        generatePdf: useOrderAgreements && isRootOrAdminOrUser
+      },
+      reservations: {
+        create: useReservations,
+        remove: useReservations,
+        update: useReservations,
+        updateContact: useReservations && role != 'selfservice',
+        updateLocation: useReservations
+      },
+      locations: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      users: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateOther: isRootOrAdmin,
+        updateOwn: true
+      },
+      webHooks: {
+        create: useWebHooks && isRootOrAdmin,
+        remove: useWebHooks && isRootOrAdmin,
+        update: useWebHooks && isRootOrAdmin
+      },
+      stickers: {
+        print: isRootOrAdmin,
+        buy: isRootOrAdmin
+      },
+      categories: {
+        create: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      account: { update: isRootOrAdmin }
+    };
+  };
+  /**
+   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
+   * @method
+   * @name  Helper#ensureValue 
+   * @param  obj   
+   * @param  prop        
+   * @return {string}       
+   */
+  Helper.prototype.ensureValue = function (obj, prop) {
+    return typeof obj === 'string' ? obj : obj[prop];
+  };
+  /**
+   * ensureId, returns id value of object or if you pass a string it returns that exact string 
+   * For example:
+   * ensureId("abc123") --> "abc123"
+   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
+   *
+   * @method
+   * @name  Helper#ensureId 
+   * @param  obj   
+   * @return {string}       
+   */
+  Helper.prototype.ensureId = function (obj) {
+    return this.ensureValue(obj, '_id');
+  };
+  return Helper;
+}(jquery, settings);
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -6622,8 +7687,8 @@ Reservation = function ($, api, Transaction, Conflict) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set reservation from / to date, status is ' + this.status));
     }
     var that = this;
-    var roundedFromDate = this._getHelper().roundTimeFrom(from);
-    var roundedToDate = to ? this._getHelper().roundTimeTo(to) : this._getHelper().addAverageDuration(roundedFromDate);
+    var roundedFromDate = this._getDateHelper().roundTimeFrom(from);
+    var roundedToDate = to ? this._getDateHelper().roundTimeTo(to) : this._getDateHelper().addAverageDuration(roundedFromDate);
     return this._checkFromToDate(roundedFromDate, roundedToDate).then(function () {
       that.from = roundedFromDate;
       that.to = roundedToDate;
@@ -6649,7 +7714,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     var that = this;
     var dateHelper = this._getDateHelper();
     var interval = dateHelper.roundMinutes;
-    var roundedFromDate = this._getHelper().roundTimeFrom(date);
+    var roundedFromDate = dateHelper.roundTimeFrom(date);
     return this._checkFromDateBetweenMinMax(roundedFromDate).then(function () {
       // TODO: Should never get here
       // Must be at least 1 interval before to date, if it's already set
@@ -6697,7 +7762,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     var that = this;
     var dateHelper = this._getDateHelper();
     var interval = dateHelper.roundMinutes;
-    var roundedToDate = this._getHelper().roundTimeTo(date);
+    var roundedToDate = dateHelper.roundTimeTo(date);
     return this._checkToDateBetweenMinMax(roundedToDate).then(function () {
       if (that.from && that.from.diff(roundedToDate, 'minutes') > interval) {
         return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set reservation to date, before (or too close to) to date ' + that.from.toJSONDate()));
@@ -6889,7 +7954,7 @@ Reservation = function ($, api, Transaction, Conflict) {
   };
   return Reservation;
 }(jquery, api, transaction, conflict);
-Transaction = function ($, api, Base, Location) {
+Transaction = function ($, api, Base, Location, DateHelper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
@@ -6912,6 +7977,7 @@ Transaction = function ($, api, Base, Location) {
    * @extends Base
    * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
    * @property {Helper}  helper                     - A Helper object ref
+   * @property {DateHelper} dateHelper              - A DateHelper object ref
    * @property {string}  status                     - The transaction status
    * @property {moment}  from                       - The transaction from date
    * @property {moment}  to                         - The transaction to date
@@ -6929,6 +7995,7 @@ Transaction = function ($, api, Base, Location) {
     // should we automatically delete the transaction from the database?
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.helper = spec.helper;
+    this.dateHelper = spec.dateHelper || new DateHelper();
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -7049,9 +8116,9 @@ Transaction = function ($, api, Base, Location) {
    * @returns {Moment} max date
    */
   Transaction.prototype.getMaxDate = function () {
-    var helper = this._getHelper();
-    var now = helper.getNow();
-    var next = helper.roundTimeTo(now);
+    var dateHelper = this._getDateHelper();
+    var now = dateHelper.getNow();
+    var next = dateHelper.roundTimeTo(now);
     return next.add(365, 'day');  // TODO: Is this a sensible date?
   };
   /**
@@ -7063,9 +8130,9 @@ Transaction = function ($, api, Base, Location) {
    * @returns {*}
    */
   Transaction.prototype.suggestEndDate = function (m) {
-    var helper = this._getHelper();
-    var end = helper.addAverageDuration(m || helper.getNow());
-    return helper.roundTimeTo(end);
+    var dateHelper = this._getDateHelper();
+    var end = dateHelper.addAverageDuration(m || dateHelper.getNow());
+    return dateHelper.roundTimeTo(end);
   };
   //
   // Base overrides
@@ -7228,7 +8295,7 @@ Transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setFromDate = function (date, skipRead) {
-    this.from = this.helper.roundTimeFrom(date);
+    this.from = this._getDateHelper().roundTimeFrom(date);
     return this._handleTransaction(skipRead);
   };
   // To date setters
@@ -7252,7 +8319,7 @@ Transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setToDate = function (date, skipRead) {
-    this.to = this.helper.roundTimeTo(date);
+    this.to = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Due date setters
@@ -7276,7 +8343,7 @@ Transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setDueDate = function (date, skipRead) {
-    this.due = this.helper.roundTimeTo(date);
+    this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Location setters
@@ -7363,7 +8430,7 @@ Transaction = function ($, api, Base, Location) {
    * addItems; adds a bunch of Items to the transaction using a list of item ids
    * It creates the transaction if it doesn't exist yet
    * @name Transaction#addItems
-   * @method addItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -7382,7 +8449,7 @@ Transaction = function ($, api, Base, Location) {
    * removeItems; removes a bunch of Items from the transaction using a list of item ids
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#removeItems
-   * @method removeItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -7404,7 +8471,7 @@ Transaction = function ($, api, Base, Location) {
    * clearItems; removes all Items from the transaction
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#clearItems
-   * @method clearItems
+   * @method
    * @param skipRead
    * @returns {promise}
    */
@@ -7423,7 +8490,7 @@ Transaction = function ($, api, Base, Location) {
   /**
    * swapItem; swaps one item for another in a transaction
    * @name Transaction#swapItem
-   * @method swapItem
+   * @method
    * @param fromItem
    * @param toItem
    * @param skipRead
@@ -7445,8 +8512,8 @@ Transaction = function ($, api, Base, Location) {
   };
   /**
    * hasItems; Gets a list of items that are already part of the transaction
-   * @name Transaction#addItems
-   * @method addItems
+   * @name Transaction#hasItems
+   * @method
    * @param itemIds        array of string values
    * @returns {Array}
    */
@@ -7483,7 +8550,7 @@ Transaction = function ($, api, Base, Location) {
     return this.helper;
   };
   Transaction.prototype._getDateHelper = function () {
-    return this._getHelper().dateHelper;
+    return this.dateHelper;
   };
   /**
    * Searches for Items that are available for this transaction
@@ -7597,8 +8664,8 @@ Transaction = function ($, api, Base, Location) {
     return this.isEmpty() && this.autoCleanup ? this._deleteTransaction() : $.Deferred().resolve();
   };
   return Transaction;
-}(jquery, api, base, location);
-User = function ($, Base, Helper) {
+}(jquery, api, base, location, dateHelper);
+User = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     email: '',
@@ -7665,7 +8732,7 @@ User = function ($, Base, Helper) {
   };
   User.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
-    return new Helper().isValidEmail(this.email);
+    return common.isValidEmail(this.email);
   };
   User.prototype.isValidRole = function () {
     switch (this.role) {
@@ -7803,11 +8870,12 @@ User = function ($, Base, Helper) {
     });
   };
   return User;
-}(jquery, base, helper);
-core = function (api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
+}(jquery, base, common);
+core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User, common) {
   var core = {};
   // namespaces
   core.api = api;
+  core.common = common;
   // Constructors
   core.Availability = Availability;
   core.Attachment = Attachment;
@@ -7826,6 +8894,6 @@ core = function (api, Availability, Attachment, Base, Comment, common, Conflict,
   core.Transaction = Transaction;
   core.User = User;
   return core;
-}(api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, helper, Reservation, Transaction, User);
+}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, helper, Reservation, Transaction, User, common);
 return core;
 }))

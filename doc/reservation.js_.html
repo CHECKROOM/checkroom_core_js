@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Source: reservation.js</title>
+    
+    
+    
+    
+    
+    <meta property="og:title" content=""/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:image" content=""/>
+    
+    <meta property="og:url" content=""/>
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <script src="scripts/jquery.min.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/jaguar.css">
+    
+    
+    <script>
+    var config = {"monospaceLinks":true,"cleverLinks":true,"default":{"outputSourceFiles":true},"applicationName":"CHEQROOM","disqus":"","googleAnalytics":"","openGraph":{"title":"","type":"website","image":"","site_name":"","url":""},"meta":{"title":"","description":"","keyword":""},"linenums":false};
+    </script>
+    
+
+    
+</head>
+<body>
+<div id="wrap" class="clearfix">
+    
+<div class="navigation">
+    <h3 class="applicationName"><a href="index.html">CHEQROOM</a></h3>
+
+    <div class="search">
+        <input id="search" type="text" class="form-control input-sm" placeholder="Search Documentations">
+    </div>
+    <ul class="list">
+    
+        <li class="item" data-name="api">
+            <span class="title">
+                <a href="api.html">api</a>
+                
+                <span class="static">static</span>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="common">
+            <span class="title">
+                <a href="common.html">common</a>
+                
+                <span class="static">static</span>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
+            
+                <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
+            
+                <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
+            
+                <li data-name="common#getCategoryNameFromKey"><a href="common.html#getCategoryNameFromKey">getCategoryNameFromKey</a></li>
+            
+                <li data-name="common#getCategorySummary"><a href="common.html#getCategorySummary">getCategorySummary</a></li>
+            
+                <li data-name="common#getCheqRoomRedirectUrl"><a href="common.html#getCheqRoomRedirectUrl">getCheqRoomRedirectUrl</a></li>
+            
+                <li data-name="common#getCheqRoomRedirectUrlQR"><a href="common.html#getCheqRoomRedirectUrlQR">getCheqRoomRedirectUrlQR</a></li>
+            
+                <li data-name="common#getFileNameFromUrl"><a href="common.html#getFileNameFromUrl">getFileNameFromUrl</a></li>
+            
+                <li data-name="common#getFriendlyConflictKind"><a href="common.html#getFriendlyConflictKind">getFriendlyConflictKind</a></li>
+            
+                <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
+            
+                <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
+            
+                <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
+            
+                <li data-name="common#getFriendlyOrderStatus"><a href="common.html#getFriendlyOrderStatus">getFriendlyOrderStatus</a></li>
+            
+                <li data-name="common#getFriendlyReservationCss"><a href="common.html#getFriendlyReservationCss">getFriendlyReservationCss</a></li>
+            
+                <li data-name="common#getFriendlyReservationStatus"><a href="common.html#getFriendlyReservationStatus">getFriendlyReservationStatus</a></li>
+            
+                <li data-name="common#getImageCDNUrl"><a href="common.html#getImageCDNUrl">getImageCDNUrl</a></li>
+            
+                <li data-name="common#getImageUrl"><a href="common.html#getImageUrl">getImageUrl</a></li>
+            
+                <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
+            
+                <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
+            
+                <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
+            
+                <li data-name="common#getOrderCss"><a href="common.html#getOrderCss">getOrderCss</a></li>
+            
+                <li data-name="common#getOrderStatus"><a href="common.html#getOrderStatus">getOrderStatus</a></li>
+            
+                <li data-name="common#getUrlParam"><a href="common.html#getUrlParam">getUrlParam</a></li>
+            
+                <li data-name="common#isCodeFromScanner"><a href="common.html#isCodeFromScanner">isCodeFromScanner</a></li>
+            
+                <li data-name="common#isCodeValid"><a href="common.html#isCodeValid">isCodeValid</a></li>
+            
+                <li data-name="common#isOrderOverdue"><a href="common.html#isOrderOverdue">isOrderOverdue</a></li>
+            
+                <li data-name="common#isValidEmail"><a href="common.html#isValidEmail">isValidEmail</a></li>
+            
+                <li data-name="common#isValidPhone"><a href="common.html#isValidPhone">isValidPhone</a></li>
+            
+                <li data-name="common#makeFileNameJpg"><a href="common.html#makeFileNameJpg">makeFileNameJpg</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiAjax">
+            <span class="title">
+                <a href="api.ApiAjax.html">api.ApiAjax</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiAnonymous">
+            <span class="title">
+                <a href="api.ApiAnonymous.html">api.ApiAnonymous</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiAuthV2">
+            <span class="title">
+                <a href="api.ApiAuthV2.html">api.ApiAuthV2</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiDataSource">
+            <span class="title">
+                <a href="api.ApiDataSource.html">api.ApiDataSource</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiUser">
+            <span class="title">
+                <a href="api.ApiUser.html">api.ApiUser</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Attachment">
+            <span class="title">
+                <a href="Attachment.html">Attachment</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Attachment#existsInDb"><a href="Attachment.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Attachment#getExt"><a href="Attachment.html#getExt">getExt</a></li>
+            
+                <li data-name="Attachment#getName"><a href="Attachment.html#getName">getName</a></li>
+            
+                <li data-name="Attachment#getUnit"><a href="Attachment.html#getUnit">getUnit</a></li>
+            
+                <li data-name="Attachment#hasPreview"><a href="Attachment.html#hasPreview">hasPreview</a></li>
+            
+                <li data-name="Attachment#isDirty"><a href="Attachment.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Attachment#isEmpty"><a href="Attachment.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Attachment#isImage"><a href="Attachment.html#isImage">isImage</a></li>
+            
+                <li data-name="Attachment#isValid"><a href="Attachment.html#isValid">isValid</a></li>
+            
+                <li data-name="Attachment#reset"><a href="Attachment.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Availability">
+            <span class="title">
+                <a href="Availability.html">Availability</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Availability#canDelete"><a href="Availability.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Availability#create"><a href="Availability.html#create">create</a></li>
+            
+                <li data-name="Availability#delete"><a href="Availability.html#delete">delete</a></li>
+            
+                <li data-name="Availability#discardChanges"><a href="Availability.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Availability#existsInDb"><a href="Availability.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Availability#get"><a href="Availability.html#get">get</a></li>
+            
+                <li data-name="Availability#isDirty"><a href="Availability.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Availability#isEmpty"><a href="Availability.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Availability#isValid"><a href="Availability.html#isValid">isValid</a></li>
+            
+                <li data-name="Availability#reload"><a href="Availability.html#reload">reload</a></li>
+            
+                <li data-name="Availability#reset"><a href="Availability.html#reset">reset</a></li>
+            
+                <li data-name="Availability#update"><a href="Availability.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Base">
+            <span class="title">
+                <a href="Base.html">Base</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Base#addComment"><a href="Base.html#addComment">addComment</a></li>
+            
+                <li data-name="Base#addKeyValue"><a href="Base.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Base#attach"><a href="Base.html#attach">attach</a></li>
+            
+                <li data-name="Base#attachFile"><a href="Base.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Base#attachImage"><a href="Base.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Base#canDelete"><a href="Base.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Base#create"><a href="Base.html#create">create</a></li>
+            
+                <li data-name="Base#delete"><a href="Base.html#delete">delete</a></li>
+            
+                <li data-name="Base#deleteComment"><a href="Base.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Base#detach"><a href="Base.html#detach">detach</a></li>
+            
+                <li data-name="Base#discardChanges"><a href="Base.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Base#existsInDb"><a href="Base.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Base#get"><a href="Base.html#get">get</a></li>
+            
+                <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Base#isEmpty"><a href="Base.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Base#isValid"><a href="Base.html#isValid">isValid</a></li>
+            
+                <li data-name="Base#moveKeyValueIndex"><a href="Base.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Base#reload"><a href="Base.html#reload">reload</a></li>
+            
+                <li data-name="Base#removeKeyValue"><a href="Base.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Base#reset"><a href="Base.html#reset">reset</a></li>
+            
+                <li data-name="Base#setCover"><a href="Base.html#setCover">setCover</a></li>
+            
+                <li data-name="Base#setKeyValue"><a href="Base.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Base#update"><a href="Base.html#update">update</a></li>
+            
+                <li data-name="Base#updateComment"><a href="Base.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Base#updateKeyValue"><a href="Base.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Comment">
+            <span class="title">
+                <a href="Comment.html">Comment</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Comment#existsInDb"><a href="Comment.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Comment#getName"><a href="Comment.html#getName">getName</a></li>
+            
+                <li data-name="Comment#getUnit"><a href="Comment.html#getUnit">getUnit</a></li>
+            
+                <li data-name="Comment#isDirty"><a href="Comment.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Comment#isEmpty"><a href="Comment.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Comment#isValid"><a href="Comment.html#isValid">isValid</a></li>
+            
+                <li data-name="Comment#reset"><a href="Comment.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Conflict">
+            <span class="title">
+                <a href="Conflict.html">Conflict</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Contact">
+            <span class="title">
+                <a href="Contact.html">Contact</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Contact#addComment"><a href="Contact.html#addComment">addComment</a></li>
+            
+                <li data-name="Contact#addKeyValue"><a href="Contact.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Contact#attach"><a href="Contact.html#attach">attach</a></li>
+            
+                <li data-name="Contact#attachFile"><a href="Contact.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Contact#attachImage"><a href="Contact.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Contact#canDelete"><a href="Contact.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Contact#create"><a href="Contact.html#create">create</a></li>
+            
+                <li data-name="Contact#delete"><a href="Contact.html#delete">delete</a></li>
+            
+                <li data-name="Contact#deleteComment"><a href="Contact.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Contact#detach"><a href="Contact.html#detach">detach</a></li>
+            
+                <li data-name="Contact#discardChanges"><a href="Contact.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Contact#existsInDb"><a href="Contact.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Contact#get"><a href="Contact.html#get">get</a></li>
+            
+                <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Contact#isEmpty"><a href="Contact.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Contact#isValid"><a href="Contact.html#isValid">isValid</a></li>
+            
+                <li data-name="Contact#isValidCompany"><a href="Contact.html#isValidCompany">isValidCompany</a></li>
+            
+                <li data-name="Contact#isValidEmail"><a href="Contact.html#isValidEmail">isValidEmail</a></li>
+            
+                <li data-name="Contact#isValidName"><a href="Contact.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Contact#isValidPhone"><a href="Contact.html#isValidPhone">isValidPhone</a></li>
+            
+                <li data-name="Contact#moveKeyValueIndex"><a href="Contact.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Contact#reload"><a href="Contact.html#reload">reload</a></li>
+            
+                <li data-name="Contact#removeKeyValue"><a href="Contact.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Contact#reset"><a href="Contact.html#reset">reset</a></li>
+            
+                <li data-name="Contact#setCover"><a href="Contact.html#setCover">setCover</a></li>
+            
+                <li data-name="Contact#setKeyValue"><a href="Contact.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Contact#update"><a href="Contact.html#update">update</a></li>
+            
+                <li data-name="Contact#updateComment"><a href="Contact.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Contact#updateKeyValue"><a href="Contact.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="DateHelper">
+            <span class="title">
+                <a href="DateHelper.html">DateHelper</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            <span class="subtitle">Members</span>
+            
+                <li data-name="DateHelper#getFriendlyDateParts"><a href="DateHelper.html#getFriendlyDateParts">getFriendlyDateParts</a></li>
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="DateHelper#fixDates"><a href="DateHelper.html#fixDates">fixDates</a></li>
+            
+                <li data-name="DateHelper#getFriendlyDuration"><a href="DateHelper.html#getFriendlyDuration">getFriendlyDuration</a></li>
+            
+                <li data-name="DateHelper#getNow"><a href="DateHelper.html#getNow">getNow</a></li>
+            
+                <li data-name="DateHelper#roundTime"><a href="DateHelper.html#roundTime">roundTime</a></li>
+            
+                <li data-name="DateHelper#roundTimeDown"><a href="DateHelper.html#roundTimeDown">roundTimeDown</a></li>
+            
+                <li data-name="DateHelper#roundTimeFrom"><a href="DateHelper.html#roundTimeFrom">roundTimeFrom</a></li>
+            
+                <li data-name="DateHelper#roundTimeTo"><a href="DateHelper.html#roundTimeTo">roundTimeTo</a></li>
+            
+                <li data-name="DateHelper#roundTimeUp"><a href="DateHelper.html#roundTimeUp">roundTimeUp</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Document">
+            <span class="title">
+                <a href="Document.html">Document</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Document#create"><a href="Document.html#create">create</a></li>
+            
+                <li data-name="Document#delete"><a href="Document.html#delete">delete</a></li>
+            
+                <li data-name="Document#discardChanges"><a href="Document.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Document#existsInDb"><a href="Document.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Document#get"><a href="Document.html#get">get</a></li>
+            
+                <li data-name="Document#isDirty"><a href="Document.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Document#isEmpty"><a href="Document.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Document#isValid"><a href="Document.html#isValid">isValid</a></li>
+            
+                <li data-name="Document#reload"><a href="Document.html#reload">reload</a></li>
+            
+                <li data-name="Document#reset"><a href="Document.html#reset">reset</a></li>
+            
+                <li data-name="Document#update"><a href="Document.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Helper">
+            <span class="title">
+                <a href="Helper.html">Helper</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Helper#ensureId"><a href="Helper.html#ensureId">ensureId</a></li>
+            
+                <li data-name="Helper#ensureValue"><a href="Helper.html#ensureValue">ensureValue</a></li>
+            
+                <li data-name="Helper#getAccessRights"><a href="Helper.html#getAccessRights">getAccessRights</a></li>
+            
+                <li data-name="Helper#getImageCDNUrl"><a href="Helper.html#getImageCDNUrl">getImageCDNUrl</a></li>
+            
+                <li data-name="Helper#getImageUrl"><a href="Helper.html#getImageUrl">getImageUrl</a></li>
+            
+                <li data-name="Helper#getNumItemsLeft"><a href="Helper.html#getNumItemsLeft">getNumItemsLeft</a></li>
+            
+                <li data-name="Helper#getNumUsersLeft"><a href="Helper.html#getNumUsersLeft">getNumUsersLeft</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Item">
+            <span class="title">
+                <a href="Item.html">Item</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            <span class="subtitle">Members</span>
+            
+                <li data-name="Item#addCode"><a href="Item.html#addCode">addCode</a></li>
+            
+                <li data-name="Item#canChangeCategory"><a href="Item.html#canChangeCategory">canChangeCategory</a></li>
+            
+                <li data-name="Item#changeCategory"><a href="Item.html#changeCategory">changeCategory</a></li>
+            
+                <li data-name="Item#changeLocation"><a href="Item.html#changeLocation">changeLocation</a></li>
+            
+                <li data-name="Item#duplicate"><a href="Item.html#duplicate">duplicate</a></li>
+            
+                <li data-name="Item#expire"><a href="Item.html#expire">expire</a></li>
+            
+                <li data-name="Item#getAvailabilities"><a href="Item.html#getAvailabilities">getAvailabilities</a></li>
+            
+                <li data-name="Item#isDirty"><a href="Item.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Item#isEmpty"><a href="Item.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Item#removeCode"><a href="Item.html#removeCode">removeCode</a></li>
+            
+                <li data-name="Item#setFlag"><a href="Item.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Item#undoExpire"><a href="Item.html#undoExpire">undoExpire</a></li>
+            
+                <li data-name="Item#updateGeo"><a href="Item.html#updateGeo">updateGeo</a></li>
+            
+                <li data-name="Item#updateName"><a href="Item.html#updateName">updateName</a></li>
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Item#addComment"><a href="Item.html#addComment">addComment</a></li>
+            
+                <li data-name="Item#addKeyValue"><a href="Item.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Item#attach"><a href="Item.html#attach">attach</a></li>
+            
+                <li data-name="Item#attachFile"><a href="Item.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Item#attachImage"><a href="Item.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Item#canDelete"><a href="Item.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Item#create"><a href="Item.html#create">create</a></li>
+            
+                <li data-name="Item#delete"><a href="Item.html#delete">delete</a></li>
+            
+                <li data-name="Item#deleteComment"><a href="Item.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Item#detach"><a href="Item.html#detach">detach</a></li>
+            
+                <li data-name="Item#discardChanges"><a href="Item.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Item#existsInDb"><a href="Item.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Item#get"><a href="Item.html#get">get</a></li>
+            
+                <li data-name="Item#isValid"><a href="Item.html#isValid">isValid</a></li>
+            
+                <li data-name="Item#moveKeyValueIndex"><a href="Item.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Item#reload"><a href="Item.html#reload">reload</a></li>
+            
+                <li data-name="Item#removeKeyValue"><a href="Item.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Item#reset"><a href="Item.html#reset">reset</a></li>
+            
+                <li data-name="Item#setCover"><a href="Item.html#setCover">setCover</a></li>
+            
+                <li data-name="Item#setKeyValue"><a href="Item.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Item#update"><a href="Item.html#update">update</a></li>
+            
+                <li data-name="Item#updateComment"><a href="Item.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Item#updateKeyValue"><a href="Item.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="KeyValue">
+            <span class="title">
+                <a href="KeyValue.html">KeyValue</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="KeyValue#existsInDb"><a href="KeyValue.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="KeyValue#getName"><a href="KeyValue.html#getName">getName</a></li>
+            
+                <li data-name="KeyValue#getUnit"><a href="KeyValue.html#getUnit">getUnit</a></li>
+            
+                <li data-name="KeyValue#isDirty"><a href="KeyValue.html#isDirty">isDirty</a></li>
+            
+                <li data-name="KeyValue#isEmpty"><a href="KeyValue.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="KeyValue#isValid"><a href="KeyValue.html#isValid">isValid</a></li>
+            
+                <li data-name="KeyValue#reset"><a href="KeyValue.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Location">
+            <span class="title">
+                <a href="Location.html">Location</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Location#addComment"><a href="Location.html#addComment">addComment</a></li>
+            
+                <li data-name="Location#addKeyValue"><a href="Location.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Location#attach"><a href="Location.html#attach">attach</a></li>
+            
+                <li data-name="Location#attachFile"><a href="Location.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Location#attachImage"><a href="Location.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Location#canDelete"><a href="Location.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Location#create"><a href="Location.html#create">create</a></li>
+            
+                <li data-name="Location#delete"><a href="Location.html#delete">delete</a></li>
+            
+                <li data-name="Location#deleteComment"><a href="Location.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Location#detach"><a href="Location.html#detach">detach</a></li>
+            
+                <li data-name="Location#discardChanges"><a href="Location.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Location#existsInDb"><a href="Location.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Location#get"><a href="Location.html#get">get</a></li>
+            
+                <li data-name="Location#isDirty"><a href="Location.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Location#isEmpty"><a href="Location.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Location#isValid"><a href="Location.html#isValid">isValid</a></li>
+            
+                <li data-name="Location#moveKeyValueIndex"><a href="Location.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Location#reload"><a href="Location.html#reload">reload</a></li>
+            
+                <li data-name="Location#removeKeyValue"><a href="Location.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Location#reset"><a href="Location.html#reset">reset</a></li>
+            
+                <li data-name="Location#setCover"><a href="Location.html#setCover">setCover</a></li>
+            
+                <li data-name="Location#setKeyValue"><a href="Location.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Location#update"><a href="Location.html#update">update</a></li>
+            
+                <li data-name="Location#updateComment"><a href="Location.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Location#updateKeyValue"><a href="Location.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Order">
+            <span class="title">
+                <a href="Order.html">Order</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Order#addComment"><a href="Order.html#addComment">addComment</a></li>
+            
+                <li data-name="Order#addItems"><a href="Order.html#addItems">addItems</a></li>
+            
+                <li data-name="Order#addKeyValue"><a href="Order.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Order#attach"><a href="Order.html#attach">attach</a></li>
+            
+                <li data-name="Order#attachFile"><a href="Order.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Order#attachImage"><a href="Order.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Order#canCheckin"><a href="Order.html#canCheckin">canCheckin</a></li>
+            
+                <li data-name="Order#canCheckout"><a href="Order.html#canCheckout">canCheckout</a></li>
+            
+                <li data-name="Order#canDelete"><a href="Order.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Order#canGenerateAgreement"><a href="Order.html#canGenerateAgreement">canGenerateAgreement</a></li>
+            
+                <li data-name="Order#canUndoCheckout"><a href="Order.html#canUndoCheckout">canUndoCheckout</a></li>
+            
+                <li data-name="Order#checkin"><a href="Order.html#checkin">checkin</a></li>
+            
+                <li data-name="Order#checkout"><a href="Order.html#checkout">checkout</a></li>
+            
+                <li data-name="Order#clearContact"><a href="Order.html#clearContact">clearContact</a></li>
+            
+                <li data-name="Order#clearDueDate"><a href="Order.html#clearDueDate">clearDueDate</a></li>
+            
+                <li data-name="Order#clearFromDate"><a href="Order.html#clearFromDate">clearFromDate</a></li>
+            
+                <li data-name="Order#clearItems"><a href="Order.html#clearItems">clearItems</a></li>
+            
+                <li data-name="Order#clearLocation"><a href="Order.html#clearLocation">clearLocation</a></li>
+            
+                <li data-name="Order#clearToDate"><a href="Order.html#clearToDate">clearToDate</a></li>
+            
+                <li data-name="Order#create"><a href="Order.html#create">create</a></li>
+            
+                <li data-name="Order#delete"><a href="Order.html#delete">delete</a></li>
+            
+                <li data-name="Order#deleteComment"><a href="Order.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Order#detach"><a href="Order.html#detach">detach</a></li>
+            
+                <li data-name="Order#discardChanges"><a href="Order.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Order#existsInDb"><a href="Order.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Order#generateAgreement"><a href="Order.html#generateAgreement">generateAgreement</a></li>
+            
+                <li data-name="Order#get"><a href="Order.html#get">get</a></li>
+            
+                <li data-name="Order#getDuration"><a href="Order.html#getDuration">getDuration</a></li>
+            
+                <li data-name="Order#getFriendlyDuration"><a href="Order.html#getFriendlyDuration">getFriendlyDuration</a></li>
+            
+                <li data-name="Order#getMaxDate"><a href="Order.html#getMaxDate">getMaxDate</a></li>
+            
+                <li data-name="Order#getMaxDateDue"><a href="Order.html#getMaxDateDue">getMaxDateDue</a></li>
+            
+                <li data-name="Order#getMaxDateFrom"><a href="Order.html#getMaxDateFrom">getMaxDateFrom</a></li>
+            
+                <li data-name="Order#getMaxDateTo"><a href="Order.html#getMaxDateTo">getMaxDateTo</a></li>
+            
+                <li data-name="Order#getMinDate"><a href="Order.html#getMinDate">getMinDate</a></li>
+            
+                <li data-name="Order#getMinDateDue"><a href="Order.html#getMinDateDue">getMinDateDue</a></li>
+            
+                <li data-name="Order#getMinDateFrom"><a href="Order.html#getMinDateFrom">getMinDateFrom</a></li>
+            
+                <li data-name="Order#getMinDateTo"><a href="Order.html#getMinDateTo">getMinDateTo</a></li>
+            
+                <li data-name="Order#hasItems"><a href="Order.html#hasItems">hasItems</a></li>
+            
+                <li data-name="Order#isDirty"><a href="Order.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Order#isEmpty"><a href="Order.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Order#isValid"><a href="Order.html#isValid">isValid</a></li>
+            
+                <li data-name="Order#moveKeyValueIndex"><a href="Order.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Order#reload"><a href="Order.html#reload">reload</a></li>
+            
+                <li data-name="Order#removeItems"><a href="Order.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Order#removeKeyValue"><a href="Order.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Order#reset"><a href="Order.html#reset">reset</a></li>
+            
+                <li data-name="Order#searchItems"><a href="Order.html#searchItems">searchItems</a></li>
+            
+                <li data-name="Order#setContact"><a href="Order.html#setContact">setContact</a></li>
+            
+                <li data-name="Order#setCover"><a href="Order.html#setCover">setCover</a></li>
+            
+                <li data-name="Order#setDueDate"><a href="Order.html#setDueDate">setDueDate</a></li>
+            
+                <li data-name="Order#setFromDate"><a href="Order.html#setFromDate">setFromDate</a></li>
+            
+                <li data-name="Order#setFromDueDate"><a href="Order.html#setFromDueDate">setFromDueDate</a></li>
+            
+                <li data-name="Order#setKeyValue"><a href="Order.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Order#setLocation"><a href="Order.html#setLocation">setLocation</a></li>
+            
+                <li data-name="Order#setToDate"><a href="Order.html#setToDate">setToDate</a></li>
+            
+                <li data-name="Order#suggestEndDate"><a href="Order.html#suggestEndDate">suggestEndDate</a></li>
+            
+                <li data-name="Order#swapItem"><a href="Order.html#swapItem">swapItem</a></li>
+            
+                <li data-name="Order#undoCheckout"><a href="Order.html#undoCheckout">undoCheckout</a></li>
+            
+                <li data-name="Order#update"><a href="Order.html#update">update</a></li>
+            
+                <li data-name="Order#updateComment"><a href="Order.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Order#updateKeyValue"><a href="Order.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Reservation">
+            <span class="title">
+                <a href="Reservation.html">Reservation</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Reservation#addComment"><a href="Reservation.html#addComment">addComment</a></li>
+            
+                <li data-name="Reservation#addItems"><a href="Reservation.html#addItems">addItems</a></li>
+            
+                <li data-name="Reservation#addKeyValue"><a href="Reservation.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Reservation#attach"><a href="Reservation.html#attach">attach</a></li>
+            
+                <li data-name="Reservation#attachFile"><a href="Reservation.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Reservation#attachImage"><a href="Reservation.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Reservation#canCancel"><a href="Reservation.html#canCancel">canCancel</a></li>
+            
+                <li data-name="Reservation#cancel"><a href="Reservation.html#cancel">cancel</a></li>
+            
+                <li data-name="Reservation#canDelete"><a href="Reservation.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Reservation#canEdit"><a href="Reservation.html#canEdit">canEdit</a></li>
+            
+                <li data-name="Reservation#canMakeOrder"><a href="Reservation.html#canMakeOrder">canMakeOrder</a></li>
+            
+                <li data-name="Reservation#canReserve"><a href="Reservation.html#canReserve">canReserve</a></li>
+            
+                <li data-name="Reservation#clearContact"><a href="Reservation.html#clearContact">clearContact</a></li>
+            
+                <li data-name="Reservation#clearDueDate"><a href="Reservation.html#clearDueDate">clearDueDate</a></li>
+            
+                <li data-name="Reservation#clearFromDate"><a href="Reservation.html#clearFromDate">clearFromDate</a></li>
+            
+                <li data-name="Reservation#clearItems"><a href="Reservation.html#clearItems">clearItems</a></li>
+            
+                <li data-name="Reservation#clearLocation"><a href="Reservation.html#clearLocation">clearLocation</a></li>
+            
+                <li data-name="Reservation#clearToDate"><a href="Reservation.html#clearToDate">clearToDate</a></li>
+            
+                <li data-name="Reservation#create"><a href="Reservation.html#create">create</a></li>
+            
+                <li data-name="Reservation#delete"><a href="Reservation.html#delete">delete</a></li>
+            
+                <li data-name="Reservation#deleteComment"><a href="Reservation.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Reservation#detach"><a href="Reservation.html#detach">detach</a></li>
+            
+                <li data-name="Reservation#discardChanges"><a href="Reservation.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Reservation#existsInDb"><a href="Reservation.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Reservation#get"><a href="Reservation.html#get">get</a></li>
+            
+                <li data-name="Reservation#getMaxDate"><a href="Reservation.html#getMaxDate">getMaxDate</a></li>
+            
+                <li data-name="Reservation#getMaxDateDue"><a href="Reservation.html#getMaxDateDue">getMaxDateDue</a></li>
+            
+                <li data-name="Reservation#getMaxDateFrom"><a href="Reservation.html#getMaxDateFrom">getMaxDateFrom</a></li>
+            
+                <li data-name="Reservation#getMaxDateTo"><a href="Reservation.html#getMaxDateTo">getMaxDateTo</a></li>
+            
+                <li data-name="Reservation#getMinDate"><a href="Reservation.html#getMinDate">getMinDate</a></li>
+            
+                <li data-name="Reservation#getMinDateDue"><a href="Reservation.html#getMinDateDue">getMinDateDue</a></li>
+            
+                <li data-name="Reservation#getMinDateFrom"><a href="Reservation.html#getMinDateFrom">getMinDateFrom</a></li>
+            
+                <li data-name="Reservation#getMinDateTo"><a href="Reservation.html#getMinDateTo">getMinDateTo</a></li>
+            
+                <li data-name="Reservation#hasItems"><a href="Reservation.html#hasItems">hasItems</a></li>
+            
+                <li data-name="Reservation#isDirty"><a href="Reservation.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Reservation#isEmpty"><a href="Reservation.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Reservation#isValid"><a href="Reservation.html#isValid">isValid</a></li>
+            
+                <li data-name="Reservation#makeOrder"><a href="Reservation.html#makeOrder">makeOrder</a></li>
+            
+                <li data-name="Reservation#moveKeyValueIndex"><a href="Reservation.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Reservation#reload"><a href="Reservation.html#reload">reload</a></li>
+            
+                <li data-name="Reservation#removeItems"><a href="Reservation.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Reservation#removeKeyValue"><a href="Reservation.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Reservation#reserve"><a href="Reservation.html#reserve">reserve</a></li>
+            
+                <li data-name="Reservation#reset"><a href="Reservation.html#reset">reset</a></li>
+            
+                <li data-name="Reservation#searchItems"><a href="Reservation.html#searchItems">searchItems</a></li>
+            
+                <li data-name="Reservation#setContact"><a href="Reservation.html#setContact">setContact</a></li>
+            
+                <li data-name="Reservation#setCover"><a href="Reservation.html#setCover">setCover</a></li>
+            
+                <li data-name="Reservation#setDueDate"><a href="Reservation.html#setDueDate">setDueDate</a></li>
+            
+                <li data-name="Reservation#setFromDate"><a href="Reservation.html#setFromDate">setFromDate</a></li>
+            
+                <li data-name="Reservation#setFromToDate"><a href="Reservation.html#setFromToDate">setFromToDate</a></li>
+            
+                <li data-name="Reservation#setKeyValue"><a href="Reservation.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Reservation#setLocation"><a href="Reservation.html#setLocation">setLocation</a></li>
+            
+                <li data-name="Reservation#setToDate"><a href="Reservation.html#setToDate">setToDate</a></li>
+            
+                <li data-name="Reservation#suggestEndDate"><a href="Reservation.html#suggestEndDate">suggestEndDate</a></li>
+            
+                <li data-name="Reservation#swapItem"><a href="Reservation.html#swapItem">swapItem</a></li>
+            
+                <li data-name="Reservation#undoReserve"><a href="Reservation.html#undoReserve">undoReserve</a></li>
+            
+                <li data-name="Reservation#update"><a href="Reservation.html#update">update</a></li>
+            
+                <li data-name="Reservation#updateComment"><a href="Reservation.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Reservation#updateKeyValue"><a href="Reservation.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Transaction">
+            <span class="title">
+                <a href="Transaction.html">Transaction</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Transaction#addComment"><a href="Transaction.html#addComment">addComment</a></li>
+            
+                <li data-name="Transaction#addItems"><a href="Transaction.html#addItems">addItems</a></li>
+            
+                <li data-name="Transaction#addKeyValue"><a href="Transaction.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Transaction#attach"><a href="Transaction.html#attach">attach</a></li>
+            
+                <li data-name="Transaction#attachFile"><a href="Transaction.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Transaction#attachImage"><a href="Transaction.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Transaction#canDelete"><a href="Transaction.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Transaction#clearContact"><a href="Transaction.html#clearContact">clearContact</a></li>
+            
+                <li data-name="Transaction#clearDueDate"><a href="Transaction.html#clearDueDate">clearDueDate</a></li>
+            
+                <li data-name="Transaction#clearFromDate"><a href="Transaction.html#clearFromDate">clearFromDate</a></li>
+            
+                <li data-name="Transaction#clearItems"><a href="Transaction.html#clearItems">clearItems</a></li>
+            
+                <li data-name="Transaction#clearLocation"><a href="Transaction.html#clearLocation">clearLocation</a></li>
+            
+                <li data-name="Transaction#clearToDate"><a href="Transaction.html#clearToDate">clearToDate</a></li>
+            
+                <li data-name="Transaction#create"><a href="Transaction.html#create">create</a></li>
+            
+                <li data-name="Transaction#delete"><a href="Transaction.html#delete">delete</a></li>
+            
+                <li data-name="Transaction#deleteComment"><a href="Transaction.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Transaction#detach"><a href="Transaction.html#detach">detach</a></li>
+            
+                <li data-name="Transaction#discardChanges"><a href="Transaction.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Transaction#existsInDb"><a href="Transaction.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Transaction#get"><a href="Transaction.html#get">get</a></li>
+            
+                <li data-name="Transaction#getMaxDate"><a href="Transaction.html#getMaxDate">getMaxDate</a></li>
+            
+                <li data-name="Transaction#getMaxDateDue"><a href="Transaction.html#getMaxDateDue">getMaxDateDue</a></li>
+            
+                <li data-name="Transaction#getMaxDateFrom"><a href="Transaction.html#getMaxDateFrom">getMaxDateFrom</a></li>
+            
+                <li data-name="Transaction#getMaxDateTo"><a href="Transaction.html#getMaxDateTo">getMaxDateTo</a></li>
+            
+                <li data-name="Transaction#getMinDate"><a href="Transaction.html#getMinDate">getMinDate</a></li>
+            
+                <li data-name="Transaction#getMinDateDue"><a href="Transaction.html#getMinDateDue">getMinDateDue</a></li>
+            
+                <li data-name="Transaction#getMinDateFrom"><a href="Transaction.html#getMinDateFrom">getMinDateFrom</a></li>
+            
+                <li data-name="Transaction#getMinDateTo"><a href="Transaction.html#getMinDateTo">getMinDateTo</a></li>
+            
+                <li data-name="Transaction#hasItems"><a href="Transaction.html#hasItems">hasItems</a></li>
+            
+                <li data-name="Transaction#isDirty"><a href="Transaction.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Transaction#isEmpty"><a href="Transaction.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Transaction#isValid"><a href="Transaction.html#isValid">isValid</a></li>
+            
+                <li data-name="Transaction#moveKeyValueIndex"><a href="Transaction.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Transaction#reload"><a href="Transaction.html#reload">reload</a></li>
+            
+                <li data-name="Transaction#removeItems"><a href="Transaction.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Transaction#removeKeyValue"><a href="Transaction.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Transaction#reset"><a href="Transaction.html#reset">reset</a></li>
+            
+                <li data-name="Transaction#setContact"><a href="Transaction.html#setContact">setContact</a></li>
+            
+                <li data-name="Transaction#setCover"><a href="Transaction.html#setCover">setCover</a></li>
+            
+                <li data-name="Transaction#setDueDate"><a href="Transaction.html#setDueDate">setDueDate</a></li>
+            
+                <li data-name="Transaction#setFromDate"><a href="Transaction.html#setFromDate">setFromDate</a></li>
+            
+                <li data-name="Transaction#setKeyValue"><a href="Transaction.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Transaction#setLocation"><a href="Transaction.html#setLocation">setLocation</a></li>
+            
+                <li data-name="Transaction#setToDate"><a href="Transaction.html#setToDate">setToDate</a></li>
+            
+                <li data-name="Transaction#suggestEndDate"><a href="Transaction.html#suggestEndDate">suggestEndDate</a></li>
+            
+                <li data-name="Transaction#swapItem"><a href="Transaction.html#swapItem">swapItem</a></li>
+            
+                <li data-name="Transaction#update"><a href="Transaction.html#update">update</a></li>
+            
+                <li data-name="Transaction#updateComment"><a href="Transaction.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Transaction#updateKeyValue"><a href="Transaction.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="User">
+            <span class="title">
+                <a href="User.html">User</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="User#addComment"><a href="User.html#addComment">addComment</a></li>
+            
+                <li data-name="User#addKeyValue"><a href="User.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="User#attach"><a href="User.html#attach">attach</a></li>
+            
+                <li data-name="User#attachFile"><a href="User.html#attachFile">attachFile</a></li>
+            
+                <li data-name="User#attachImage"><a href="User.html#attachImage">attachImage</a></li>
+            
+                <li data-name="User#canDelete"><a href="User.html#canDelete">canDelete</a></li>
+            
+                <li data-name="User#create"><a href="User.html#create">create</a></li>
+            
+                <li data-name="User#delete"><a href="User.html#delete">delete</a></li>
+            
+                <li data-name="User#deleteComment"><a href="User.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="User#detach"><a href="User.html#detach">detach</a></li>
+            
+                <li data-name="User#discardChanges"><a href="User.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="User#existsInDb"><a href="User.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="User#get"><a href="User.html#get">get</a></li>
+            
+                <li data-name="User#isDirty"><a href="User.html#isDirty">isDirty</a></li>
+            
+                <li data-name="User#isEmpty"><a href="User.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="User#isValid"><a href="User.html#isValid">isValid</a></li>
+            
+                <li data-name="User#moveKeyValueIndex"><a href="User.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="User#reload"><a href="User.html#reload">reload</a></li>
+            
+                <li data-name="User#removeKeyValue"><a href="User.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="User#reset"><a href="User.html#reset">reset</a></li>
+            
+                <li data-name="User#setCover"><a href="User.html#setCover">setCover</a></li>
+            
+                <li data-name="User#setKeyValue"><a href="User.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="User#update"><a href="User.html#update">update</a></li>
+            
+                <li data-name="User#updateComment"><a href="User.html#updateComment">updateComment</a></li>
+            
+                <li data-name="User#updateKeyValue"><a href="User.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+    </ul>
+</div>
+    <div class="main">
+        <h1 class="page-title" data-filename="reservation.js_.html">Source: reservation.js</h1>
+        
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source "><code>/**
+ * The Reservation module
+ * @module reservation
+ * @copyright CHECKROOM NV 2015
+ */
+define([
+    "jquery",
+    "api",
+    "transaction",
+    "conflict"],  /** @lends Transaction */ function ($, api, Transaction, Conflict) {
+
+    // Allow overriding the ctor during inheritance
+    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+    var tmp = function() {};
+    tmp.prototype = Transaction.prototype;
+
+    /**
+     * @name Reservation
+     * @class Reservation
+     * @constructor
+     * @extends Transaction
+     * @propery {Array}  conflicts               - The reservation conflicts
+     */
+    var Reservation = function(opt) {
+        var spec = $.extend({
+            crtype: "cheqroom.types.reservation",
+            fields: ["*"]
+        }, opt);
+        Transaction.call(this, spec);
+
+        this.conflicts = [];
+    };
+
+    Reservation.prototype = new tmp();
+    Reservation.prototype.constructor = Reservation;
+
+    //
+    // Date helpers; we'll need these for sliding from / to dates during a long user session
+    //
+    // getMinDateFrom (overwritten)
+    // getMaxDateFrom (default)
+    // getMinDateTo (overwritten)
+    // getMaxDateTo (default)
+
+    /**
+     * Overwrite how we get a min date for reservation
+     * Min date is a timeslot after now
+     */
+    Reservation.prototype.getMinDateFrom = function() {
+        return this.getNextTimeSlot();
+    };
+
+    Reservation.prototype.getMinDateTo = function() {
+        return this.getNextTimeSlot(this.from);
+    };
+
+    //
+    // Helpers
+    //
+    /**
+     * Checks if the reservation can be booked
+     * @method
+     * @name Reservation#canReserve
+     * @returns {boolean}
+     */
+    Reservation.prototype.canReserve = function() {
+        return (
+            (this.status=="creating") &&
+                (this.location) &&
+                (this.contact) &&
+                (this.from) &&
+                (this.to) &&
+                (this.items) &&
+                (this.items.length));
+    };
+
+    /**
+     * Checks if the reservation can be cancelled
+     * @method
+     * @name Reservation#canCancel
+     * @returns {boolean}
+     */
+    Reservation.prototype.canCancel = function() {
+        return (this.status=="open");
+    };
+
+    /**
+     * Checks if the reservation can be edited
+     * @method
+     * @name Reservation#canEdit
+     * @returns {boolean}
+     */
+    Reservation.prototype.canEdit = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if the reservation can be deleted
+     * @method
+     * @name Reservation#canDelete
+     * @returns {boolean}
+     */
+    Reservation.prototype.canDelete = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if the reservation can be turned into an order
+     * @method
+     * @name Reservation#canMakeOrder
+     * @returns {boolean}
+     */
+    Reservation.prototype.canMakeOrder = function() {
+        // Only reservations that meet the following conditions can be made into an order
+        // - status: open
+        // - to date: is in the future
+        // - items: all are available
+        if( (this.status=="open") &&
+            (this.to!=null) &&
+            (this.to.isAfter(this.getNow()))) {
+            var unavailable = this._getUnavailableItems();
+            var len = $.map(unavailable, function(n, i) { return i; }).length;  // TODO: Why do we need this?
+            return (len==0);
+        } else {
+            return false;
+        }
+    };
+
+    //
+    // Document overrides
+    //
+    Reservation.prototype._toJson = function(options) {
+        var data = Transaction.prototype._toJson.call(this, options);
+        data.fromDate = (this.from!=null) ? this.from.toJSONDate() : "null";
+        data.toDate = (this.to!=null) ? this.to.toJSONDate() : "null";
+        return data;
+    };
+
+    Reservation.prototype._fromJson = function(data, options) {
+        var that = this;
+
+        // Already set the from, to and due dates
+        // Transaction._fromJson might need it during _getConflicts
+        that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
+        that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
+        that.due = null;
+
+        return Transaction.prototype._fromJson.call(this, data, options)
+            .then(function() {
+                // TODO: existsInDb should always return true?
+                // If that is the case we can simplify the part below
+                if (that.existsInDb()) {
+                    return that._loadConflicts(data, options)
+                        .then(function() {
+                            $.publish("reservation.fromJson", data);
+                        });
+                } else {
+                    $.publish("reservation.fromJson", data);
+                }
+            });
+    };
+
+    //
+    // Base overrides
+    //
+
+    //
+    // Transaction overrides
+    //
+    /**
+     * Gets a list of Conflict objects
+     * used during Transaction._fromJson
+     * @returns {promise}
+     * @private
+     */
+    Reservation.prototype._getConflicts = function() {
+        var conflicts = [];
+        var conflict = null;
+
+        // Reservations can only have conflicts
+        // when we have a (location OR (from AND to)) AND at least 1 item
+        if( (this.items) &&
+            (this.items.length) &&
+            ((this.location) || (this.from && this.to))) {
+
+            if (this.status == "open") {
+                // Reservations in "open" status,
+                // can use the Items' current status and location
+                // to see if there are any conflicts for fullfilling into an Order
+                var locId = this._getId(this.location);
+
+                $.each(this.items, function(i, item) {
+                    if (item.status!="available") {
+                        conflicts.push(new Conflict({
+                            kind: "status",
+                            item: item._id,
+                            itemName: item.name,
+                            doc: item.order
+                        }));
+                    } else if (item.location!=locId) {
+                        conflicts.push(new Conflict({
+                            kind: "location",
+                            item: item._id,
+                            itemName: item.name,
+                            locationCurrent: item.location,
+                            locationDesired: locId,
+                            doc: item.order
+                        }));
+                    }
+                });
+
+            } else if (this.status == "creating") {
+                var that = this;
+
+                // Reservations in "creating" status,
+                // use a server side check
+                return this.ds.call(this.id, "getConflicts")
+                    .then(function(cnflcts) {
+                        if( (cnflcts) &&
+                            (cnflcts.length)) {
+
+                            // Now we have the conflicts for this reservation
+                            // run over the items again and find the conflict for each item
+                            $.each(that.items, function(i, item) {
+                                conflict = $.grep(cnflcts, function(c) { return c.item==item._id});
+                                if (conflict) {
+                                    var kind = "";
+                                    kind = kind || (conflict.order) ? "order" : "";
+                                    kind = kind || (conflict.reservation) ? "reservation" : "";
+
+                                    conflicts.push(new Conflict({
+                                        kind: kind,
+                                        item: item._id,
+                                        itemName: item.name,
+                                        doc: conflict.conflictsWith
+                                    }));
+                                }
+                            });
+                        }
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
+
+    /**
+     * Sets the reservation from / to dates in a single call
+     * @method
+     * @name Reservation#setFromToDate
+     * @param from
+     * @param to (optional) if null, we'll take the default average checkout duration as due date
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.setFromToDate = function(from, to, skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation from / to date, status is "+this.status));
+        }
+
+        var that = this;
+        var roundedFromDate = this._getDateHelper().roundTimeFrom(from);
+        var roundedToDate = (to) ?
+            this._getDateHelper().roundTimeTo(to) :
+            this._getDateHelper().addAverageDuration(roundedFromDate);
+
+        return this._checkFromToDate(roundedFromDate, roundedToDate)
+            .then(function() {
+                that.from = roundedFromDate;
+                that.to = roundedToDate;
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * setFromDate
+     * The from date must be:
+     * - bigger than minDate
+     * - smaller than maxDate
+     * - at least one interval before .to date (if set)
+     * @method
+     * @name Reservation#setFromDate
+     * @param date
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.setFromDate = function(date, skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation from date, status is "+this.status));
+        }
+
+        var that = this;
+        var dateHelper = this._getDateHelper();
+        var interval = dateHelper.roundMinutes;
+        var roundedFromDate = dateHelper.roundTimeFrom(date);
+
+        return this._checkFromDateBetweenMinMax(roundedFromDate)
+            .then(function() {
+                // TODO: Should never get here
+                // Must be at least 1 interval before to date, if it's already set
+                if( (that.to) &&
+                    (that.to.diff(roundedFromDate, "minutes") &lt; interval)) {
+                    return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation from date, after (or too close to) to date "+that.to.toJSONDate()));
+                }
+
+                that.from = roundedFromDate;
+
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * Clear the reservation from date
+     * @method
+     * @name Reservation#clearFromDate
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.clearFromDate = function(skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation from date, status is "+this.status));
+        }
+
+        this.from = null;
+
+        return this._handleTransaction(skipRead);
+    };
+
+    /**
+     * setToDate
+     * The to date must be:
+     * - bigger than minDate
+     * - smaller than maxDate
+     * - at least one interval after the .from date (if set)
+     * @method
+     * @name Reservation#setToDate
+     * @param date
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.setToDate = function(date, skipRead) {
+        // Cannot change the to-date of a reservation that is not in status "creating"
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation to date, status is "+this.status));
+        }
+
+        // The to date must be:
+        // 1) at least 30 minutes into the feature
+        // 2) at least 15 minutes after the from date (if set)
+        var that = this;
+        var dateHelper = this._getDateHelper();
+        var interval = dateHelper.roundMinutes;
+        var roundedToDate = dateHelper.roundTimeTo(date);
+
+        return this._checkToDateBetweenMinMax(roundedToDate)
+            .then(function() {
+                if( (that.from) &&
+                    (that.from.diff(roundedToDate, "minutes") > interval)) {
+                    return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set reservation to date, before (or too close to) to date "+that.from.toJSONDate()));
+                }
+
+                that.to = roundedToDate;
+
+                return that._handleTransaction(skipRead);
+            });
+    };
+
+    /**
+     * Clears the reservation to date
+     * @method
+     * @name Reservation#clearToDate
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.clearToDate = function(skipRead) {
+        if (this.status!="creating") {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot clear reservation to date, status is "+this.status));
+        }
+
+        this.to = null;
+
+        return this._handleTransaction(skipRead);
+    };
+
+    // Reservation does not use due dates
+    Reservation.prototype.clearDueDate = function(skipRead) {
+        throw "Reservation.clearDueDate not implemented";
+    };
+
+    Reservation.prototype.setDueDate = function(date, skipRead) {
+        throw "Reservation.setDueDate not implemented";
+    };
+
+//
+// Business logic calls
+//
+
+    /**
+     * Searches for Items that are available for this reservation
+     * @method
+     * @name Reservation#searchItems
+     * @param params
+     * @param useAvailabilies (should always be true, we only use this flag for Order objects)
+     * @param onlyUnbooked
+     * @returns {*}
+     */
+    Reservation.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
+        return this._searchItems(params, null, true, onlyUnbooked, skipItems || this.items);
+    };
+
+    /**
+     * Books the reservation and sets the status to `open`
+     * @method
+     * @name Reservation#reserve
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.reserve = function(skipRead) {
+        return this._doApiCall({method: "reserve", skipRead: skipRead});
+    };
+
+    /**
+     * Unbooks the reservation and sets the status to `creating` again
+     * @method
+     * @name Reservation#undoReserve
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.undoReserve = function(skipRead) {
+        return this._doApiCall({method: "undoReserve", skipRead: skipRead});
+    };
+
+    /**
+     * Cancels the booked reservation and sets the status to `cancelled`
+     * @method
+     * @name Reservation#cancel
+     * @param skipRead
+     * @returns {*}
+     */
+    Reservation.prototype.cancel = function(skipRead) {
+        return this._doApiCall({method: "cancel", skipRead: skipRead});
+    };
+
+    /**
+     * Turns an open reservation into an order (which still needs to be checked out)
+     * @method
+     * @name Reservation#makeOrder
+     * @returns {*}
+     */
+    Reservation.prototype.makeOrder = function() {
+        return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
+    };
+
+//
+// Implementation
+//
+    Reservation.prototype._checkFromToDate = function(from, to) {
+        var dateHelper = this._getDateHelper();
+        var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
+        var roundedToDate = to; //(due) ? this._getHelper().roundTimeTo(due) : null;
+
+        if (roundedFromDate && roundedToDate) {
+            return $.when(
+                    this._checkFromDateBetweenMinMax(roundedFromDate),
+                    this._checkToDateBetweenMinMax(roundedToDate)
+                )
+                .then(function(fromRes, toRes) {
+                    var interval = dateHelper.roundMinutes;
+                    // TODO: We should never get here
+                    if (roundedToDate.diff(roundedFromDate, "minutes") &lt; interval) {
+                        return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order from date, after (or too close to) to date "+roundedToDate.toJSONDate()));
+                    }
+                    if (roundedFromDate.diff(roundedToDate, "minutes") > interval) {
+                        return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot set order due date, before (or too close to) from date "+roundedFromDate.toJSONDate()));
+                    }
+                });
+        } else if (roundedFromDate) {
+            return this._checkFromDateBetweenMinMax(roundedFromDate);
+        } else if (roundedToDate) {
+            return this._checkToDateBetweenMinMax(roundedToDate);
+        } else {
+            return $.Deferred().reject(new api.ApiUnprocessableEntity("Cannot from/due date, both are null"));
+        }
+    };
+
+    Reservation.prototype._getUnavailableItems = function() {
+        var unavailable = {};
+
+        if( (this.status=="open") &&
+            (this.location) &&
+            (this.items!=null) &&
+            (this.items.length>0)) {
+            var that = this;
+            var locId = that._getId(that.location);
+            $.each(this.items, function(i, item) {
+                if (item.status!="available") {
+                    unavailable["status"] = unavailable["status"] || [];
+                    unavailable["status"].push(item._id);
+                } else if (item.location!=locId) {
+                    unavailable["location"] = unavailable["location"] || [];
+                    unavailable["location"].push(item._id);
+                }
+            });
+        }
+
+        return unavailable;
+    };
+
+    Reservation.prototype._loadConflicts = function(data, options) {
+        // Only load conflicts when it"s possible to have conflicts
+        // location, at least 1 date and at least 1 item
+        var that = this;
+        var locId = this._getId(this.location);
+        var hasLocation = (locId!=null) && (locId.length>0);
+        var hasAnyDate = (this.from!=null) || (this.to!=null);
+        var hasAnyItem = (this.items!=null) && (this.items.length>0);
+        var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
+
+        if( (hasNonConflictStatus) ||
+            (!hasLocation && !hasAnyDate && !hasAnyItem)) {
+
+            // We cannot have conflicts, so make the conflicts array empty
+            this.conflicts = [];
+            return $.Deferred().resolve(data);
+
+        } else if (this.status == "creating") {
+
+            // We can have conflicts,
+            // so we better check the server if there are any
+            return this.ds.call(this.id, "getConflicts")
+                .then(function(conflicts) {
+                    that.conflicts = conflicts || [];
+                });
+
+        } else if (this.status == "open") {
+
+            this.conflicts = [];
+
+            // The reservation is already open,
+            // so the only conflicts we can have
+            // are for turning it into an order
+            $.each(this.raw.items, function(i, item) {
+                if (item.status=="expired") {
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "expired"
+                    }));
+                } else if (item.status!="available") {
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "status"
+                    }));
+                } else if(item.location!=locId) {
+                    that.conflicts.push(new Conflict({
+                        item: that._getId(item),
+                        kind: "location"
+                    }));
+                }
+            });
+
+            return $.Deferred().resolve(data);
+
+        } else {
+
+            // We should never get here :)
+            this.conflicts = [];
+            return $.Deferred().resolve(data);
+
+        }
+    };
+
+    return Reservation;
+
+});</code></pre>
+        </article>
+    </section>
+
+
+
+
+
+
+        
+
+        <footer>
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Sep 23 2015 16:13:42 GMT+0200 (CEST)
+        </footer>
+    </div>
+</div>
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+<script src="scripts/main.js"></script>
+</body>
+</html>

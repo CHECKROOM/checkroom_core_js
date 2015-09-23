@@ -9,7 +9,6 @@ define([
     'Attachment',
     'Base',
     'Comment',
-    'common',
     'Conflict',
     'Contact',
     'DateHelper',
@@ -21,12 +20,14 @@ define([
     'helper',
     'Reservation',
     'Transaction',
-    'User'], function(api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
+    'User',
+    'common'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User, common) {
 
     var core = {};
 
     // namespaces
     core.api = api;
+    core.common = common;
 
     // Constructors
     core.Availability = Availability;

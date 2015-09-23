@@ -5,15 +5,761 @@ define(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);
 factory($, moment, jsonp, pubsub);
 }
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
- * Provides some common helper functions
- * @module common
- * @copyright CHECKROOM NV 2015
+ * QR and barcode helpers
  */
-var common, dateHelper, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, settings, helper, Contact, DateHelper, Document, Item, KeyValue, Location, location, transaction, conflict, Order, Reservation, Transaction, User, core;
-common = function () {
-  // latinize; replaces all accented characters in a string
-  // http://stackoverflow.com/questions/286921/efficiently-replace-all-accented-characters-in-a-string
-  // ----
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common, dateHelper, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Location, location, transaction, conflict, Order, settings, helper, Reservation, Transaction, User, core;
+common_code = {
+  /**
+     * isCodeValid
+     *
+     * @memberOf common
+     * @name  common#isCodeValid
+     * @method
+     * 
+  * @param  codeId
+  * @return {Boolean}       
+  */
+  isCodeValid: function (codeId) {
+    // Checks if a code is syntactically valid
+    // This does not mean that it is an official code issued by CHEQROOM
+    return codeId.trim().match(/^[a-z0-9]{8}$/i) != null;
+  },
+  /**
+   * isCodeFromScanner
+   *
+   * @memberOf common
+   * @name  common#isCodeFromScanner
+   * @method
+   * 
+   * @param  urlPart
+   * @return {Boolean}        
+   */
+  isCodeFromScanner: function (urlPart) {
+    var prefix = urlPart.substring(0, 23);
+    var index = 'http://cheqroom.com/qr/'.indexOf(prefix);
+    return index == 0;
+  },
+  /**
+   * getCheqRoomRedirectUrl
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrl
+   * @method
+   * 
+   * @param  codeId 
+   * @return {string}       
+   */
+  getCheqRoomRedirectUrl: function (codeId) {
+    return this.isCodeValid(codeId) ? 'http://cheqroom.com/qr/' + codeId.trim() : '';
+  },
+  /**
+   * getCheqRoomRedirectUrlQR 
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrlQR
+   * @method
+   * 
+   * @param  codeId 
+   * @param  size   
+   * @return {string}      
+   */
+  getCheqRoomRedirectUrlQR: function (codeId, size) {
+    if (this.isCodeValid(codeId)) {
+      //https://chart.googleapis.com/chart?chs=200x200&cht=qr&choe=UTF-8&chld=L|0&chl=http://cheqroom.com/qr/c4ab3a6a
+      var url = encodeURI(this.getCheqRoomRedirectUrl(codeId));
+      return 'https://chart.googleapis.com/chart?chs=' + size + 'x' + size + '&cht=qr&choe=UTF-8&chld=L|0&chl=' + url;
+    } else {
+      return '';
+    }
+  }
+};
+common_order = function (moment) {
+  return {
+    /**
+     * getFriendlyOrderStatus
+     *
+     * @memberOf common
+     * @name  common#getFriendlyOrderStatus
+     * @method
+     * 
+     * @param  {string} status
+     * @return {string}        
+     */
+    getFriendlyOrderStatus: function (status) {
+      // ORDER_STATUS = ('creating', 'open', 'closed')
+      switch (status) {
+      case 'creating':
+        return 'Incomplete';
+      case 'open':
+        return 'Open';
+      case 'closed':
+        return 'Closed';
+      default:
+        return 'Unknown';
+      }
+    },
+    /**
+    * getFriendlyOrderCss
+    *
+    * @memberOf common
+    * @name  common#getFriendlyOrderCss
+    * @method
+    * 
+    * @param  {string} status 
+    * @return {string}        
+    */
+    getFriendlyOrderCss: function (status) {
+      switch (status) {
+      case 'creating':
+        return 'label-creating';
+      case 'open':
+        return 'label-open';
+      case 'closed':
+        return 'label-closed';
+      default:
+        return '';
+      }
+    },
+    /**
+    * getFriendlyOrderSize
+    *
+    * @memberOf common
+    * @name  common#getFriendlyOrderSize
+    * @method
+    * 
+    * @param  {object} order
+    * @return {string}      
+    */
+    getFriendlyOrderSize: function (order) {
+      if (order.items && order.items.length > 0) {
+        var str = order.items.length + ' item';
+        if (order.items.length > 1) {
+          str += 's';
+        }
+        return str;
+      } else {
+        return 'No items';
+      }
+    },
+    /**
+    * isOrderOverdue
+    *
+    * @memberOf common
+    * @name  common#isOrderOverdue
+    * @method
+    * 
+    * @param  {object}  order 
+    * @param  {moment}  now   
+    * @return {Boolean}       
+    */
+    isOrderOverdue: function (order, now) {
+      now = now || moment();
+      return order.status == 'open' && now.isAfter(order.due);
+    },
+    /**
+    * getOrderStatus
+    *
+    * @memberOf common
+    * @name  common#getOrderStatus
+    * @method
+    * 
+    * @param  {object} order 
+    * @param  {moment} now   
+    * @return {string}       
+    */
+    getOrderStatus: function (order, now) {
+      now = now || moment();
+      return this.isOrderOverdue(order, now) ? 'Overdue' : this.getFriendlyOrderStatus(order.status);
+    },
+    /**
+    * getOrderCss
+    *
+    * @memberOf common
+    * @name  common#getOrderCss
+    * @method
+    * 
+    * @param  {object} order 
+    * @param  {moment} now   
+    * @return {string}       
+    */
+    getOrderCss: function (order, now) {
+      now = now || moment();
+      return this.isOrderOverdue(order, now) ? 'label-overdue' : this.getFriendlyOrderCss(order.status);
+    }
+  };
+}(moment);
+common_reservation = {
+  /**
+   * getFriendlyReservationCss
+   *
+   * @memberOf common
+   * @name  common#getFriendlyReservationCss
+   * @method
+   * 
+   * @param  {string} status 
+   * @return {string}        
+   */
+  getFriendlyReservationCss: function (status) {
+    switch (status) {
+    case 'creating':
+      return 'label-creating';
+    case 'open':
+      return 'label-open';
+    case 'closed':
+      return 'label-closed';
+    case 'cancelled':
+      return 'label-cancelled';
+    default:
+      return '';
+    }
+  },
+  /**
+   * getFriendlyReservationStatus 
+   *
+   * @memberOf common
+   * @name  common#getFriendlyReservationStatus
+   * @method
+   * 
+   * @param  {string} status 
+   * @return {string}        
+   */
+  getFriendlyReservationStatus: function (status) {
+    switch (status) {
+    case 'creating':
+      return 'Incomplete';
+    case 'open':
+      return 'Open';
+    case 'closed':
+      return 'Closed';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return 'Unknown';
+    }
+  }
+};
+common_item = {
+  /**
+   * getFriendlyItemStatus 
+   *
+   * @memberOf common
+   * @name  common#getFriendlyItemStatus
+   * @method
+   * 
+   * @param  status
+   * @return {string}        
+   */
+  getFriendlyItemStatus: function (status) {
+    // ITEM_STATUS = ('available', 'checkedout', 'await_checkout', 'in_transit', 'maintenance', 'repair', 'inspection', 'expired')
+    switch (status) {
+    case 'available':
+      return 'Available';
+    case 'checkedout':
+      return 'Checked out';
+    case 'await_checkout':
+      return 'Checking out';
+    case 'in_transit':
+      return 'In transit';
+    case 'maintenance':
+      return 'Maintenance';
+    case 'repair':
+      return 'Repair';
+    case 'inspection':
+      return 'Inspection';
+    case 'expired':
+      return 'Expired';
+    default:
+      return 'Unknown';
+    }
+  },
+  /**
+  * getItemStatusCss
+  *
+  * @memberOf common
+  * @name  common#getItemStatusCss
+  * @method
+  * 
+  * @param  status 
+  * @return {string}       
+  */
+  getItemStatusCss: function (status) {
+    switch (status) {
+    case 'available':
+      return 'label-available';
+    case 'checkedout':
+      return 'label-checkedout';
+    case 'await_checkout':
+      return 'label-awaitcheckout';
+    case 'in_transit':
+      return 'label-transit';
+    case 'maintenance':
+      return 'label-maintenance';
+    case 'repair':
+      return 'label-repair';
+    case 'inspection':
+      return 'label-inspection';
+    case 'expired':
+      return 'label-expired';
+    default:
+      return '';
+    }
+  },
+  /**
+  * getItemStatusIcon
+  *
+  * @memberOf common
+  * @name  common#getItemStatusIcon
+  * @method
+  * 
+  * @param  status
+  * @return {string}       
+  */
+  getItemStatusIcon: function (status) {
+    switch (status) {
+    case 'available':
+      return 'fa fa-check-circle';
+    case 'checkedout':
+      return 'fa fa-times-circle';
+    case 'await_checkout':
+      return 'fa fa-ellipsis-h';
+    case 'in_transit':
+      return 'fa fa-truck';
+    case 'maintenance':
+      return 'fa fa-wrench';
+    case 'repair':
+      return 'fa fa-wrench';
+    case 'inspection':
+      return 'fa fa-stethoscope';
+    case 'expired':
+      return 'fa fa-bug';
+    default:
+      return '';
+    }
+  }
+};
+common_conflicts = {
+  /**
+   * getFriendlyConflictKind
+   *
+   * @memberOf  common
+   * @name  common#getFriendlyConflictKind
+   * @method
+   * 
+   * @param  kind 
+   * @return {string}    
+   */
+  getFriendlyConflictKind: function (kind) {
+    switch (kind) {
+    case 'location':
+      return 'At wrong location';
+    case 'order':
+      return 'Checked out in order';
+    case 'reservation':
+      return 'Already reserved';
+    default:
+      return '';
+    }
+  }
+};
+common_keyValues = function () {
+  var _getCategoryName = function (obj) {
+    return typeof obj === 'string' ? obj : obj['name'];
+  };
+  return {
+    /**
+     * Creates a category key from a friendly name
+     *
+     * @memberOf  common
+     * @name  common#getCategoryKeyFromName
+     * @method
+     * 
+     * @param  {string} name 
+     * @return {string}   
+     */
+    getCategoryKeyFromName: function (name) {
+      return 'cheqroom.types.item.' + name.split(' ').join('_').split('.').join('').toLowerCase();
+    },
+    /**
+     * Creates a name from a category key
+     *
+     * @memberOf common
+     * @name  common#getCategoryNameFromKey
+     * @method
+     * 
+     * @param  {string} key
+     * @return {string}
+     */
+    getCategoryNameFromKey: function (key) {
+      var re = new RegExp('_', 'g');
+      return key.split('.').pop().replace(re, ' ');
+    },
+    /**
+     * getCategorySummary
+     *
+     * @memberOf common
+     * @name  common#getCategorySummary
+     * @method
+     * 
+     * @param  {array} items 
+     * @return {string}      
+     */
+    getCategorySummary: function (items) {
+      items = items || [];
+      if (items.length == 0)
+        return 'No items';
+      var catSummary = {};
+      var firstKey = '';
+      var firstKeyCount = 0;
+      var that = this;
+      for (var i = 0, len = items.length; i < len; i++) {
+        var item = items[i];
+        var key = item.category ? that.getCategoryNameFromKey(_getCategoryName(item.category)) : '';
+        if (!catSummary[key]) {
+          catSummary[key] = 1;
+        } else {
+          catSummary[key] += 1;
+        }
+        // first key should be category with largest number of items
+        if (catSummary[key] > firstKeyCount) {
+          firstKey = key;
+          firstKeyCount = catSummary[key];
+        }
+      }
+      var summ = catSummary[firstKey] + ' ';
+      if (firstKeyCount == 1 && String.prototype.singularize) {
+        summ += firstKey.singularize();
+      } else {
+        summ += firstKey;
+      }
+      if (items.length > catSummary[firstKey]) {
+        var other = items.length - catSummary[firstKey];
+        summ += ' + ' + other + ' other';
+      }
+      return summ;
+    }
+  };
+}();
+common_image = function ($) {
+  return {
+    /**
+     * Returns an avatar image with the initials of the user
+     * source: http://codepen.io/leecrossley/pen/CBHca 
+     *
+     * @memberOf  common
+     * @name  common#getAvatarInitial
+     * @method
+     * 
+     * @param  {string} name name for which to display the initials
+     * @param  {string} size Possible values XS,S,M,L,XL
+     * @return {string}	base64 image url    
+     */
+    getAvatarInitial: function (name, size) {
+      var sizes = {
+        'XS': 32,
+        'S': 64,
+        'M': 128,
+        'L': 256,
+        'XL': 512
+      };
+      var colours = [
+        '#1abc9c',
+        '#2ecc71',
+        '#3498db',
+        '#9b59b6',
+        '#34495e',
+        '#16a085',
+        '#27ae60',
+        '#2980b9',
+        '#8e44ad',
+        '#2c3e50',
+        '#f1c40f',
+        '#e67e22',
+        '#e74c3c',
+        '#95a5a6',
+        '#f39c12',
+        '#d35400',
+        '#c0392b',
+        '#bdc3c7'
+      ];
+      var nameSplit = name.split(' '), initials = nameSplit.length == 2 ? nameSplit[0].charAt(0).toUpperCase() + nameSplit[1].charAt(0).toUpperCase() : nameSplit[0].charAt(0).toUpperCase();
+      var charIndex = initials.charCodeAt(0) - 65, colourIndex = charIndex % colours.length;
+      var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
+      var $canvas = $('<canvas />').attr({
+        width: canvasWidth,
+        height: canvasHeight
+      });
+      var context = $canvas.get(0).getContext('2d');
+      if (window.devicePixelRatio) {
+        $canvas.attr('width', canvasWidth * window.devicePixelRatio);
+        $canvas.attr('height', canvasHeight * window.devicePixelRatio);
+        $canvas.css('width', canvasCssWidth);
+        $canvas.css('height', canvasCssHeight);
+        context.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+      context.fillStyle = colours[colourIndex];
+      context.fillRect(0, 0, canvasWidth, canvasHeight);
+      context.font = canvasWidth / 2 + 'px Arial';
+      context.textAlign = 'center';
+      context.fillStyle = '#FFF';
+      context.fillText(initials, canvasCssWidth / 2, canvasCssHeight / 1.5);
+      return $canvas.get(0).toDataURL();
+    },
+    /**
+     * getImageUrl 
+     *
+     * @memberOf  common
+     * @name common#getImageUrl  
+     * @method
+     * 
+     * @param  ds        
+     * @param  pk        
+     * @param  size      
+     * @param  bustCache 
+     * @return {string}           
+     */
+    getImageUrl: function (ds, pk, size, bustCache) {
+      var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+      if (size) {
+        url += '&size=' + size;
+      }
+      if (bustCache) {
+        url += '&_bust=' + new Date().getTime();
+      }
+      return url;
+    },
+    /**
+     * getImageCDNUrl 
+     *
+     * @memberOf  common
+     * @name  common#getImageCDNUrl
+     * @method
+     * 
+     * @param  settings     
+     * @param  groupId      
+     * @param  attachmentId 
+     * @param  size         
+     * @return {string}              
+     */
+    getImageCDNUrl: function (settings, groupId, attachmentId, size) {
+      // Makes a CDN url for Item using the Item.cover property
+      // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+      var url = 'https://cheqroom-cdn.s3.amazonaws.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+      if (size && size.length > 0) {
+        var parts = url.split('.');
+        var ext = parts.pop();
+        url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
+      }
+      return url;
+    }
+  };
+}(jquery);
+common_attachment = function (moment) {
+  /**
+   * Provides attachment related helper methods
+   */
+  return {
+    /**
+     * getImgFileNameFromName
+     *
+     * @memberOf common
+     * @name  common#getImgFileNameFromName
+     * @method
+     * 
+     * @param  name 
+     * @return {string}      
+     */
+    getImgFileNameFromName: function (name) {
+      if (name != null && name.length > 0) {
+        return name.split(' ').join('_').split('.').join('_') + '.jpg';
+      } else {
+        // upload 2014-03-10 at 11.41.45 am.png
+        return 'upload ' + moment().format('YYYY-MM-DD at hh:mm:ss a') + '.jpg';
+      }
+    },
+    /**
+     * makeFileNameJpg
+     *
+     * @memberOf common
+     * @name  common#makeFileNameJpg
+     * @method
+     * 
+     * @param  name
+     * @return {string}    
+     */
+    makeFileNameJpg: function (name) {
+      return name.indexOf('.') >= 0 ? name.substr(0, name.lastIndexOf('.')) + '.jpg' : name;
+    },
+    /**
+     * getFileNameFromUrl
+     *
+     * @memberOf common
+     * @name  common#getFileNameFromUrl
+     * @method
+     * 
+     * @param  url
+     * @return {string}  
+     */
+    getFileNameFromUrl: function (url) {
+      if (url) {
+        var m = url.toString().match(/.*\/(.+?)\./);
+        if (m && m.length > 1) {
+          return m[1];
+        }
+      }
+      return '';
+    }
+  };
+}(moment);
+common_inflection = function () {
+  /**
+  * STRING EXTENSIONS
+  */
+  /**
+  * pluralize
+  *
+  * @memberOf String
+  * @name  String#pluralize
+  * @method
+  * 
+  * @param  {int} count  
+  * @param  {string} suffix 
+  * @return {string}        
+  */
+  String.prototype.pluralize = function (count, suffix) {
+    if (this == 'is' && count != 1) {
+      return 'are';
+    } else if (this == 'this') {
+      return count == 1 ? this : 'these';
+    } else if (this.endsWith('s')) {
+      suffix = suffix || 'es';
+      return count == 1 ? this : this + suffix;
+    } else if (this.endsWith('y')) {
+      suffix = suffix || 'ies';
+      return count == 1 ? this : this.substr(0, this.length - 1) + suffix;
+    } else {
+      suffix = suffix || 's';
+      return count == 1 ? this : this + suffix;
+    }
+  };
+  /**
+  * capitalize 
+  *
+  * @memberOf String
+  * @name  String#capitalize
+  * @method
+  * 
+  * @param  {Boolean} lower 
+  * @return {string}       
+  */
+  String.prototype.capitalize = function (lower) {
+    return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function (a) {
+      return a.toUpperCase();
+    });
+  };
+  if (!String.prototype.startsWith) {
+    /**
+     * startsWith
+     *
+     * @memberOf String
+     * @name  String#startsWith
+     * @method
+     * 
+     * @param  {string} str 
+     * @return {Boolean}     
+     */
+    String.prototype.startsWith = function (str) {
+      return this.indexOf(str) == 0;
+    };
+  }
+  if (!String.prototype.endsWith) {
+    /**
+     * endsWith
+     *
+     * @memberOf String
+     * @name  String#endsWith
+     * @method
+     * 
+     * @param  {string} str 
+     * @return {Boolean}     
+     */
+    String.prototype.endsWith = function (str) {
+      if (this.length < str.length) {
+        return false;
+      } else {
+        return this.lastIndexOf(str) == this.length - str.length;
+      }
+    };
+  }
+  if (!String.prototype.truncate) {
+    /**
+     * truncate 
+     *
+     * @memberOf String
+     * @name  String#truncate
+     * @method 
+     * 
+     * @param  {int} len 
+     * @return {string}     
+     */
+    String.prototype.truncate = function (len) {
+      len = len != null ? len : 25;
+      var re = this.match(RegExp('^.{0,' + len + '}[S]*'));
+      var l = re[0].length;
+      re = re[0].replace(/\s$/, '');
+      if (l < this.length)
+        re = re + '&hellip;';
+      return re;
+    };
+  }
+  if (!String.prototype.isValidUrl) {
+    /**
+     * isValidUrl
+     *
+     * @memberOf String
+     * @name  String#isValidUrl
+     * @method  
+     * 
+     * @return {Boolean} 
+     */
+    String.prototype.isValidUrl = function () {
+      var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+      '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+      '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+      '(\\#[-a-z\\d_]*)?$', 'i');
+      // fragment locator
+      if (!pattern.test(this)) {
+        return false;
+      } else {
+        return true;
+      }
+    };
+  }
+  if (!String.prototype.hashCode) {
+    /**
+    * hashCode 
+    * http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+    *
+    * @memberOf String
+    * @name  String#hashCode
+    * @method
+    * 
+    * @return {string} 
+    */
+    String.prototype.hashCode = function () {
+      var hash = 0, i, chr, len;
+      if (this.length == 0)
+        return hash;
+      for (i = 0, len = this.length; i < len; i++) {
+        chr = this.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0;  // Convert to 32bit integer
+      }
+      return hash;
+    };
+  }
+  //http://stackoverflow.com/questions/286921/efficiently-replace-all-accented-characters-in-a-string
   var Latinise = {};
   Latinise.latin_map = {
     '\xC1': 'A',
@@ -841,78 +1587,334 @@ common = function () {
     '\u1D65': 'v',
     '\u2093': 'x'
   };
+  /**
+  * latinise 
+  *
+  * @memberOf  String
+  * @name  String#latinise
+  * @method
+  * 
+  * @return {string} 
+  */
   String.prototype.latinise = function () {
     return this.replace(/[^A-Za-z0-9\[\] ]/g, function (a) {
       return Latinise.latin_map[a] || a;
     });
   };
+  /**
+  * latinize 
+  *
+  * @memberOf  String
+  * @name  String#latinize
+  * @method
+  * 
+  * @return {string} 
+  */
   String.prototype.latinize = String.prototype.latinise;
+  /**
+  * isLatin 
+  *
+  * @memberOf  String
+  * @name  String#isLatin
+  * @method
+  * 
+  * @return {Boolean} 
+  */
   String.prototype.isLatin = function () {
     return this == this.latinise();
   };
-  // Extending the string type with some helpers
-  // ----
-  String.prototype.startsWith = function (str) {
-    return this.indexOf(str) == 0;
-  };
-  String.prototype.endsWith = function (str) {
-    if (this.length < str.length) {
-      return false;
-    } else {
-      return this.lastIndexOf(str) == this.length - str.length;
-    }
-  };
-  String.prototype.pluralize = function (count, suffix) {
-    if (this == 'is' && count != 1) {
-      return 'are';
-    } else if (this.endsWith('s')) {
-      suffix = suffix || 'es';
-      return count == 1 ? this : this + suffix;
-    } else if (this.endsWith('y')) {
-      suffix = suffix || 'ies';
-      return count == 1 ? this : this.substr(0, this.length - 1) + suffix;
-    } else {
-      suffix = suffix || 's';
-      return count == 1 ? this : this + suffix;
-    }
-  };
-  String.prototype.capitalize = function () {
-    return this.charAt(0).toUpperCase() + this.slice(1);
-  };
-  String.prototype.truncate = function (len) {
-    len = len != null ? len : 25;
-    var re = this.match(RegExp('^.{0,' + len + '}[S]*'));
-    var l = re[0].length;
-    re = re[0].replace(/\s$/, '');
-    if (l < this.length) {
-      re = re + '&hellip;';
-    }
-    return re;
-  };
+  /**
+  * OnlyAlphaNumSpaceAndUnderscore
+  *
+  * @memberOf String
+  * @name  String#OnlyAlphaNumSpaceAndUnderscore
+  * @method
+  * 
+  */
   String.prototype.OnlyAlphaNumSpaceAndUnderscore = function () {
     // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
     // \W Matches any character that is not a word character from the basic Latin alphabet. Equivalent to [^A-Za-z0-9_]
     // Preceding or trailing whitespaces are removed, and words are also latinised
     return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[\W]/g, '');
   };
+  /**
+  * OnlyAlphaNumSpaceUnderscoreAndDot
+  *
+  * @memberOf String
+  * @name  String#OnlyAlphaNumSpaceUnderscoreAndDot
+  * @method
+  * 
+  */
   String.prototype.OnlyAlphaNumSpaceUnderscoreAndDot = function () {
     // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
     // \W Matches any character that is not a word character from the basic Latin alphabet. Equivalent to [^A-Za-z0-9_]
     // Preceding or trailing whitespaces are removed, and words are also latinised
     return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[^a-z0-9_\.]/g, '');
   };
-  // Other helpers
-  // ----
-  return {
-    getUrlParam: function (name) {
-      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-      var regexS = '[\\?&]' + name + '=([^&#]*)';
-      var regex = new RegExp(regexS);
-      var results = regex.exec(window.location.href);
-      return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+  /**
+  * NUMBER EXTENSIONS
+  */
+  if (!Number.prototype.between) {
+    /**
+     * between
+     *
+     * @memberOf  Number
+     * @name  Number#between
+     * @method
+     * 
+     * @param  {int} a 
+     * @param  {int} b 
+     * @return {Boolean}   
+     */
+    Number.prototype.between = function (a, b) {
+      var min = Math.min(a, b), max = Math.max(a, b);
+      return this >= min && this <= max;
+    };
+  }
+}();
+common_validation = {
+  /**
+   * isValidEmail
+   *
+   * @memberOf common
+   * @name  common#isValidEmail
+   * @method
+   * 
+   * @param  {string}  email 
+   * @return {Boolean}       
+   */
+  isValidEmail: function (email) {
+    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+    return re.test(email);
+  },
+  /**
+   * isValidPhone
+   *
+   * @memberOf common
+   * @name  common#isValidPhone
+   * @method
+   * 
+   * @param  {string}  phone 
+   * @return {Boolean}       
+   */
+  isValidPhone: function (phone) {
+    var isnum = /^\d{9,}$/.test(phone);
+    if (isnum) {
+      return true;
+    }
+    var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+    return m != null && m.length > 0;
+  }
+};
+common_utils = {
+  /**
+   * Turns an integer into a compact text to show in a badge
+   *
+   * @memberOf  common
+   * @name  common#badgeify
+   * @method         
+   * 
+   * @param  {int} count 
+   * @return {string}       
+   */
+  badgeify: function (count) {
+    if (count > 100) {
+      return '100+';
+    } else if (count > 10) {
+      return '10+';
+    } else if (count > 0) {
+      return '' + count;
+    } else {
+      return '';
+    }
+  },
+  /**
+   * getLoginName
+   *
+   * @memberOf common
+   * @name  common#getLoginName
+   * @method
+   * 
+   * @param  {string} firstName 
+   * @param  {string} lastName  
+   * @return {string}           
+   */
+  getLoginName: function (firstName, lastName) {
+    var patt = /[\s-]*/gim;
+    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+  },
+  /**
+   * getUrlParam
+   *
+   * @memberOf common
+   * @name  common#getUrlParam
+   * @method
+   * 
+   * @param  {string} name 
+   * @return {string}      
+   */
+  getUrlParam: function (name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regexS = '[\\?&]' + name + '=([^&#]*)';
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.href);
+    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+  }
+};
+common_slimdown = function () {
+  /**
+  * Javascript version of https://gist.github.com/jbroadway/2836900
+  *
+  * Slimdown - A very basic regex-based Markdown parser. Supports the
+  * following elements (and can be extended via Slimdown::add_rule()):
+  *
+  * - Headers
+  * - Links
+  * - Bold
+  * - Emphasis
+  * - Deletions
+  * - Quotes
+  * - Inline code
+  * - Blockquotes
+  * - Ordered/unordered lists
+  * - Horizontal rules
+  *
+  * Author: Johnny Broadway <johnny@johnnybroadway.com>
+  * Website: https://gist.github.com/jbroadway/2836900
+  * License: MIT
+  *
+  * @global
+  * @name  Slimdown
+  */
+  var Slimdown = function () {
+    // Rules
+    this.rules = [
+      {
+        regex: /(#+)(.*)/g,
+        replacement: header
+      },
+      // headers
+      {
+        regex: /!\[([^\[]+)\]\(([^\)]+)\)/g,
+        replacement: '<img src=\'$2\' alt=\'$1\'>'
+      },
+      // image
+      {
+        regex: /\[([^\[]+)\]\(([^\)]+)\)/g,
+        replacement: '<a href=\'$2\'>$1</a>'
+      },
+      // hyperlink
+      {
+        regex: /(\*\*|__)(.*?)\1/g,
+        replacement: '<strong>$2</strong>'
+      },
+      // bold
+      {
+        regex: /(\*|_)(.*?)\1/g,
+        replacement: '<em>$2</em>'
+      },
+      // emphasis
+      {
+        regex: /\~\~(.*?)\~\~/g,
+        replacement: '<del>$1</del>'
+      },
+      // del
+      {
+        regex: /\:\"(.*?)\"\:/g,
+        replacement: '<q>$1</q>'
+      },
+      // quote
+      {
+        regex: /`(.*?)`/g,
+        replacement: '<code>$1</code>'
+      },
+      // inline code
+      {
+        regex: /\n\*(.*)/g,
+        replacement: ulList
+      },
+      // ul lists
+      {
+        regex: /\n[0-9]+\.(.*)/g,
+        replacement: olList
+      },
+      // ol lists
+      {
+        regex: /\n(&gt;|\>)(.*)/g,
+        replacement: blockquote
+      },
+      // blockquotes
+      {
+        regex: /\n-{5,}/g,
+        replacement: '\n<hr />'
+      },
+      // horizontal rule
+      {
+        regex: /\n([^\n]+)\n/g,
+        replacement: para
+      },
+      // add paragraphs
+      {
+        regex: /<\/ul>\s?<ul>/g,
+        replacement: ''
+      },
+      // fix extra ul
+      {
+        regex: /<\/ol>\s?<ol>/g,
+        replacement: ''
+      },
+      // fix extra ol
+      {
+        regex: /<\/blockquote><blockquote>/g,
+        replacement: '\n'
+      }  // fix extra blockquote
+    ];
+    // Add a rule.
+    this.addRule = function (regex, replacement) {
+      regex.global = true;
+      regex.multiline = false;
+      this.rules.push({
+        regex: regex,
+        replacement: replacement
+      });
+    };
+    // Render some Markdown into HTML.
+    this.render = function (text) {
+      text = '\n' + text + '\n';
+      this.rules.forEach(function (rule) {
+        text = text.replace(rule.regex, rule.replacement);
+      });
+      return text.trim();
+    };
+    function para(text, line) {
+      var trimmed = line.trim();
+      if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
+        return '\n' + line + '\n';
+      }
+      return '\n<p>' + trimmed + '</p>\n';
+    }
+    function ulList(text, item) {
+      return '\n<ul>\n\t<li>' + item.trim() + '</li>\n</ul>';
+    }
+    function olList(text, item) {
+      return '\n<ol>\n\t<li>' + item.trim() + '</li>\n</ol>';
+    }
+    function blockquote(text, tmp, item) {
+      return '\n<blockquote>' + item.trim() + '</blockquote>';
+    }
+    function header(text, chars, content) {
+      var level = chars.length;
+      return '<h' + level + '>' + content.trim() + '</h' + level + '>';
     }
   };
+  window.Slimdown = Slimdown;
 }();
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown) {
+  /**
+   * Return common object with different helper methods
+   */
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown);
 dateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
@@ -1071,6 +2073,41 @@ dateHelper = function ($, moment) {
     return result;
   };
   /**
+   * @deprecated use getFriendlyFromToInfo
+   * [getFriendlyFromToOld]
+   * @param  fromDate    
+   * @param  toDate       
+   * @param  groupProfile 
+   * @return {}              
+   */
+  DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
+    var mFrom = this.roundFromTime(fromDate, groupProfile);
+    var mTo = this.roundToTime(toDate, groupProfile);
+    return {
+      from: mFrom,
+      to: mTo,
+      daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
+      duration: moment.duration(mFrom - mTo).humanize(),
+      fromText: mFrom.calendar().replace(' at ', ' '),
+      toText: mTo.calendar().replace(' at ', ' ')
+    };
+  };
+  /**
+   * [getFriendlyDateText]
+   * @param  date    
+   * @param  useHours 
+   * @param  now     
+   * @param  format  
+   * @return {string}         
+   */
+  DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
+    if (date == null) {
+      return 'Not set';
+    }
+    var parts = this.getFriendlyDateParts(date, now, format);
+    return useHours ? parts.join('') : parts[0];
+  };
+  /**
    * Turns all strings that look like datetimes into moment objects recursively
    * @name  DateHelper#fixDates
    * @method
@@ -1096,6 +2133,16 @@ dateHelper = function ($, moment) {
       });
     }
     return data;
+  };
+  /**
+   * [addAverageDuration]
+   * @param m
+   * @returns {moment}
+   */
+  DateHelper.prototype.addAverageDuration = function (m) {
+    // TODO: Read the average order duration from the group.profile
+    // add it to the date that was passed
+    return m.clone().add(1, 'day');
   };
   /**
    * roundTimeFrom uses the time rounding rules to round a begin datetime
@@ -1276,7 +2323,7 @@ api = function ($, jsonp, moment, common, DateHelper) {
   // ----
   api.ApiAjax.prototype._handleAjaxSuccess = function (dfd, data, opt) {
     if (this.responseInTz) {
-      data = this._fixDates(data);
+      data = new DateHelper().fixDates(data);
     }
     return dfd.resolve(data);
   };
@@ -1375,26 +2422,6 @@ api = function ($, jsonp, moment, common, DateHelper) {
         data[key] = value.toJSONDate();
       }
     });
-    return data;
-  };
-  api.ApiAjax.prototype._fixDates = function (data) {
-    if (typeof data == 'string' || data instanceof String) {
-      // "2014-04-03T12:15:00+00:00" (length 25)
-      // "2014-04-03T09:32:43.841000+00:00" (length 32)
-      if (data.endsWith('+00:00')) {
-        var len = data.length;
-        if (len == 25) {
-          return moment(data.substring(0, len - 6));
-        } else if (len == 32) {
-          return moment(data.substring(0, len - 6).split('.')[0]);
-        }
-      }
-    } else if (data instanceof Object || $.isArray(data)) {
-      var that = this;
-      $.each(data, function (k, v) {
-        data[k] = that._fixDates(v);
-      });
-    }
     return data;
   };
   //*************
@@ -3588,207 +4615,7 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   };
   return Base;
 }(jquery, common, api, document, comment, attachment, keyvalue);
-settings = {
-  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
-  amazonBucket: 'app'
-};
-helper = function ($, moment, DateHelper, settings) {
-  var Helper = function (spec) {
-    this.dateHelper = new DateHelper({});
-  };
-  /**
-   * Convenience method that calls the DateHelper.getNow
-   * @returns {*}
-   */
-  Helper.prototype.getNow = function () {
-    return this.dateHelper.getNow();
-  };
-  Helper.prototype.roundTimeFrom = function (m) {
-    return this.dateHelper.roundTimeFrom(m);
-  };
-  Helper.prototype.roundTimeTo = function (m) {
-    return this.dateHelper.roundTimeTo(m);
-  };
-  Helper.prototype.addAverageDuration = function (m) {
-    // TODO: Read the average order duration from the group.profile
-    // add it to the date that was passed
-    return m.clone().add(1, 'day');
-  };
-  /**
-   * getImageCDNUrl gets an image by using the path to a CDN location
-   * @param groupId
-   * @param attachmentId
-   * @param size
-   * @returns {string}
-   */
-  Helper.prototype.getImageCDNUrl = function (groupId, attachmentId, size) {
-    // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-    var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
-    if (size && size.length > 0) {
-      var parts = url.split('.');
-      var ext = parts.pop();
-      // pop off the extension, we'll change it
-      url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
-    }
-    return url;
-  };
-  /**
-   * getImageUrl gets an image by using the datasource /get style and a mimeType
-   * 'XS': (64, 64),
-   * 'S': (128, 128),
-   * 'M': (256, 256),
-   * 'L': (512, 512)
-   * @param ds
-   * @param pk
-   * @param size
-   * @param bustCache
-   * @returns {string}
-   */
-  Helper.prototype.getImageUrl = function (ds, pk, size, bustCache) {
-    var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-    if (size) {
-      url += '&size=' + size;
-    }
-    if (bustCache) {
-      url += '&_bust=' + new Date().getTime();
-    }
-    return url;
-  };
-  /**
-   * isValidEmail checks if an email address is valid
-   * @param email
-   * @returns {boolean}
-   */
-  Helper.prototype.isValidEmail = function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-    return re.test(email);
-  };
-  /**
-   * isValidPhone checks if a phone number is valid
-   * @param phone
-   * @returns {boolean}
-  */
-  Helper.prototype.isValidPhone = function (phone) {
-    var isnum = /^\d{9,}$/.test(phone);
-    if (isnum) {
-      return true;
-    }
-    var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
-    return m != null && m.length > 0;
-  };
-  /**
-   * getNumItemsLeft
-   * @param limits {maxItems: 100, ...}
-   * @param stats {detailed: {production: {items: {expired: 10, total: 100}}}
-   * @return {Number}
-   */
-  Helper.prototype.getNumItemsLeft = function (limits, stats) {
-    return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
-  };
-  /**
-   * getNumUsersLeft
-   * @param limits {maxUsers: 10, ...}
-   * @param stats {detailed: {production: {users: {active: 3}}}
-   * @return {Number}
-   */
-  Helper.prototype.getNumUsersLeft = function (limits, stats) {
-    return limits.maxUsers - stats.detailed.production.users.active;
-  };
-  /**
-   * getAccessRights returns access rights based on the user role, profile settings 
-   * and account limits 
-   * @param  role   
-   * @param  profile 
-   * @param  limits
-   * @return {object}       
-   */
-  Helper.prototype.getAccessRights = function (role, profile, limits) {
-    var isRootOrAdmin = role == 'root' || role == 'admin';
-    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
-    var useReservations = limits.allowReservations && profile.useReservations;
-    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
-    var useWebHooks = limits.allowWebHooks;
-    return {
-      contacts: {
-        create: isRootOrAdminOrUser,
-        remove: isRootOrAdminOrUser,
-        update: true
-      },
-      items: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin,
-        updateFlag: isRootOrAdmin,
-        updateLocation: isRootOrAdmin,
-        updateGeo: true
-      },
-      orders: {
-        create: true,
-        remove: true,
-        update: true,
-        updateContact: role != 'selfservice',
-        updateLocation: true,
-        generatePdf: useOrderAgreements && isRootOrAdminOrUser
-      },
-      reservations: {
-        create: useReservations,
-        remove: useReservations,
-        update: useReservations,
-        updateContact: useReservations && role != 'selfservice',
-        updateLocation: useReservations
-      },
-      locations: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin
-      },
-      users: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin,
-        updateOther: isRootOrAdmin,
-        updateOwn: true
-      },
-      webHooks: {
-        create: useWebHooks && isRootOrAdmin,
-        remove: useWebHooks && isRootOrAdmin,
-        update: useWebHooks && isRootOrAdmin
-      },
-      stickers: {
-        print: isRootOrAdmin,
-        buy: isRootOrAdmin
-      },
-      categories: {
-        create: isRootOrAdmin,
-        update: isRootOrAdmin
-      },
-      account: { update: isRootOrAdmin }
-    };
-  };
-  /**
-   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
-   * @param  obj   
-   * @param  prop        
-   * @return {string}       
-   */
-  Helper.prototype.ensureValue = function (obj, prop) {
-    return typeof obj === 'string' ? obj : obj[prop];
-  };
-  /**
-   * ensureId, returns id value of object or if you pass a string it returns that exact string 
-   * For example:
-   * ensureId("abc123") --> "abc123"
-   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
-   * 
-   * @param  obj   
-   * @return {string}       
-   */
-  Helper.prototype.ensureId = function (obj) {
-    return this.ensureValue(obj, '_id');
-  };
-  return Helper;
-}(jquery, moment, dateHelper, settings);
-Contact = function ($, Base, Helper) {
+Contact = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     company: '',
@@ -3850,7 +4677,7 @@ Contact = function ($, Base, Helper) {
    */
   Contact.prototype.isValidPhone = function () {
     this.phone = $.trim(this.phone);
-    return new Helper().isValidPhone(this.phone);
+    return common.isValidPhone(this.phone);
   };
   /**
    * Check is email is valid
@@ -3860,7 +4687,7 @@ Contact = function ($, Base, Helper) {
    */
   Contact.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
-    return new Helper().isValidEmail(this.email);
+    return common.isValidEmail(this.email);
   };
   //
   // Base overrides
@@ -3918,7 +4745,7 @@ Contact = function ($, Base, Helper) {
     });
   };
   return Contact;
-}(jquery, base, helper);
+}(jquery, base, common);
 DateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
@@ -4077,6 +4904,41 @@ DateHelper = function ($, moment) {
     return result;
   };
   /**
+   * @deprecated use getFriendlyFromToInfo
+   * [getFriendlyFromToOld]
+   * @param  fromDate    
+   * @param  toDate       
+   * @param  groupProfile 
+   * @return {}              
+   */
+  DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
+    var mFrom = this.roundFromTime(fromDate, groupProfile);
+    var mTo = this.roundToTime(toDate, groupProfile);
+    return {
+      from: mFrom,
+      to: mTo,
+      daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
+      duration: moment.duration(mFrom - mTo).humanize(),
+      fromText: mFrom.calendar().replace(' at ', ' '),
+      toText: mTo.calendar().replace(' at ', ' ')
+    };
+  };
+  /**
+   * [getFriendlyDateText]
+   * @param  date    
+   * @param  useHours 
+   * @param  now     
+   * @param  format  
+   * @return {string}         
+   */
+  DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
+    if (date == null) {
+      return 'Not set';
+    }
+    var parts = this.getFriendlyDateParts(date, now, format);
+    return useHours ? parts.join('') : parts[0];
+  };
+  /**
    * Turns all strings that look like datetimes into moment objects recursively
    * @name  DateHelper#fixDates
    * @method
@@ -4102,6 +4964,16 @@ DateHelper = function ($, moment) {
       });
     }
     return data;
+  };
+  /**
+   * [addAverageDuration]
+   * @param m
+   * @returns {moment}
+   */
+  DateHelper.prototype.addAverageDuration = function (m) {
+    // TODO: Read the average order duration from the group.profile
+    // add it to the date that was passed
+    return m.clone().add(1, 'day');
   };
   /**
    * roundTimeFrom uses the time rounding rules to round a begin datetime
@@ -5160,7 +6032,7 @@ location = function ($, Base) {
   };
   return Location;
 }(jquery, base);
-transaction = function ($, api, Base, Location) {
+transaction = function ($, api, Base, Location, DateHelper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
@@ -5183,6 +6055,7 @@ transaction = function ($, api, Base, Location) {
    * @extends Base
    * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
    * @property {Helper}  helper                     - A Helper object ref
+   * @property {DateHelper} dateHelper              - A DateHelper object ref
    * @property {string}  status                     - The transaction status
    * @property {moment}  from                       - The transaction from date
    * @property {moment}  to                         - The transaction to date
@@ -5200,6 +6073,7 @@ transaction = function ($, api, Base, Location) {
     // should we automatically delete the transaction from the database?
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.helper = spec.helper;
+    this.dateHelper = spec.dateHelper || new DateHelper();
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -5320,9 +6194,9 @@ transaction = function ($, api, Base, Location) {
    * @returns {Moment} max date
    */
   Transaction.prototype.getMaxDate = function () {
-    var helper = this._getHelper();
-    var now = helper.getNow();
-    var next = helper.roundTimeTo(now);
+    var dateHelper = this._getDateHelper();
+    var now = dateHelper.getNow();
+    var next = dateHelper.roundTimeTo(now);
     return next.add(365, 'day');  // TODO: Is this a sensible date?
   };
   /**
@@ -5334,9 +6208,9 @@ transaction = function ($, api, Base, Location) {
    * @returns {*}
    */
   Transaction.prototype.suggestEndDate = function (m) {
-    var helper = this._getHelper();
-    var end = helper.addAverageDuration(m || helper.getNow());
-    return helper.roundTimeTo(end);
+    var dateHelper = this._getDateHelper();
+    var end = dateHelper.addAverageDuration(m || dateHelper.getNow());
+    return dateHelper.roundTimeTo(end);
   };
   //
   // Base overrides
@@ -5499,7 +6373,7 @@ transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setFromDate = function (date, skipRead) {
-    this.from = this.helper.roundTimeFrom(date);
+    this.from = this._getDateHelper().roundTimeFrom(date);
     return this._handleTransaction(skipRead);
   };
   // To date setters
@@ -5523,7 +6397,7 @@ transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setToDate = function (date, skipRead) {
-    this.to = this.helper.roundTimeTo(date);
+    this.to = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Due date setters
@@ -5547,7 +6421,7 @@ transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setDueDate = function (date, skipRead) {
-    this.due = this.helper.roundTimeTo(date);
+    this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Location setters
@@ -5634,7 +6508,7 @@ transaction = function ($, api, Base, Location) {
    * addItems; adds a bunch of Items to the transaction using a list of item ids
    * It creates the transaction if it doesn't exist yet
    * @name Transaction#addItems
-   * @method addItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -5653,7 +6527,7 @@ transaction = function ($, api, Base, Location) {
    * removeItems; removes a bunch of Items from the transaction using a list of item ids
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#removeItems
-   * @method removeItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -5675,7 +6549,7 @@ transaction = function ($, api, Base, Location) {
    * clearItems; removes all Items from the transaction
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#clearItems
-   * @method clearItems
+   * @method
    * @param skipRead
    * @returns {promise}
    */
@@ -5694,7 +6568,7 @@ transaction = function ($, api, Base, Location) {
   /**
    * swapItem; swaps one item for another in a transaction
    * @name Transaction#swapItem
-   * @method swapItem
+   * @method
    * @param fromItem
    * @param toItem
    * @param skipRead
@@ -5716,8 +6590,8 @@ transaction = function ($, api, Base, Location) {
   };
   /**
    * hasItems; Gets a list of items that are already part of the transaction
-   * @name Transaction#addItems
-   * @method addItems
+   * @name Transaction#hasItems
+   * @method
    * @param itemIds        array of string values
    * @returns {Array}
    */
@@ -5754,7 +6628,7 @@ transaction = function ($, api, Base, Location) {
     return this.helper;
   };
   Transaction.prototype._getDateHelper = function () {
-    return this._getHelper().dateHelper;
+    return this.dateHelper;
   };
   /**
    * Searches for Items that are available for this transaction
@@ -5868,7 +6742,7 @@ transaction = function ($, api, Base, Location) {
     return this.isEmpty() && this.autoCleanup ? this._deleteTransaction() : $.Deferred().resolve();
   };
   return Transaction;
-}(jquery, api, base, location);
+}(jquery, api, base, location, dateHelper);
 conflict = function ($) {
   var DEFAULTS = {
     kind: '',
@@ -6073,7 +6947,7 @@ Order = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Order.prototype.canCheckout = function () {
-    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getHelper().getNow()) && this.items && this.items.length;
+    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length;
   };
   /**
    * Checks if order can undo checkout
@@ -6188,7 +7062,7 @@ Order = function ($, api, Transaction, Conflict) {
     }
     var that = this;
     var roundedFromDate = this.getMinDateFrom();
-    var roundedDueDate = due ? this._getHelper().roundTimeTo(due) : this._getHelper().addAverageDuration(roundedFromDate);
+    var roundedDueDate = due ? this._getDateHelper().roundTimeTo(due) : this._getDateHelper().addAverageDuration(roundedFromDate);
     return this._checkFromDueDate(roundedFromDate, roundedDueDate).then(function () {
       that.from = roundedFromDate;
       that.due = roundedDueDate;
@@ -6208,7 +7082,7 @@ Order = function ($, api, Transaction, Conflict) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set order from date, status is ' + this.status));
     }
     var that = this;
-    var roundedFromDate = this._getHelper().roundTimeFrom(date);
+    var roundedFromDate = this._getDateHelper().roundTimeFrom(date);
     return this._checkFromDueDate(roundedFromDate, this.due).then(function () {
       that.from = roundedFromDate;
       return that._handleTransaction(skipRead);
@@ -6246,7 +7120,7 @@ Order = function ($, api, Transaction, Conflict) {
     // 1) at least 30 minutes into the feature
     // 2) at least 15 minutes after the from date (if set)
     var that = this;
-    var roundedDueDate = this._getHelper().roundTimeTo(due);
+    var roundedDueDate = this._getDateHelper().roundTimeTo(due);
     this.from = this.getMinDateFrom();
     return this._checkDueDateBetweenMinMax(roundedDueDate).then(function () {
       that.due = roundedDueDate;
@@ -6376,6 +7250,184 @@ Order = function ($, api, Transaction, Conflict) {
   };
   return Order;
 }(jquery, api, transaction, conflict);
+settings = {
+  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
+  amazonBucket: 'app'
+};
+helper = function ($, settings) {
+  /**
+   * @name Helper
+   * @class
+   * @constructor
+   */
+  var Helper = function (spec) {
+  };
+  /**
+   * getImageCDNUrl gets an image by using the path to a CDN location
+   * @method
+   * @name  Helper#getImageCDNUrl
+   * @param groupId
+   * @param attachmentId
+   * @param size
+   * @returns {string}
+   */
+  Helper.prototype.getImageCDNUrl = function (groupId, attachmentId, size) {
+    // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+    var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+    if (size && size.length > 0) {
+      var parts = url.split('.');
+      var ext = parts.pop();
+      // pop off the extension, we'll change it
+      url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
+    }
+    return url;
+  };
+  /**
+   * getImageUrl gets an image by using the datasource /get style and a mimeType
+   * 'XS': (64, 64),
+   * 'S': (128, 128),
+   * 'M': (256, 256),
+   * 'L': (512, 512)
+   * @method
+   * @name  Helper#getImageUrl
+   * @param ds
+   * @param pk
+   * @param size
+   * @param bustCache
+   * @returns {string}
+   */
+  Helper.prototype.getImageUrl = function (ds, pk, size, bustCache) {
+    var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+    if (size) {
+      url += '&size=' + size;
+    }
+    if (bustCache) {
+      url += '&_bust=' + new Date().getTime();
+    }
+    return url;
+  };
+  /**
+   * getNumItemsLeft
+   * @method
+   * @name  Helper#getNumItemsLeft
+   * @param limits
+   * @param stats 
+   * @return {Number}
+   */
+  Helper.prototype.getNumItemsLeft = function (limits, stats) {
+    return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
+  };
+  /**
+   * getNumUsersLeft
+   * @method
+   * @name  Helper#getNumUsersLeft 
+   * @param limits
+   * @param stats 
+   * @return {Number}
+   */
+  Helper.prototype.getNumUsersLeft = function (limits, stats) {
+    return limits.maxUsers - stats.detailed.production.users.active;
+  };
+  /**
+   * getAccessRights returns access rights based on the user role, profile settings 
+   * and account limits 
+   * @method
+   * @name  Helper#getAccessRights 
+   * @param  role   
+   * @param  profile 
+   * @param  limits
+   * @return {object}       
+   */
+  Helper.prototype.getAccessRights = function (role, profile, limits) {
+    var isRootOrAdmin = role == 'root' || role == 'admin';
+    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+    var useReservations = limits.allowReservations && profile.useReservations;
+    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
+    var useWebHooks = limits.allowWebHooks;
+    return {
+      contacts: {
+        create: isRootOrAdminOrUser,
+        remove: isRootOrAdminOrUser,
+        update: true
+      },
+      items: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateFlag: isRootOrAdmin,
+        updateLocation: isRootOrAdmin,
+        updateGeo: true
+      },
+      orders: {
+        create: true,
+        remove: true,
+        update: true,
+        updateContact: role != 'selfservice',
+        updateLocation: true,
+        generatePdf: useOrderAgreements && isRootOrAdminOrUser
+      },
+      reservations: {
+        create: useReservations,
+        remove: useReservations,
+        update: useReservations,
+        updateContact: useReservations && role != 'selfservice',
+        updateLocation: useReservations
+      },
+      locations: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      users: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateOther: isRootOrAdmin,
+        updateOwn: true
+      },
+      webHooks: {
+        create: useWebHooks && isRootOrAdmin,
+        remove: useWebHooks && isRootOrAdmin,
+        update: useWebHooks && isRootOrAdmin
+      },
+      stickers: {
+        print: isRootOrAdmin,
+        buy: isRootOrAdmin
+      },
+      categories: {
+        create: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      account: { update: isRootOrAdmin }
+    };
+  };
+  /**
+   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
+   * @method
+   * @name  Helper#ensureValue 
+   * @param  obj   
+   * @param  prop        
+   * @return {string}       
+   */
+  Helper.prototype.ensureValue = function (obj, prop) {
+    return typeof obj === 'string' ? obj : obj[prop];
+  };
+  /**
+   * ensureId, returns id value of object or if you pass a string it returns that exact string 
+   * For example:
+   * ensureId("abc123") --> "abc123"
+   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
+   *
+   * @method
+   * @name  Helper#ensureId 
+   * @param  obj   
+   * @return {string}       
+   */
+  Helper.prototype.ensureId = function (obj) {
+    return this.ensureValue(obj, '_id');
+  };
+  return Helper;
+}(jquery, settings);
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -6591,8 +7643,8 @@ Reservation = function ($, api, Transaction, Conflict) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set reservation from / to date, status is ' + this.status));
     }
     var that = this;
-    var roundedFromDate = this._getHelper().roundTimeFrom(from);
-    var roundedToDate = to ? this._getHelper().roundTimeTo(to) : this._getHelper().addAverageDuration(roundedFromDate);
+    var roundedFromDate = this._getDateHelper().roundTimeFrom(from);
+    var roundedToDate = to ? this._getDateHelper().roundTimeTo(to) : this._getDateHelper().addAverageDuration(roundedFromDate);
     return this._checkFromToDate(roundedFromDate, roundedToDate).then(function () {
       that.from = roundedFromDate;
       that.to = roundedToDate;
@@ -6618,7 +7670,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     var that = this;
     var dateHelper = this._getDateHelper();
     var interval = dateHelper.roundMinutes;
-    var roundedFromDate = this._getHelper().roundTimeFrom(date);
+    var roundedFromDate = dateHelper.roundTimeFrom(date);
     return this._checkFromDateBetweenMinMax(roundedFromDate).then(function () {
       // TODO: Should never get here
       // Must be at least 1 interval before to date, if it's already set
@@ -6666,7 +7718,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     var that = this;
     var dateHelper = this._getDateHelper();
     var interval = dateHelper.roundMinutes;
-    var roundedToDate = this._getHelper().roundTimeTo(date);
+    var roundedToDate = dateHelper.roundTimeTo(date);
     return this._checkToDateBetweenMinMax(roundedToDate).then(function () {
       if (that.from && that.from.diff(roundedToDate, 'minutes') > interval) {
         return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set reservation to date, before (or too close to) to date ' + that.from.toJSONDate()));
@@ -6858,7 +7910,7 @@ Reservation = function ($, api, Transaction, Conflict) {
   };
   return Reservation;
 }(jquery, api, transaction, conflict);
-Transaction = function ($, api, Base, Location) {
+Transaction = function ($, api, Base, Location, DateHelper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
@@ -6881,6 +7933,7 @@ Transaction = function ($, api, Base, Location) {
    * @extends Base
    * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
    * @property {Helper}  helper                     - A Helper object ref
+   * @property {DateHelper} dateHelper              - A DateHelper object ref
    * @property {string}  status                     - The transaction status
    * @property {moment}  from                       - The transaction from date
    * @property {moment}  to                         - The transaction to date
@@ -6898,6 +7951,7 @@ Transaction = function ($, api, Base, Location) {
     // should we automatically delete the transaction from the database?
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.helper = spec.helper;
+    this.dateHelper = spec.dateHelper || new DateHelper();
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -7018,9 +8072,9 @@ Transaction = function ($, api, Base, Location) {
    * @returns {Moment} max date
    */
   Transaction.prototype.getMaxDate = function () {
-    var helper = this._getHelper();
-    var now = helper.getNow();
-    var next = helper.roundTimeTo(now);
+    var dateHelper = this._getDateHelper();
+    var now = dateHelper.getNow();
+    var next = dateHelper.roundTimeTo(now);
     return next.add(365, 'day');  // TODO: Is this a sensible date?
   };
   /**
@@ -7032,9 +8086,9 @@ Transaction = function ($, api, Base, Location) {
    * @returns {*}
    */
   Transaction.prototype.suggestEndDate = function (m) {
-    var helper = this._getHelper();
-    var end = helper.addAverageDuration(m || helper.getNow());
-    return helper.roundTimeTo(end);
+    var dateHelper = this._getDateHelper();
+    var end = dateHelper.addAverageDuration(m || dateHelper.getNow());
+    return dateHelper.roundTimeTo(end);
   };
   //
   // Base overrides
@@ -7197,7 +8251,7 @@ Transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setFromDate = function (date, skipRead) {
-    this.from = this.helper.roundTimeFrom(date);
+    this.from = this._getDateHelper().roundTimeFrom(date);
     return this._handleTransaction(skipRead);
   };
   // To date setters
@@ -7221,7 +8275,7 @@ Transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setToDate = function (date, skipRead) {
-    this.to = this.helper.roundTimeTo(date);
+    this.to = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Due date setters
@@ -7245,7 +8299,7 @@ Transaction = function ($, api, Base, Location) {
    * @returns {promise}
    */
   Transaction.prototype.setDueDate = function (date, skipRead) {
-    this.due = this.helper.roundTimeTo(date);
+    this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
   // Location setters
@@ -7332,7 +8386,7 @@ Transaction = function ($, api, Base, Location) {
    * addItems; adds a bunch of Items to the transaction using a list of item ids
    * It creates the transaction if it doesn't exist yet
    * @name Transaction#addItems
-   * @method addItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -7351,7 +8405,7 @@ Transaction = function ($, api, Base, Location) {
    * removeItems; removes a bunch of Items from the transaction using a list of item ids
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#removeItems
-   * @method removeItems
+   * @method
    * @param items
    * @param skipRead
    * @returns {promise}
@@ -7373,7 +8427,7 @@ Transaction = function ($, api, Base, Location) {
    * clearItems; removes all Items from the transaction
    * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Transaction#clearItems
-   * @method clearItems
+   * @method
    * @param skipRead
    * @returns {promise}
    */
@@ -7392,7 +8446,7 @@ Transaction = function ($, api, Base, Location) {
   /**
    * swapItem; swaps one item for another in a transaction
    * @name Transaction#swapItem
-   * @method swapItem
+   * @method
    * @param fromItem
    * @param toItem
    * @param skipRead
@@ -7414,8 +8468,8 @@ Transaction = function ($, api, Base, Location) {
   };
   /**
    * hasItems; Gets a list of items that are already part of the transaction
-   * @name Transaction#addItems
-   * @method addItems
+   * @name Transaction#hasItems
+   * @method
    * @param itemIds        array of string values
    * @returns {Array}
    */
@@ -7452,7 +8506,7 @@ Transaction = function ($, api, Base, Location) {
     return this.helper;
   };
   Transaction.prototype._getDateHelper = function () {
-    return this._getHelper().dateHelper;
+    return this.dateHelper;
   };
   /**
    * Searches for Items that are available for this transaction
@@ -7566,8 +8620,8 @@ Transaction = function ($, api, Base, Location) {
     return this.isEmpty() && this.autoCleanup ? this._deleteTransaction() : $.Deferred().resolve();
   };
   return Transaction;
-}(jquery, api, base, location);
-User = function ($, Base, Helper) {
+}(jquery, api, base, location, dateHelper);
+User = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     email: '',
@@ -7634,7 +8688,7 @@ User = function ($, Base, Helper) {
   };
   User.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
-    return new Helper().isValidEmail(this.email);
+    return common.isValidEmail(this.email);
   };
   User.prototype.isValidRole = function () {
     switch (this.role) {
@@ -7772,11 +8826,12 @@ User = function ($, Base, Helper) {
     });
   };
   return User;
-}(jquery, base, helper);
-core = function (api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User) {
+}(jquery, base, common);
+core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, Helper, Reservation, Transaction, User, common) {
   var core = {};
   // namespaces
   core.api = api;
+  core.common = common;
   // Constructors
   core.Availability = Availability;
   core.Attachment = Attachment;
@@ -7795,6 +8850,6 @@ core = function (api, Availability, Attachment, Base, Comment, common, Conflict,
   core.Transaction = Transaction;
   core.User = User;
   return core;
-}(api, Availability, Attachment, Base, Comment, common, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, helper, Reservation, Transaction, User);
+}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, helper, Reservation, Transaction, User, common);
 return core;
 }))

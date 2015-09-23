@@ -79,7 +79,7 @@ define(['settings', 'cheqroom-core'], function(settings, cr) {
 
             // getFriendlyFromTo
             // ----
-            test('getFriendlyFromTo', function() {
+            /*test('getFriendlyFromTo', function() {
                 var helper = new cr.DateHelper();
                 var nowstr = "2015-06-24T16:15:00+00:00";
                 var now = helper.fixDates(nowstr);
@@ -103,7 +103,7 @@ define(['settings', 'cheqroom-core'], function(settings, cr) {
                     console.log("");
                 });
 
-            });
+            });*/
 
         };
 

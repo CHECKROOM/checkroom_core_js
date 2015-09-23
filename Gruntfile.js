@@ -9,7 +9,7 @@ module.exports = function(grunt){
                 version: '<%= pkg.version %>',
                 url: '<%= pkg.homepage %>',
                 options: {
-                    paths: ['src/app'],
+                    paths: ['src/core'],
                     outdir: './docs/'
                 }
             }
@@ -19,7 +19,7 @@ module.exports = function(grunt){
         },
         jsdoc : {
             dist : {
-                src: ['src/**/*.js', 'README.md'],
+                src: ['src/**/*.js', 'src/**/**/*.js', 'README.md'],
                 options: {
                     destination: 'doc',
                     template : "node_modules/jaguarjs-jsdoc",
@@ -30,7 +30,7 @@ module.exports = function(grunt){
         requirejs: {
             compile: {
                 options: {
-                    baseUrl: "src/app",
+                    baseUrl: "src/core",
                     out: "build/<%= pkg.name %>.js",
                     include: ['../core'],
                     exclude:['jquery', 'jquery-jsonp', 'jquery-pubsub', 'moment'],
@@ -109,7 +109,7 @@ module.exports = function(grunt){
     grunt.loadNpmTasks('grunt-gh-pages');
 
     // this will generate the docs by typing "grunt docs" on the command line
-    grunt.registerTask("docs", ["clean:jsdoc","jsdoc"]);
+    grunt.registerTask("docs", ["requirejs", "clean:jsdoc","jsdoc"]);
 
     // this would be run by typing "grunt test" on the command line
     grunt.registerTask('test', ['connect','qunit']);

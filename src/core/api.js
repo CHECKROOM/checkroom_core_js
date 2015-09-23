@@ -8,8 +8,7 @@ define([
     'jquery',
     'jquery-jsonp',
     'moment',
-    'common',
-    'dateHelper'], function ($, jsonp, moment, common, DateHelper) {
+    'common'], function ($, jsonp, moment, common) {
 
     //TODO change this
     //system.log fallback
@@ -85,7 +84,7 @@ define([
     // ----
     api.ApiAjax.prototype._handleAjaxSuccess = function(dfd, data, opt) {
         if (this.responseInTz) {
-            data = new DateHelper().fixDates(data);
+            data = this._fixDates(data);
         }
         return dfd.resolve(data);
     };
@@ -171,6 +170,39 @@ define([
         });
         return data;
     };
+
+     /**
+     * Turns all strings that look like datetimes into moment objects recursively
+     * 
+     * @name  DateHelper#fixDates
+     * @method
+     * @private
+     * 
+     * @param data
+     * @returns {*}
+     */
+    api.ApiAjax.prototype._fixDates = function(data){
+        if (typeof data == 'string' || data instanceof String) {
+            // "2014-04-03T12:15:00+00:00" (length 25)
+            // "2014-04-03T09:32:43.841000+00:00" (length 32)
+            if (data.endsWith('+00:00')) {
+                var len = data.length;
+                if (len==25) {
+                    return moment(data.substring(0, len-6));
+                } else if (len==32) {
+                    return moment(data.substring(0, len-6).split('.')[0]);
+                }
+            }
+        } else if (
+            (data instanceof Object) ||
+            ($.isArray(data))) {
+            var that = this;
+            $.each(data, function(k, v) {
+                data[k] = that.fixDates(v);
+            });
+        }
+        return data;
+    }
 
     //*************
     // ApiUser

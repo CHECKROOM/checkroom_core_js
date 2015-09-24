@@ -200,7 +200,6 @@ define([
         }
     };
 
-
     // toJson, fromJson
     // ----
     Document.prototype._getDefaults = function() {

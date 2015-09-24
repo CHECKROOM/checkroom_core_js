@@ -78,6 +78,10 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
             test("getLoginName", function(assert){
                 equal(common.getLoginName("Fabiàn ", "Ramos"), "fabian.ramos");
             })
+
+            test("getParsedLines", function(assert){
+              equal(JSON.stringify(common.getParsedLines("1,2,3,1,1")), "[\"1\",\"2\",\"3\"]");
+            })
         };
 
         return {run: run}

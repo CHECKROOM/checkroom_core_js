@@ -253,8 +253,7 @@ define([
             (this.userId) &&
             (this.userId.length>0) &&
             (this.userToken) &&
-            (this.userToken.length>0) &&
-            (this.tokenType));
+            (this.userToken.length>0));
     };
 
     api.ApiUser.prototype._reset = function() {

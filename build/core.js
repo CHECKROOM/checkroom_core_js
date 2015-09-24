@@ -2209,7 +2209,7 @@ api = function ($, jsonp, moment, common) {
   };
   api.ApiUser.prototype.isValid = function () {
     system.log('ApiUser: isValid');
-    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0 && this.tokenType;
+    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
   };
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
@@ -3295,7 +3295,6 @@ Attachment = function ($, KeyValue) {
 }(jquery, keyvalue);
 comment = function ($, KeyValue) {
   var KEY = 'cheqroom.Comment';
-  var DEFAULTS = {};
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -3308,53 +3307,13 @@ comment = function ($, KeyValue) {
    * @extends KeyValue
    */
   var Comment = function (spec) {
+    spec = spec || {};
+    spec.key = KEY;
+    spec.kind = 'string';
     KeyValue.call(this, spec);
   };
   Comment.prototype = new tmp();
   Comment.prototype.constructor = Comment;
-  //    Comment.prototype._fromJson = function(json) {
-  //        return KeyValue.prototype._fromJson.call(this, json)
-  //            .then(function() {
-  //                this.comment(json.value || DEFAULTS.comment);
-  //            });
-  //    };
-  //
-  //    Comment.prototype.isEmpty = function() {
-  //        // Comments have a special call for determining if they're empty or not
-  //        var comment = $.trim(this.comment());
-  //        return (comment.length == 0);
-  //    };
-  //
-  //    Comment.prototype.canDelete = function(by) {
-  //        // TODO: Comments can only be deleted by the same user that made them
-  //        return true;
-  //    };
-  //
-  //    Comment.prototype.canEdit = function(by) {
-  //        // TODO: Comments can only be edited by the same user that made them
-  //        return true;
-  //    };
-  //
-  //    /**
-  //    Managing document KeyValues
-  //     */
-  //    Comment.prototype.addComment = function() {
-  //        if (this.isEmpty()) {
-  //            return $.Deferred().reject(new Error("addComment cannot add empty comment"));
-  //        }
-  //        return KeyValue.prototype._addKeyValue(KEY, this.comment(), 'string');
-  //    };
-  //
-  //    Comment.prototype.updateComment = function() {
-  //        if (this.isEmpty()) {
-  //            return $.Deferred().reject(new Error("updateComment cannot update to empty comment"));
-  //        }
-  //        return KeyValue.prototype._updateKeyValue(KEY, this.comment(), 'string');
-  //    };
-  //
-  //    Comment.prototype.deleteComment = function() {
-  //        return KeyValue.prototype._removeKeyValue();
-  //    };
   return Comment;
 }(jquery, keyvalue);
 attachment = function ($, KeyValue) {
@@ -3841,7 +3800,6 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
 }(jquery, common, api, document, comment, attachment, keyvalue);
 Comment = function ($, KeyValue) {
   var KEY = 'cheqroom.Comment';
-  var DEFAULTS = {};
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -3854,53 +3812,13 @@ Comment = function ($, KeyValue) {
    * @extends KeyValue
    */
   var Comment = function (spec) {
+    spec = spec || {};
+    spec.key = KEY;
+    spec.kind = 'string';
     KeyValue.call(this, spec);
   };
   Comment.prototype = new tmp();
   Comment.prototype.constructor = Comment;
-  //    Comment.prototype._fromJson = function(json) {
-  //        return KeyValue.prototype._fromJson.call(this, json)
-  //            .then(function() {
-  //                this.comment(json.value || DEFAULTS.comment);
-  //            });
-  //    };
-  //
-  //    Comment.prototype.isEmpty = function() {
-  //        // Comments have a special call for determining if they're empty or not
-  //        var comment = $.trim(this.comment());
-  //        return (comment.length == 0);
-  //    };
-  //
-  //    Comment.prototype.canDelete = function(by) {
-  //        // TODO: Comments can only be deleted by the same user that made them
-  //        return true;
-  //    };
-  //
-  //    Comment.prototype.canEdit = function(by) {
-  //        // TODO: Comments can only be edited by the same user that made them
-  //        return true;
-  //    };
-  //
-  //    /**
-  //    Managing document KeyValues
-  //     */
-  //    Comment.prototype.addComment = function() {
-  //        if (this.isEmpty()) {
-  //            return $.Deferred().reject(new Error("addComment cannot add empty comment"));
-  //        }
-  //        return KeyValue.prototype._addKeyValue(KEY, this.comment(), 'string');
-  //    };
-  //
-  //    Comment.prototype.updateComment = function() {
-  //        if (this.isEmpty()) {
-  //            return $.Deferred().reject(new Error("updateComment cannot update to empty comment"));
-  //        }
-  //        return KeyValue.prototype._updateKeyValue(KEY, this.comment(), 'string');
-  //    };
-  //
-  //    Comment.prototype.deleteComment = function() {
-  //        return KeyValue.prototype._removeKeyValue();
-  //    };
   return Comment;
 }(jquery, keyvalue);
 Conflict = function ($) {

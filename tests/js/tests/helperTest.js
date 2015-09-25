@@ -6,7 +6,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
 
         var run = function() {
 
-            var crHelper = new cr.Helper();
+            var crHelper = cr.Helper;
          
             test('ensureId', function(){
                 equal(crHelper.ensureId("abc123"), "abc123");

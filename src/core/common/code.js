@@ -29,6 +29,9 @@ define(function () {
 		 * @return {Boolean}        
 		 */
 		isCodeFromScanner: function(urlPart){
+			// If no urlPart is given or is empty, return false
+			if(!urlPart || urlPart.length == 0) return false;
+
 			var prefix = urlPart.substring(0,23);
 	        var index = 'http://cheqroom.com/qr/'.indexOf(prefix);
 	        return (index==0);

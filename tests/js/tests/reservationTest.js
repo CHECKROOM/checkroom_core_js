@@ -18,8 +18,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     var getNewReservation = function(params) {
                         var kwargs = $.extend({
                             ds: ds,
-                            dsItems: dsItems,
-                            helper: new cr.Helper()
+                            dsItems: dsItems
                         }, params);
                         return new cr.Reservation(kwargs);
                     };
@@ -243,7 +242,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                 var r = getNewReservation();
 
                                 // Hack: overwrite the getNow function to always return the same date
-                                r.helper.dateHelper.getNow = function() {
+                                r.dateHelper.getNow = function() {
                                     var d1 = new Date(2013, 11, 13, 11, 32, 30, 0);
                                     return moment(d1)
                                 };
@@ -264,7 +263,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                 var r = getNewReservation();
 
                                 // Hack: overwrite the getNow function to always return the same date
-                                r.helper.dateHelper.getNow = function() {
+                                r.dateHelper.getNow = function() {
                                     var d1 = new Date(2013, 11, 13, 11, 44, 30, 0);
                                     return moment(d1)
                                 };

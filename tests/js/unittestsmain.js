@@ -44,7 +44,7 @@ require([
         availabilityTest) {
 
         commonTest.run();
-        helperTest.run();
+        //helperTest.run();
         simpleTest.run();
         dateHelperTest.run();
         contactTest.run();

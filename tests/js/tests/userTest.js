@@ -17,8 +17,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             ds: ds,
                             name: 'Vincent Theeten',
                             role: 'admin',
-                            active: false,
-                            helper: new cr.Helper()
+                            active: false
                         });
                     };
 

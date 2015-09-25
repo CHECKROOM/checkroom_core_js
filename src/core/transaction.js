@@ -11,7 +11,8 @@ define([
     "api",
     "base",
     "location",
-    "dateHelper"], /** @lends Base */ function ($, api, Base, Location, DateHelper) {
+    "dateHelper",
+    "helper"], /** @lends Base */ function ($, api, Base, Location, DateHelper, helper) {
 
     var DEFAULTS = {
         status: "creating",
@@ -35,7 +36,6 @@ define([
      * @constructor
      * @extends Base
      * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
-     * @property {Helper}  helper                     - A Helper object ref
      * @property {DateHelper} dateHelper              - A DateHelper object ref
      * @property {string}  status                     - The transaction status
      * @property {moment}  from                       - The transaction from date
@@ -54,7 +54,6 @@ define([
 
         // should we automatically delete the transaction from the database?
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
-        this.helper = spec.helper;
         this.dateHelper = spec.dateHelper || new DateHelper();
 
         this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
@@ -662,10 +661,6 @@ define([
      */
     Transaction.prototype._getConflicts = function() {
         return $.Deferred().resolve([]);
-    };
-
-    Transaction.prototype._getHelper = function() {
-        return this.helper;
     };
 
     Transaction.prototype._getDateHelper = function() {

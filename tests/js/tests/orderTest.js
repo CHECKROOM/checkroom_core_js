@@ -191,8 +191,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                     .done(function(data) {
                                         var order = new cr.Order({
                                             ds: ds,
-                                            dsItems: dsItems,
-                                            helper: new cr.Helper()
+                                            dsItems: dsItems
                                         });
 
                                         order._fromJson(data)
@@ -211,14 +210,12 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
 
                             asyncTest("create Order object via constructor, searchItems", function() {
-                                var helper = new cr.Helper();
                                 var order = new cr.Order({
                                     ds: ds,
                                     dsItems: dsItems,
                                     autoCleanup: true,
                                     location: location._id,
-                                    contact: contact._id,
-                                    helper: helper
+                                    contact: contact._id
                                 });
 
                                 var deleteOrder = function() {

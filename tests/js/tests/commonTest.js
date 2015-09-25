@@ -75,6 +75,11 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                ok(!common.isCodeValid("test"), "invalid code");
             });
 
+            test("isCodeFromScanner", function(){
+              ok(common.isCodeFromScanner("http://cheqroom.com/qr/bd1b7301"), "valid code");
+              ok(!common.isCodeFromScanner(""), "invalid code");
+            })
+
             test("getLoginName", function(assert){
                 equal(common.getLoginName("Fabiàn ", "Ramos"), "fabian.ramos");
             })

@@ -3420,6 +3420,7 @@ Attachment = function ($, Helper, KeyValue) {
   /**
    * @name  Attachment
    * @class
+   * @property {ApiDataSource} ds    attachments datasource
    * @property {bool} isCover        is this the cover image of a document
    * @property {bool} canBeCover     can this attachment be the cover of a document?
    * @constructor
@@ -3541,6 +3542,7 @@ attachment = function ($, Helper, KeyValue) {
   /**
    * @name  Attachment
    * @class
+   * @property {ApiDataSource} ds    attachments datasource
    * @property {bool} isCover        is this the cover image of a document
    * @property {bool} canBeCover     can this attachment be the cover of a document?
    * @constructor
@@ -3632,12 +3634,21 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   /**
    * @name  Base
    * @class
+   * @property {ApiDataSource} dsAttachments   attachments datasource
+   * @property {string} crtype                 e.g. cheqroom.types.customer
+   * @property {moment} modified               last modified timestamp
+   * @property {array} comments                array of Comment objects
+   * @property {array} attachments             array of Attachment objects
+   * @property {array} keyValues               array of KeyValue objects
+   * @property {string} cover                  cover attachment id, default null
    * @constructor
    * @extends Document
    */
   var Base = function (opt) {
     var spec = $.extend({}, opt);
     Document.call(this, spec);
+    this.dsAttachments = spec.dsAttachments;
+    // ApiDataSource for the attachments coll
     this.crtype = spec.crtype;
     // e.g. cheqroom.types.customer
     this.modified = spec.modified || DEFAULTS.modified;
@@ -4010,7 +4021,7 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   };
   Base.prototype._getAttachment = function (kv, options) {
     var spec = $.extend({
-      ds: this.ds,
+      ds: this.dsAttachments,
       fields: this.fields
     }, options || {}, // can contain; isCover, canBeCover
     kv);
@@ -4145,12 +4156,21 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   /**
    * @name  Base
    * @class
+   * @property {ApiDataSource} dsAttachments   attachments datasource
+   * @property {string} crtype                 e.g. cheqroom.types.customer
+   * @property {moment} modified               last modified timestamp
+   * @property {array} comments                array of Comment objects
+   * @property {array} attachments             array of Attachment objects
+   * @property {array} keyValues               array of KeyValue objects
+   * @property {string} cover                  cover attachment id, default null
    * @constructor
    * @extends Document
    */
   var Base = function (opt) {
     var spec = $.extend({}, opt);
     Document.call(this, spec);
+    this.dsAttachments = spec.dsAttachments;
+    // ApiDataSource for the attachments coll
     this.crtype = spec.crtype;
     // e.g. cheqroom.types.customer
     this.modified = spec.modified || DEFAULTS.modified;
@@ -4523,7 +4543,7 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   };
   Base.prototype._getAttachment = function (kv, options) {
     var spec = $.extend({
-      ds: this.ds,
+      ds: this.dsAttachments,
       fields: this.fields
     }, options || {}, // can contain; isCover, canBeCover
     kv);

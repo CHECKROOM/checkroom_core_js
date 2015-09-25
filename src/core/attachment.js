@@ -25,6 +25,7 @@ define([
     /**
      * @name  Attachment
      * @class
+     * @property {ApiDataSource} ds    attachments datasource
      * @property {bool} isCover        is this the cover image of a document
      * @property {bool} canBeCover     can this attachment be the cover of a document?
      * @constructor

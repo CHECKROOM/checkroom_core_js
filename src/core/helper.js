@@ -61,16 +61,10 @@ define(["jquery",
     };
 
     /**
-     * getNumItemsLeft
-<<<<<<< HEAD:src/app/helper.js
-     * @param limits
-     * @param stats
-=======
      * @method
      * @name  Helper#getNumItemsLeft
      * @param limits
      * @param stats 
->>>>>>> feature/use_common_library:src/core/helper.js
      * @return {Number}
      */
     Helper.prototype.getNumItemsLeft = function(limits, stats) {
@@ -78,16 +72,10 @@ define(["jquery",
     };
 
     /**
-     * getNumUsersLeft
-<<<<<<< HEAD:src/app/helper.js
-     * @param limits
-     * @param stats
-=======
      * @method
      * @name  Helper#getNumUsersLeft 
      * @param limits
      * @param stats 
->>>>>>> feature/use_common_library:src/core/helper.js
      * @return {Number}
      */
     Helper.prototype.getNumUsersLeft = function(limits, stats) {
@@ -180,8 +168,8 @@ define(["jquery",
      * @return {string}       
      */
     Helper.prototype.ensureValue = function(obj, prop){
-        return typeof obj === 'string'?obj:obj[prop]; 
-    }
+        return (typeof obj === 'string') ? obj : obj[prop];
+    };
 
     /**
      * ensureId, returns id value of object or if you pass a string it returns that exact string 
@@ -196,7 +184,7 @@ define(["jquery",
      */
     Helper.prototype.ensureId = function(obj){
         return this.ensureValue(obj, "_id");
-    }
+    };
 
     return Helper;
 

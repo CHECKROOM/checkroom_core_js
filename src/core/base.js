@@ -88,12 +88,9 @@ define([
     Base.prototype.canDelete = function() {
         // Documents can only be deleted when they have a pk
         if (this.existsInDb()) {
-            return this.ds.call(this.id, 'canDelete')
-                .then(function(resp) {
-                    return resp.result;
-                });
+            return this.ds.call(this.id, 'canDelete');
         } else {
-            return $.Deferred().resolve(false);
+            return $.Deferred().resolve({result: false, message: ''});
         }
     };
 

@@ -127,6 +127,8 @@
             
                 <li data-name="common#getOrderStatus"><a href="common.html#getOrderStatus">getOrderStatus</a></li>
             
+                <li data-name="common#getParsedLines"><a href="common.html#getParsedLines">getParsedLines</a></li>
+            
                 <li data-name="common#getUrlParam"><a href="common.html#getUrlParam">getUrlParam</a></li>
             
                 <li data-name="common#isCodeFromScanner"><a href="common.html#isCodeFromScanner">isCodeFromScanner</a></li>
@@ -259,9 +261,13 @@
             
                 <li data-name="Attachment#existsInDb"><a href="Attachment.html#existsInDb">existsInDb</a></li>
             
+                <li data-name="Attachment#getDownloadUrl"><a href="Attachment.html#getDownloadUrl">getDownloadUrl</a></li>
+            
                 <li data-name="Attachment#getExt"><a href="Attachment.html#getExt">getExt</a></li>
             
                 <li data-name="Attachment#getName"><a href="Attachment.html#getName">getName</a></li>
+            
+                <li data-name="Attachment#getThumbnailUrl"><a href="Attachment.html#getThumbnailUrl">getThumbnailUrl</a></li>
             
                 <li data-name="Attachment#getUnit"><a href="Attachment.html#getUnit">getUnit</a></li>
             
@@ -1358,7 +1364,7 @@
     
         
         <div class="tag-source">
-            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line24">line 24</a>
+            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line25">line 25</a>
         </div>
         
     </div>
@@ -1594,6 +1600,82 @@
             
 <dt>
     <div class="nameContainer">
+        <h4 class="name" id="getDownloadUrl">
+            
+            getDownloadUrl<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{string}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line61">line 61</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Gets the url where the attachment can be downloaded</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
         <h4 class="name" id="getExt">
             
             getExt<span class="signature">(name)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{string}</span>
@@ -1601,7 +1683,7 @@
     
         
         <div class="tag-source">
-            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line42">line 42</a>
+            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line71">line 71</a>
         </div>
         
     </div>
@@ -1787,6 +1869,128 @@
         
             
 <dt>
+    <div class="nameContainer">
+        <h4 class="name" id="getThumbnailUrl">
+            
+            getThumbnailUrl<span class="signature">(size)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{string}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line44">line 44</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Gets the url of a thumbnail
+&quot;XS&quot;: 32,
+&quot;S&quot;: 64,
+&quot;M&quot;: 128,
+&quot;L&quot;: 256,
+&quot;XL&quot;: 512
+&quot;orig&quot;: original size</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>size</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
     <div class="nameContainer inherited">
         <h4 class="name" id="getUnit">
             
@@ -1873,7 +2077,7 @@
     
         
         <div class="tag-source">
-            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line66">line 66</a>
+            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line95">line 95</a>
         </div>
         
     </div>
@@ -2106,7 +2310,7 @@ after calling reset() isEmpty() should return true</p>
     
         
         <div class="tag-source">
-            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line54">line 54</a>
+            <a href="attachment.js.html">attachment.js</a>, <a href="attachment.js.html#line83">line 83</a>
         </div>
         
     </div>
@@ -2344,7 +2548,7 @@ after calling reset() isEmpty() should return true</p>
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Sep 23 2015 16:44:11 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Fri Sep 25 2015 17:06:19 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

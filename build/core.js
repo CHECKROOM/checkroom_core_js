@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Location, location, dateHelper, transaction, conflict, Order, settings, helper, Reservation, Transaction, User, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common, api, document, Availability, settings, helper, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Location, location, dateHelper, transaction, conflict, Order, Reservation, Transaction, User, core;
 common_code = {
   /**
      * isCodeValid
@@ -3080,6 +3080,180 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
+settings = {
+  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
+  amazonBucket: 'app'
+};
+helper = function ($, settings) {
+  /**
+   * @name Helper
+   * @class
+   * @constructor
+   */
+  var Helper = function (spec) {
+  };
+  /**
+   * getImageCDNUrl gets an image by using the path to a CDN location
+   * @method
+   * @name  Helper#getImageCDNUrl
+   * @param groupId
+   * @param attachmentId
+   * @param size
+   * @returns {string}
+   */
+  Helper.prototype.getImageCDNUrl = function (groupId, attachmentId, size) {
+    // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+    var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+    if (size && size.length > 0) {
+      var parts = url.split('.'), ext = parts.pop();
+      // pop off the extension, we'll change it
+      url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
+    }
+    return url;
+  };
+  /**
+   * getImageUrl gets an image by using the datasource /get style and a mimeType
+   * 'XS': (64, 64),
+   * 'S': (128, 128),
+   * 'M': (256, 256),
+   * 'L': (512, 512)
+   * @method
+   * @name  Helper#getImageUrl
+   * @param ds
+   * @param pk
+   * @param size
+   * @param bustCache
+   * @returns {string}
+   */
+  Helper.prototype.getImageUrl = function (ds, pk, size, bustCache) {
+    var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+    if (size) {
+      url += '&size=' + size;
+    }
+    if (bustCache) {
+      url += '&_bust=' + new Date().getTime();
+    }
+    return url;
+  };
+  /**
+   * @method
+   * @name  Helper#getNumItemsLeft
+   * @param limits
+   * @param stats 
+   * @return {Number}
+   */
+  Helper.prototype.getNumItemsLeft = function (limits, stats) {
+    return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
+  };
+  /**
+   * @method
+   * @name  Helper#getNumUsersLeft 
+   * @param limits
+   * @param stats 
+   * @return {Number}
+   */
+  Helper.prototype.getNumUsersLeft = function (limits, stats) {
+    return limits.maxUsers - stats.detailed.production.users.active;
+  };
+  /**
+   * getAccessRights returns access rights based on the user role, profile settings 
+   * and account limits 
+   * @method
+   * @name  Helper#getAccessRights 
+   * @param  role   
+   * @param  profile 
+   * @param  limits
+   * @return {object}       
+   */
+  Helper.prototype.getAccessRights = function (role, profile, limits) {
+    var isRootOrAdmin = role == 'root' || role == 'admin';
+    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+    var useReservations = limits.allowReservations && profile.useReservations;
+    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
+    var useWebHooks = limits.allowWebHooks;
+    return {
+      contacts: {
+        create: isRootOrAdminOrUser,
+        remove: isRootOrAdminOrUser,
+        update: true
+      },
+      items: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateFlag: isRootOrAdmin,
+        updateLocation: isRootOrAdmin,
+        updateGeo: true
+      },
+      orders: {
+        create: true,
+        remove: true,
+        update: true,
+        updateContact: role != 'selfservice',
+        updateLocation: true,
+        generatePdf: useOrderAgreements && isRootOrAdminOrUser
+      },
+      reservations: {
+        create: useReservations,
+        remove: useReservations,
+        update: useReservations,
+        updateContact: useReservations && role != 'selfservice',
+        updateLocation: useReservations
+      },
+      locations: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      users: {
+        create: isRootOrAdmin,
+        remove: isRootOrAdmin,
+        update: isRootOrAdmin,
+        updateOther: isRootOrAdmin,
+        updateOwn: true
+      },
+      webHooks: {
+        create: useWebHooks && isRootOrAdmin,
+        remove: useWebHooks && isRootOrAdmin,
+        update: useWebHooks && isRootOrAdmin
+      },
+      stickers: {
+        print: isRootOrAdmin,
+        buy: isRootOrAdmin
+      },
+      categories: {
+        create: isRootOrAdmin,
+        update: isRootOrAdmin
+      },
+      account: { update: isRootOrAdmin }
+    };
+  };
+  /**
+   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
+   * @method
+   * @name  Helper#ensureValue 
+   * @param  obj   
+   * @param  prop        
+   * @return {string}       
+   */
+  Helper.prototype.ensureValue = function (obj, prop) {
+    return typeof obj === 'string' ? obj : obj[prop];
+  };
+  /**
+   * ensureId, returns id value of object or if you pass a string it returns that exact string 
+   * For example:
+   * ensureId("abc123") --> "abc123"
+   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
+   * @method
+   * @name  Helper#ensureId 
+   * @param  obj   
+   * @return {string}       
+   */
+  Helper.prototype.ensureId = function (obj) {
+    return this.ensureValue(obj, '_id');
+  };
+  return Helper;
+}(jquery, settings);
 keyvalue = function ($) {
   var DEFAULTS = {
     id: '',
@@ -3221,7 +3395,7 @@ keyvalue = function ($) {
   };
   return KeyValue;
 }(jquery);
-Attachment = function ($, KeyValue) {
+Attachment = function ($, Helper, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
@@ -3253,11 +3427,37 @@ Attachment = function ($, KeyValue) {
    */
   var Attachment = function (spec) {
     KeyValue.call(this, spec);
+    this.ds = spec.ds;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
   };
   Attachment.prototype = new tmp();
   Attachment.prototype.constructor = Attachment;
+  /**
+   * Gets the url of a thumbnail
+   * "XS": 32,
+   * "S": 64,
+   * "M": 128,
+   * "L": 256,
+   * "XL": 512
+   * "orig": original size
+   * @name Attachment#getThumbnailUrl
+   * @method
+   * @param size
+   * @returns {string}
+   */
+  Attachment.prototype.getThumbnailUrl = function (size) {
+    return this.hasPreview() ? new Helper().getImageUrl(this.ds, this.id, size || 'S') : '';
+  };
+  /**
+   * Gets the url where the attachment can be downloaded
+   * @name Attachment#getDownloadUrl
+   * @method
+   * @returns {string}
+   */
+  Attachment.prototype.getDownloadUrl = function () {
+    return this.ds.getBaseUrl() + this.id + '?download=True';
+  };
   /**
    * Gets the extension part of a filename
    * @name  Attachment#getExt
@@ -3292,7 +3492,7 @@ Attachment = function ($, KeyValue) {
     return $.inArray(ext, PREVIEWS) >= 0;
   };
   return Attachment;
-}(jquery, keyvalue);
+}(jquery, helper, keyvalue);
 comment = function ($, KeyValue) {
   var KEY = 'cheqroom.Comment';
   // Allow overriding the ctor during inheritance
@@ -3316,7 +3516,7 @@ comment = function ($, KeyValue) {
   Comment.prototype.constructor = Comment;
   return Comment;
 }(jquery, keyvalue);
-attachment = function ($, KeyValue) {
+attachment = function ($, Helper, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
@@ -3348,11 +3548,37 @@ attachment = function ($, KeyValue) {
    */
   var Attachment = function (spec) {
     KeyValue.call(this, spec);
+    this.ds = spec.ds;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
   };
   Attachment.prototype = new tmp();
   Attachment.prototype.constructor = Attachment;
+  /**
+   * Gets the url of a thumbnail
+   * "XS": 32,
+   * "S": 64,
+   * "M": 128,
+   * "L": 256,
+   * "XL": 512
+   * "orig": original size
+   * @name Attachment#getThumbnailUrl
+   * @method
+   * @param size
+   * @returns {string}
+   */
+  Attachment.prototype.getThumbnailUrl = function (size) {
+    return this.hasPreview() ? new Helper().getImageUrl(this.ds, this.id, size || 'S') : '';
+  };
+  /**
+   * Gets the url where the attachment can be downloaded
+   * @name Attachment#getDownloadUrl
+   * @method
+   * @returns {string}
+   */
+  Attachment.prototype.getDownloadUrl = function () {
+    return this.ds.getBaseUrl() + this.id + '?download=True';
+  };
   /**
    * Gets the extension part of a filename
    * @name  Attachment#getExt
@@ -3387,7 +3613,7 @@ attachment = function ($, KeyValue) {
     return $.inArray(ext, PREVIEWS) >= 0;
   };
   return Attachment;
-}(jquery, keyvalue);
+}(jquery, helper, keyvalue);
 Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   // Some constant values
   var COMMENT = 'cheqroom.Comment', ATTACHMENT = 'cheqroom.Attachment', IMAGE = 'cheqroom.prop.Image', IMAGE_OTHER = 'cheqroom.attachment.Image', DEFAULTS = {
@@ -7202,182 +7428,6 @@ Order = function ($, api, Transaction, Conflict) {
   };
   return Order;
 }(jquery, api, transaction, conflict);
-settings = {
-  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
-  amazonBucket: 'app'
-};
-helper = function ($, settings) {
-  /**
-   * @name Helper
-   * @class
-   * @constructor
-   */
-  var Helper = function (spec) {
-  };
-  /**
-   * getImageCDNUrl gets an image by using the path to a CDN location
-   * @method
-   * @name  Helper#getImageCDNUrl
-   * @param groupId
-   * @param attachmentId
-   * @param size
-   * @returns {string}
-   */
-  Helper.prototype.getImageCDNUrl = function (groupId, attachmentId, size) {
-    // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-    var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
-    if (size && size.length > 0) {
-      var parts = url.split('.');
-      var ext = parts.pop();
-      // pop off the extension, we'll change it
-      url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
-    }
-    return url;
-  };
-  /**
-   * getImageUrl gets an image by using the datasource /get style and a mimeType
-   * 'XS': (64, 64),
-   * 'S': (128, 128),
-   * 'M': (256, 256),
-   * 'L': (512, 512)
-   * @method
-   * @name  Helper#getImageUrl
-   * @param ds
-   * @param pk
-   * @param size
-   * @param bustCache
-   * @returns {string}
-   */
-  Helper.prototype.getImageUrl = function (ds, pk, size, bustCache) {
-    var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-    if (size) {
-      url += '&size=' + size;
-    }
-    if (bustCache) {
-      url += '&_bust=' + new Date().getTime();
-    }
-    return url;
-  };
-  /**
-   * @method
-   * @name  Helper#getNumItemsLeft
-   * @param limits
-   * @param stats 
-   * @return {Number}
-   */
-  Helper.prototype.getNumItemsLeft = function (limits, stats) {
-    return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
-  };
-  /**
-   * @method
-   * @name  Helper#getNumUsersLeft 
-   * @param limits
-   * @param stats 
-   * @return {Number}
-   */
-  Helper.prototype.getNumUsersLeft = function (limits, stats) {
-    return limits.maxUsers - stats.detailed.production.users.active;
-  };
-  /**
-   * getAccessRights returns access rights based on the user role, profile settings 
-   * and account limits 
-   * @method
-   * @name  Helper#getAccessRights 
-   * @param  role   
-   * @param  profile 
-   * @param  limits
-   * @return {object}       
-   */
-  Helper.prototype.getAccessRights = function (role, profile, limits) {
-    var isRootOrAdmin = role == 'root' || role == 'admin';
-    var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
-    var useReservations = limits.allowReservations && profile.useReservations;
-    var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
-    var useWebHooks = limits.allowWebHooks;
-    return {
-      contacts: {
-        create: isRootOrAdminOrUser,
-        remove: isRootOrAdminOrUser,
-        update: true
-      },
-      items: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin,
-        updateFlag: isRootOrAdmin,
-        updateLocation: isRootOrAdmin,
-        updateGeo: true
-      },
-      orders: {
-        create: true,
-        remove: true,
-        update: true,
-        updateContact: role != 'selfservice',
-        updateLocation: true,
-        generatePdf: useOrderAgreements && isRootOrAdminOrUser
-      },
-      reservations: {
-        create: useReservations,
-        remove: useReservations,
-        update: useReservations,
-        updateContact: useReservations && role != 'selfservice',
-        updateLocation: useReservations
-      },
-      locations: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin
-      },
-      users: {
-        create: isRootOrAdmin,
-        remove: isRootOrAdmin,
-        update: isRootOrAdmin,
-        updateOther: isRootOrAdmin,
-        updateOwn: true
-      },
-      webHooks: {
-        create: useWebHooks && isRootOrAdmin,
-        remove: useWebHooks && isRootOrAdmin,
-        update: useWebHooks && isRootOrAdmin
-      },
-      stickers: {
-        print: isRootOrAdmin,
-        buy: isRootOrAdmin
-      },
-      categories: {
-        create: isRootOrAdmin,
-        update: isRootOrAdmin
-      },
-      account: { update: isRootOrAdmin }
-    };
-  };
-  /**
-   * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
-   * @method
-   * @name  Helper#ensureValue 
-   * @param  obj   
-   * @param  prop        
-   * @return {string}       
-   */
-  Helper.prototype.ensureValue = function (obj, prop) {
-    return typeof obj === 'string' ? obj : obj[prop];
-  };
-  /**
-   * ensureId, returns id value of object or if you pass a string it returns that exact string 
-   * For example:
-   * ensureId("abc123") --> "abc123"
-   * ensureId({ id:"abc123", name:"example" }) --> "abc123"
-   *
-   * @method
-   * @name  Helper#ensureId 
-   * @param  obj   
-   * @return {string}       
-   */
-  Helper.prototype.ensureId = function (obj) {
-    return this.ensureValue(obj, '_id');
-  };
-  return Helper;
-}(jquery, settings);
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain

@@ -7,7 +7,7 @@
 define([
     'jquery',
     'helper',
-    'keyvalue'], /** @lends Attachment */ function ($, Helper, KeyValue) {
+    'keyvalue'], /** @lends Attachment */ function ($, helper, KeyValue) {
 
     var EXT = /(?:\.([^.]+))?$/;
     var IMAGES = ['jpg', 'png'];
@@ -56,7 +56,7 @@ define([
      * @returns {string}
      */
     Attachment.prototype.getThumbnailUrl = function(size) {
-        return (this.hasPreview()) ? new Helper().getImageUrl(this.ds, this.id, size || 'S') : "";
+        return (this.hasPreview()) ? helper.getImageUrl(this.ds, this.id, size || 'S') : "";
     };
 
     /**
@@ -73,12 +73,12 @@ define([
      * Gets the extension part of a filename
      * @name  Attachment#getExt
      * @method
-     * @param name
+     * @param fileName
      * @returns {string}
      */
-    Attachment.prototype.getExt = function(name) {
-        name = name || this.getName();
-        return EXT.exec(name)[1] || "";
+    Attachment.prototype.getExt = function(fileName) {
+        fileName = fileName || this.id;
+        return EXT.exec(fileName)[1] || "";
     };
 
     /**
@@ -88,8 +88,8 @@ define([
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
-        var name = this.getName();
-        var ext = this.getExt(name);
+        var fileName = this.id;
+        var ext = this.getExt(fileName);
         return ($.inArray(ext, IMAGES) >= 0);
     };
 
@@ -100,8 +100,8 @@ define([
      * @returns {boolean}
      */
     Attachment.prototype.hasPreview = function() {
-        var name = this.getName();
-        var ext = this.getExt(name);
+        var fileName = this.id;
+        var ext = this.getExt(fileName);
         return ($.inArray(ext, PREVIEWS) >= 0);
     };
 

@@ -36,6 +36,21 @@ define(function () {
 	        var index = 'http://cheqroom.com/qr/'.indexOf(prefix);
 	        return (index==0);
 		},
+
+		/**
+		 * isBarcodeValid
+		 * 		 
+		 * @memberOf common
+		 * @name  common#isValidBarcode
+		 * @method
+		 * 
+		 * @param  {string}  barCode 
+		 * @return {Boolean}         
+		 */
+		isValidBarcode: function(barCode){
+			return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
+		},
+
 		/**
 		 * getCheqRoomRedirectUrl
 		 *

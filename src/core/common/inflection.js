@@ -221,6 +221,22 @@ define(function () {
 	    return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[^a-z0-9_\.]/g, '');
 	};
 
+	if(!String.prototype.addLeadingZero){
+		/**
+		 * addLeadingZero adds zeros in front of a number 
+		 * http://stackoverflow.com/questions/6466135/adding-extra-zeros-in-front-of-a-number-using-jquery
+		 * ex: 5.pad(3) --> 005
+		 *    
+		 * @param  {string} str 
+		 * @param  {Number} max 
+		 * @return {string}     
+		 */
+		String.prototype.addLeadingZero = function(max){
+			var str = this.toString();
+			return str.length < max ? ("0" + str).addLeadingZero(max) : str;
+		}
+	}
+
 	/**
 	 * NUMBER EXTENSIONS
 	 */
@@ -242,5 +258,4 @@ define(function () {
 	        return this >= min && this <= max;
 	    };
 	}
-
 });

@@ -87,6 +87,11 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
             test("getParsedLines", function(assert){
               equal(JSON.stringify(common.getParsedLines("1,2,3,1,1")), "[\"1\",\"2\",\"3\"]");
             })
+
+            test("number padding", function(){
+              equal("5".addLeadingZero(3), "005");
+              equal("100".addLeadingZero(3), "100");
+            });
         };
 
         return {run: run}

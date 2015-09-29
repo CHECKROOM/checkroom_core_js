@@ -106,6 +106,7 @@ define(["jquery",
             var useReservations = (limits.allowReservations) && (profile.useReservations);
             var useOrderAgreements = (limits.allowGeneratePdf) && (profile.useOrderAgreements);
             var useWebHooks = (limits.allowWebHooks);
+            var useKits = (limits.allowKits) && (profile.useKits);
 
             return {
                 contacts: {
@@ -163,6 +164,10 @@ define(["jquery",
                 },
                 account: {
                     update: isRootOrAdmin
+                },
+                kits: {
+                    create: useKits && isRootOrAdmin,
+                    update: useKits && isRootOrAdmin
                 }
             }
         },

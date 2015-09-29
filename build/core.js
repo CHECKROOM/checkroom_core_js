@@ -1667,6 +1667,21 @@ common_inflection = function () {
     // Preceding or trailing whitespaces are removed, and words are also latinised
     return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[^a-z0-9_\.]/g, '');
   };
+  if (!String.prototype.addLeadingZero) {
+    /**
+     * addLeadingZero adds zeros in front of a number 
+     * http://stackoverflow.com/questions/6466135/adding-extra-zeros-in-front-of-a-number-using-jquery
+     * ex: 5.pad(3) --> 005
+     *    
+     * @param  {string} str 
+     * @param  {Number} max 
+     * @return {string}     
+     */
+    String.prototype.addLeadingZero = function (max) {
+      var str = this.toString();
+      return str.length < max ? ('0' + str).addLeadingZero(max) : str;
+    };
+  }
   /**
   * NUMBER EXTENSIONS
   */
@@ -3199,6 +3214,7 @@ helper = function ($, settings) {
       var useReservations = limits.allowReservations && profile.useReservations;
       var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
       var useWebHooks = limits.allowWebHooks;
+      var useKits = limits.allowKits && profile.useKits;
       return {
         contacts: {
           create: isRootOrAdminOrUser,
@@ -3253,7 +3269,11 @@ helper = function ($, settings) {
           create: isRootOrAdmin,
           update: isRootOrAdmin
         },
-        account: { update: isRootOrAdmin }
+        account: { update: isRootOrAdmin },
+        kits: {
+          create: useKits && isRootOrAdmin,
+          update: useKits && isRootOrAdmin
+        }
       };
     },
     /**

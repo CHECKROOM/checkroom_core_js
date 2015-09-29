@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Source: user.js</title>
+    <title>Source: kit.js</title>
     
     
     
@@ -1418,7 +1418,7 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="user.js.html">Source: user.js</h1>
+        <h1 class="page-title" data-filename="kit.js.html">Source: kit.js</h1>
         
 
 
@@ -1426,22 +1426,19 @@
     <section>
         <article>
             <pre class="prettyprint source "><code>/**
- * The User module
- * @module user
+ * The Kit module
+ * Kit class inherits from Base so it supports KeyValues (Attachment, Comment)
+ * @module kit
  * @copyright CHECKROOM NV 2015
  */
 define([
     'jquery',
     'base',
-    'common'],  /** @lends User */ function ($, Base, common) {
+    'common'], /** @lends Kit */ function ($, Base, common) {
 
     var DEFAULTS = {
-        name: '',
-        email: '',
-        group: '',  // groupid
-        picture: '',
-        role: 'user',  // user, admin
-        active: true
+        name: "",
+        items: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -1450,230 +1447,142 @@ define([
     tmp.prototype = Base.prototype;
 
     /**
-     * @name User
-     * @class User
+     * Kit class
+     * @name  Kit
+     * @class
      * @constructor
      * @extends Base
-     * @property {string}  name               - The name
-     * @property {string}  role               - The role (admin, user)
-     * @property {boolean} active             - Is the user active?
      */
-    var User = function(opt) {
+    var Kit = function(opt) {
         var spec = $.extend({
-            fields: ['*', 'group', 'picture']
+            fields: ['*'],
+            crtype: 'cheqroom.types.kit'
         }, opt);
         Base.call(this, spec);
 
-        this.helper = spec.helper;
-
-        /*
-        from API:
-
-        login = StringField(primary_key=True, min_length=4)
-        role = StringField(required=True, choices=USER_ROLE)
-        group = ReferenceField(Group)
-        password = StringField(min_length=4)
-        name = StringField(min_length=4)
-        email = EmailField(required=True, unique=True)
-        lastLogin = DateTimeField()
-        profile = EmbeddedDocumentField(UserProfile)
-        active = BooleanField(default=True)
-        picture = ReferenceField(Attachment)
-        timezone = StringField(default="Etc/GMT")  # stored as
-        */
-
         this.name = spec.name || DEFAULTS.name;
-        this.picture = spec.picture || DEFAULTS.picture;
-        this.email = spec.email || DEFAULTS.email;
-        this.role = spec.role || DEFAULTS.role;
-        this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
+        this.items = spec.items || DEFAULTS.items.slice();
     };
 
-    User.prototype = new tmp();
-    User.prototype.constructor = User;
+    Kit.prototype = new tmp();
+    Kit.prototype.constructor = Kit;
 
     //
-    // Document overrides
-    //
-    User.prototype.isValidName = function() {
+    // Specific validators
+    /**
+     * Checks if name is valid
+     * @name Kit#isValidName
+     * @method
+     * @return {Boolean} [description]
+     */
+    Kit.prototype.isValidName = function() {
         this.name = $.trim(this.name);
-        return (this.name.length>=4);
+        return (this.name.length>=3);
     };
 
-    User.prototype.isValidEmail = function() {
-        this.email = $.trim(this.email);
-        return common.isValidEmail(this.email);
-    };
-
-    User.prototype.isValidRole = function() {
-        switch(this.role) {
-            case "user":
-            case "admin":
-            case "root":
-                return true;
-            default:
-                return false;
-        }
-    };
-
-    User.prototype.isValidPassword = function() {
-        this.password = $.trim(this.password);
-        var length = this.password.length;
-        var hasDigit = this.password.match(/[0-9]/);
-        return (length>=4) && (hasDigit);
-    };
+    //
+    // Base overrides
+    //
 
     /**
-     * Checks if the user is valid
-     * @returns {boolean}
-     */
-    User.prototype.isValid = function() {
-        return (
-            this.isValidName() &&
-            this.isValidEmail() &&
-            this.isValidRole());
-    };
-
-    /**
-     * Checks if the user is empty
+     * Checks if the Kit has any validation errors
+     * @name Kit#isValid
      * @method
-     * @name User#isEmpty
      * @returns {boolean}
+     * @override
      */
-    User.prototype.isEmpty = function() {
-        // We check: name, role
-        return (
-            (Base.prototype.isEmpty.call(this)) &&
-            (this.name==DEFAULTS.name) &&
-            (this.email==DEFAULTS.email) &&
-            (this.role==DEFAULTS.role));
+    Kit.prototype.isValid = function() {
+        return this.isValidName();
     };
 
     /**
-     * Checks if the user is dirty and needs saving
-     * @method
-     * @name User#isDirty
+     * Checks if the Kits is dirty and needs saving
+     * @name Kit#isDirty
      * @returns {boolean}
+     * @override
      */
-    User.prototype.isDirty = function() {
+    Kit.prototype.isDirty = function() {
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
-            var name = this.raw.name || DEFAULTS.name;
-            var role = this.raw.role || DEFAULTS.role;
-            var email = this.raw.email || DEFAULTS.email;
-            var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
-            return (
-                (this.name!=name) ||
-                (this.email!=email) ||
-                (this.role!=role) ||
-                (this.active!=active)
-            );
+            isDirty = (this.name!=this.raw.name);
         }
         return isDirty;
     };
 
+    //
+    // Business logic
+    //
     /**
-     * Gets an url for a user avatar
-     * 'XS': (64, 64),
-     * 'S': (128, 128),
-     * 'M': (256, 256),
-     * 'L': (512, 512)
-     * @param size {string} default null is original size
-     * @param bustCache {boolean}
-     * @returns {string}
+     * addItems; adds a bunch of Items to the transaction using a list of item ids
+     * It creates the transaction if it doesn't exist yet
+     * @name Kit#addItems
+     * @method
+     * @param items
+     * @param skipRead
+     * @returns {promise}
      */
-    User.prototype.getImageUrl = function(size, bustCache) {
-        return (
-            (this.picture!=null) &&
-            (this.picture.length>0)) ?
-            this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) :
-            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+    Kit.prototype.addItems = function(items, skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
+        }
+
+        return this._doApiCall({
+            method: 'addItems',
+            params: {items: items},
+            skipRead: skipRead
+        });
     };
 
-    User.prototype._getDefaults = function() {
+    /**
+     * removeItems; removes a bunch of Items from the transaction using a list of item ids
+     * It deletes the transaction if it's empty afterwards and autoCleanup is true
+     * @name Kit#removeItems
+     * @method
+     * @param items (can be null)
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.removeItems = function(items, skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
+        }
+
+        return this._doApiCall({
+            method: 'removeItems',
+            params: {items: items},
+            skipRead: skipRead
+        });
+    };
+
+    //
+    // Implementation stuff
+    //
+
+    Kit.prototype._getDefaults = function() {
         return DEFAULTS;
     };
 
-    // OVERRIDE BASE: addKeyValue not implemented
-    User.prototype.addKeyValue = function(key, value, kind, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
-    };
-
-    // OVERRIDE BASE: addKeyValue not implemented
-    User.prototype.addKeyValue = function(id, key, value, kind, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
-    };
-
-    // OVERRIDE BASE: removeKeyValue not implemented
-    User.prototype.removeKeyValue = function(id, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use clearPicture instead?");
-    };
-
-    User.prototype.setPicture = function(attachmentId, skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        this.picture = attachmentId;
-        return this._doApiCall({
-            method: 'setPicture',
-            params: {attachment: attachmentId},
-            skipRead: skipRead
-        });
-    };
-
-    User.prototype.clearPicture = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({
-            method: 'clearPicture',
-            skipRead: skipRead
-        });
-    };
-
-    /**
-     * Writes the user to a json object
-     * @param options
-     * @returns {object}
-     * @private
-     */
-    User.prototype._toJson = function(options) {
+    Kit.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
-        data.email = this.email || DEFAULTS.email;
-        data.group = this.group || DEFAULTS.group;
-        data.role = this.role || DEFAULTS.role;
-        data.active = this.active || DEFAULTS.active;
+        //data.items --> not via update
         return data;
     };
 
-    /**
-     * Reads the user from the json object
-     * @param data
-     * @param options
-     * @returns {promise}
-     * @private
-     */
-    User.prototype._fromJson = function(data, options) {
+    Kit.prototype._fromJson = function(data, options) {
         var that = this;
         return Base.prototype._fromJson.call(this, data, options)
-            .then(function() {
-                // Read the group id from group or group._id
-                // depending on the fields
-                that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
-                that.name = data.name || DEFAULTS.name;
-                that.picture = data.picture || DEFAULTS.picture;
-                that.email = data.email || DEFAULTS.email;
-                that.role = data.role || DEFAULTS.role;
-                that.active = (data.active!=null) ? data.active : DEFAULTS.active;
-                $.publish('user.fromJson', data);
+            .then(function(data) {
+                that.name = data.name || DEFAULTS.name;
+                that.items = data.items || DEFAULTS.items.slice();
+                $.publish('Kit.fromJson', data);
                 return data;
             });
     };
 
-    return User;
-    
+    return Kit;
+
 });</code></pre>
         </article>
     </section>
@@ -1686,7 +1595,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Sep 29 2015 15:53:17 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Sep 29 2015 15:53:16 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

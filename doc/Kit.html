@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Source: user.js</title>
+    <title>Class: Kit</title>
     
     
     
@@ -1418,266 +1418,3490 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="user.js.html">Source: user.js</h1>
+        <h1 class="page-title" data-filename="Kit.html">Class: Kit</h1>
         
 
 
+
+<section>
     
-    <section>
-        <article>
-            <pre class="prettyprint source "><code>/**
- * The User module
- * @module user
- * @copyright CHECKROOM NV 2015
- */
-define([
-    'jquery',
-    'base',
-    'common'],  /** @lends User */ function ($, Base, common) {
-
-    var DEFAULTS = {
-        name: '',
-        email: '',
-        group: '',  // groupid
-        picture: '',
-        role: 'user',  // user, admin
-        active: true
-    };
-
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = Base.prototype;
-
-    /**
-     * @name User
-     * @class User
-     * @constructor
-     * @extends Base
-     * @property {string}  name               - The name
-     * @property {string}  role               - The role (admin, user)
-     * @property {boolean} active             - Is the user active?
-     */
-    var User = function(opt) {
-        var spec = $.extend({
-            fields: ['*', 'group', 'picture']
-        }, opt);
-        Base.call(this, spec);
-
-        this.helper = spec.helper;
-
-        /*
-        from API:
-
-        login = StringField(primary_key=True, min_length=4)
-        role = StringField(required=True, choices=USER_ROLE)
-        group = ReferenceField(Group)
-        password = StringField(min_length=4)
-        name = StringField(min_length=4)
-        email = EmailField(required=True, unique=True)
-        lastLogin = DateTimeField()
-        profile = EmbeddedDocumentField(UserProfile)
-        active = BooleanField(default=True)
-        picture = ReferenceField(Attachment)
-        timezone = StringField(default="Etc/GMT")  # stored as
-        */
-
-        this.name = spec.name || DEFAULTS.name;
-        this.picture = spec.picture || DEFAULTS.picture;
-        this.email = spec.email || DEFAULTS.email;
-        this.role = spec.role || DEFAULTS.role;
-        this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
-    };
-
-    User.prototype = new tmp();
-    User.prototype.constructor = User;
-
-    //
-    // Document overrides
-    //
-    User.prototype.isValidName = function() {
-        this.name = $.trim(this.name);
-        return (this.name.length>=4);
-    };
-
-    User.prototype.isValidEmail = function() {
-        this.email = $.trim(this.email);
-        return common.isValidEmail(this.email);
-    };
-
-    User.prototype.isValidRole = function() {
-        switch(this.role) {
-            case "user":
-            case "admin":
-            case "root":
-                return true;
-            default:
-                return false;
-        }
-    };
-
-    User.prototype.isValidPassword = function() {
-        this.password = $.trim(this.password);
-        var length = this.password.length;
-        var hasDigit = this.password.match(/[0-9]/);
-        return (length>=4) && (hasDigit);
-    };
-
-    /**
-     * Checks if the user is valid
-     * @returns {boolean}
-     */
-    User.prototype.isValid = function() {
-        return (
-            this.isValidName() &&
-            this.isValidEmail() &&
-            this.isValidRole());
-    };
-
-    /**
-     * Checks if the user is empty
-     * @method
-     * @name User#isEmpty
-     * @returns {boolean}
-     */
-    User.prototype.isEmpty = function() {
-        // We check: name, role
-        return (
-            (Base.prototype.isEmpty.call(this)) &&
-            (this.name==DEFAULTS.name) &&
-            (this.email==DEFAULTS.email) &&
-            (this.role==DEFAULTS.role));
-    };
-
-    /**
-     * Checks if the user is dirty and needs saving
-     * @method
-     * @name User#isDirty
-     * @returns {boolean}
-     */
-    User.prototype.isDirty = function() {
-        var isDirty = Base.prototype.isDirty.call(this);
-        if( (!isDirty) &&
-            (this.raw)) {
-            var name = this.raw.name || DEFAULTS.name;
-            var role = this.raw.role || DEFAULTS.role;
-            var email = this.raw.email || DEFAULTS.email;
-            var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
-            return (
-                (this.name!=name) ||
-                (this.email!=email) ||
-                (this.role!=role) ||
-                (this.active!=active)
-            );
-        }
-        return isDirty;
-    };
-
-    /**
-     * Gets an url for a user avatar
-     * 'XS': (64, 64),
-     * 'S': (128, 128),
-     * 'M': (256, 256),
-     * 'L': (512, 512)
-     * @param size {string} default null is original size
-     * @param bustCache {boolean}
-     * @returns {string}
-     */
-    User.prototype.getImageUrl = function(size, bustCache) {
-        return (
-            (this.picture!=null) &&
-            (this.picture.length>0)) ?
-            this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) :
-            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
-    };
-
-    User.prototype._getDefaults = function() {
-        return DEFAULTS;
-    };
-
-    // OVERRIDE BASE: addKeyValue not implemented
-    User.prototype.addKeyValue = function(key, value, kind, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
-    };
-
-    // OVERRIDE BASE: addKeyValue not implemented
-    User.prototype.addKeyValue = function(id, key, value, kind, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
-    };
-
-    // OVERRIDE BASE: removeKeyValue not implemented
-    User.prototype.removeKeyValue = function(id, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use clearPicture instead?");
-    };
-
-    User.prototype.setPicture = function(attachmentId, skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        this.picture = attachmentId;
-        return this._doApiCall({
-            method: 'setPicture',
-            params: {attachment: attachmentId},
-            skipRead: skipRead
-        });
-    };
-
-    User.prototype.clearPicture = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({
-            method: 'clearPicture',
-            skipRead: skipRead
-        });
-    };
-
-    /**
-     * Writes the user to a json object
-     * @param options
-     * @returns {object}
-     * @private
-     */
-    User.prototype._toJson = function(options) {
-        var data = Base.prototype._toJson.call(this, options);
-        data.name = this.name || DEFAULTS.name;
-        data.email = this.email || DEFAULTS.email;
-        data.group = this.group || DEFAULTS.group;
-        data.role = this.role || DEFAULTS.role;
-        data.active = this.active || DEFAULTS.active;
-        return data;
-    };
-
-    /**
-     * Reads the user from the json object
-     * @param data
-     * @param options
-     * @returns {promise}
-     * @private
-     */
-    User.prototype._fromJson = function(data, options) {
-        var that = this;
-        return Base.prototype._fromJson.call(this, data, options)
-            .then(function() {
-                // Read the group id from group or group._id
-                // depending on the fields
-                that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
-                that.name = data.name || DEFAULTS.name;
-                that.picture = data.picture || DEFAULTS.picture;
-                that.email = data.email || DEFAULTS.email;
-                that.role = data.role || DEFAULTS.role;
-                that.active = (data.active!=null) ? data.active : DEFAULTS.active;
-                $.publish('user.fromJson', data);
-                return data;
-            });
-    };
-
-    return User;
+<header>
+    <h2>
+    Kit
+    </h2>
     
-});</code></pre>
-        </article>
-    </section>
+</header>  
 
+<article>
+    <div class="container-overview">
+    
+    
+    
+        
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="Kit">
+            
+            new Kit<span class="signature">()</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line22">line 22</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Kit class</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+</dd>
+
+    
+    </div>
+    
+    
+        <h3 class="subsection-title">Extends</h3>
+        
+        <ul>
+            <li><a href="Base.html">Base</a></li>
+        </ul>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+        <h3 class="subsection-title">Members</h3>
+        
+        <dl>
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="isDirty">isDirty</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Checks if the Kits is dirty and needs saving</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        </dl>
+    
+    
+    
+        <h3 class="subsection-title">Methods</h3>
+        
+        <dl>
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="addComment">
+            
+                <span class="inherited"><a href="Base.html#addComment">inherited</a></span>
+            
+            addComment<span class="signature">(comment, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line107">line 107</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Adds a comment by string</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>comment</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="addItems">
+            
+            addItems<span class="signature">(items, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line89">line 89</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>addItems; adds a bunch of Items to the transaction using a list of item ids
+It creates the transaction if it doesn't exist yet</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>items</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="addKeyValue">
+            
+                <span class="inherited"><a href="Base.html#addKeyValue">inherited</a></span>
+            
+            addKeyValue<span class="signature">(key, value, kind, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line146">line 146</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Adds a key value</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>key</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>value</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>kind</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="attach">
+            
+                <span class="inherited"><a href="Base.html#attach">inherited</a></span>
+            
+            attach<span class="signature">(att, key, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line306">line 306</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>attaches an Attachment object</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>att</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>key</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="attachFile">
+            
+                <span class="inherited"><a href="Base.html#attachFile">inherited</a></span>
+            
+            attachFile<span class="signature">(att, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line294">line 294</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>attaches an Attachment file, shortcut to attach</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>att</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="attachImage">
+            
+                <span class="inherited"><a href="Base.html#attachImage">inherited</a></span>
+            
+            attachImage<span class="signature">(att, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line282">line 282</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>attaches an image Attachment file, shortcut to attach</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>att</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="canDelete">
+            
+                <span class="inherited"><a href="Base.html#canDelete">inherited</a></span>
+            
+            canDelete<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line89">line 89</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Checks via the api if we can delete the document</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="create">
+            
+                <span class="inherited"><a href="Document.html#create">inherited</a></span>
+            
+            create<span class="signature">(skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line130">line 130</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Creates an object by the default api.create</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>skips reading the response via _fromJson (false)</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="delete">
+            
+                <span class="inherited"><a href="Document.html#delete">inherited</a></span>
+            
+            delete<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line184">line 184</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Deletes an object by the default api.delete</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="deleteComment">
+            
+                <span class="inherited"><a href="Base.html#deleteComment">inherited</a></span>
+            
+            deleteComment<span class="signature">(id, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line132">line 132</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Deletes a Comment by id</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="detach">
+            
+                <span class="inherited"><a href="Base.html#detach">inherited</a></span>
+            
+            detach<span class="signature">(keyId, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line327">line 327</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>detaches an Attachment by kvId (guid)</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>keyId</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>(usually the attachment._id)</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="discardChanges">
+            
+                <span class="inherited"><a href="Document.html#discardChanges">inherited</a></span>
+            
+            discardChanges<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line85">line 85</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Discards any changes made to the object from the previously loaded raw response
+or resets it when no old raw response was found</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="existsInDb">
+            
+                <span class="inherited"><a href="Document.html#existsInDb">inherited</a></span>
+            
+            existsInDb<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{boolean}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line43">line 43</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Checks if the document exists in the database</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="get">
+            
+                <span class="inherited"><a href="Document.html#get">inherited</a></span>
+            
+            get<span class="signature">(fields)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line111">line 111</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Gets an object by the default api.get</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>fields</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="isEmpty">
+            
+                <span class="inherited"><a href="Base.html#isEmpty">inherited</a></span>
+            
+            isEmpty<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{boolean}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line72">line 72</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Checks if the object is empty
+after calling reset() isEmpty() should return true
+We'll only check for comments, attachments, keyValues here</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="isValid">
+            
+            isValid<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{boolean}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line60">line 60</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Checks if the Kit has any validation errors</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="isValidName">
+            
+            isValidName<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{Boolean}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line45">line 45</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Checks if name is valid</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="moveKeyValueIndex">
+            
+                <span class="inherited"><a href="Base.html#moveKeyValueIndex">inherited</a></span>
+            
+            moveKeyValueIndex<span class="signature">(id, pos)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line223">line 223</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Moves a keyvalue by its id to a new position</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>pos</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="reload">
+            
+                <span class="inherited"><a href="Document.html#reload">inherited</a></span>
+            
+            reload<span class="signature">(fields)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line96">line 96</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Reloads the object from db</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>fields</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="removeItems">
+            
+            removeItems<span class="signature">(items, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line110">line 110</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>removeItems; removes a bunch of Items from the transaction using a list of item ids
+It deletes the transaction if it's empty afterwards and autoCleanup is true</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>items</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>(can be null)</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="removeKeyValue">
+            
+                <span class="inherited"><a href="Base.html#removeKeyValue">inherited</a></span>
+            
+            removeKeyValue<span class="signature">(id, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line183">line 183</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Removes a keyvalue by id</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="reset">
+            
+                <span class="inherited"><a href="Document.html#reset">inherited</a></span>
+            
+            reset<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line32">line 32</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Resets the object</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="setCover">
+            
+                <span class="inherited"><a href="Base.html#setCover">inherited</a></span>
+            
+            setCover<span class="signature">(att, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line266">line 266</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>changes the cover image to another Attachment</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>att</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="setKeyValue">
+            
+                <span class="inherited"><a href="Base.html#setKeyValue">inherited</a></span>
+            
+            setKeyValue<span class="signature">(id, key, value, kind, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line199">line 199</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Sets a keyvalue by id</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>key</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>value</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>kind</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="update">
+            
+                <span class="inherited"><a href="Document.html#update">inherited</a></span>
+            
+            update<span class="signature">(skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line157">line 157</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Updates an object by the default api.update</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>skips reading the response via _fromJson (false)</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="updateComment">
+            
+                <span class="inherited"><a href="Base.html#updateComment">inherited</a></span>
+            
+            updateComment<span class="signature">(id, comment, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line119">line 119</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Updates a comment by id</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>comment</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer inherited">
+        <h4 class="name" id="updateKeyValue">
+            
+                <span class="inherited"><a href="Base.html#updateKeyValue">inherited</a></span>
+            
+            updateKeyValue<span class="signature">(id, key, value, kind, skipRead)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line164">line 164</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Updates a keyvalue by id</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>id</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>key</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>value</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>kind</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>skipRead</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        </dl>
+    
+    
+    
+    
+    
+</article>
+
+</section>  
 
 
 
@@ -1686,7 +4910,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Sep 29 2015 15:53:17 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Sep 29 2015 15:53:19 GMT+0200 (CEST)
         </footer>
     </div>
 </div>

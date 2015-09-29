@@ -15,13 +15,14 @@ define([
     'Document',
     'Item',
     'KeyValue',
+    'Kit',
     'Location',
     'Order',
     'helper',
     'Reservation',
     'Transaction',
     'User',
-    'common'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Location, Order, helper, Reservation, Transaction, User, common) {
+    'common'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common) {
 
     var core = {};
 
@@ -41,6 +42,7 @@ define([
     core.Document = Document;   
     core.Item = Item;
     core.KeyValue = KeyValue;
+    core.Kit = Kit;
     core.Location = Location;
     core.Order = Order;
     core.Reservation = Reservation;

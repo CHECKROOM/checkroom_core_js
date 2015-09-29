@@ -25,6 +25,7 @@ require([
     'dateHelperTest',
     'contactTest',
     'itemTest',
+    'kitTest',
     'locationTest',
     'orderTest',
     'reservationTest',
@@ -37,23 +38,25 @@ require([
         dateHelperTest,
         contactTest,
         itemTest,
+        kitTest,
         locationTest,
         orderTest,
         reservationTest,
         userTest,
         availabilityTest) {
 
-        commonTest.run();
+        //commonTest.run();
         //helperTest.run();
-        simpleTest.run();
-        dateHelperTest.run();
-        contactTest.run();
-        locationTest.run();
-        itemTest.run();
-        orderTest.run();
-        reservationTest.run();
-        userTest.run();
-        availabilityTest.run();
+        //simpleTest.run();
+        //dateHelperTest.run();
+        //contactTest.run();
+        //locationTest.run();
+        kitTest.run();
+        //itemTest.run();
+        //orderTest.run();
+        //reservationTest.run();
+        //userTest.run();
+        //availabilityTest.run();
 
         // start QUnit.
         QUnit.start();

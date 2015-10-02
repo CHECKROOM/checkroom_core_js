@@ -270,11 +270,12 @@ define([
         spec = spec || {};
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
+        this.version = spec.version;
     };
 
     api.ApiAuth.prototype.authenticate = function(userId, password) {
         system.log('ApiAuth: authenticate '+userId);
-        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2});
+        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
         var dfd = $.Deferred();
         this.ajax.get(url)
             .done(function(resp) {
@@ -308,7 +309,7 @@ define([
      * var password = "";
      *
      * var ajax = new cr.api.ApiAjax({useJsonp: true});
-     * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
+     * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
      * var authUser = null;
      *
      * auth.authenticate(userName, password)
@@ -321,6 +322,7 @@ define([
         spec = spec || {};
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
+        this.version = spec.version;
     };
 
     /**
@@ -333,7 +335,7 @@ define([
      */
     api.ApiAuthV2.prototype.authenticate = function(userId, password) {
         system.log('ApiAuthV2: authenticate '+userId);
-        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2});
+        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
         var dfd = $.Deferred();
         this.ajax.get(url)
             .done(function(resp) {
@@ -379,6 +381,7 @@ define([
         spec = spec || {};
         this.ajax = spec.ajax;
         this.urlApi = spec.urlApi || '';
+        this.version = spec.version;
     };
 
     /**
@@ -393,6 +396,11 @@ define([
      */
     api.ApiAnonymous.prototype.call = function(method, params, timeOut, opt) {
         system.log('ApiAnonymous: call ' + method);
+        if (this.version) {
+            params = params || {};
+            params["_v"] = this.version;
+        }
+
         var url =
             this.urlApi +
             '/' +

@@ -2254,13 +2254,15 @@ api = function ($, jsonp, moment, common) {
     spec = spec || {};
     this.urlAuth = spec.urlAuth || '';
     this.ajax = spec.ajax;
+    this.version = spec.version;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
     var url = this.urlAuth + '?' + $.param({
       user: userId,
       password: password,
-      auth_v: 2
+      auth_v: 2,
+      _v: this.version
     });
     var dfd = $.Deferred();
     this.ajax.get(url).done(function (resp) {
@@ -2291,7 +2293,7 @@ api = function ($, jsonp, moment, common) {
    * var password = "";
    *
    * var ajax = new cr.api.ApiAjax({useJsonp: true});
-   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
+   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
    * var authUser = null;
    *
    * auth.authenticate(userName, password)
@@ -2304,6 +2306,7 @@ api = function ($, jsonp, moment, common) {
     spec = spec || {};
     this.urlAuth = spec.urlAuth || '';
     this.ajax = spec.ajax;
+    this.version = spec.version;
   };
   /**
    * The call to authenticate a user with userid an dpassword
@@ -2318,7 +2321,8 @@ api = function ($, jsonp, moment, common) {
     var url = this.urlAuth + '?' + $.param({
       user: userId,
       password: password,
-      auth_v: 2
+      auth_v: 2,
+      _v: this.version
     });
     var dfd = $.Deferred();
     this.ajax.get(url).done(function (resp) {
@@ -2360,6 +2364,7 @@ api = function ($, jsonp, moment, common) {
     spec = spec || {};
     this.ajax = spec.ajax;
     this.urlApi = spec.urlApi || '';
+    this.version = spec.version;
   };
   /**
    * Makes a call to the API which doesn't require a token
@@ -2373,6 +2378,10 @@ api = function ($, jsonp, moment, common) {
    */
   api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
     system.log('ApiAnonymous: call ' + method);
+    if (this.version) {
+      params = params || {};
+      params['_v'] = this.version;
+    }
     var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
     return this.ajax.get(url, timeOut, opt);
   };

@@ -51,9 +51,9 @@ require([
         //dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
-        kitTest.run();
+        //kitTest.run();
         //itemTest.run();
-        //orderTest.run();
+        orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

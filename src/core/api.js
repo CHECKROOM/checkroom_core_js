@@ -277,7 +277,7 @@ define([
         system.log('ApiAuth: authenticate '+userId);
         var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
         var dfd = $.Deferred();
-        this.ajax.get(url)
+        this.ajax.get(url, 30000)
             .done(function(resp) {
                 if (resp.status=="OK") {
                     dfd.resolve(resp.data);
@@ -337,7 +337,7 @@ define([
         system.log('ApiAuthV2: authenticate '+userId);
         var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
         var dfd = $.Deferred();
-        this.ajax.get(url)
+        this.ajax.get(url, 30000)
             .done(function(resp) {
                 // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
                 // TODO: Handle case for password incorrect, no rights or subscription expired

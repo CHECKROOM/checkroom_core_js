@@ -2265,7 +2265,7 @@ api = function ($, jsonp, moment, common) {
       _v: this.version
     });
     var dfd = $.Deferred();
-    this.ajax.get(url).done(function (resp) {
+    this.ajax.get(url, 30000).done(function (resp) {
       if (resp.status == 'OK') {
         dfd.resolve(resp.data);
       } else {
@@ -2325,7 +2325,7 @@ api = function ($, jsonp, moment, common) {
       _v: this.version
     });
     var dfd = $.Deferred();
-    this.ajax.get(url).done(function (resp) {
+    this.ajax.get(url, 30000).done(function (resp) {
       // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
       // TODO: Handle case for password incorrect, no rights or subscription expired
       if (resp.status == 'OK') {

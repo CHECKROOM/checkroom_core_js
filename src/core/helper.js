@@ -71,7 +71,7 @@ define(["jquery",
          * @return {Number}
          */
         getNumItemsLeft: function(limits, stats) {
-            return limits.maxItems - stats.detailed.production.items.total + stats.detailed.production.items.expired;
+            return limits.maxItems - this.getStat(stats, "items", "total")  + this.getStat(stats, "items", "expired");
         },
         /**
          * getNumUsersLeft
@@ -85,7 +85,37 @@ define(["jquery",
          * @return {Number}
          */
         getNumUsersLeft: function(limits, stats) {
-            return limits.maxUsers - stats.detailed.production.users.active;
+            return limits.maxUsers - this.getStat(stats, "users", "active");
+        },
+        /**
+         * getStat
+         *
+         * @memberOf helper
+         * @method
+         * @name  helper#getStat
+         *
+         * @param stats
+         * @param type
+         * @param name
+         * @param mode
+         * @return {object}         number or object
+         */
+        getStat: function(stats, type, name, mode){
+            if(!stats || !stats.detailed) throw "Invalid stats object";
+
+            mode = mode || 'production';
+
+            stats = stats.detailed[mode]
+
+            var statType = stats[type];
+
+            if(statType === undefined) throw "Stat doesn't exist";
+            if(!name) return statType;
+
+            var statTypeValue = statType[name];
+            if(statTypeValue === undefined) throw "Stat value doesn't exist";
+
+            return statTypeValue;        
         },
         /**
          * getAccessRights returns access rights based on the user role, profile settings 

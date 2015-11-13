@@ -19,7 +19,8 @@ define([
         category: "",
         geo: [DEFAULT_LAT,DEFAULT_LONG],
         address: "",
-        order: null
+        order: null,
+        kit: null
     };
     
     // Allow overriding the ctor during inheritance
@@ -58,6 +59,7 @@ define([
         this.geo = spec.geo || DEFAULTS.geo.slice();            // null or an array with 2 floats
         this.address = spec.address || DEFAULTS.address;
         this.order = spec.order || DEFAULTS.order;
+        this.kit = spec.kit || DEFAULTS.kit;
     };
 
     Item.prototype = new tmp();
@@ -159,6 +161,12 @@ define([
                     orderId = (data.order._id) ? data.order._id : data.order;
                 }
                 that.order = orderId;
+
+                var kitId = DEFAULTS.kit;
+                if (data.kit) {
+                    kitId = (data.kit._id) ? data.kit._id : data.kit;
+                }
+                that.kit = kitId;
 
                 // Read the flag from the keyvalues
                 return that._fromJsonFlag(data, options)

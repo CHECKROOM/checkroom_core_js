@@ -5306,7 +5306,8 @@ Item = function ($, Base) {
         DEFAULT_LONG
       ],
       address: '',
-      order: null
+      order: null,
+      kit: null
     };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5346,6 +5347,7 @@ Item = function ($, Base) {
     // null or an array with 2 floats
     this.address = spec.address || DEFAULTS.address;
     this.order = spec.order || DEFAULTS.order;
+    this.kit = spec.kit || DEFAULTS.kit;
   };
   Item.prototype = new tmp();
   Item.prototype.constructor = Item;
@@ -5417,6 +5419,11 @@ Item = function ($, Base) {
         orderId = data.order._id ? data.order._id : data.order;
       }
       that.order = orderId;
+      var kitId = DEFAULTS.kit;
+      if (data.kit) {
+        kitId = data.kit._id ? data.kit._id : data.kit;
+      }
+      that.kit = kitId;
       // Read the flag from the keyvalues
       return that._fromJsonFlag(data, options).then(function () {
         $.publish('item.fromJson', data);
@@ -5948,7 +5955,6 @@ Kit = function ($, Base, common) {
   //
   /**
    * addItems; adds a bunch of Items to the transaction using a list of item ids
-   * It creates the transaction if it doesn't exist yet
    * @name Kit#addItems
    * @method
    * @param items
@@ -5957,7 +5963,7 @@ Kit = function ($, Base, common) {
    */
   Kit.prototype.addItems = function (items, skipRead) {
     if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot removeItems from document without id'));
+      return $.Deferred().reject(new Error('Cannot addItems from document without id'));
     }
     return this._doApiCall({
       method: 'addItems',
@@ -5967,7 +5973,6 @@ Kit = function ($, Base, common) {
   };
   /**
    * removeItems; removes a bunch of Items from the transaction using a list of item ids
-   * It deletes the transaction if it's empty afterwards and autoCleanup is true
    * @name Kit#removeItems
    * @method
    * @param items (can be null)

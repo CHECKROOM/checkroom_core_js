@@ -97,7 +97,7 @@ define([
      */
     Kit.prototype.addItems = function(items, skipRead) {
         if (!this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
+            return $.Deferred().reject(new Error("Cannot addItems from document without id"));
         }
 
         return this._doApiCall({

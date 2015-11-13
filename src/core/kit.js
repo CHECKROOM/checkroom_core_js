@@ -88,7 +88,6 @@ define([
     //
     /**
      * addItems; adds a bunch of Items to the transaction using a list of item ids
-     * It creates the transaction if it doesn't exist yet
      * @name Kit#addItems
      * @method
      * @param items
@@ -109,7 +108,6 @@ define([
 
     /**
      * removeItems; removes a bunch of Items from the transaction using a list of item ids
-     * It deletes the transaction if it's empty afterwards and autoCleanup is true
      * @name Kit#removeItems
      * @method
      * @param items (can be null)

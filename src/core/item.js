@@ -477,7 +477,17 @@ define([
      * @returns {promise}
      */
     Item.prototype.setFlag = function(flag, skipRead) {
-        return this.setKeyValue(null, FLAG, flag, "string", skipRead);
+        return this._doApiCall({method: 'setFlag', flag: flag, skipRead: skipRead});
+    };
+
+    /**
+     * Clears the flag of an item
+     * @name Item#clearFlag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Item.prototype.clearFlag = function(skipRead) {
+        return this._doApiCall({method: 'clearFlag', skipRead: skipRead});
     };
 
     return Item;

@@ -20,7 +20,7 @@ define([
         geo: [DEFAULT_LAT,DEFAULT_LONG],
         address: ""
     };
-    
+
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
     var tmp = function() {};
@@ -444,6 +444,20 @@ define([
         return this.setKeyValue(null, FLAG, flag, "string", skipRead);
     };
 
+    /**
+     * Clears the flag of an item
+     * @name Item#clearFlag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Item.prototype.clearFlag = function (skipRead) {
+      return this._doApiCall({
+        method: 'clearFlag',
+        params: {},
+        skipRead: skipRead
+      });
+    };
+
     return Item;
-    
+
 });

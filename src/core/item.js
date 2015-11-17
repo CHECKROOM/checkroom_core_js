@@ -22,7 +22,7 @@ define([
         order: null,
         kit: null
     };
-    
+
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
     var tmp = function() {};
@@ -490,6 +490,20 @@ define([
         return this._doApiCall({method: 'clearFlag', skipRead: skipRead});
     };
 
+    /**
+     * Clears the flag of an item
+     * @name Item#clearFlag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Item.prototype.clearFlag = function (skipRead) {
+      return this._doApiCall({
+        method: 'clearFlag',
+        params: {},
+        skipRead: skipRead
+      });
+    };
+
     return Item;
-    
+
 });

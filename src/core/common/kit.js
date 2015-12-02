@@ -23,8 +23,8 @@ define(['jquery'], function ($) {
             
             // Make dictionary of different item statuses
             $.each(items, function(i, item){  
-                if(!_statuses[item.status]){  
-                    _statuses[item.status] = true;
+                if(!statuses[item.status]){  
+                    statuses[item.status] = true;
                     itemStatuses.push(item.status);
                 }
             });

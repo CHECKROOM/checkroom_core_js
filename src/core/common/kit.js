@@ -32,16 +32,16 @@ define(['jquery'], function ($) {
             // First check if all items in the kit are available
             // if not check by status importance 
             // Expired > Checked out > checking out
-            if(itemStatuses.length == 1 && itemStatuses["available"]){
+            if(itemStatuses.length == 1 && statuses["available"]){
                 // all items in the kit are available
                 return "available";
-            }else if (itemStatuses["expired"]){
+            }else if (statuses["expired"]){
                 // 1 item in the kit is expired
                 return "expired";
-            }else if (itemStatuses["checkedout"]){
+            }else if (statuses["checkedout"]){
                 // 1 item in the kit is checked out
                 return "checkedout";
-            }else if (itemStatuses["await_checkout"]){
+            }else if (statuses["await_checkout"]){
                 // 1 item in the kit is awaiting checkout
                 return "await_checkout";
             }else{

@@ -10,7 +10,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     moment.fn.toJSONDate = function() {
         // toISOString gives the time in Zulu timezone
         // we want the local timezone but in ISO formatting
-        return this.format("YYYY-MM-DDTHH:mm:ss.000[Z]");
+        return this.format("YYYY-MM-DD[T]HH:mm:ss.000[Z]");
     };
 
     // https://github.com/moment/moment/pull/1595

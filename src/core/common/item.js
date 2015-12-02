@@ -72,6 +72,59 @@ define(function () {
 	            case 'expired': return 'fa fa-bug';
 	            default: return '';
 	        }
-	    }
+	    },
+
+	    /**
+	     * getItemsByStatus
+	     *
+	     * @memberOf common
+	     * @name  common#getItemsByStatus
+	     * @method
+	     * 
+	     * @param  {Array} 			 items      
+	     * @param  {string|function} comparator 
+	     * @return {Array}           
+	     */
+	    getItemsByStatus: function(items, comparator){
+            if(!items) return [];
+
+            return items.filter(function(item){
+                if(typeof(comparator) == "string"){
+                    //filter items on status
+                    return item.status == comparator;
+                }else{
+                    //use custom comparator to filter items
+                    return comparator(item); 
+                } 
+            });
+        },
+        /**
+         * getAvailableItems
+         * 
+         * @memberOf common
+	     * @name  common#getAvailableItems
+	     * @method
+         * 
+         * @param  {Array} items 
+         * @return {Array}       
+         */
+        getAvailableItems: function(items){
+            return this.getItemsByStatus(items, "available");
+        },
+        /**
+         * getActiveItems
+         * 
+         * @memberOf common
+	     * @name  common#getActiveItems
+	     * @method
+         * 
+         * @param  {Array} items 
+         * @return {Array}       
+         */
+        getActiveItems: function(items){
+            return this.getItemsByStatus(items, function(item){
+                return item.status != "expired";
+            });
+        }
 	};
 });

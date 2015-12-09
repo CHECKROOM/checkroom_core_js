@@ -163,6 +163,9 @@ define([
 
     api.ApiAjax.prototype._prepareDict = function(data) {
         // Makes sure all values from the dict are serializable and understandable for json
+	if (!data) {
+            return {};
+	};
         $.each(data, function(key, value) {
             if(moment.isMoment(value)) {
                 data[key] = value.toJSONDate();

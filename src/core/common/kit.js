@@ -1,15 +1,16 @@
 /*
  * Kit helpers
  */
-define(['jquery'], function ($) {
+define(['jquery', 'common/item'], function ($, itemHelpers) {
 	return {
 		/**
 		 * getKitStatus 
 		 * Available 		=> if all items in the kit are available
-	     * Checking out 	=> if 1 item in the kit is checking out
-	     * Checked out 		=> if 1 item in the kit is checked out 
-	     * Expired			=> if 1 item in the kit is expired
-	     * 
+	     * Checking out 	=> if all item in the kit is checking out
+	     * Checked out 		=> if all item in the kit is checked out 
+	     * Expired			=> if all item in the kit is expired
+         * Unknown          => if not all items in the kit have the same status
+         * 
 		 * @memberOf common
 		 * @name  common#getKitStatus
 		 * @method
@@ -29,24 +30,47 @@ define(['jquery'], function ($) {
                 }
             });
 
-            // First check if all items in the kit are available
-            // if not check by status importance 
-            // Expired > Checked out > checking out
-            if(itemStatuses.length == 1 && statuses["available"]){
-                // all items in the kit are available
-                return "available";
-            }else if (statuses["expired"]){
-                // 1 item in the kit is expired
-                return "expired";
-            }else if (statuses["checkedout"]){
-                // 1 item in the kit is checked out
-                return "checkedout";
-            }else if (statuses["await_checkout"]){
-                // 1 item in the kit is awaiting checkout
-                return "await_checkout";
-            }else{
-                return "unknown";
+            if(itemStatuses.length == 1){
+                // All items in the kit have the same status
+                return itemStatuses[0];
+            } else {
+                // Kit has items with different statuses
+                return "incomplete";
             }
-	    }
+	    },
+        /**
+         * getFriendlyKitStatus 
+         *
+         * @memberOf common
+         * @name  common#getFriendlyKitStatus
+         * @method
+         * 
+         * @param  status
+         * @return {string}        
+         */
+        getFriendlyKitStatus: function(status) {
+            if(status == "incomplete"){
+                return "Incomplete";
+            }
+
+            return itemHelpers.getFriendlyItemStatus(status);
+        },
+        /**
+         * getKitStatusCss
+         *
+         * @memberOf common
+         * @name  common#getKitStatusCss
+         * @method
+         * 
+         * @param  status 
+         * @return {string}       
+         */
+        getKitStatusCss: function(status) {
+            if(status == "incomplete"){
+                return "label-incomplete";
+            }
+
+            return itemHelpers.getItemStatusCss(status);
+        }
 	};
 });

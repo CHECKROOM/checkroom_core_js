@@ -6092,6 +6092,15 @@ Kit = function ($, Base, common) {
     return this.isValidName();
   };
   /**
+   * Checks if the kit is empty
+   * @name Kit#isEmpty
+   * @returns {boolean}
+   */
+  Kit.prototype.isEmpty = function () {
+    // Checks for: name
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
+  };
+  /**
    * Checks if the Kits is dirty and needs saving
    * @name Kit#isDirty
    * @returns {boolean}

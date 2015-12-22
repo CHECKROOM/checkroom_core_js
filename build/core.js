@@ -2393,8 +2393,7 @@ api = function ($, jsonp, moment, common) {
       if (resp.status == 'OK') {
         dfd.resolve(resp.data);
       } else {
-        var error = new Error('Your username or password is not correct');
-        dfd.reject(error);
+        dfd.reject(resp);
       }
     }).fail(function (err) {
       dfd.reject(err);

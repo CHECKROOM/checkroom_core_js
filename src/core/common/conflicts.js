@@ -18,6 +18,7 @@ define(function () {
                 case "location": return "At wrong location";
                 case "order": return "Checked out in order";
                 case "reservation": return "Already reserved";
+                case "expired": return "Item is expired";
                 default: return "";
             }
         }

@@ -2234,7 +2234,7 @@ api = function ($, jsonp, moment, common) {
   api.ApiAjax.prototype._postAjax = function (url, data, timeOut, opt) {
     var dfd = $.Deferred();
     var that = this;
-    $.ajax({
+    var xhr = $.ajax({
       type: 'POST',
       url: url,
       data: JSON.stringify(this._prepareDict(data)),
@@ -2247,12 +2247,19 @@ api = function ($, jsonp, moment, common) {
         return that._handleAjaxError(dfd, x, t, m, opt);
       }
     });
-    return dfd.promise();
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfd.promise();
+    promise.abort = function () {
+      xhr.abort();
+    };
+    return promise;
   };
   api.ApiAjax.prototype._getAjax = function (url, timeOut, opt) {
     var dfd = $.Deferred();
     var that = this;
-    $.ajax({
+    var xhr = $.ajax({
       url: url,
       timeout: timeOut || this.timeOut,
       success: function (data) {
@@ -2262,12 +2269,19 @@ api = function ($, jsonp, moment, common) {
         return that._handleAjaxError(dfd, x, t, m, opt);
       }
     });
-    return dfd.promise();
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfd.promise();
+    promise.abort = function () {
+      xhr.abort();
+    };
+    return promise;
   };
   api.ApiAjax.prototype._getJsonp = function (url, timeOut, opt) {
     var dfd = $.Deferred();
     var that = this;
-    $.jsonp({
+    var xhr = $.jsonp({
       url: url,
       type: 'GET',
       timeout: timeOut || this.timeOut,
@@ -2283,7 +2297,14 @@ api = function ($, jsonp, moment, common) {
         dfd.reject(new api.ApiError(null, opt));
       }
     });
-    return dfd.promise();
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfd.promise();
+    promise.abort = function () {
+      xhr.abort();
+    };
+    return promise;
   };
   api.ApiAjax.prototype._prepareDict = function (data) {
     // Makes sure all values from the dict are serializable and understandable for json
@@ -6072,11 +6093,34 @@ Kit = function ($, Base, common) {
    * Checks if name is valid
    * @name Kit#isValidName
    * @method
-   * @return {Boolean} [description]
+   * @return {Boolean} 
    */
   Kit.prototype.isValidName = function () {
     this.name = $.trim(this.name);
     return this.name.length >= 3;
+  };
+  /**
+   * Check if name is valid and isn't already used
+   * @name Kit#isValidNameAsync
+   * @method
+   * @return {promise} 
+   */
+  Kit.prototype.isNameAvailableAsync = function () {
+    // When existing kit is edited, we don't want 
+    // to check its current name 
+    if (this.id != null && this.raw != null && this.name == this.raw.name) {
+      return $.Deferred().resolve(true);
+    }
+    // If a previous name available check is pending, abort it
+    if (this._dfdNameAvailable) {
+      this._dfdNameAvailable.abort();
+    }
+    this._dfdNameAvailable = this.ds.search({ name: $.trim(this.name) }, '_id');
+    return this._dfdNameAvailable.then(function (resp) {
+      return resp.count == 0;
+    }, function (error) {
+      return false;
+    });
   };
   //
   // Base overrides

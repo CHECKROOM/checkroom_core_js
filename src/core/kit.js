@@ -46,11 +46,36 @@ define([
      * Checks if name is valid
      * @name Kit#isValidName
      * @method
-     * @return {Boolean} [description]
+     * @return {Boolean} 
      */
     Kit.prototype.isValidName = function() {
         this.name = $.trim(this.name);
         return (this.name.length>=3);
+    };
+
+    /**
+     * Check if name is valid and isn't already used
+     * @name Kit#isValidNameAsync
+     * @method
+     * @return {promise} 
+     */
+    Kit.prototype.isNameAvailableAsync = function(){
+        // When existing kit is edited, we don't want 
+        // to check its current name 
+        if(this.id != null && this.raw != null && this.name == this.raw.name){
+            return $.Deferred().resolve(true);
+        }
+
+        // If a previous name available check is pending, abort it
+        if(this._dfdNameAvailable){ this._dfdNameAvailable.abort(); }
+
+        this._dfdNameAvailable = this.ds.search({name: $.trim(this.name) }, "_id");
+            
+        return this._dfdNameAvailable.then(function(resp) {
+            return resp.count == 0;
+        }, function(error) {
+            return false;
+        });
     };
 
     //

@@ -112,7 +112,7 @@ define([
         var dfd = $.Deferred();
         var that = this;
 
-        $.ajax({
+        var xhr = $.ajax({
             type: "POST",
             url: url,
             data: JSON.stringify(this._prepareDict(data)),
@@ -122,28 +122,44 @@ define([
             error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
         });
 
-        return dfd.promise();
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfd.promise();
+        promise.abort = function(){
+            xhr.abort();
+        };
+
+        return promise;
     };
 
     api.ApiAjax.prototype._getAjax = function(url, timeOut,  opt) {
         var dfd = $.Deferred();
         var that = this;
 
-        $.ajax({
+        var xhr = $.ajax({
             url: url,
             timeout: timeOut || this.timeOut,
             success: function(data) {return that._handleAjaxSuccess(dfd, data, opt);},
             error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
         });
 
-        return dfd.promise();
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfd.promise();
+        promise.abort = function(){
+            xhr.abort();
+        };
+
+        return promise;
     };
 
     api.ApiAjax.prototype._getJsonp = function(url, timeOut, opt) {
         var dfd = $.Deferred();
         var that = this;
 
-        $.jsonp({
+        var xhr = $.jsonp({
             url: url,
             type: 'GET',
             timeout: timeOut || this.timeOut,
@@ -158,7 +174,15 @@ define([
             }
         });
 
-        return dfd.promise();
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfd.promise();
+        promise.abort = function(){
+            xhr.abort();
+        };
+
+        return promise;
     };
 
     api.ApiAjax.prototype._prepareDict = function(data) {

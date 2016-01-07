@@ -5887,7 +5887,7 @@ Item = function ($, Base) {
   Item.prototype.setFlag = function (flag, skipRead) {
     return this._doApiCall({
       method: 'setFlag',
-      flag: flag,
+      params: { flag: flag },
       skipRead: skipRead
     });
   };
@@ -5900,19 +5900,6 @@ Item = function ($, Base) {
   Item.prototype.clearFlag = function (skipRead) {
     return this._doApiCall({
       method: 'clearFlag',
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears the flag of an item
-   * @name Item#clearFlag
-   * @param skipRead
-   * @returns {promise}
-   */
-  Item.prototype.clearFlag = function (skipRead) {
-    return this._doApiCall({
-      method: 'clearFlag',
-      params: {},
       skipRead: skipRead
     });
   };

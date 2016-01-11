@@ -6071,6 +6071,7 @@ Kit = function ($, Base, common) {
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.items = spec.items || DEFAULTS.items.slice();
+    this.conflicts = [];
   };
   Kit.prototype = new tmp();
   Kit.prototype.constructor = Kit;
@@ -6200,9 +6201,52 @@ Kit = function ($, Base, common) {
     return Base.prototype._fromJson.call(this, data, options).then(function (data) {
       that.name = data.name || DEFAULTS.name;
       that.items = data.items || DEFAULTS.items.slice();
+      that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
     });
+  };
+  /**
+   * getConflicts; returns list of conflict objects
+   * @return {[type]} [description]
+   */
+  Kit.prototype._loadConflicts = function (items) {
+    var conflicts = [];
+    var kitStatus = common.getKitStatus(items);
+    // Kit has only conflicts when it's status is incomplete  
+    if (kitStatus == 'incomplete') {
+      $.each(items, function (i, item) {
+        switch (item.status) {
+        case 'await_checkout':
+          conflicts.push({
+            kind: 'status',
+            item: item._id,
+            itemName: item.name,
+            itemStatus: item.status,
+            order: item.order
+          });
+          break;
+        case 'checkedout':
+          conflicts.push({
+            kind: 'order',
+            item: item._id,
+            itemName: item.name,
+            itemStatus: item.status,
+            order: item.order
+          });
+          break;
+        case 'expired':
+          conflicts.push({
+            kind: 'status',
+            item: item._id,
+            itemName: item.name,
+            itemStatus: item.status
+          });
+          break;
+        }
+      });
+    }
+    this.conflicts = conflicts;
   };
   return Kit;
 }(jquery, base, common);

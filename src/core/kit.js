@@ -165,6 +165,30 @@ define([
         });
     };
 
+
+    /**
+     * Adds a QR code to the kit
+     * @name Kit#addCode
+     * @param code
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.addCode = function(code, skipRead) {
+        return this._doApiCall({method: 'addCodes', params: {codes: [code]}, skipRead: skipRead});
+    };
+
+    /**
+     * Removes a QR code from the kit
+     * @name Kit#removeCode
+     * @param code
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.removeCode = function(code, skipRead) {
+        return this._doApiCall({method: 'removeCodes', params: {codes: [code]}, skipRead: skipRead});
+    };
+
+
     //
     // Implementation stuff
     //

@@ -35,7 +35,7 @@ define([
 
         this.name = spec.name || DEFAULTS.name;
         this.items = spec.items || DEFAULTS.items.slice();
-
+        this.codes = [];
         this.conflicts = [];
     };
 
@@ -186,6 +186,7 @@ define([
             .then(function(data) {
                 that.name = data.name || DEFAULTS.name;
                 that.items = data.items || DEFAULTS.items.slice();
+                that.codes = data.codes || [];
 
                 that._loadConflicts(that.items);
 

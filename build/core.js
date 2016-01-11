@@ -6071,6 +6071,7 @@ Kit = function ($, Base, common) {
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.items = spec.items || DEFAULTS.items.slice();
+    this.codes = [];
     this.conflicts = [];
   };
   Kit.prototype = new tmp();
@@ -6201,6 +6202,7 @@ Kit = function ($, Base, common) {
     return Base.prototype._fromJson.call(this, data, options).then(function (data) {
       that.name = data.name || DEFAULTS.name;
       that.items = data.items || DEFAULTS.items.slice();
+      that.codes = data.codes || [];
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;

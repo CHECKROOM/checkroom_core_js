@@ -21,17 +21,26 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
 		getKitStatus: function(items) {
 	        var statuses = {};
             var itemStatuses = [];
+            var orders = {};
+            var itemOrders = [];
             
             // Make dictionary of different item statuses
             $.each(items, function(i, item){  
+                // Unique item statuses
                 if(!statuses[item.status]){  
                     statuses[item.status] = true;
                     itemStatuses.push(item.status);
                 }
+
+                // Unique item orders
+                if(!orders[item.order]){
+                    orders[item.order] = true;
+                    itemOrders.push(item.order);
+                }
             });
 
-            if(itemStatuses.length == 1){
-                // All items in the kit have the same status
+            if(itemStatuses.length == 1 && itemOrders.length <= 1){
+                // All items in the kit have the same status and are in the same order
                 return itemStatuses[0];
             } else {
                 // Kit has items with different statuses

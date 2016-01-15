@@ -194,10 +194,6 @@ define(["jquery",
                 },
                 account: {
                     update: isRootOrAdmin
-                },
-                kits: {
-                    create: useKits && isRootOrAdmin,
-                    update: useKits && isRootOrAdmin
                 }
             }
         },

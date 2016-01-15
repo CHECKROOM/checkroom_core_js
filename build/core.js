@@ -2036,15 +2036,23 @@ common_kit = function ($, itemHelpers) {
     getKitStatus: function (items) {
       var statuses = {};
       var itemStatuses = [];
+      var orders = {};
+      var itemOrders = [];
       // Make dictionary of different item statuses
       $.each(items, function (i, item) {
+        // Unique item statuses
         if (!statuses[item.status]) {
           statuses[item.status] = true;
           itemStatuses.push(item.status);
         }
+        // Unique item orders
+        if (!orders[item.order]) {
+          orders[item.order] = true;
+          itemOrders.push(item.order);
+        }
       });
-      if (itemStatuses.length == 1) {
-        // All items in the kit have the same status
+      if (itemStatuses.length == 1 && itemOrders.length <= 1) {
+        // All items in the kit have the same status and are in the same order
         return itemStatuses[0];
       } else {
         // Kit has items with different statuses
@@ -3452,11 +3460,7 @@ helper = function ($, settings) {
           create: isRootOrAdmin,
           update: isRootOrAdmin
         },
-        account: { update: isRootOrAdmin },
-        kits: {
-          create: useKits && isRootOrAdmin,
-          update: useKits && isRootOrAdmin
-        }
+        account: { update: isRootOrAdmin }
       };
     },
     /**
@@ -7847,8 +7851,8 @@ Order = function ($, api, Transaction, Conflict) {
    * @param skipItems
    * @returns {promise}
    */
-  Order.prototype.searchItems = function (params, useAvailabilies, onlyUnbooked, skipItems) {
-    return this._searchItems(params, 'available', useAvailabilies, onlyUnbooked, skipItems || this.items);
+  Order.prototype.searchItems = function (params, useAvailabilies, onlyUnbooked, skipItems, listName) {
+    return this._searchItems(params, listName != null ? listName : 'available', useAvailabilies, onlyUnbooked, skipItems || this.items);
   };
   /**
    * Checks in the order

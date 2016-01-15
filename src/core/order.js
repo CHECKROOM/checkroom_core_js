@@ -406,8 +406,8 @@ define([
      * @param skipItems
      * @returns {promise}
      */
-    Order.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems) {
-        return this._searchItems(params, "available", useAvailabilies, onlyUnbooked, skipItems || this.items);
+    Order.prototype.searchItems = function(params, useAvailabilies, onlyUnbooked, skipItems, listName) {
+        return this._searchItems(params, listName != null?listName:"available", useAvailabilies, onlyUnbooked, skipItems || this.items);
     };
 
     /**

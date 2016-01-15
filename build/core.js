@@ -2090,6 +2090,27 @@ common_kit = function ($, itemHelpers) {
         return 'label-incomplete';
       }
       return itemHelpers.getItemStatusCss(status);
+    },
+    /**
+     * getKitIds
+     *
+     * @memberOf common
+     * @name  common#getKitIds
+     * @method
+     * 
+     * @param  items 
+     * @return {array}       
+     */
+    getKitIds: function (items) {
+      var kitDictionary = {};
+      var ids = [];
+      $.each(items, function (i, item) {
+        if (item.kit && item.kit._id && !kitDictionary[item.kit._id]) {
+          kitDictionary[item.kit._id] = true;
+          ids.push(item.kit._id);
+        }
+      });
+      return ids;
     }
   };
 }(jquery, common_item);

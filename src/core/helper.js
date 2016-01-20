@@ -71,7 +71,8 @@ define(["jquery",
          * @return {Number}
          */
         getNumItemsLeft: function(limits, stats) {
-            return limits.maxItems - this.getStat(stats, "items", "total")  + this.getStat(stats, "items", "expired");
+            var itemsPerStatus = this.getStat(stats, "items", "status");
+            return limits.maxItems - this.getStat(stats, "items", "total")  + itemsPerStatus.expired;
         },
         /**
          * getNumUsersLeft
@@ -85,27 +86,31 @@ define(["jquery",
          * @return {Number}
          */
         getNumUsersLeft: function(limits, stats) {
-            return limits.maxUsers - this.getStat(stats, "users", "active");
+            var usersPerStatus = this.getStat(stats, "users", "status");
+            return limits.maxUsers - usersPerStatus.active;
         },
         /**
-         * getStat
+         * getStat for location
          *
          * @memberOf helper
          * @method
          * @name  helper#getStat
          *
          * @param stats
+         * @param location
          * @param type
          * @param name
          * @param mode
          * @return {object}         number or object
          */
-        getStat: function(stats, type, name, mode){
-            if(!stats || !stats.detailed) throw "Invalid stats object";
-
+        getStat: function(stats, type, name, location, mode){
             mode = mode || 'production';
 
-            stats = stats.detailed[mode]
+            stats = stats || {};
+
+            //if no stats for given location found, use all stats object
+            stats = stats[(location && location != "null")?location:"all"] || stats["all"]; 
+            stats = stats[mode];
 
             var statType = stats[type];
 
@@ -115,7 +120,7 @@ define(["jquery",
             var statTypeValue = statType[name];
             if(statTypeValue === undefined) throw "Stat value doesn't exist";
 
-            return statTypeValue;        
+            return statTypeValue;      
         },
         /**
          * getAccessRights returns access rights based on the user role, profile settings 

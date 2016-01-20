@@ -104,13 +104,16 @@ define(["jquery",
          * @return {object}         number or object
          */
         getStat: function(stats, type, name, location, mode){
-            mode = mode || 'production';
-
+            // make sure stats object isn't undefined
             stats = stats || {};
 
             //if no stats for given location found, use all stats object
             stats = stats[(location && location != "null")?location:"all"] || stats["all"]; 
-            stats = stats[mode];
+            
+            if(stats === undefined) throw "Invalid stats"; 
+
+            // load stats for given mode (defaults to production)
+            stats = stats[mode || 'production'];
 
             var statType = stats[type];
 

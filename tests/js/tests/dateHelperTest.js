@@ -76,6 +76,35 @@ define(['settings', 'cheqroom-core'], function(settings, cr) {
                 equal(t2.toJSONDate(), jsn);
                 equal(t1.toJSONDate(), t2.toJSONDate());
             });
+
+            // getFriendlyFromTo
+            // ----
+            /*test('getFriendlyFromTo', function() {
+                var helper = new cr.DateHelper();
+                var nowstr = "2015-06-24T16:15:00+00:00";
+                var now = helper.fixDates(nowstr);
+                var res = "";
+
+                $.each([1,2,3,4,7,8,14,21,31,100], function(i, val) {
+                    console.log(val);
+                    var from = moment(now).add(-1*val, "days");
+                    var to = moment(now).add(1, "days").add(4, "hours");
+                    res = helper.getFriendlyFromTo(from, to, true, now);
+                    console.log(res.text);
+                    console.log("");
+                });
+
+                $.each([1,2,3,4,7,8,14,21,31,100], function(i, val) {
+                    console.log(val);
+                    var from = moment(now).add(1, "days");
+                    var to = moment(now).add(val, "days").add(4, "hours");
+                    res = helper.getFriendlyFromTo(from, to, true, now);
+                    console.log(res.text);
+                    console.log("");
+                });
+
+            });*/
+
         };
 
         return {run: run}

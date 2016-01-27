@@ -9,7 +9,7 @@ module.exports = function(grunt){
                 version: '<%= pkg.version %>',
                 url: '<%= pkg.homepage %>',
                 options: {
-                    paths: ['src/app'],
+                    paths: ['src/core'],
                     outdir: './docs/'
                 }
             }
@@ -19,7 +19,7 @@ module.exports = function(grunt){
         },
         jsdoc : {
             dist : {
-                src: ['src/**/*.js', 'README.md'],
+                src: ['src/**/*.js', 'src/**/**/*.js', 'README.md'],
                 options: {
                     destination: 'doc',
                     template : "node_modules/jaguarjs-jsdoc",
@@ -30,9 +30,9 @@ module.exports = function(grunt){
         requirejs: {
             compile: {
                 options: {
-                    baseUrl: "src/app",
+                    baseUrl: "src/core",
                     out: "build/<%= pkg.name %>.js",
-                    include: ['../main', '../../tests/js/lib/almond/almond'],
+                    include: ['../core'],
                     exclude:['jquery', 'jquery-jsonp', 'jquery-pubsub', 'moment'],
                     paths:{
                         "jquery": "empty:",
@@ -40,11 +40,20 @@ module.exports = function(grunt){
                         "moment": "empty:",
                         "jquery-pubsub": "empty:"
                     },
-                    wrap: {
-                        "startFile": "wrap.start",
-                        "endFile": "wrap.end"
-                    },
-                    optimize: "none"
+                    optimize: "none",
+                    onModuleBundleComplete: function (data) {
+                        var fs = require('fs'),
+                          amdclean = require('amdclean'),
+                          outputFile = data.path;
+
+                        fs.writeFileSync(outputFile, amdclean.clean({
+                            'filePath': outputFile,
+                            wrap: {
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jsonp, pubsub);\n}\n}(function (jquery, moment, jquery_jsonp, jquery_pubsub) {",
+                                "end": '\nreturn core;\n}))'
+                            },
+                        }));
+                    }
                 }
             }
         },
@@ -100,7 +109,7 @@ module.exports = function(grunt){
     grunt.loadNpmTasks('grunt-gh-pages');
 
     // this will generate the docs by typing "grunt docs" on the command line
-    grunt.registerTask("docs", ["clean:jsdoc","jsdoc"]);
+    grunt.registerTask("docs", ["requirejs", "clean:jsdoc","jsdoc"]);
 
     // this would be run by typing "grunt test" on the command line
     grunt.registerTask('test', ['connect','qunit']);

@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Source: common/inflection.js</title>
+    
+    
+    
+    
+    
+    <meta property="og:title" content=""/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:image" content=""/>
+    
+    <meta property="og:url" content=""/>
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <script src="scripts/jquery.min.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/jaguar.css">
+    
+    
+    <script>
+    var config = {"monospaceLinks":true,"cleverLinks":true,"default":{"outputSourceFiles":true},"applicationName":"CHEQROOM","disqus":"","googleAnalytics":"","openGraph":{"title":"","type":"website","image":"","site_name":"","url":""},"meta":{"title":"","description":"","keyword":""},"linenums":false};
+    </script>
+    
+
+    
+</head>
+<body>
+<div id="wrap" class="clearfix">
+    
+<div class="navigation">
+    <h3 class="applicationName"><a href="index.html">CHEQROOM</a></h3>
+
+    <div class="search">
+        <input id="search" type="text" class="form-control input-sm" placeholder="Search Documentations">
+    </div>
+    <ul class="list">
+    
+        <li class="item" data-name="api">
+            <span class="title">
+                <a href="api.html">api</a>
+                
+                <span class="static">static</span>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="common">
+            <span class="title">
+                <a href="common.html">common</a>
+                
+                <span class="static">static</span>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
+            
+                <li data-name="common#getActiveItems"><a href="common.html#getActiveItems">getActiveItems</a></li>
+            
+                <li data-name="common#getAvailableItems"><a href="common.html#getAvailableItems">getAvailableItems</a></li>
+            
+                <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
+            
+                <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
+            
+                <li data-name="common#getCategoryNameFromKey"><a href="common.html#getCategoryNameFromKey">getCategoryNameFromKey</a></li>
+            
+                <li data-name="common#getCategorySummary"><a href="common.html#getCategorySummary">getCategorySummary</a></li>
+            
+                <li data-name="common#getCheqRoomRedirectUrl"><a href="common.html#getCheqRoomRedirectUrl">getCheqRoomRedirectUrl</a></li>
+            
+                <li data-name="common#getCheqRoomRedirectUrlQR"><a href="common.html#getCheqRoomRedirectUrlQR">getCheqRoomRedirectUrlQR</a></li>
+            
+                <li data-name="common#getFileNameFromUrl"><a href="common.html#getFileNameFromUrl">getFileNameFromUrl</a></li>
+            
+                <li data-name="common#getFriendlyConflictKind"><a href="common.html#getFriendlyConflictKind">getFriendlyConflictKind</a></li>
+            
+                <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
+            
+                <li data-name="common#getFriendlyKitStatus"><a href="common.html#getFriendlyKitStatus">getFriendlyKitStatus</a></li>
+            
+                <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
+            
+                <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
+            
+                <li data-name="common#getFriendlyOrderStatus"><a href="common.html#getFriendlyOrderStatus">getFriendlyOrderStatus</a></li>
+            
+                <li data-name="common#getFriendlyReservationCss"><a href="common.html#getFriendlyReservationCss">getFriendlyReservationCss</a></li>
+            
+                <li data-name="common#getFriendlyReservationStatus"><a href="common.html#getFriendlyReservationStatus">getFriendlyReservationStatus</a></li>
+            
+                <li data-name="common#getImageCDNUrl"><a href="common.html#getImageCDNUrl">getImageCDNUrl</a></li>
+            
+                <li data-name="common#getImageUrl"><a href="common.html#getImageUrl">getImageUrl</a></li>
+            
+                <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
+            
+                <li data-name="common#getItemsByStatus"><a href="common.html#getItemsByStatus">getItemsByStatus</a></li>
+            
+                <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
+            
+                <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getKitIds"><a href="common.html#getKitIds">getKitIds</a></li>
+            
+                <li data-name="common#getKitStatus"><a href="common.html#getKitStatus">getKitStatus</a></li>
+            
+                <li data-name="common#getKitStatusCss"><a href="common.html#getKitStatusCss">getKitStatusCss</a></li>
+            
+                <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
+            
+                <li data-name="common#getOrderCss"><a href="common.html#getOrderCss">getOrderCss</a></li>
+            
+                <li data-name="common#getOrderStatus"><a href="common.html#getOrderStatus">getOrderStatus</a></li>
+            
+                <li data-name="common#getParsedLines"><a href="common.html#getParsedLines">getParsedLines</a></li>
+            
+                <li data-name="common#getUrlParam"><a href="common.html#getUrlParam">getUrlParam</a></li>
+            
+                <li data-name="common#isCodeFromScanner"><a href="common.html#isCodeFromScanner">isCodeFromScanner</a></li>
+            
+                <li data-name="common#isCodeValid"><a href="common.html#isCodeValid">isCodeValid</a></li>
+            
+                <li data-name="common#isOrderOverdue"><a href="common.html#isOrderOverdue">isOrderOverdue</a></li>
+            
+                <li data-name="common#isValidBarcode"><a href="common.html#isValidBarcode">isValidBarcode</a></li>
+            
+                <li data-name="common#isValidEmail"><a href="common.html#isValidEmail">isValidEmail</a></li>
+            
+                <li data-name="common#isValidPhone"><a href="common.html#isValidPhone">isValidPhone</a></li>
+            
+                <li data-name="common#makeFileNameJpg"><a href="common.html#makeFileNameJpg">makeFileNameJpg</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="helper">
+            <span class="title">
+                <a href="helper.html">helper</a>
+                
+                <span class="static">static</span>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="helper#ensureId"><a href="helper.html#ensureId">ensureId</a></li>
+            
+                <li data-name="helper#ensureValue"><a href="helper.html#ensureValue">ensureValue</a></li>
+            
+                <li data-name="helper#getAccessRights"><a href="helper.html#getAccessRights">getAccessRights</a></li>
+            
+                <li data-name="helper#getImageCDNUrl"><a href="helper.html#getImageCDNUrl">getImageCDNUrl</a></li>
+            
+                <li data-name="helper#getImageUrl"><a href="helper.html#getImageUrl">getImageUrl</a></li>
+            
+                <li data-name="helper#getNumItemsLeft"><a href="helper.html#getNumItemsLeft">getNumItemsLeft</a></li>
+            
+                <li data-name="helper#getNumUsersLeft"><a href="helper.html#getNumUsersLeft">getNumUsersLeft</a></li>
+            
+                <li data-name="helper#getStat"><a href="helper.html#getStat">getStat</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiAjax">
+            <span class="title">
+                <a href="api.ApiAjax.html">api.ApiAjax</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiAnonymous">
+            <span class="title">
+                <a href="api.ApiAnonymous.html">api.ApiAnonymous</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiAuthV2">
+            <span class="title">
+                <a href="api.ApiAuthV2.html">api.ApiAuthV2</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiDataSource">
+            <span class="title">
+                <a href="api.ApiDataSource.html">api.ApiDataSource</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="api.ApiUser">
+            <span class="title">
+                <a href="api.ApiUser.html">api.ApiUser</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Attachment">
+            <span class="title">
+                <a href="Attachment.html">Attachment</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Attachment#existsInDb"><a href="Attachment.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Attachment#getDownloadUrl"><a href="Attachment.html#getDownloadUrl">getDownloadUrl</a></li>
+            
+                <li data-name="Attachment#getExt"><a href="Attachment.html#getExt">getExt</a></li>
+            
+                <li data-name="Attachment#getName"><a href="Attachment.html#getName">getName</a></li>
+            
+                <li data-name="Attachment#getThumbnailUrl"><a href="Attachment.html#getThumbnailUrl">getThumbnailUrl</a></li>
+            
+                <li data-name="Attachment#getUnit"><a href="Attachment.html#getUnit">getUnit</a></li>
+            
+                <li data-name="Attachment#hasPreview"><a href="Attachment.html#hasPreview">hasPreview</a></li>
+            
+                <li data-name="Attachment#isDirty"><a href="Attachment.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Attachment#isEmpty"><a href="Attachment.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Attachment#isImage"><a href="Attachment.html#isImage">isImage</a></li>
+            
+                <li data-name="Attachment#isValid"><a href="Attachment.html#isValid">isValid</a></li>
+            
+                <li data-name="Attachment#reset"><a href="Attachment.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Availability">
+            <span class="title">
+                <a href="Availability.html">Availability</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Availability#canDelete"><a href="Availability.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Availability#create"><a href="Availability.html#create">create</a></li>
+            
+                <li data-name="Availability#delete"><a href="Availability.html#delete">delete</a></li>
+            
+                <li data-name="Availability#discardChanges"><a href="Availability.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Availability#existsInDb"><a href="Availability.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Availability#get"><a href="Availability.html#get">get</a></li>
+            
+                <li data-name="Availability#isDirty"><a href="Availability.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Availability#isEmpty"><a href="Availability.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Availability#isValid"><a href="Availability.html#isValid">isValid</a></li>
+            
+                <li data-name="Availability#reload"><a href="Availability.html#reload">reload</a></li>
+            
+                <li data-name="Availability#reset"><a href="Availability.html#reset">reset</a></li>
+            
+                <li data-name="Availability#update"><a href="Availability.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Base">
+            <span class="title">
+                <a href="Base.html">Base</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Base#addComment"><a href="Base.html#addComment">addComment</a></li>
+            
+                <li data-name="Base#addKeyValue"><a href="Base.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Base#attach"><a href="Base.html#attach">attach</a></li>
+            
+                <li data-name="Base#attachFile"><a href="Base.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Base#attachImage"><a href="Base.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Base#canDelete"><a href="Base.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Base#create"><a href="Base.html#create">create</a></li>
+            
+                <li data-name="Base#delete"><a href="Base.html#delete">delete</a></li>
+            
+                <li data-name="Base#deleteComment"><a href="Base.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Base#detach"><a href="Base.html#detach">detach</a></li>
+            
+                <li data-name="Base#discardChanges"><a href="Base.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Base#existsInDb"><a href="Base.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Base#get"><a href="Base.html#get">get</a></li>
+            
+                <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Base#isEmpty"><a href="Base.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Base#isValid"><a href="Base.html#isValid">isValid</a></li>
+            
+                <li data-name="Base#moveKeyValueIndex"><a href="Base.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Base#reload"><a href="Base.html#reload">reload</a></li>
+            
+                <li data-name="Base#removeKeyValue"><a href="Base.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Base#reset"><a href="Base.html#reset">reset</a></li>
+            
+                <li data-name="Base#setCover"><a href="Base.html#setCover">setCover</a></li>
+            
+                <li data-name="Base#setKeyValue"><a href="Base.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Base#update"><a href="Base.html#update">update</a></li>
+            
+                <li data-name="Base#updateComment"><a href="Base.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Base#updateKeyValue"><a href="Base.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Comment">
+            <span class="title">
+                <a href="Comment.html">Comment</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Comment#existsInDb"><a href="Comment.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Comment#getName"><a href="Comment.html#getName">getName</a></li>
+            
+                <li data-name="Comment#getUnit"><a href="Comment.html#getUnit">getUnit</a></li>
+            
+                <li data-name="Comment#isDirty"><a href="Comment.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Comment#isEmpty"><a href="Comment.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Comment#isValid"><a href="Comment.html#isValid">isValid</a></li>
+            
+                <li data-name="Comment#reset"><a href="Comment.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Conflict">
+            <span class="title">
+                <a href="Conflict.html">Conflict</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Contact">
+            <span class="title">
+                <a href="Contact.html">Contact</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Contact#addComment"><a href="Contact.html#addComment">addComment</a></li>
+            
+                <li data-name="Contact#addKeyValue"><a href="Contact.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Contact#attach"><a href="Contact.html#attach">attach</a></li>
+            
+                <li data-name="Contact#attachFile"><a href="Contact.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Contact#attachImage"><a href="Contact.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Contact#canDelete"><a href="Contact.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Contact#create"><a href="Contact.html#create">create</a></li>
+            
+                <li data-name="Contact#delete"><a href="Contact.html#delete">delete</a></li>
+            
+                <li data-name="Contact#deleteComment"><a href="Contact.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Contact#detach"><a href="Contact.html#detach">detach</a></li>
+            
+                <li data-name="Contact#discardChanges"><a href="Contact.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Contact#existsInDb"><a href="Contact.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Contact#get"><a href="Contact.html#get">get</a></li>
+            
+                <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Contact#isEmpty"><a href="Contact.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Contact#isValid"><a href="Contact.html#isValid">isValid</a></li>
+            
+                <li data-name="Contact#isValidCompany"><a href="Contact.html#isValidCompany">isValidCompany</a></li>
+            
+                <li data-name="Contact#isValidEmail"><a href="Contact.html#isValidEmail">isValidEmail</a></li>
+            
+                <li data-name="Contact#isValidName"><a href="Contact.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Contact#isValidPhone"><a href="Contact.html#isValidPhone">isValidPhone</a></li>
+            
+                <li data-name="Contact#moveKeyValueIndex"><a href="Contact.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Contact#reload"><a href="Contact.html#reload">reload</a></li>
+            
+                <li data-name="Contact#removeKeyValue"><a href="Contact.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Contact#reset"><a href="Contact.html#reset">reset</a></li>
+            
+                <li data-name="Contact#setCover"><a href="Contact.html#setCover">setCover</a></li>
+            
+                <li data-name="Contact#setKeyValue"><a href="Contact.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Contact#update"><a href="Contact.html#update">update</a></li>
+            
+                <li data-name="Contact#updateComment"><a href="Contact.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Contact#updateKeyValue"><a href="Contact.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="DateHelper">
+            <span class="title">
+                <a href="DateHelper.html">DateHelper</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            <span class="subtitle">Members</span>
+            
+                <li data-name="DateHelper#getFriendlyDateParts"><a href="DateHelper.html#getFriendlyDateParts">getFriendlyDateParts</a></li>
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="DateHelper#fixDates"><a href="DateHelper.html#fixDates">fixDates</a></li>
+            
+                <li data-name="DateHelper#getFriendlyDuration"><a href="DateHelper.html#getFriendlyDuration">getFriendlyDuration</a></li>
+            
+                <li data-name="DateHelper#getNow"><a href="DateHelper.html#getNow">getNow</a></li>
+            
+                <li data-name="DateHelper#roundTime"><a href="DateHelper.html#roundTime">roundTime</a></li>
+            
+                <li data-name="DateHelper#roundTimeDown"><a href="DateHelper.html#roundTimeDown">roundTimeDown</a></li>
+            
+                <li data-name="DateHelper#roundTimeFrom"><a href="DateHelper.html#roundTimeFrom">roundTimeFrom</a></li>
+            
+                <li data-name="DateHelper#roundTimeTo"><a href="DateHelper.html#roundTimeTo">roundTimeTo</a></li>
+            
+                <li data-name="DateHelper#roundTimeUp"><a href="DateHelper.html#roundTimeUp">roundTimeUp</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Document">
+            <span class="title">
+                <a href="Document.html">Document</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Document#create"><a href="Document.html#create">create</a></li>
+            
+                <li data-name="Document#delete"><a href="Document.html#delete">delete</a></li>
+            
+                <li data-name="Document#discardChanges"><a href="Document.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Document#existsInDb"><a href="Document.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Document#get"><a href="Document.html#get">get</a></li>
+            
+                <li data-name="Document#isDirty"><a href="Document.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Document#isEmpty"><a href="Document.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Document#isValid"><a href="Document.html#isValid">isValid</a></li>
+            
+                <li data-name="Document#reload"><a href="Document.html#reload">reload</a></li>
+            
+                <li data-name="Document#reset"><a href="Document.html#reset">reset</a></li>
+            
+                <li data-name="Document#update"><a href="Document.html#update">update</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Item">
+            <span class="title">
+                <a href="Item.html">Item</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            <span class="subtitle">Members</span>
+            
+                <li data-name="Item#addCode"><a href="Item.html#addCode">addCode</a></li>
+            
+                <li data-name="Item#canChangeCategory"><a href="Item.html#canChangeCategory">canChangeCategory</a></li>
+            
+                <li data-name="Item#changeCategory"><a href="Item.html#changeCategory">changeCategory</a></li>
+            
+                <li data-name="Item#changeLocation"><a href="Item.html#changeLocation">changeLocation</a></li>
+            
+                <li data-name="Item#clearFlag"><a href="Item.html#clearFlag">clearFlag</a></li>
+            
+                <li data-name="Item#duplicate"><a href="Item.html#duplicate">duplicate</a></li>
+            
+                <li data-name="Item#expire"><a href="Item.html#expire">expire</a></li>
+            
+                <li data-name="Item#getAvailabilities"><a href="Item.html#getAvailabilities">getAvailabilities</a></li>
+            
+                <li data-name="Item#isDirty"><a href="Item.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Item#isEmpty"><a href="Item.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Item#removeCode"><a href="Item.html#removeCode">removeCode</a></li>
+            
+                <li data-name="Item#setFlag"><a href="Item.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Item#undoExpire"><a href="Item.html#undoExpire">undoExpire</a></li>
+            
+                <li data-name="Item#updateGeo"><a href="Item.html#updateGeo">updateGeo</a></li>
+            
+                <li data-name="Item#updateName"><a href="Item.html#updateName">updateName</a></li>
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Item#addComment"><a href="Item.html#addComment">addComment</a></li>
+            
+                <li data-name="Item#addKeyValue"><a href="Item.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Item#attach"><a href="Item.html#attach">attach</a></li>
+            
+                <li data-name="Item#attachFile"><a href="Item.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Item#attachImage"><a href="Item.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Item#canDelete"><a href="Item.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Item#create"><a href="Item.html#create">create</a></li>
+            
+                <li data-name="Item#delete"><a href="Item.html#delete">delete</a></li>
+            
+                <li data-name="Item#deleteComment"><a href="Item.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Item#detach"><a href="Item.html#detach">detach</a></li>
+            
+                <li data-name="Item#discardChanges"><a href="Item.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Item#existsInDb"><a href="Item.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Item#get"><a href="Item.html#get">get</a></li>
+            
+                <li data-name="Item#isValid"><a href="Item.html#isValid">isValid</a></li>
+            
+                <li data-name="Item#moveKeyValueIndex"><a href="Item.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Item#reload"><a href="Item.html#reload">reload</a></li>
+            
+                <li data-name="Item#removeKeyValue"><a href="Item.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Item#reset"><a href="Item.html#reset">reset</a></li>
+            
+                <li data-name="Item#setCover"><a href="Item.html#setCover">setCover</a></li>
+            
+                <li data-name="Item#setKeyValue"><a href="Item.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Item#update"><a href="Item.html#update">update</a></li>
+            
+                <li data-name="Item#updateComment"><a href="Item.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Item#updateKeyValue"><a href="Item.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="KeyValue">
+            <span class="title">
+                <a href="KeyValue.html">KeyValue</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="KeyValue#existsInDb"><a href="KeyValue.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="KeyValue#getName"><a href="KeyValue.html#getName">getName</a></li>
+            
+                <li data-name="KeyValue#getUnit"><a href="KeyValue.html#getUnit">getUnit</a></li>
+            
+                <li data-name="KeyValue#isDirty"><a href="KeyValue.html#isDirty">isDirty</a></li>
+            
+                <li data-name="KeyValue#isEmpty"><a href="KeyValue.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="KeyValue#isValid"><a href="KeyValue.html#isValid">isValid</a></li>
+            
+                <li data-name="KeyValue#reset"><a href="KeyValue.html#reset">reset</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Kit">
+            <span class="title">
+                <a href="Kit.html">Kit</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            <span class="subtitle">Members</span>
+            
+                <li data-name="Kit#addCode"><a href="Kit.html#addCode">addCode</a></li>
+            
+                <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Kit#removeCode"><a href="Kit.html#removeCode">removeCode</a></li>
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Kit#addComment"><a href="Kit.html#addComment">addComment</a></li>
+            
+                <li data-name="Kit#addItems"><a href="Kit.html#addItems">addItems</a></li>
+            
+                <li data-name="Kit#addKeyValue"><a href="Kit.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Kit#attach"><a href="Kit.html#attach">attach</a></li>
+            
+                <li data-name="Kit#attachFile"><a href="Kit.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Kit#attachImage"><a href="Kit.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Kit#canDelete"><a href="Kit.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Kit#create"><a href="Kit.html#create">create</a></li>
+            
+                <li data-name="Kit#delete"><a href="Kit.html#delete">delete</a></li>
+            
+                <li data-name="Kit#deleteComment"><a href="Kit.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Kit#detach"><a href="Kit.html#detach">detach</a></li>
+            
+                <li data-name="Kit#discardChanges"><a href="Kit.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Kit#existsInDb"><a href="Kit.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Kit#get"><a href="Kit.html#get">get</a></li>
+            
+                <li data-name="Kit#isValid"><a href="Kit.html#isValid">isValid</a></li>
+            
+                <li data-name="Kit#isValidName"><a href="Kit.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Kit#isValidNameAsync"><a href="Kit.html#isValidNameAsync">isValidNameAsync</a></li>
+            
+                <li data-name="Kit#moveKeyValueIndex"><a href="Kit.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Kit#reload"><a href="Kit.html#reload">reload</a></li>
+            
+                <li data-name="Kit#removeItems"><a href="Kit.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Kit#removeKeyValue"><a href="Kit.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Kit#reset"><a href="Kit.html#reset">reset</a></li>
+            
+                <li data-name="Kit#setCover"><a href="Kit.html#setCover">setCover</a></li>
+            
+                <li data-name="Kit#setKeyValue"><a href="Kit.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Kit#update"><a href="Kit.html#update">update</a></li>
+            
+                <li data-name="Kit#updateComment"><a href="Kit.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Kit#updateKeyValue"><a href="Kit.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Location">
+            <span class="title">
+                <a href="Location.html">Location</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Location#addComment"><a href="Location.html#addComment">addComment</a></li>
+            
+                <li data-name="Location#addKeyValue"><a href="Location.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Location#attach"><a href="Location.html#attach">attach</a></li>
+            
+                <li data-name="Location#attachFile"><a href="Location.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Location#attachImage"><a href="Location.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Location#canDelete"><a href="Location.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Location#create"><a href="Location.html#create">create</a></li>
+            
+                <li data-name="Location#delete"><a href="Location.html#delete">delete</a></li>
+            
+                <li data-name="Location#deleteComment"><a href="Location.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Location#detach"><a href="Location.html#detach">detach</a></li>
+            
+                <li data-name="Location#discardChanges"><a href="Location.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Location#existsInDb"><a href="Location.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Location#get"><a href="Location.html#get">get</a></li>
+            
+                <li data-name="Location#isDirty"><a href="Location.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Location#isEmpty"><a href="Location.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Location#isValid"><a href="Location.html#isValid">isValid</a></li>
+            
+                <li data-name="Location#moveKeyValueIndex"><a href="Location.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Location#reload"><a href="Location.html#reload">reload</a></li>
+            
+                <li data-name="Location#removeKeyValue"><a href="Location.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Location#reset"><a href="Location.html#reset">reset</a></li>
+            
+                <li data-name="Location#setCover"><a href="Location.html#setCover">setCover</a></li>
+            
+                <li data-name="Location#setKeyValue"><a href="Location.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Location#update"><a href="Location.html#update">update</a></li>
+            
+                <li data-name="Location#updateComment"><a href="Location.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Location#updateKeyValue"><a href="Location.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Order">
+            <span class="title">
+                <a href="Order.html">Order</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Order#addComment"><a href="Order.html#addComment">addComment</a></li>
+            
+                <li data-name="Order#addItems"><a href="Order.html#addItems">addItems</a></li>
+            
+                <li data-name="Order#addKeyValue"><a href="Order.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Order#attach"><a href="Order.html#attach">attach</a></li>
+            
+                <li data-name="Order#attachFile"><a href="Order.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Order#attachImage"><a href="Order.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Order#canCheckin"><a href="Order.html#canCheckin">canCheckin</a></li>
+            
+                <li data-name="Order#canCheckout"><a href="Order.html#canCheckout">canCheckout</a></li>
+            
+                <li data-name="Order#canDelete"><a href="Order.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Order#canGenerateAgreement"><a href="Order.html#canGenerateAgreement">canGenerateAgreement</a></li>
+            
+                <li data-name="Order#canUndoCheckout"><a href="Order.html#canUndoCheckout">canUndoCheckout</a></li>
+            
+                <li data-name="Order#checkin"><a href="Order.html#checkin">checkin</a></li>
+            
+                <li data-name="Order#checkout"><a href="Order.html#checkout">checkout</a></li>
+            
+                <li data-name="Order#clearContact"><a href="Order.html#clearContact">clearContact</a></li>
+            
+                <li data-name="Order#clearDueDate"><a href="Order.html#clearDueDate">clearDueDate</a></li>
+            
+                <li data-name="Order#clearFromDate"><a href="Order.html#clearFromDate">clearFromDate</a></li>
+            
+                <li data-name="Order#clearItems"><a href="Order.html#clearItems">clearItems</a></li>
+            
+                <li data-name="Order#clearLocation"><a href="Order.html#clearLocation">clearLocation</a></li>
+            
+                <li data-name="Order#clearToDate"><a href="Order.html#clearToDate">clearToDate</a></li>
+            
+                <li data-name="Order#create"><a href="Order.html#create">create</a></li>
+            
+                <li data-name="Order#delete"><a href="Order.html#delete">delete</a></li>
+            
+                <li data-name="Order#deleteComment"><a href="Order.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Order#detach"><a href="Order.html#detach">detach</a></li>
+            
+                <li data-name="Order#discardChanges"><a href="Order.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Order#existsInDb"><a href="Order.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Order#generateAgreement"><a href="Order.html#generateAgreement">generateAgreement</a></li>
+            
+                <li data-name="Order#get"><a href="Order.html#get">get</a></li>
+            
+                <li data-name="Order#getDuration"><a href="Order.html#getDuration">getDuration</a></li>
+            
+                <li data-name="Order#getFriendlyDuration"><a href="Order.html#getFriendlyDuration">getFriendlyDuration</a></li>
+            
+                <li data-name="Order#getMaxDate"><a href="Order.html#getMaxDate">getMaxDate</a></li>
+            
+                <li data-name="Order#getMaxDateDue"><a href="Order.html#getMaxDateDue">getMaxDateDue</a></li>
+            
+                <li data-name="Order#getMaxDateFrom"><a href="Order.html#getMaxDateFrom">getMaxDateFrom</a></li>
+            
+                <li data-name="Order#getMaxDateTo"><a href="Order.html#getMaxDateTo">getMaxDateTo</a></li>
+            
+                <li data-name="Order#getMinDate"><a href="Order.html#getMinDate">getMinDate</a></li>
+            
+                <li data-name="Order#getMinDateDue"><a href="Order.html#getMinDateDue">getMinDateDue</a></li>
+            
+                <li data-name="Order#getMinDateFrom"><a href="Order.html#getMinDateFrom">getMinDateFrom</a></li>
+            
+                <li data-name="Order#getMinDateTo"><a href="Order.html#getMinDateTo">getMinDateTo</a></li>
+            
+                <li data-name="Order#hasItems"><a href="Order.html#hasItems">hasItems</a></li>
+            
+                <li data-name="Order#isDirty"><a href="Order.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Order#isEmpty"><a href="Order.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Order#isValid"><a href="Order.html#isValid">isValid</a></li>
+            
+                <li data-name="Order#moveKeyValueIndex"><a href="Order.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Order#reload"><a href="Order.html#reload">reload</a></li>
+            
+                <li data-name="Order#removeItems"><a href="Order.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Order#removeKeyValue"><a href="Order.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Order#reset"><a href="Order.html#reset">reset</a></li>
+            
+                <li data-name="Order#searchItems"><a href="Order.html#searchItems">searchItems</a></li>
+            
+                <li data-name="Order#setContact"><a href="Order.html#setContact">setContact</a></li>
+            
+                <li data-name="Order#setCover"><a href="Order.html#setCover">setCover</a></li>
+            
+                <li data-name="Order#setDueDate"><a href="Order.html#setDueDate">setDueDate</a></li>
+            
+                <li data-name="Order#setFromDate"><a href="Order.html#setFromDate">setFromDate</a></li>
+            
+                <li data-name="Order#setFromDueDate"><a href="Order.html#setFromDueDate">setFromDueDate</a></li>
+            
+                <li data-name="Order#setKeyValue"><a href="Order.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Order#setLocation"><a href="Order.html#setLocation">setLocation</a></li>
+            
+                <li data-name="Order#setToDate"><a href="Order.html#setToDate">setToDate</a></li>
+            
+                <li data-name="Order#suggestEndDate"><a href="Order.html#suggestEndDate">suggestEndDate</a></li>
+            
+                <li data-name="Order#swapItem"><a href="Order.html#swapItem">swapItem</a></li>
+            
+                <li data-name="Order#undoCheckout"><a href="Order.html#undoCheckout">undoCheckout</a></li>
+            
+                <li data-name="Order#update"><a href="Order.html#update">update</a></li>
+            
+                <li data-name="Order#updateComment"><a href="Order.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Order#updateKeyValue"><a href="Order.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Reservation">
+            <span class="title">
+                <a href="Reservation.html">Reservation</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Reservation#addComment"><a href="Reservation.html#addComment">addComment</a></li>
+            
+                <li data-name="Reservation#addItems"><a href="Reservation.html#addItems">addItems</a></li>
+            
+                <li data-name="Reservation#addKeyValue"><a href="Reservation.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Reservation#attach"><a href="Reservation.html#attach">attach</a></li>
+            
+                <li data-name="Reservation#attachFile"><a href="Reservation.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Reservation#attachImage"><a href="Reservation.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Reservation#canCancel"><a href="Reservation.html#canCancel">canCancel</a></li>
+            
+                <li data-name="Reservation#cancel"><a href="Reservation.html#cancel">cancel</a></li>
+            
+                <li data-name="Reservation#canDelete"><a href="Reservation.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Reservation#canEdit"><a href="Reservation.html#canEdit">canEdit</a></li>
+            
+                <li data-name="Reservation#canMakeOrder"><a href="Reservation.html#canMakeOrder">canMakeOrder</a></li>
+            
+                <li data-name="Reservation#canReserve"><a href="Reservation.html#canReserve">canReserve</a></li>
+            
+                <li data-name="Reservation#clearContact"><a href="Reservation.html#clearContact">clearContact</a></li>
+            
+                <li data-name="Reservation#clearDueDate"><a href="Reservation.html#clearDueDate">clearDueDate</a></li>
+            
+                <li data-name="Reservation#clearFromDate"><a href="Reservation.html#clearFromDate">clearFromDate</a></li>
+            
+                <li data-name="Reservation#clearItems"><a href="Reservation.html#clearItems">clearItems</a></li>
+            
+                <li data-name="Reservation#clearLocation"><a href="Reservation.html#clearLocation">clearLocation</a></li>
+            
+                <li data-name="Reservation#clearToDate"><a href="Reservation.html#clearToDate">clearToDate</a></li>
+            
+                <li data-name="Reservation#create"><a href="Reservation.html#create">create</a></li>
+            
+                <li data-name="Reservation#delete"><a href="Reservation.html#delete">delete</a></li>
+            
+                <li data-name="Reservation#deleteComment"><a href="Reservation.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Reservation#detach"><a href="Reservation.html#detach">detach</a></li>
+            
+                <li data-name="Reservation#discardChanges"><a href="Reservation.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Reservation#existsInDb"><a href="Reservation.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Reservation#get"><a href="Reservation.html#get">get</a></li>
+            
+                <li data-name="Reservation#getMaxDate"><a href="Reservation.html#getMaxDate">getMaxDate</a></li>
+            
+                <li data-name="Reservation#getMaxDateDue"><a href="Reservation.html#getMaxDateDue">getMaxDateDue</a></li>
+            
+                <li data-name="Reservation#getMaxDateFrom"><a href="Reservation.html#getMaxDateFrom">getMaxDateFrom</a></li>
+            
+                <li data-name="Reservation#getMaxDateTo"><a href="Reservation.html#getMaxDateTo">getMaxDateTo</a></li>
+            
+                <li data-name="Reservation#getMinDate"><a href="Reservation.html#getMinDate">getMinDate</a></li>
+            
+                <li data-name="Reservation#getMinDateDue"><a href="Reservation.html#getMinDateDue">getMinDateDue</a></li>
+            
+                <li data-name="Reservation#getMinDateFrom"><a href="Reservation.html#getMinDateFrom">getMinDateFrom</a></li>
+            
+                <li data-name="Reservation#getMinDateTo"><a href="Reservation.html#getMinDateTo">getMinDateTo</a></li>
+            
+                <li data-name="Reservation#hasItems"><a href="Reservation.html#hasItems">hasItems</a></li>
+            
+                <li data-name="Reservation#isDirty"><a href="Reservation.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Reservation#isEmpty"><a href="Reservation.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Reservation#isValid"><a href="Reservation.html#isValid">isValid</a></li>
+            
+                <li data-name="Reservation#makeOrder"><a href="Reservation.html#makeOrder">makeOrder</a></li>
+            
+                <li data-name="Reservation#moveKeyValueIndex"><a href="Reservation.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Reservation#reload"><a href="Reservation.html#reload">reload</a></li>
+            
+                <li data-name="Reservation#removeItems"><a href="Reservation.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Reservation#removeKeyValue"><a href="Reservation.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Reservation#reserve"><a href="Reservation.html#reserve">reserve</a></li>
+            
+                <li data-name="Reservation#reset"><a href="Reservation.html#reset">reset</a></li>
+            
+                <li data-name="Reservation#searchItems"><a href="Reservation.html#searchItems">searchItems</a></li>
+            
+                <li data-name="Reservation#setContact"><a href="Reservation.html#setContact">setContact</a></li>
+            
+                <li data-name="Reservation#setCover"><a href="Reservation.html#setCover">setCover</a></li>
+            
+                <li data-name="Reservation#setDueDate"><a href="Reservation.html#setDueDate">setDueDate</a></li>
+            
+                <li data-name="Reservation#setFromDate"><a href="Reservation.html#setFromDate">setFromDate</a></li>
+            
+                <li data-name="Reservation#setFromToDate"><a href="Reservation.html#setFromToDate">setFromToDate</a></li>
+            
+                <li data-name="Reservation#setKeyValue"><a href="Reservation.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Reservation#setLocation"><a href="Reservation.html#setLocation">setLocation</a></li>
+            
+                <li data-name="Reservation#setToDate"><a href="Reservation.html#setToDate">setToDate</a></li>
+            
+                <li data-name="Reservation#suggestEndDate"><a href="Reservation.html#suggestEndDate">suggestEndDate</a></li>
+            
+                <li data-name="Reservation#swapItem"><a href="Reservation.html#swapItem">swapItem</a></li>
+            
+                <li data-name="Reservation#undoReserve"><a href="Reservation.html#undoReserve">undoReserve</a></li>
+            
+                <li data-name="Reservation#update"><a href="Reservation.html#update">update</a></li>
+            
+                <li data-name="Reservation#updateComment"><a href="Reservation.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Reservation#updateKeyValue"><a href="Reservation.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="Transaction">
+            <span class="title">
+                <a href="Transaction.html">Transaction</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="Transaction#addComment"><a href="Transaction.html#addComment">addComment</a></li>
+            
+                <li data-name="Transaction#addItems"><a href="Transaction.html#addItems">addItems</a></li>
+            
+                <li data-name="Transaction#addKeyValue"><a href="Transaction.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="Transaction#attach"><a href="Transaction.html#attach">attach</a></li>
+            
+                <li data-name="Transaction#attachFile"><a href="Transaction.html#attachFile">attachFile</a></li>
+            
+                <li data-name="Transaction#attachImage"><a href="Transaction.html#attachImage">attachImage</a></li>
+            
+                <li data-name="Transaction#canDelete"><a href="Transaction.html#canDelete">canDelete</a></li>
+            
+                <li data-name="Transaction#clearContact"><a href="Transaction.html#clearContact">clearContact</a></li>
+            
+                <li data-name="Transaction#clearDueDate"><a href="Transaction.html#clearDueDate">clearDueDate</a></li>
+            
+                <li data-name="Transaction#clearFromDate"><a href="Transaction.html#clearFromDate">clearFromDate</a></li>
+            
+                <li data-name="Transaction#clearItems"><a href="Transaction.html#clearItems">clearItems</a></li>
+            
+                <li data-name="Transaction#clearLocation"><a href="Transaction.html#clearLocation">clearLocation</a></li>
+            
+                <li data-name="Transaction#clearToDate"><a href="Transaction.html#clearToDate">clearToDate</a></li>
+            
+                <li data-name="Transaction#create"><a href="Transaction.html#create">create</a></li>
+            
+                <li data-name="Transaction#delete"><a href="Transaction.html#delete">delete</a></li>
+            
+                <li data-name="Transaction#deleteComment"><a href="Transaction.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="Transaction#detach"><a href="Transaction.html#detach">detach</a></li>
+            
+                <li data-name="Transaction#discardChanges"><a href="Transaction.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="Transaction#existsInDb"><a href="Transaction.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="Transaction#get"><a href="Transaction.html#get">get</a></li>
+            
+                <li data-name="Transaction#getMaxDate"><a href="Transaction.html#getMaxDate">getMaxDate</a></li>
+            
+                <li data-name="Transaction#getMaxDateDue"><a href="Transaction.html#getMaxDateDue">getMaxDateDue</a></li>
+            
+                <li data-name="Transaction#getMaxDateFrom"><a href="Transaction.html#getMaxDateFrom">getMaxDateFrom</a></li>
+            
+                <li data-name="Transaction#getMaxDateTo"><a href="Transaction.html#getMaxDateTo">getMaxDateTo</a></li>
+            
+                <li data-name="Transaction#getMinDate"><a href="Transaction.html#getMinDate">getMinDate</a></li>
+            
+                <li data-name="Transaction#getMinDateDue"><a href="Transaction.html#getMinDateDue">getMinDateDue</a></li>
+            
+                <li data-name="Transaction#getMinDateFrom"><a href="Transaction.html#getMinDateFrom">getMinDateFrom</a></li>
+            
+                <li data-name="Transaction#getMinDateTo"><a href="Transaction.html#getMinDateTo">getMinDateTo</a></li>
+            
+                <li data-name="Transaction#hasItems"><a href="Transaction.html#hasItems">hasItems</a></li>
+            
+                <li data-name="Transaction#isDirty"><a href="Transaction.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Transaction#isEmpty"><a href="Transaction.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Transaction#isValid"><a href="Transaction.html#isValid">isValid</a></li>
+            
+                <li data-name="Transaction#moveKeyValueIndex"><a href="Transaction.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="Transaction#reload"><a href="Transaction.html#reload">reload</a></li>
+            
+                <li data-name="Transaction#removeItems"><a href="Transaction.html#removeItems">removeItems</a></li>
+            
+                <li data-name="Transaction#removeKeyValue"><a href="Transaction.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="Transaction#reset"><a href="Transaction.html#reset">reset</a></li>
+            
+                <li data-name="Transaction#setContact"><a href="Transaction.html#setContact">setContact</a></li>
+            
+                <li data-name="Transaction#setCover"><a href="Transaction.html#setCover">setCover</a></li>
+            
+                <li data-name="Transaction#setDueDate"><a href="Transaction.html#setDueDate">setDueDate</a></li>
+            
+                <li data-name="Transaction#setFromDate"><a href="Transaction.html#setFromDate">setFromDate</a></li>
+            
+                <li data-name="Transaction#setKeyValue"><a href="Transaction.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="Transaction#setLocation"><a href="Transaction.html#setLocation">setLocation</a></li>
+            
+                <li data-name="Transaction#setToDate"><a href="Transaction.html#setToDate">setToDate</a></li>
+            
+                <li data-name="Transaction#suggestEndDate"><a href="Transaction.html#suggestEndDate">suggestEndDate</a></li>
+            
+                <li data-name="Transaction#swapItem"><a href="Transaction.html#swapItem">swapItem</a></li>
+            
+                <li data-name="Transaction#update"><a href="Transaction.html#update">update</a></li>
+            
+                <li data-name="Transaction#updateComment"><a href="Transaction.html#updateComment">updateComment</a></li>
+            
+                <li data-name="Transaction#updateKeyValue"><a href="Transaction.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+        <li class="item" data-name="User">
+            <span class="title">
+                <a href="User.html">User</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="User#addComment"><a href="User.html#addComment">addComment</a></li>
+            
+                <li data-name="User#addKeyValue"><a href="User.html#addKeyValue">addKeyValue</a></li>
+            
+                <li data-name="User#attach"><a href="User.html#attach">attach</a></li>
+            
+                <li data-name="User#attachFile"><a href="User.html#attachFile">attachFile</a></li>
+            
+                <li data-name="User#attachImage"><a href="User.html#attachImage">attachImage</a></li>
+            
+                <li data-name="User#canDelete"><a href="User.html#canDelete">canDelete</a></li>
+            
+                <li data-name="User#create"><a href="User.html#create">create</a></li>
+            
+                <li data-name="User#delete"><a href="User.html#delete">delete</a></li>
+            
+                <li data-name="User#deleteComment"><a href="User.html#deleteComment">deleteComment</a></li>
+            
+                <li data-name="User#detach"><a href="User.html#detach">detach</a></li>
+            
+                <li data-name="User#discardChanges"><a href="User.html#discardChanges">discardChanges</a></li>
+            
+                <li data-name="User#existsInDb"><a href="User.html#existsInDb">existsInDb</a></li>
+            
+                <li data-name="User#get"><a href="User.html#get">get</a></li>
+            
+                <li data-name="User#isDirty"><a href="User.html#isDirty">isDirty</a></li>
+            
+                <li data-name="User#isEmpty"><a href="User.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="User#isValid"><a href="User.html#isValid">isValid</a></li>
+            
+                <li data-name="User#moveKeyValueIndex"><a href="User.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
+            
+                <li data-name="User#reload"><a href="User.html#reload">reload</a></li>
+            
+                <li data-name="User#removeKeyValue"><a href="User.html#removeKeyValue">removeKeyValue</a></li>
+            
+                <li data-name="User#reset"><a href="User.html#reset">reset</a></li>
+            
+                <li data-name="User#setCover"><a href="User.html#setCover">setCover</a></li>
+            
+                <li data-name="User#setKeyValue"><a href="User.html#setKeyValue">setKeyValue</a></li>
+            
+                <li data-name="User#update"><a href="User.html#update">update</a></li>
+            
+                <li data-name="User#updateComment"><a href="User.html#updateComment">updateComment</a></li>
+            
+                <li data-name="User#updateKeyValue"><a href="User.html#updateKeyValue">updateKeyValue</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
+    </ul>
+</div>
+    <div class="main">
+        <h1 class="page-title" data-filename="inflection.js.html">Source: common/inflection.js</h1>
+        
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source "><code>/*
+ * Javascript extenders for string/number
+ */
+define(function () {
+	/**
+	 * STRING EXTENSIONS
+	 */
+	/**
+	 * pluralize
+	 *
+	 * @memberOf String
+	 * @name  String#pluralize
+	 * @method
+	 * 
+	 * @param  {int} count  
+	 * @param  {string} suffix 
+	 * @return {string}        
+	 */
+		 String.prototype.pluralize = function (count, suffix) {
+	        if( (this == 'is') && (count!=1)) {
+	            return 'are';
+	        } else if (this == 'this') {
+	            return (count==1) ? this : "these";
+	        } else if (this.endsWith('s')) {
+	            suffix = suffix || 'es';
+	            return (count==1) ? this : this+suffix;
+	        } else if (this.endsWith('y')) {
+	            suffix = suffix || 'ies';
+	            return (count==1) ? this : this.substr(0, this.length-1) + suffix;
+	        } else {
+	            suffix = suffix || 's';
+	            return (count==1) ? this : this+suffix;
+	        }
+	    };
+	
+
+	/**
+	 * capitalize 
+	 *
+	 * @memberOf String
+	 * @name  String#capitalize
+	 * @method
+	 * 
+	 * @param  {Boolean} lower 
+	 * @return {string}       
+	 */
+	String.prototype.capitalize = function(lower) {
+        return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+    };
+
+	
+	if(!String.prototype.startsWith){
+		/**
+		 * startsWith
+		 *
+		 * @memberOf String
+		 * @name  String#startsWith
+		 * @method
+		 * 
+		 * @param  {string} str 
+		 * @return {Boolean}     
+		 */
+		String.prototype.startsWith = function (str){
+	        return this.indexOf(str) == 0;
+	    };
+	}
+	if(!String.prototype.endsWith){
+		/**
+		 * endsWith
+		 *
+		 * @memberOf String
+		 * @name  String#endsWith
+		 * @method
+		 * 
+		 * @param  {string} str 
+		 * @return {Boolean}     
+		 */
+		String.prototype.endsWith = function (str){
+	        if (this.length&lt;str.length) {
+	            return false;
+	        } else {
+	            return this.lastIndexOf(str) == (this.length-str.length);
+	        }
+	    };
+	}
+	if(!String.prototype.truncate){
+		/**
+		 * truncate 
+		 *
+		 * @memberOf String
+		 * @name  String#truncate
+		 * @method 
+		 * 
+		 * @param  {int} len 
+		 * @return {string}     
+		 */
+		String.prototype.truncate = function(len){
+	        len = (len!=null) ? len : 25;
+	        var re = this.match(RegExp("^.{0,"+len+"}[\S]*"));
+	        var l = re[0].length;
+	        re = re[0].replace(/\s$/,'');
+	        if(l &lt; this.length)
+	            re = re + "&hellip;";
+	        return re;
+	    };
+	}
+	if(!String.prototype.isValidUrl){
+		/**
+		 * isValidUrl
+		 *
+		 * @memberOf String
+		 * @name  String#isValidUrl
+		 * @method  
+		 * 
+		 * @return {Boolean} 
+		 */
+		String.prototype.isValidUrl = function() {
+	        var pattern = new RegExp('^(https?:\\/\\/)?'+ // protocol
+	            '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
+	            '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
+	            '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
+	            '(\\?[;&a-z\\d%_.~+=-]*)?'+ // query string
+	            '(\\#[-a-z\\d_]*)?$','i'); // fragment locator
+	        if(!pattern.test(this)) {
+	            return false;
+	        } else {
+	            return true;
+	        }
+	    };
+	}
+	if(!String.prototype.hashCode){
+		/**
+	     * hashCode 
+	     * http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+	     *
+	     * @memberOf String
+	     * @name  String#hashCode
+	     * @method
+	     * 
+	     * @return {string} 
+	     */
+	    String.prototype.hashCode = function() {
+	        var hash = 0, i, chr, len;
+	        if (this.length == 0) return hash;
+	        for (i = 0, len = this.length; i &lt; len; i++) {
+	            chr   = this.charCodeAt(i);
+	            hash  = ((hash &lt;&lt; 5) - hash) + chr;
+	            hash |= 0; // Convert to 32bit integer
+	        }
+	        return hash;
+	    };
+	}
+
+	//http://stackoverflow.com/questions/286921/efficiently-replace-all-accented-characters-in-a-string
+	var Latinise={};Latinise.latin_map={"Á":"A","Ă":"A","Ắ":"A","Ặ":"A","Ằ":"A","Ẳ":"A","Ẵ":"A","Ǎ":"A","Â":"A","Ấ":"A","Ậ":"A","Ầ":"A","Ẩ":"A","Ẫ":"A","Ä":"A","Ǟ":"A","Ȧ":"A","Ǡ":"A","Ạ":"A","Ȁ":"A","À":"A","Ả":"A","Ȃ":"A","Ā":"A","Ą":"A","Å":"A","Ǻ":"A","Ḁ":"A","Ⱥ":"A","Ã":"A","Ꜳ":"AA","Æ":"AE","Ǽ":"AE","Ǣ":"AE","Ꜵ":"AO","Ꜷ":"AU","Ꜹ":"AV","Ꜻ":"AV","Ꜽ":"AY","Ḃ":"B","Ḅ":"B","Ɓ":"B","Ḇ":"B","Ƀ":"B","Ƃ":"B","Ć":"C","Č":"C","Ç":"C","Ḉ":"C","Ĉ":"C","Ċ":"C","Ƈ":"C","Ȼ":"C","Ď":"D","Ḑ":"D","Ḓ":"D","Ḋ":"D","Ḍ":"D","Ɗ":"D","Ḏ":"D","ǲ":"D","ǅ":"D","Đ":"D","Ƌ":"D","Ǳ":"DZ","Ǆ":"DZ","É":"E","Ĕ":"E","Ě":"E","Ȩ":"E","Ḝ":"E","Ê":"E","Ế":"E","Ệ":"E","Ề":"E","Ể":"E","Ễ":"E","Ḙ":"E","Ë":"E","Ė":"E","Ẹ":"E","Ȅ":"E","È":"E","Ẻ":"E","Ȇ":"E","Ē":"E","Ḗ":"E","Ḕ":"E","Ę":"E","Ɇ":"E","Ẽ":"E","Ḛ":"E","Ꝫ":"ET","Ḟ":"F","Ƒ":"F","Ǵ":"G","Ğ":"G","Ǧ":"G","Ģ":"G","Ĝ":"G","Ġ":"G","Ɠ":"G","Ḡ":"G","Ǥ":"G","Ḫ":"H","Ȟ":"H","Ḩ":"H","Ĥ":"H","Ⱨ":"H","Ḧ":"H","Ḣ":"H","Ḥ":"H","Ħ":"H","Í":"I","Ĭ":"I","Ǐ":"I","Î":"I","Ï":"I","Ḯ":"I","İ":"I","Ị":"I","Ȉ":"I","Ì":"I","Ỉ":"I","Ȋ":"I","Ī":"I","Į":"I","Ɨ":"I","Ĩ":"I","Ḭ":"I","Ꝺ":"D","Ꝼ":"F","Ᵹ":"G","Ꞃ":"R","Ꞅ":"S","Ꞇ":"T","Ꝭ":"IS","Ĵ":"J","Ɉ":"J","Ḱ":"K","Ǩ":"K","Ķ":"K","Ⱪ":"K","Ꝃ":"K","Ḳ":"K","Ƙ":"K","Ḵ":"K","Ꝁ":"K","Ꝅ":"K","Ĺ":"L","Ƚ":"L","Ľ":"L","Ļ":"L","Ḽ":"L","Ḷ":"L","Ḹ":"L","Ⱡ":"L","Ꝉ":"L","Ḻ":"L","Ŀ":"L","Ɫ":"L","ǈ":"L","Ł":"L","Ǉ":"LJ","Ḿ":"M","Ṁ":"M","Ṃ":"M","Ɱ":"M","Ń":"N","Ň":"N","Ņ":"N","Ṋ":"N","Ṅ":"N","Ṇ":"N","Ǹ":"N","Ɲ":"N","Ṉ":"N","Ƞ":"N","ǋ":"N","Ñ":"N","Ǌ":"NJ","Ó":"O","Ŏ":"O","Ǒ":"O","Ô":"O","Ố":"O","Ộ":"O","Ồ":"O","Ổ":"O","Ỗ":"O","Ö":"O","Ȫ":"O","Ȯ":"O","Ȱ":"O","Ọ":"O","Ő":"O","Ȍ":"O","Ò":"O","Ỏ":"O","Ơ":"O","Ớ":"O","Ợ":"O","Ờ":"O","Ở":"O","Ỡ":"O","Ȏ":"O","Ꝋ":"O","Ꝍ":"O","Ō":"O","Ṓ":"O","Ṑ":"O","Ɵ":"O","Ǫ":"O","Ǭ":"O","Ø":"O","Ǿ":"O","Õ":"O","Ṍ":"O","Ṏ":"O","Ȭ":"O","Ƣ":"OI","Ꝏ":"OO","Ɛ":"E","Ɔ":"O","Ȣ":"OU","Ṕ":"P","Ṗ":"P","Ꝓ":"P","Ƥ":"P","Ꝕ":"P","Ᵽ":"P","Ꝑ":"P","Ꝙ":"Q","Ꝗ":"Q","Ŕ":"R","Ř":"R","Ŗ":"R","Ṙ":"R","Ṛ":"R","Ṝ":"R","Ȑ":"R","Ȓ":"R","Ṟ":"R","Ɍ":"R","Ɽ":"R","Ꜿ":"C","Ǝ":"E","Ś":"S","Ṥ":"S","Š":"S","Ṧ":"S","Ş":"S","Ŝ":"S","Ș":"S","Ṡ":"S","Ṣ":"S","Ṩ":"S","Ť":"T","Ţ":"T","Ṱ":"T","Ț":"T","Ⱦ":"T","Ṫ":"T","Ṭ":"T","Ƭ":"T","Ṯ":"T","Ʈ":"T","Ŧ":"T","Ɐ":"A","Ꞁ":"L","Ɯ":"M","Ʌ":"V","Ꜩ":"TZ","Ú":"U","Ŭ":"U","Ǔ":"U","Û":"U","Ṷ":"U","Ü":"U","Ǘ":"U","Ǚ":"U","Ǜ":"U","Ǖ":"U","Ṳ":"U","Ụ":"U","Ű":"U","Ȕ":"U","Ù":"U","Ủ":"U","Ư":"U","Ứ":"U","Ự":"U","Ừ":"U","Ử":"U","Ữ":"U","Ȗ":"U","Ū":"U","Ṻ":"U","Ų":"U","Ů":"U","Ũ":"U","Ṹ":"U","Ṵ":"U","Ꝟ":"V","Ṿ":"V","Ʋ":"V","Ṽ":"V","Ꝡ":"VY","Ẃ":"W","Ŵ":"W","Ẅ":"W","Ẇ":"W","Ẉ":"W","Ẁ":"W","Ⱳ":"W","Ẍ":"X","Ẋ":"X","Ý":"Y","Ŷ":"Y","Ÿ":"Y","Ẏ":"Y","Ỵ":"Y","Ỳ":"Y","Ƴ":"Y","Ỷ":"Y","Ỿ":"Y","Ȳ":"Y","Ɏ":"Y","Ỹ":"Y","Ź":"Z","Ž":"Z","Ẑ":"Z","Ⱬ":"Z","Ż":"Z","Ẓ":"Z","Ȥ":"Z","Ẕ":"Z","Ƶ":"Z","Ĳ":"IJ","Œ":"OE","ᴀ":"A","ᴁ":"AE","ʙ":"B","ᴃ":"B","ᴄ":"C","ᴅ":"D","ᴇ":"E","ꜰ":"F","ɢ":"G","ʛ":"G","ʜ":"H","ɪ":"I","ʁ":"R","ᴊ":"J","ᴋ":"K","ʟ":"L","ᴌ":"L","ᴍ":"M","ɴ":"N","ᴏ":"O","ɶ":"OE","ᴐ":"O","ᴕ":"OU","ᴘ":"P","ʀ":"R","ᴎ":"N","ᴙ":"R","ꜱ":"S","ᴛ":"T","ⱻ":"E","ᴚ":"R","ᴜ":"U","ᴠ":"V","ᴡ":"W","ʏ":"Y","ᴢ":"Z","á":"a","ă":"a","ắ":"a","ặ":"a","ằ":"a","ẳ":"a","ẵ":"a","ǎ":"a","â":"a","ấ":"a","ậ":"a","ầ":"a","ẩ":"a","ẫ":"a","ä":"a","ǟ":"a","ȧ":"a","ǡ":"a","ạ":"a","ȁ":"a","à":"a","ả":"a","ȃ":"a","ā":"a","ą":"a","ᶏ":"a","ẚ":"a","å":"a","ǻ":"a","ḁ":"a","ⱥ":"a","ã":"a","ꜳ":"aa","æ":"ae","ǽ":"ae","ǣ":"ae","ꜵ":"ao","ꜷ":"au","ꜹ":"av","ꜻ":"av","ꜽ":"ay","ḃ":"b","ḅ":"b","ɓ":"b","ḇ":"b","ᵬ":"b","ᶀ":"b","ƀ":"b","ƃ":"b","ɵ":"o","ć":"c","č":"c","ç":"c","ḉ":"c","ĉ":"c","ɕ":"c","ċ":"c","ƈ":"c","ȼ":"c","ď":"d","ḑ":"d","ḓ":"d","ȡ":"d","ḋ":"d","ḍ":"d","ɗ":"d","ᶑ":"d","ḏ":"d","ᵭ":"d","ᶁ":"d","đ":"d","ɖ":"d","ƌ":"d","ı":"i","ȷ":"j","ɟ":"j","ʄ":"j","ǳ":"dz","ǆ":"dz","é":"e","ĕ":"e","ě":"e","ȩ":"e","ḝ":"e","ê":"e","ế":"e","ệ":"e","ề":"e","ể":"e","ễ":"e","ḙ":"e","ë":"e","ė":"e","ẹ":"e","ȅ":"e","è":"e","ẻ":"e","ȇ":"e","ē":"e","ḗ":"e","ḕ":"e","ⱸ":"e","ę":"e","ᶒ":"e","ɇ":"e","ẽ":"e","ḛ":"e","ꝫ":"et","ḟ":"f","ƒ":"f","ᵮ":"f","ᶂ":"f","ǵ":"g","ğ":"g","ǧ":"g","ģ":"g","ĝ":"g","ġ":"g","ɠ":"g","ḡ":"g","ᶃ":"g","ǥ":"g","ḫ":"h","ȟ":"h","ḩ":"h","ĥ":"h","ⱨ":"h","ḧ":"h","ḣ":"h","ḥ":"h","ɦ":"h","ẖ":"h","ħ":"h","ƕ":"hv","í":"i","ĭ":"i","ǐ":"i","î":"i","ï":"i","ḯ":"i","ị":"i","ȉ":"i","ì":"i","ỉ":"i","ȋ":"i","ī":"i","į":"i","ᶖ":"i","ɨ":"i","ĩ":"i","ḭ":"i","ꝺ":"d","ꝼ":"f","ᵹ":"g","ꞃ":"r","ꞅ":"s","ꞇ":"t","ꝭ":"is","ǰ":"j","ĵ":"j","ʝ":"j","ɉ":"j","ḱ":"k","ǩ":"k","ķ":"k","ⱪ":"k","ꝃ":"k","ḳ":"k","ƙ":"k","ḵ":"k","ᶄ":"k","ꝁ":"k","ꝅ":"k","ĺ":"l","ƚ":"l","ɬ":"l","ľ":"l","ļ":"l","ḽ":"l","ȴ":"l","ḷ":"l","ḹ":"l","ⱡ":"l","ꝉ":"l","ḻ":"l","ŀ":"l","ɫ":"l","ᶅ":"l","ɭ":"l","ł":"l","ǉ":"lj","ſ":"s","ẜ":"s","ẛ":"s","ẝ":"s","ḿ":"m","ṁ":"m","ṃ":"m","ɱ":"m","ᵯ":"m","ᶆ":"m","ń":"n","ň":"n","ņ":"n","ṋ":"n","ȵ":"n","ṅ":"n","ṇ":"n","ǹ":"n","ɲ":"n","ṉ":"n","ƞ":"n","ᵰ":"n","ᶇ":"n","ɳ":"n","ñ":"n","ǌ":"nj","ó":"o","ŏ":"o","ǒ":"o","ô":"o","ố":"o","ộ":"o","ồ":"o","ổ":"o","ỗ":"o","ö":"o","ȫ":"o","ȯ":"o","ȱ":"o","ọ":"o","ő":"o","ȍ":"o","ò":"o","ỏ":"o","ơ":"o","ớ":"o","ợ":"o","ờ":"o","ở":"o","ỡ":"o","ȏ":"o","ꝋ":"o","ꝍ":"o","ⱺ":"o","ō":"o","ṓ":"o","ṑ":"o","ǫ":"o","ǭ":"o","ø":"o","ǿ":"o","õ":"o","ṍ":"o","ṏ":"o","ȭ":"o","ƣ":"oi","ꝏ":"oo","ɛ":"e","ᶓ":"e","ɔ":"o","ᶗ":"o","ȣ":"ou","ṕ":"p","ṗ":"p","ꝓ":"p","ƥ":"p","ᵱ":"p","ᶈ":"p","ꝕ":"p","ᵽ":"p","ꝑ":"p","ꝙ":"q","ʠ":"q","ɋ":"q","ꝗ":"q","ŕ":"r","ř":"r","ŗ":"r","ṙ":"r","ṛ":"r","ṝ":"r","ȑ":"r","ɾ":"r","ᵳ":"r","ȓ":"r","ṟ":"r","ɼ":"r","ᵲ":"r","ᶉ":"r","ɍ":"r","ɽ":"r","ↄ":"c","ꜿ":"c","ɘ":"e","ɿ":"r","ś":"s","ṥ":"s","š":"s","ṧ":"s","ş":"s","ŝ":"s","ș":"s","ṡ":"s","ṣ":"s","ṩ":"s","ʂ":"s","ᵴ":"s","ᶊ":"s","ȿ":"s","ɡ":"g","ᴑ":"o","ᴓ":"o","ᴝ":"u","ť":"t","ţ":"t","ṱ":"t","ț":"t","ȶ":"t","ẗ":"t","ⱦ":"t","ṫ":"t","ṭ":"t","ƭ":"t","ṯ":"t","ᵵ":"t","ƫ":"t","ʈ":"t","ŧ":"t","ᵺ":"th","ɐ":"a","ᴂ":"ae","ǝ":"e","ᵷ":"g","ɥ":"h","ʮ":"h","ʯ":"h","ᴉ":"i","ʞ":"k","ꞁ":"l","ɯ":"m","ɰ":"m","ᴔ":"oe","ɹ":"r","ɻ":"r","ɺ":"r","ⱹ":"r","ʇ":"t","ʌ":"v","ʍ":"w","ʎ":"y","ꜩ":"tz","ú":"u","ŭ":"u","ǔ":"u","û":"u","ṷ":"u","ü":"u","ǘ":"u","ǚ":"u","ǜ":"u","ǖ":"u","ṳ":"u","ụ":"u","ű":"u","ȕ":"u","ù":"u","ủ":"u","ư":"u","ứ":"u","ự":"u","ừ":"u","ử":"u","ữ":"u","ȗ":"u","ū":"u","ṻ":"u","ų":"u","ᶙ":"u","ů":"u","ũ":"u","ṹ":"u","ṵ":"u","ᵫ":"ue","ꝸ":"um","ⱴ":"v","ꝟ":"v","ṿ":"v","ʋ":"v","ᶌ":"v","ⱱ":"v","ṽ":"v","ꝡ":"vy","ẃ":"w","ŵ":"w","ẅ":"w","ẇ":"w","ẉ":"w","ẁ":"w","ⱳ":"w","ẘ":"w","ẍ":"x","ẋ":"x","ᶍ":"x","ý":"y","ŷ":"y","ÿ":"y","ẏ":"y","ỵ":"y","ỳ":"y","ƴ":"y","ỷ":"y","ỿ":"y","ȳ":"y","ẙ":"y","ɏ":"y","ỹ":"y","ź":"z","ž":"z","ẑ":"z","ʑ":"z","ⱬ":"z","ż":"z","ẓ":"z","ȥ":"z","ẕ":"z","ᵶ":"z","ᶎ":"z","ʐ":"z","ƶ":"z","ɀ":"z","ﬀ":"ff","ﬃ":"ffi","ﬄ":"ffl","ﬁ":"fi","ﬂ":"fl","ĳ":"ij","œ":"oe","ﬆ":"st","ₐ":"a","ₑ":"e","ᵢ":"i","ⱼ":"j","ₒ":"o","ᵣ":"r","ᵤ":"u","ᵥ":"v","ₓ":"x"};
+	
+	/**
+	 * latinise 
+	 *
+	 * @memberOf  String
+	 * @name  String#latinise
+	 * @method
+	 * 
+	 * @return {string} 
+	 */
+	String.prototype.latinise=function(){
+		return this.replace(/[^A-Za-z0-9\[\] ]/g,function(a){return Latinise.latin_map[a]||a});
+	};
+
+	/**
+	 * latinize 
+	 *
+	 * @memberOf  String
+	 * @name  String#latinize
+	 * @method
+	 * 
+	 * @return {string} 
+	 */
+	String.prototype.latinize=String.prototype.latinise;
+
+	/**
+	 * isLatin 
+	 *
+	 * @memberOf  String
+	 * @name  String#isLatin
+	 * @method
+	 * 
+	 * @return {Boolean} 
+	 */
+	String.prototype.isLatin=function(){
+		return this==this.latinise();
+	};
+
+	/**
+	 * OnlyAlphaNumSpaceAndUnderscore
+	 *
+	 * @memberOf String
+	 * @name  String#OnlyAlphaNumSpaceAndUnderscore
+	 * @method
+	 * 
+	 */
+	String.prototype.OnlyAlphaNumSpaceAndUnderscore = function (){
+	    // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
+	    // \W Matches any character that is not a word character from the basic Latin alphabet. Equivalent to [^A-Za-z0-9_]
+	    // Preceding or trailing whitespaces are removed, and words are also latinised
+	    return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[\W]/g, '');
+	};
+
+	/**
+	 * OnlyAlphaNumSpaceUnderscoreAndDot
+	 *
+	 * @memberOf String
+	 * @name  String#OnlyAlphaNumSpaceUnderscoreAndDot
+	 * @method
+	 * 
+	 */
+	String.prototype.OnlyAlphaNumSpaceUnderscoreAndDot = function (){
+	    // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
+	    // \W Matches any character that is not a word character from the basic Latin alphabet. Equivalent to [^A-Za-z0-9_]
+	    // Preceding or trailing whitespaces are removed, and words are also latinised
+	    return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[^a-z0-9_\.]/g, '');
+	};
+
+	if(!String.prototype.addLeadingZero){
+		/**
+		 * addLeadingZero adds zeros in front of a number 
+		 * http://stackoverflow.com/questions/6466135/adding-extra-zeros-in-front-of-a-number-using-jquery
+		 * ex: 5.pad(3) --> 005
+		 *    
+		 * @param  {string} str 
+		 * @param  {Number} max 
+		 * @return {string}     
+		 */
+		String.prototype.addLeadingZero = function(max){
+			var str = this.toString();
+			return str.length &lt; max ? ("0" + str).addLeadingZero(max) : str;
+		}
+	}
+
+	/**
+	 * NUMBER EXTENSIONS
+	 */
+	if(!Number.prototype.between){
+		/**
+		 * between
+		 *
+		 * @memberOf  Number
+		 * @name  Number#between
+		 * @method
+		 * 
+		 * @param  {int} a 
+		 * @param  {int} b 
+		 * @return {Boolean}   
+		 */
+	 	Number.prototype.between  = function (a, b) {
+	        var min = Math.min(a,b),
+	            max = Math.max(a,b);
+	        return this >= min && this &lt;= max;
+	    };
+	}
+});
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+
+
+        
+
+        <footer>
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 27 2016 11:40:05 GMT+0100 (CET)
+        </footer>
+    </div>
+</div>
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+<script src="scripts/main.js"></script>
+</body>
+</html>

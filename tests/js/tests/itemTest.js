@@ -7,6 +7,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
         var run = function() {
 
             var collection = "items";
+            var collectionAttachments = "attachments";
             var categories = [
                 "cheqroom.types.item.heavy_equipment.compressors",
                 "cheqroom.types.item.heavy_equipment.concrete_equipment"
@@ -18,8 +19,11 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
             var ROOT = 'cheqroom.types.item';
 
             // Get a user with token
-            helper.getApiDataSource(collection)
-                .done(function(ds) {
+            $.when(
+                helper.getApiDataSource(collection),
+                helper.getApiDataSource(collectionAttachments)
+            )
+                .done(function(ds, dsAttachments) {
 
                     var getAnyCheckedOutItem = function() {
                         return helper.apiSearch({listName: "checkedout"}, collection, "*,location,category")
@@ -33,6 +37,10 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             .then(function(resp) {
                                 return (resp!=null) && (resp.docs!=null) && (resp.docs.length>0) ? resp.docs[0] : null;
                             });
+                    };
+
+                    var getAnyAttachment = function() {
+                        return helper.apiGet(null, collectionAttachments);
                     };
 
                     var getAllLocations = function() {
@@ -128,7 +136,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             // Create a simple Item
                             item.create()
                                 .done(function(resp) {
-                                    ok(resp != undefined)
+                                    ok(resp != undefined);
                                     ok(item.existsInDb());                                    
                                 })
                                 .always(function(){
@@ -250,6 +258,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             .done(function(data) {
                                 item._fromJson(data)
                                     .done(function() {
+                                        ok(item.order==null);
                                         item.expire()
                                             .done(function() {
                                                 ok(item.status=="expired");
@@ -287,6 +296,52 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             });
                     });
 
+                    asyncTest("attach, detach on Item object", function() {
+                        var item = new cr.Item({
+                            ds: ds
+                        });
+
+                        $.when(
+                            getAnyAvailableItem(),
+                            getAnyAttachment()
+                        )
+                            .done(function(itemData, attData) {
+                                 item._fromJson(itemData)
+                                    .done(function() {
+                                        item.duplicate(1)
+                                            .done(function(items) {
+                                                var newItem = new cr.Item({
+                                                    ds: ds
+                                                });
+
+                                                newItem._fromJson(items[0])
+                                                    .done(function() {
+                                                        // Attach the file
+                                                        newItem.attach(attData)
+                                                            .done(function() {
+                                                                newItem.cover = "";
+                                                                // Set it as cover
+                                                                newItem.setCover(attData)
+                                                                    .done(function() {
+                                                                        ok(newItem.cover!="");
+
+                                                                        // Detach the file, cover should be different
+                                                                        var oldCover = newItem.cover;
+                                                                        newItem.detach(oldCover)
+                                                                            .done(function() {
+                                                                                ok(newItem.cover!=oldCover);
+                                                                            })
+                                                                            .always(function(){
+                                                                                start();
+                                                                            });
+                                                                    });
+                                                            });
+                                                    });
+                                            });
+                                    });
+                            });
+                    });
+
                     asyncTest("change geo Item object", function() {
                         var item = new cr.Item({
                             ds: ds
@@ -309,6 +364,41 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                                             });
                                     });
                             });
+                    });
+
+                    test("isValid Item object", function() {
+                        var item = new cr.Item({
+                            ds: ds
+                        });
+
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==false);
+                        ok(item.isValidCategory()==false);
+                        ok(item.isValidLocation()==false);
+
+                        item.name = "Testing";
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==true);
+                        ok(item.isValidCategory()==false);
+                        ok(item.isValidLocation()==false);
+
+                        item.category = "FakeCategoryId";
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==true);
+                        ok(item.isValidCategory()==true);
+                        ok(item.isValidLocation()==false);
+
+                        item.location = "FakeLocationId";
+                        ok(item.isValid()==true);
+                        ok(item.isValidName()==true);
+                        ok(item.isValidCategory()==true);
+                        ok(item.isValidLocation()==true);
+
+                        item.reset();
+                        ok(item.isValid()==false);
+                        ok(item.isValidName()==false);
+                        ok(item.isValidCategory()==false);
+                        ok(item.isValidLocation()==false);
                     });
 
                     asyncTest("change location Item object", function() {
@@ -478,6 +568,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                         getAnyCheckedOutItem()
                             .done(function(data) {
                                 ok(data._id);
+                                ok(data.order);
                                 item.id = data._id;
 
                                 item.getAvailabilities(null, null)

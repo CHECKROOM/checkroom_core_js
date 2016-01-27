@@ -17,8 +17,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             ds: ds,
                             name: 'Vincent Theeten',
                             role: 'admin',
-                            active: false,
-                            helper: new cr.Helper()
+                            active: false
                         });
                     };
 
@@ -63,7 +62,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     asyncTest("get user imageUrl", function() {
                         getAnyUser()
                             .then(function(user) {
-                                ok(user.getImageUrl());
+                                var url = user.getImageUrl();
+                                ok(url);
                             })
                             .always(function(){
                                 start();

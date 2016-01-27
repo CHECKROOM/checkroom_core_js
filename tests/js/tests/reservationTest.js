@@ -18,8 +18,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     var getNewReservation = function(params) {
                         var kwargs = $.extend({
                             ds: ds,
-                            dsItems: dsItems,
-                            helper: new cr.Helper()
+                            dsItems: dsItems
                         }, params);
                         return new cr.Reservation(kwargs);
                     };
@@ -149,6 +148,27 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
                     });
 
+                    asyncTest("Reservation getMinDateTo when a from date is set", function() {
+                        $.when(
+                                helper.getAnyContact(),
+                                helper.getAnyLocation()
+                            )
+                            .then(function(contact, location) {
+                                var r = getNewReservation({location: location._id});
+                                var from = moment().add(1, 'days');
+                                from.set({hour: 13, minute: 0, second: 0});
+                                r.setFromDate(from)
+                                    .then(function() {
+                                        var minTo = r.getMinDateTo();
+                                        var next = r.getNextTimeSlot(from);
+                                        ok(minTo.isSame(next));
+                                    })
+                                    .always(function(){
+                                        start();
+                                    });
+                            });
+                    });
+
                     asyncTest("Reservation - errors when in wrong status", function() {
                         var r = new cr.Reservation({"status": "closed"});
 
@@ -208,6 +228,80 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
 
                     });
+
+                    // swap item
+                    $.when(
+                        helper.getAnyContact(),
+                        helper.getAnyLocation(),
+                        helper.getAnyAvailableItem(),
+                        helper.getAnyCheckedOutItem()
+                    )
+                        .then(function(contact, location, available, checkedout) {
+
+                            asyncTest("Reservation - from date round down", function() {
+                                var r = getNewReservation();
+
+                                // Hack: overwrite the getNow function to always return the same date
+                                r.dateHelper.getNow = function() {
+                                    var d1 = new Date(2013, 11, 13, 11, 32, 30, 0);
+                                    return moment(d1)
+                                };
+
+                                r.from = r.getMinDateFrom();
+                                var t = "2013-12-13T11:45:00.000Z";
+                                equal(r.from.toJSONDate(), t);
+
+                                r._checkFromDateBetweenMinMax()
+                                    .done(function() {
+                                        ok(true);
+                                    }).always(function() {
+                                        start();
+                                    });
+                            });
+
+                            asyncTest("Reservation - from date round up", function() {
+                                var r = getNewReservation();
+
+                                // Hack: overwrite the getNow function to always return the same date
+                                r.dateHelper.getNow = function() {
+                                    var d1 = new Date(2013, 11, 13, 11, 44, 30, 0);
+                                    return moment(d1)
+                                };
+
+                                r.from = r.getMinDateFrom();
+                                var t = "2013-12-13T12:00:00.000Z";
+                                equal(r.from.toJSONDate(), t);
+
+                                r._checkFromDateBetweenMinMax()
+                                    .done(function() {
+                                        ok(true);
+                                    }).always(function() {
+                                        start();
+                                    });
+                            });
+
+                            asyncTest("Reservation - swapItem", function() {
+                                var r = getNewReservation();
+                                r.contact = contact._id;
+                                r.location = location._id;
+
+                                var oldItem = checkedout._id;
+                                var newItem = available._id;
+                                r.addItems([oldItem])
+                                    .done(function() {
+                                        r.swapItem(oldItem, newItem)
+                                            .done(function() {
+                                                ok(r.items[0]!=oldItem);
+                                                ok(r.items[0]==newItem);
+                                            })
+                                            .always(function() {
+                                                start();
+                                                r.delete();
+                                            });
+                                    });
+
+                            });
+                        });
 
                     // make reservation
                     // ----

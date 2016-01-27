@@ -2,7 +2,7 @@
  * @copyright CHECKROOM NV 2015
  */
 "use strict";
-define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
+define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, helper, moment, cr) {
 
         var run = function() {
 
@@ -72,6 +72,73 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     )
                         .done(function(contact, location) {
 
+                            /*asyncTest("create Order object -- with location and contact objects set", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true,
+                                    location: location,
+                                    contact: contact
+                                });
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.location!=null);
+                                        ok(order.contact!=null);
+                                    })
+                                    .always(function() {
+                                        start();
+                                    });
+                            });
+
+                            asyncTest("create Order object -- with location and contact object ids set", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true,
+                                    location: location._id,
+                                    contact: contact._id
+                                });
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.location!=null);
+                                        ok(order.contact!=null);
+                                    })
+                                    .always(function() {
+                                        start();
+                                    });
+                            });*/
+
+                            /*
+                            asyncTest("create Order object -- due date bug", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    autoCleanup: true,
+                                    location: location._id
+                                });
+
+                                order.create()
+                                    .done(function() {
+                                        ok(order.due==null);
+                                        ok(order.existsInDb());
+                                        ok(order.status=="creating");
+
+                                        helper.getAnyAvailableItem()
+                                            .done(function(item) {
+
+                                                order.addItems([item._id])
+                                                    .done(function() {
+                                                        ok(order.due==null);
+                                                        ok(order.existsInDb());
+                                                        ok(order.status=="creating");
+                                                        ok(order.items.length==1);
+                                                    })
+                                                    .always(function(){
+                                                        start();
+                                                    });
+                                            });
+                                    });
+                            });
+
                             asyncTest("create Order object with contact, autoclean on delete", function() {
                                 var order = new cr.Order({
                                     ds: ds,
@@ -117,16 +184,38 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                             });
                                     });
                             });
+                            */
+
+                          /* asyncTest("BUG: Set due date on open order", function() {
+                                helper.getAnyOpenOrder()
+                                    .done(function(data) {
+                                        var order = new cr.Order({
+                                            ds: ds,
+                                            dsItems: dsItems
+                                        });
+
+                                        order._fromJson(data)
+                                            .done(function() {
+                                                var due = moment().add(3, 'days');
+                                                order.setDueDate(due)
+                                                    .done(function() {
+                                                        console.log(due);
+                                                        console.log(order.due);
+                                                        ok(order.due.diff(due, 'minutes')==0);
+                                                    }).always(function() {
+                                                        start();
+                                                    });
+                                            });
+                                    });
+                            });*/
 
                             asyncTest("create Order object via constructor, searchItems", function() {
-                                var helper = new cr.Helper();
                                 var order = new cr.Order({
                                     ds: ds,
                                     dsItems: dsItems,
                                     autoCleanup: true,
                                     location: location._id,
-                                    contact: contact._id,
-                                    helper: helper
+                                    contact: contact._id
                                 });
 
                                 var deleteOrder = function() {
@@ -142,7 +231,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                         ok(order.status=="creating");
 
                                         order.searchItems()
-                                            .done(function(items) {
+                                            .done(function(searchResp) {
+                                                var items = searchResp.docs;
                                                 ok(items!=null);
                                                 ok(items.length>0);
 
@@ -174,13 +264,33 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                                                                                 ok(order.status=="open");
                                                                                 ok(oldDue.isBefore(newDue));
 
-                                                                                order.undoCheckout()
-                                                                                    .then(function() {
-                                                                                        ok(order.status=="creating");
+
+                                                                                order.addComment("test")
+                                                                                    .then(function(){
+                                                                                        ok(order.comments.length == 1);
+
+                                                                                        order.generateAgreement()
+                                                                                            .then(function(){
+                                                                                                ok(order.attachments.length==1);
+
+                                                                                                var attachment = order.attachments[0];
+                                                                                                order.detach(attachment.id)
+                                                                                                    .then(function(){
+                                                                                                        ok(order.attachments.length == 0);
+
+                                                                                                        order.undoCheckout()
+                                                                                                            .then(function() {
+                                                                                                                ok(order.status=="creating");
+                                                                                                                
+
+                                                                                                            })
+                                                                                                            .always(function() {
+                                                                                                                start();
+                                                                                                            });
+                                                                                                    });
+                                                                                            });
                                                                                     })
-                                                                                    .always(function() {
-                                                                                        start();
-                                                                                    });
+                                                                               
                                                                             }, deleteOrder);
                                                                     });
                                                             });
@@ -190,7 +300,6 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
 
                         });
-
                 });
 
         };

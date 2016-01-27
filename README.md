@@ -6,6 +6,9 @@ A JavaScript wrapper around the CHEQROOM REST API
 
 https://github.com/CHECKROOM/checkroom_core_js
 
+## Docs
+http://checkroom.github.io/checkroom_core_js/
+
 ## Installation
 
 Install `sudo npm install` required npm packages
@@ -15,6 +18,8 @@ Install `sudo npm install` required npm packages
 Call `grunt` to build and run the tests
 
 Call `grunt docs` to rebuild the documentation
+
+Call 'grunt gh-pages' to publish the documentation
 
 ## Sample code
 

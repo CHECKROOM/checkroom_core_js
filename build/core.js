@@ -6268,10 +6268,6 @@ Kit = function ($, Base, common) {
       return data;
     });
   };
-  /**
-   * getConflicts; returns list of conflict objects
-   * @return {[type]} [description]
-   */
   Kit.prototype._loadConflicts = function (items) {
     var conflicts = [];
     var kitStatus = common.getKitStatus(items);

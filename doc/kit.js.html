@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Source: kit.js</title>
+    <title>Source: common/kit.js</title>
     
     
     
@@ -83,6 +83,10 @@
             
                 <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
             
+                <li data-name="common#getActiveItems"><a href="common.html#getActiveItems">getActiveItems</a></li>
+            
+                <li data-name="common#getAvailableItems"><a href="common.html#getAvailableItems">getAvailableItems</a></li>
+            
                 <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
             
                 <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
@@ -101,6 +105,8 @@
             
                 <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
             
+                <li data-name="common#getFriendlyKitStatus"><a href="common.html#getFriendlyKitStatus">getFriendlyKitStatus</a></li>
+            
                 <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
             
                 <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
@@ -117,9 +123,17 @@
             
                 <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
             
+                <li data-name="common#getItemsByStatus"><a href="common.html#getItemsByStatus">getItemsByStatus</a></li>
+            
                 <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
             
                 <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getKitIds"><a href="common.html#getKitIds">getKitIds</a></li>
+            
+                <li data-name="common#getKitStatus"><a href="common.html#getKitStatus">getKitStatus</a></li>
+            
+                <li data-name="common#getKitStatusCss"><a href="common.html#getKitStatusCss">getKitStatusCss</a></li>
             
                 <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
             
@@ -806,7 +820,13 @@
             
             <span class="subtitle">Members</span>
             
+                <li data-name="Kit#addCode"><a href="Kit.html#addCode">addCode</a></li>
+            
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Kit#removeCode"><a href="Kit.html#removeCode">removeCode</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -844,11 +864,11 @@
             
                 <li data-name="Kit#get"><a href="Kit.html#get">get</a></li>
             
-                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
-            
                 <li data-name="Kit#isValid"><a href="Kit.html#isValid">isValid</a></li>
             
                 <li data-name="Kit#isValidName"><a href="Kit.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Kit#isValidNameAsync"><a href="Kit.html#isValidNameAsync">isValidNameAsync</a></li>
             
                 <li data-name="Kit#moveKeyValueIndex"><a href="Kit.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
             
@@ -1422,169 +1442,120 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="kit.js.html">Source: kit.js</h1>
+        <h1 class="page-title" data-filename="kit.js.html">Source: common/kit.js</h1>
         
 
 
     
     <section>
         <article>
-            <pre class="prettyprint source "><code>/**
- * The Kit module
- * Kit class inherits from Base so it supports KeyValues (Attachment, Comment)
- * @module kit
- * @copyright CHECKROOM NV 2015
+            <pre class="prettyprint source "><code>/*
+ * Kit helpers
  */
-define([
-    'jquery',
-    'base',
-    'common'], /** @lends Kit */ function ($, Base, common) {
+define(['jquery', 'common/item'], function ($, itemHelpers) {
+	return {
+		/**
+		 * getKitStatus 
+		 * Available 		=> if all items in the kit are available
+	     * Checking out 	=> if all item in the kit is checking out
+	     * Checked out 		=> if all item in the kit is checked out 
+	     * Expired			=> if all item in the kit is expired
+         * Unknown          => if not all items in the kit have the same status
+         * 
+		 * @memberOf common
+		 * @name  common#getKitStatus
+		 * @method
+		 * 
+		 * @param  status
+		 * @return {string}        
+		 */
+		getKitStatus: function(items) {
+	        var statuses = {};
+            var itemStatuses = [];
+            var orders = {};
+            var itemOrders = [];
+            
+            // Make dictionary of different item statuses
+            $.each(items, function(i, item){  
+                // Unique item statuses
+                if(!statuses[item.status]){  
+                    statuses[item.status] = true;
+                    itemStatuses.push(item.status);
+                }
 
-    var DEFAULTS = {
-        name: "",
-        items: []
-    };
-
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = Base.prototype;
-
-    /**
-     * Kit class
-     * @name  Kit
-     * @class
-     * @constructor
-     * @extends Base
-     */
-    var Kit = function(opt) {
-        var spec = $.extend({
-            fields: ['*'],
-            crtype: 'cheqroom.types.kit'
-        }, opt);
-        Base.call(this, spec);
-
-        this.name = spec.name || DEFAULTS.name;
-        this.items = spec.items || DEFAULTS.items.slice();
-    };
-
-    Kit.prototype = new tmp();
-    Kit.prototype.constructor = Kit;
-
-    //
-    // Specific validators
-    /**
-     * Checks if name is valid
-     * @name Kit#isValidName
-     * @method
-     * @return {Boolean} [description]
-     */
-    Kit.prototype.isValidName = function() {
-        this.name = $.trim(this.name);
-        return (this.name.length>=3);
-    };
-
-    //
-    // Base overrides
-    //
-
-    /**
-     * Checks if the Kit has any validation errors
-     * @name Kit#isValid
-     * @method
-     * @returns {boolean}
-     * @override
-     */
-    Kit.prototype.isValid = function() {
-        return this.isValidName();
-    };
-
-    /**
-     * Checks if the Kits is dirty and needs saving
-     * @name Kit#isDirty
-     * @returns {boolean}
-     * @override
-     */
-    Kit.prototype.isDirty = function() {
-        var isDirty = Base.prototype.isDirty.call(this);
-        if( (!isDirty) &&
-            (this.raw)) {
-            isDirty = (this.name!=this.raw.name);
-        }
-        return isDirty;
-    };
-
-    //
-    // Business logic
-    //
-    /**
-     * addItems; adds a bunch of Items to the transaction using a list of item ids
-     * @name Kit#addItems
-     * @method
-     * @param items
-     * @param skipRead
-     * @returns {promise}
-     */
-    Kit.prototype.addItems = function(items, skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot addItems from document without id"));
-        }
-
-        return this._doApiCall({
-            method: 'addItems',
-            params: {items: items},
-            skipRead: skipRead
-        });
-    };
-
-    /**
-     * removeItems; removes a bunch of Items from the transaction using a list of item ids
-     * @name Kit#removeItems
-     * @method
-     * @param items (can be null)
-     * @param skipRead
-     * @returns {promise}
-     */
-    Kit.prototype.removeItems = function(items, skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
-        }
-
-        return this._doApiCall({
-            method: 'removeItems',
-            params: {items: items},
-            skipRead: skipRead
-        });
-    };
-
-    //
-    // Implementation stuff
-    //
-
-    Kit.prototype._getDefaults = function() {
-        return DEFAULTS;
-    };
-
-    Kit.prototype._toJson = function(options) {
-        var data = Base.prototype._toJson.call(this, options);
-        data.name = this.name || DEFAULTS.name;
-        //data.items --> not via update
-        return data;
-    };
-
-    Kit.prototype._fromJson = function(data, options) {
-        var that = this;
-        return Base.prototype._fromJson.call(this, data, options)
-            .then(function(data) {
-                that.name = data.name || DEFAULTS.name;
-                that.items = data.items || DEFAULTS.items.slice();
-                $.publish('Kit.fromJson', data);
-                return data;
+                // Unique item orders
+                if(!orders[item.order]){
+                    orders[item.order] = true;
+                    itemOrders.push(item.order);
+                }
             });
-    };
 
-    return Kit;
+            if(itemStatuses.length == 1 && itemOrders.length &lt;= 1){
+                // All items in the kit have the same status and are in the same order
+                return itemStatuses[0];
+            } else {
+                // Kit has items with different statuses
+                return "incomplete";
+            }
+	    },
+        /**
+         * getFriendlyKitStatus 
+         *
+         * @memberOf common
+         * @name  common#getFriendlyKitStatus
+         * @method
+         * 
+         * @param  status
+         * @return {string}        
+         */
+        getFriendlyKitStatus: function(status) {
+            if(status == "incomplete"){
+                return "Incomplete";
+            }
 
+            return itemHelpers.getFriendlyItemStatus(status);
+        },
+        /**
+         * getKitStatusCss
+         *
+         * @memberOf common
+         * @name  common#getKitStatusCss
+         * @method
+         * 
+         * @param  status 
+         * @return {string}       
+         */
+        getKitStatusCss: function(status) {
+            if(status == "incomplete"){
+                return "label-incomplete";
+            }
+
+            return itemHelpers.getItemStatusCss(status);
+        },
+        /**
+         * getKitIds
+         *
+         * @memberOf common
+         * @name  common#getKitIds
+         * @method
+         * 
+         * @param  items 
+         * @return {array}       
+         */
+        getKitIds: function(items){
+            var kitDictionary = {};
+            var ids = [];
+
+            $.each(items, function(i, item){
+                if(item.kit && item.kit._id && !kitDictionary[item.kit._id]){
+                    kitDictionary[item.kit._id] = true;
+                    ids.push(item.kit._id);
+                }
+            });
+
+            return ids;
+        }
+	};
 });</code></pre>
         </article>
     </section>
@@ -1597,7 +1568,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon Nov 16 2015 15:47:29 GMT+0100 (CET)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 27 2016 11:40:04 GMT+0100 (CET)
         </footer>
     </div>
 </div>

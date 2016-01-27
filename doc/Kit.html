@@ -83,6 +83,10 @@
             
                 <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
             
+                <li data-name="common#getActiveItems"><a href="common.html#getActiveItems">getActiveItems</a></li>
+            
+                <li data-name="common#getAvailableItems"><a href="common.html#getAvailableItems">getAvailableItems</a></li>
+            
                 <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
             
                 <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
@@ -101,6 +105,8 @@
             
                 <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
             
+                <li data-name="common#getFriendlyKitStatus"><a href="common.html#getFriendlyKitStatus">getFriendlyKitStatus</a></li>
+            
                 <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
             
                 <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
@@ -117,9 +123,17 @@
             
                 <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
             
+                <li data-name="common#getItemsByStatus"><a href="common.html#getItemsByStatus">getItemsByStatus</a></li>
+            
                 <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
             
                 <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getKitIds"><a href="common.html#getKitIds">getKitIds</a></li>
+            
+                <li data-name="common#getKitStatus"><a href="common.html#getKitStatus">getKitStatus</a></li>
+            
+                <li data-name="common#getKitStatusCss"><a href="common.html#getKitStatusCss">getKitStatusCss</a></li>
             
                 <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
             
@@ -806,7 +820,13 @@
             
             <span class="subtitle">Members</span>
             
+                <li data-name="Kit#addCode"><a href="Kit.html#addCode">addCode</a></li>
+            
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Kit#removeCode"><a href="Kit.html#removeCode">removeCode</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -844,11 +864,11 @@
             
                 <li data-name="Kit#get"><a href="Kit.html#get">get</a></li>
             
-                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
-            
                 <li data-name="Kit#isValid"><a href="Kit.html#isValid">isValid</a></li>
             
                 <li data-name="Kit#isValidName"><a href="Kit.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Kit#isValidNameAsync"><a href="Kit.html#isValidNameAsync">isValidNameAsync</a></li>
             
                 <li data-name="Kit#moveKeyValueIndex"><a href="Kit.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
             
@@ -1451,7 +1471,7 @@
     
         
         <div class="tag-source">
-            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line22">line 22</a>
+            <a href="kit.js_.html">kit.js</a>, <a href="kit.js_.html#line22">line 22</a>
         </div>
         
     </div>
@@ -1537,6 +1557,51 @@
             
 <dt>
     <div class="nameContainer">
+        <h4 class="name" id="addCode">addCode</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Adds a QR code to the kit</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
         <h4 class="name" id="isDirty">isDirty</h4>
     </div>
     
@@ -1546,6 +1611,96 @@
     
     <div class="description">
         <p>Checks if the Kits is dirty and needs saving</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="isEmpty">isEmpty</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Checks if the kit is empty</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="removeCode">removeCode</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Removes a QR code from the kit</p>
     </div>
     
     
@@ -1731,7 +1886,7 @@
     
         
         <div class="tag-source">
-            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line89">line 89</a>
+            <a href="kit.js_.html">kit.js</a>, <a href="kit.js_.html#line128">line 128</a>
         </div>
         
     </div>
@@ -3276,86 +3431,6 @@ or resets it when no old raw response was found</p>
         
             
 <dt>
-    <div class="nameContainer inherited">
-        <h4 class="name" id="isEmpty">
-            
-                <span class="inherited"><a href="Base.html#isEmpty">inherited</a></span>
-            
-            isEmpty<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{boolean}</span>
-        </h4>
-    
-        
-        <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line72">line 72</a>
-        </div>
-        
-    </div>
-
-    
-</dt>
-<dd>
-    
-    
-    <div class="description">
-        <p>Checks if the object is empty
-after calling reset() isEmpty() should return true
-We'll only check for comments, attachments, keyValues here</p>
-    </div>
-    
-
-    
-    
-    
-    
-    
-    
-    
-<dl class="details">
-    
-        
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-</dl>
-
-    
-    
-
-    
-
-    
-    
-    
-    
-    
-    
-    
-
-
-    
-    
-    
-</dd>
-
-        
-            
-<dt>
     <div class="nameContainer">
         <h4 class="name" id="isValid">
             
@@ -3364,7 +3439,7 @@ We'll only check for comments, attachments, keyValues here</p>
     
         
         <div class="tag-source">
-            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line60">line 60</a>
+            <a href="kit.js_.html">kit.js</a>, <a href="kit.js_.html#line87">line 87</a>
         </div>
         
     </div>
@@ -3440,7 +3515,7 @@ We'll only check for comments, attachments, keyValues here</p>
     
         
         <div class="tag-source">
-            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line45">line 45</a>
+            <a href="kit.js_.html">kit.js</a>, <a href="kit.js_.html#line47">line 47</a>
         </div>
         
     </div>
@@ -3452,6 +3527,82 @@ We'll only check for comments, attachments, keyValues here</p>
     
     <div class="description">
         <p>Checks if name is valid</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="isValidNameAsync">
+            
+            isValidNameAsync<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{promise}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="kit.js_.html">kit.js</a>, <a href="kit.js_.html#line58">line 58</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Check if name is valid and isn't already used</p>
     </div>
     
 
@@ -3770,7 +3921,7 @@ We'll only check for comments, attachments, keyValues here</p>
     
         
         <div class="tag-source">
-            <a href="kit.js.html">kit.js</a>, <a href="kit.js.html#line109">line 109</a>
+            <a href="kit.js_.html">kit.js</a>, <a href="kit.js_.html#line148">line 148</a>
         </div>
         
     </div>
@@ -4912,7 +5063,7 @@ We'll only check for comments, attachments, keyValues here</p>
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon Nov 16 2015 15:47:32 GMT+0100 (CET)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 27 2016 11:40:07 GMT+0100 (CET)
         </footer>
     </div>
 </div>

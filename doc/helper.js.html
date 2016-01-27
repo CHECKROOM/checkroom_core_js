@@ -83,6 +83,10 @@
             
                 <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
             
+                <li data-name="common#getActiveItems"><a href="common.html#getActiveItems">getActiveItems</a></li>
+            
+                <li data-name="common#getAvailableItems"><a href="common.html#getAvailableItems">getAvailableItems</a></li>
+            
                 <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
             
                 <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
@@ -101,6 +105,8 @@
             
                 <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
             
+                <li data-name="common#getFriendlyKitStatus"><a href="common.html#getFriendlyKitStatus">getFriendlyKitStatus</a></li>
+            
                 <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
             
                 <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
@@ -117,9 +123,17 @@
             
                 <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
             
+                <li data-name="common#getItemsByStatus"><a href="common.html#getItemsByStatus">getItemsByStatus</a></li>
+            
                 <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
             
                 <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getKitIds"><a href="common.html#getKitIds">getKitIds</a></li>
+            
+                <li data-name="common#getKitStatus"><a href="common.html#getKitStatus">getKitStatus</a></li>
+            
+                <li data-name="common#getKitStatusCss"><a href="common.html#getKitStatusCss">getKitStatusCss</a></li>
             
                 <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
             
@@ -806,7 +820,13 @@
             
             <span class="subtitle">Members</span>
             
+                <li data-name="Kit#addCode"><a href="Kit.html#addCode">addCode</a></li>
+            
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Kit#removeCode"><a href="Kit.html#removeCode">removeCode</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -844,11 +864,11 @@
             
                 <li data-name="Kit#get"><a href="Kit.html#get">get</a></li>
             
-                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
-            
                 <li data-name="Kit#isValid"><a href="Kit.html#isValid">isValid</a></li>
             
                 <li data-name="Kit#isValidName"><a href="Kit.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Kit#isValidNameAsync"><a href="Kit.html#isValidNameAsync">isValidNameAsync</a></li>
             
                 <li data-name="Kit#moveKeyValueIndex"><a href="Kit.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
             
@@ -1502,7 +1522,8 @@ define(["jquery",
          * @return {Number}
          */
         getNumItemsLeft: function(limits, stats) {
-            return limits.maxItems - this.getStat(stats, "items", "total")  + this.getStat(stats, "items", "expired");
+            var itemsPerStatus = this.getStat(stats, "items", "status");
+            return limits.maxItems - this.getStat(stats, "items", "total")  + itemsPerStatus.expired;
         },
         /**
          * getNumUsersLeft
@@ -1516,27 +1537,34 @@ define(["jquery",
          * @return {Number}
          */
         getNumUsersLeft: function(limits, stats) {
-            return limits.maxUsers - this.getStat(stats, "users", "active");
+            var usersPerStatus = this.getStat(stats, "users", "status");
+            return limits.maxUsers - usersPerStatus.active;
         },
         /**
-         * getStat
+         * getStat for location
          *
          * @memberOf helper
          * @method
          * @name  helper#getStat
          *
          * @param stats
+         * @param location
          * @param type
          * @param name
          * @param mode
          * @return {object}         number or object
          */
-        getStat: function(stats, type, name, mode){
-            if(!stats || !stats.detailed) throw "Invalid stats object";
+        getStat: function(stats, type, name, location, mode){
+            // make sure stats object isn't undefined
+            stats = stats || {};
 
-            mode = mode || 'production';
+            //if no stats for given location found, use all stats object
+            stats = stats[(location && location != "null")?location:"all"] || stats["all"]; 
+            
+            if(stats === undefined) throw "Invalid stats"; 
 
-            stats = stats.detailed[mode]
+            // load stats for given mode (defaults to production)
+            stats = stats[mode || 'production'];
 
             var statType = stats[type];
 
@@ -1546,7 +1574,7 @@ define(["jquery",
             var statTypeValue = statType[name];
             if(statTypeValue === undefined) throw "Stat value doesn't exist";
 
-            return statTypeValue;        
+            return statTypeValue;      
         },
         /**
          * getAccessRights returns access rights based on the user role, profile settings 
@@ -1625,10 +1653,6 @@ define(["jquery",
                 },
                 account: {
                     update: isRootOrAdmin
-                },
-                kits: {
-                    create: useKits && isRootOrAdmin,
-                    update: useKits && isRootOrAdmin
                 }
             }
         },
@@ -1675,7 +1699,7 @@ define(["jquery",
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon Nov 16 2015 15:47:29 GMT+0100 (CET)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 27 2016 11:40:05 GMT+0100 (CET)
         </footer>
     </div>
 </div>

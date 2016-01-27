@@ -83,6 +83,10 @@
             
                 <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
             
+                <li data-name="common#getActiveItems"><a href="common.html#getActiveItems">getActiveItems</a></li>
+            
+                <li data-name="common#getAvailableItems"><a href="common.html#getAvailableItems">getAvailableItems</a></li>
+            
                 <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
             
                 <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
@@ -101,6 +105,8 @@
             
                 <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
             
+                <li data-name="common#getFriendlyKitStatus"><a href="common.html#getFriendlyKitStatus">getFriendlyKitStatus</a></li>
+            
                 <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
             
                 <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
@@ -117,9 +123,17 @@
             
                 <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
             
+                <li data-name="common#getItemsByStatus"><a href="common.html#getItemsByStatus">getItemsByStatus</a></li>
+            
                 <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
             
                 <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getKitIds"><a href="common.html#getKitIds">getKitIds</a></li>
+            
+                <li data-name="common#getKitStatus"><a href="common.html#getKitStatus">getKitStatus</a></li>
+            
+                <li data-name="common#getKitStatusCss"><a href="common.html#getKitStatusCss">getKitStatusCss</a></li>
             
                 <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
             
@@ -806,7 +820,13 @@
             
             <span class="subtitle">Members</span>
             
+                <li data-name="Kit#addCode"><a href="Kit.html#addCode">addCode</a></li>
+            
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Kit#removeCode"><a href="Kit.html#removeCode">removeCode</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -844,11 +864,11 @@
             
                 <li data-name="Kit#get"><a href="Kit.html#get">get</a></li>
             
-                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
-            
                 <li data-name="Kit#isValid"><a href="Kit.html#isValid">isValid</a></li>
             
                 <li data-name="Kit#isValidName"><a href="Kit.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Kit#isValidNameAsync"><a href="Kit.html#isValidNameAsync">isValidNameAsync</a></li>
             
                 <li data-name="Kit#moveKeyValueIndex"><a href="Kit.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
             
@@ -1543,7 +1563,7 @@ define([
         var dfd = $.Deferred();
         var that = this;
 
-        $.ajax({
+        var xhr = $.ajax({
             type: "POST",
             url: url,
             data: JSON.stringify(this._prepareDict(data)),
@@ -1553,28 +1573,44 @@ define([
             error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
         });
 
-        return dfd.promise();
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfd.promise();
+        promise.abort = function(){
+            xhr.abort();
+        };
+
+        return promise;
     };
 
     api.ApiAjax.prototype._getAjax = function(url, timeOut,  opt) {
         var dfd = $.Deferred();
         var that = this;
 
-        $.ajax({
+        var xhr = $.ajax({
             url: url,
             timeout: timeOut || this.timeOut,
             success: function(data) {return that._handleAjaxSuccess(dfd, data, opt);},
             error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
         });
 
-        return dfd.promise();
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfd.promise();
+        promise.abort = function(){
+            xhr.abort();
+        };
+
+        return promise;
     };
 
     api.ApiAjax.prototype._getJsonp = function(url, timeOut, opt) {
         var dfd = $.Deferred();
         var that = this;
 
-        $.jsonp({
+        var xhr = $.jsonp({
             url: url,
             type: 'GET',
             timeout: timeOut || this.timeOut,
@@ -1589,11 +1625,22 @@ define([
             }
         });
 
-        return dfd.promise();
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfd.promise();
+        promise.abort = function(){
+            xhr.abort();
+        };
+
+        return promise;
     };
 
     api.ApiAjax.prototype._prepareDict = function(data) {
         // Makes sure all values from the dict are serializable and understandable for json
+	if (!data) {
+            return {};
+	};
         $.each(data, function(key, value) {
             if(moment.isMoment(value)) {
                 data[key] = value.toJSONDate();
@@ -1713,8 +1760,7 @@ define([
                 if (resp.status=="OK") {
                     dfd.resolve(resp.data);
                 } else {
-                    var error = new Error("Your username or password is not correct");
-                    dfd.reject(error);
+                    dfd.reject(resp);
                 }
             }).fail(function(err) {
                 dfd.reject(err);
@@ -2260,7 +2306,8 @@ define([
     };
 
     return api;
-});</code></pre>
+});
+</code></pre>
         </article>
     </section>
 
@@ -2272,7 +2319,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon Nov 16 2015 15:47:27 GMT+0100 (CET)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 27 2016 11:40:03 GMT+0100 (CET)
         </footer>
     </div>
 </div>

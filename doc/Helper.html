@@ -83,6 +83,10 @@
             
                 <li data-name="common#badgeify"><a href="common.html#badgeify">badgeify</a></li>
             
+                <li data-name="common#getActiveItems"><a href="common.html#getActiveItems">getActiveItems</a></li>
+            
+                <li data-name="common#getAvailableItems"><a href="common.html#getAvailableItems">getAvailableItems</a></li>
+            
                 <li data-name="common#getAvatarInitial"><a href="common.html#getAvatarInitial">getAvatarInitial</a></li>
             
                 <li data-name="common#getCategoryKeyFromName"><a href="common.html#getCategoryKeyFromName">getCategoryKeyFromName</a></li>
@@ -101,6 +105,8 @@
             
                 <li data-name="common#getFriendlyItemStatus"><a href="common.html#getFriendlyItemStatus">getFriendlyItemStatus</a></li>
             
+                <li data-name="common#getFriendlyKitStatus"><a href="common.html#getFriendlyKitStatus">getFriendlyKitStatus</a></li>
+            
                 <li data-name="common#getFriendlyOrderCss"><a href="common.html#getFriendlyOrderCss">getFriendlyOrderCss</a></li>
             
                 <li data-name="common#getFriendlyOrderSize"><a href="common.html#getFriendlyOrderSize">getFriendlyOrderSize</a></li>
@@ -117,9 +123,17 @@
             
                 <li data-name="common#getImgFileNameFromName"><a href="common.html#getImgFileNameFromName">getImgFileNameFromName</a></li>
             
+                <li data-name="common#getItemsByStatus"><a href="common.html#getItemsByStatus">getItemsByStatus</a></li>
+            
                 <li data-name="common#getItemStatusCss"><a href="common.html#getItemStatusCss">getItemStatusCss</a></li>
             
                 <li data-name="common#getItemStatusIcon"><a href="common.html#getItemStatusIcon">getItemStatusIcon</a></li>
+            
+                <li data-name="common#getKitIds"><a href="common.html#getKitIds">getKitIds</a></li>
+            
+                <li data-name="common#getKitStatus"><a href="common.html#getKitStatus">getKitStatus</a></li>
+            
+                <li data-name="common#getKitStatusCss"><a href="common.html#getKitStatusCss">getKitStatusCss</a></li>
             
                 <li data-name="common#getLoginName"><a href="common.html#getLoginName">getLoginName</a></li>
             
@@ -806,7 +820,13 @@
             
             <span class="subtitle">Members</span>
             
+                <li data-name="Kit#addCode"><a href="Kit.html#addCode">addCode</a></li>
+            
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
+            
+                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
+            
+                <li data-name="Kit#removeCode"><a href="Kit.html#removeCode">removeCode</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -844,11 +864,11 @@
             
                 <li data-name="Kit#get"><a href="Kit.html#get">get</a></li>
             
-                <li data-name="Kit#isEmpty"><a href="Kit.html#isEmpty">isEmpty</a></li>
-            
                 <li data-name="Kit#isValid"><a href="Kit.html#isValid">isValid</a></li>
             
                 <li data-name="Kit#isValidName"><a href="Kit.html#isValidName">isValidName</a></li>
+            
+                <li data-name="Kit#isValidNameAsync"><a href="Kit.html#isValidNameAsync">isValidNameAsync</a></li>
             
                 <li data-name="Kit#moveKeyValueIndex"><a href="Kit.html#moveKeyValueIndex">moveKeyValueIndex</a></li>
             
@@ -1505,7 +1525,7 @@ a Helper class which allows you to call helpers based on the settings in group.p
     
         
         <div class="tag-source">
-            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line218">line 218</a>
+            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line222">line 222</a>
         </div>
         
     </div>
@@ -1624,7 +1644,7 @@ ensureId({ id:&quot;abc123&quot;, name:&quot;example&quot; }) --&gt; &quot;abc12
     
         
         <div class="tag-source">
-            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line204">line 204</a>
+            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line208">line 208</a>
         </div>
         
     </div>
@@ -1758,7 +1778,7 @@ ensureId({ id:&quot;abc123&quot;, name:&quot;example&quot; }) --&gt; &quot;abc12
     
         
         <div class="tag-source">
-            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line120">line 120</a>
+            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line128">line 128</a>
         </div>
         
     </div>
@@ -2371,7 +2391,7 @@ and account limits</p>
     
         
         <div class="tag-source">
-            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line76">line 76</a>
+            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line77">line 77</a>
         </div>
         
     </div>
@@ -2500,12 +2520,12 @@ and account limits</p>
     <div class="nameContainer">
         <h4 class="name" id="getStat">
             
-            getStat<span class="signature">(stats, type, name, mode)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{object}</span>
+            getStat<span class="signature">(stats, location, type, name, mode)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{object}</span>
         </h4>
     
         
         <div class="tag-source">
-            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line90">line 90</a>
+            <a href="helper.js.html">helper.js</a>, <a href="helper.js.html#line92">line 92</a>
         </div>
         
     </div>
@@ -2516,7 +2536,7 @@ and account limits</p>
     
     
     <div class="description">
-        <p>getStat</p>
+        <p>getStat for location</p>
     </div>
     
 
@@ -2548,6 +2568,24 @@ and account limits</p>
         <tr>
             
                 <td class="name"><code>stats</code></td>
+            
+            
+            <td class="type">
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                </td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>location</code></td>
             
             
             <td class="type">
@@ -2685,7 +2723,7 @@ or object
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon Nov 16 2015 15:47:31 GMT+0100 (CET)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 27 2016 11:40:07 GMT+0100 (CET)
         </footer>
     </div>
 </div>

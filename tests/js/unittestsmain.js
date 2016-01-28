@@ -19,6 +19,7 @@ requirejs.config({
 
 // require the unit tests.
 require([
+    'orderTransferTest',
     'commonTest',
     'helperTest',
     'simpleTest',
@@ -32,6 +33,7 @@ require([
     'userTest',
     'availabilityTest'
     ], function(
+        orderTransferTest,
         commonTest,
         helperTest,
         simpleTest,
@@ -45,6 +47,7 @@ require([
         userTest,
         availabilityTest) {
 
+        orderTransferTest.run();
         //commonTest.run();
         //helperTest.run();
         //simpleTest.run();
@@ -53,7 +56,7 @@ require([
         //locationTest.run();
         //kitTest.run();
         //itemTest.run();
-        orderTest.run();
+        //orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

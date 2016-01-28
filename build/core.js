@@ -2231,6 +2231,9 @@ api = function ($, jsonp, moment, common) {
     if (m === 'timeout') {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
+      if (x && x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+        msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+      }
       switch (x.status) {
       case 400:
         dfd.reject(new api.ApiBadRequest(msg, opt));

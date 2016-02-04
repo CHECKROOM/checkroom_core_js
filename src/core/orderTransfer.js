@@ -16,7 +16,8 @@ define([
         started: null,
         accepted: null,
         fromOrder: null,
-        toOrder: null
+        toOrder: null,
+        startedBy: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -38,7 +39,8 @@ define([
      * @property {Date} started         when was the transfer started
      * @property {Date} accepted        when was the transfer accepted
      * @property {Date} fromOrder       from order
-     * @property {Date} toOrder         to order     
+     * @property {Date} toOrder         to order    
+     * @property {cr.User} startedBy    who started the transfer    
      * @extends Base
      */
     var OrderTransfer = function(opt) {
@@ -57,6 +59,7 @@ define([
         this.accepted = spec.accepted || DEFAULTS.accepted;
         this.fromOrder = spec.fromOrder || DEFAULTS.fromOrder;
         this.toOrder = spec.toOrder || DEFAULTS.toOrder;
+        this.startedBy = spec.startedBy || DEFAULTS.startedBy;
     };
 
     OrderTransfer.prototype = new tmp();
@@ -94,6 +97,7 @@ define([
                 that.accepted = data.accepted || DEFAULTS.accepted;
                 that.fromOrder = data.fromOrder || DEFAULTS.fromOrder;
                 that.toOrder = data.toOrder || DEFAULTS.toOrder;
+                that.startedBy = data.startedBy || DEFAULTS.startedBy;
 
                 return data;
             });
@@ -148,8 +152,8 @@ define([
      * @name OrderTransfer#accept
      * @return {promise}
      */
-    OrderTransfer.prototype.accept = function(contact, skipRead){
-        return this._doApiCall({method: 'accept', params: {customer: contact}, skipRead: skipRead});
+    OrderTransfer.prototype.accept = function(params, skipRead){
+        return this._doApiCall({method: 'accept', params: params, skipRead: skipRead});
     }
 
     /**

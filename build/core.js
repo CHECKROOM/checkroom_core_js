@@ -56,6 +56,47 @@ common_code = {
     return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
   },
   /**
+   * isValidQRCode
+   * 
+   * @memberOf common
+   * @name  common#isValidQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean}  
+   */
+  isValidQRCode: function (qrCode) {
+    return this.isValidItemQRCode(qrCode) || this.isValidTransferQRCode(qrCode);
+  },
+  /**
+   * isValidTransferQRCode
+   * For example: http://cheqroom.com/ordertransfer/tTfZXW6eTianQU3UQVELdn
+   * 
+   * @memberOf common
+   * @name  common#isValidTransferQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidTransferQRCode: function (qrCode) {
+    return qrCode.match(/^http:\/\/cheqroom\.com\/ordertransfer\/[a-zA-Z0-9]{22}$/i) != null;
+  },
+  /**
+   * isValidItemQRCode 
+   * For example: http://cheqroom.com/qr/eeaa37ed
+   * 
+   * @memberOf common
+   * @name  common#isValidItemQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidItemQRCode: function (qrCode) {
+    return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+  },
+  /**
    * getCheqRoomRedirectUrl
    *
    * @memberOf  common
@@ -9371,7 +9412,8 @@ OrderTransfer = function ($, Base) {
     started: null,
     accepted: null,
     fromOrder: null,
-    toOrder: null
+    toOrder: null,
+    startedBy: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9392,7 +9434,8 @@ OrderTransfer = function ($, Base) {
    * @property {Date} started         when was the transfer started
    * @property {Date} accepted        when was the transfer accepted
    * @property {Date} fromOrder       from order
-   * @property {Date} toOrder         to order     
+   * @property {Date} toOrder         to order    
+   * @property {cr.User} startedBy    who started the transfer    
    * @extends Base
    */
   var OrderTransfer = function (opt) {
@@ -9410,6 +9453,7 @@ OrderTransfer = function ($, Base) {
     this.accepted = spec.accepted || DEFAULTS.accepted;
     this.fromOrder = spec.fromOrder || DEFAULTS.fromOrder;
     this.toOrder = spec.toOrder || DEFAULTS.toOrder;
+    this.startedBy = spec.startedBy || DEFAULTS.startedBy;
   };
   OrderTransfer.prototype = new tmp();
   OrderTransfer.prototype.constructor = OrderTransfer;
@@ -9441,6 +9485,7 @@ OrderTransfer = function ($, Base) {
       that.accepted = data.accepted || DEFAULTS.accepted;
       that.fromOrder = data.fromOrder || DEFAULTS.fromOrder;
       that.toOrder = data.toOrder || DEFAULTS.toOrder;
+      that.startedBy = data.startedBy || DEFAULTS.startedBy;
       return data;
     });
   };
@@ -9504,10 +9549,10 @@ OrderTransfer = function ($, Base) {
    * @name OrderTransfer#accept
    * @return {promise}
    */
-  OrderTransfer.prototype.accept = function (contact, skipRead) {
+  OrderTransfer.prototype.accept = function (params, skipRead) {
     return this._doApiCall({
       method: 'accept',
-      params: { customer: contact },
+      params: params,
       skipRead: skipRead
     });
   };

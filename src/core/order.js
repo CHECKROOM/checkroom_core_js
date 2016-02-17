@@ -7,7 +7,9 @@ define([
     "jquery",
     "api",
     "transaction",
-    "conflict"], /** @lends Transaction */  function ($, api, Transaction, Conflict) {
+    "conflict",
+    "common",
+    "helper"], /** @lends Transaction */  function ($, api, Transaction, Conflict, common, helper) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -147,6 +149,7 @@ define([
      * @returns {boolean}
      */
     Order.prototype.canCheckout = function() {
+        var that = this;
         return (
             (this.status=="creating") &&
             (this.location) &&
@@ -154,7 +157,10 @@ define([
             (this.due) &&
             (this.due.isAfter(this._getDateHelper().getNow())) &&
             (this.items) &&
-            (this.items.length));
+            (this.items.length) &&
+            (common.getItemsByStatus(this.items, function(item){
+                return that.id == helper.ensureId(item.order);
+            }).length == this.items.length));
     };
 
     /**
@@ -244,8 +250,8 @@ define([
                                 // Order cannot conflict with itself
                                 if(av.order != that.id) {
                                     kind = "";
-                                    kind = kind || (av.order) ? "order" : "";
-                                    kind = kind || (av.reservation) ? "reservation" : "";
+                                    kind = kind || ((av.order) ? "order" : "");
+                                    kind = kind || ((av.reservation) ? "reservation" : "");
 
                                     conflicts.push(new Conflict({
                                         kind: kind,

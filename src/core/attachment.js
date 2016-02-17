@@ -10,8 +10,8 @@ define([
     'keyvalue'], /** @lends Attachment */ function ($, helper, KeyValue) {
 
     var EXT = /(?:\.([^.]+))?$/;
-    var IMAGES = ['jpg', 'png'];
-    var PREVIEWS = ['jpg', 'png', 'doc', 'docx', 'pdf'];
+    var IMAGES = ['jpg', 'jpeg', 'png'];
+    var PREVIEWS = ['jpg', 'jpeg', 'png', 'doc', 'docx', 'pdf'];
     var DEFAULTS = {
         isCover: false,
         canBeCover: true

@@ -2268,10 +2268,16 @@ api = function ($, jsonp, moment, common) {
     return dfd.resolve(data);
   };
   api.ApiAjax.prototype._handleAjaxError = function (dfd, x, t, m, opt) {
+    // ajax call was aborted
+    if (t == 'abort')
+      return;
     var msg = null;
     if (m === 'timeout') {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
+      if (x && x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+        msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+      }
       switch (x.status) {
       case 400:
         dfd.reject(new api.ApiBadRequest(msg, opt));
@@ -3711,10 +3717,12 @@ Attachment = function ($, helper, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
+    'jpeg',
     'png'
   ];
   var PREVIEWS = [
     'jpg',
+    'jpeg',
     'png',
     'doc',
     'docx',
@@ -3833,10 +3841,12 @@ attachment = function ($, helper, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
+    'jpeg',
     'png'
   ];
   var PREVIEWS = [
     'jpg',
+    'jpeg',
     'png',
     'doc',
     'docx',
@@ -4875,7 +4885,8 @@ Contact = function ($, Base, common) {
     name: '',
     company: '',
     phone: '',
-    email: ''
+    email: '',
+    user: {}
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -4899,6 +4910,7 @@ Contact = function ($, Base, common) {
     this.company = spec.company || DEFAULTS.company;
     this.phone = spec.phone || DEFAULTS.phone;
     this.email = spec.email || DEFAULTS.email;
+    this.user = spec.user || DEFAULTS.user;
   };
   Contact.prototype = new tmp();
   Contact.prototype.constructor = Contact;
@@ -4995,6 +5007,7 @@ Contact = function ($, Base, common) {
       that.company = data.company || DEFAULTS.company;
       that.phone = data.phone || DEFAULTS.phone;
       that.email = data.email || DEFAULTS.email;
+      that.user = data.user || DEFAULTS.user;
       $.publish('contact.fromJson', data);
       return data;
     });
@@ -7580,7 +7593,7 @@ conflict = function ($) {
   };
   return Conflict;
 }(jquery);
-Order = function ($, api, Transaction, Conflict) {
+Order = function ($, api, Transaction, Conflict, common, helper) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -7705,7 +7718,10 @@ Order = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Order.prototype.canCheckout = function () {
-    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length;
+    var that = this;
+    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length && common.getItemsByStatus(this.items, function (item) {
+      return that.id == helper.ensureId(item.order);
+    }).length == this.items.length;
   };
   /**
    * Checks if order can undo checkout
@@ -7785,8 +7801,8 @@ Order = function ($, api, Transaction, Conflict) {
               // Order cannot conflict with itself
               if (av.order != that.id) {
                 kind = '';
-                kind = kind || av.order ? 'order' : '';
-                kind = kind || av.reservation ? 'reservation' : '';
+                kind = kind || (av.order ? 'order' : '');
+                kind = kind || (av.reservation ? 'reservation' : '');
                 conflicts.push(new Conflict({
                   kind: kind,
                   item: transItem._id,
@@ -8007,7 +8023,7 @@ Order = function ($, api, Transaction, Conflict) {
     }
   };
   return Order;
-}(jquery, api, transaction, conflict);
+}(jquery, api, transaction, conflict, common, helper);
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain

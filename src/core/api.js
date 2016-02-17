@@ -90,10 +90,19 @@ define([
     };
 
     api.ApiAjax.prototype._handleAjaxError = function(dfd, x, t, m, opt) {
+        // ajax call was aborted
+        if(t == "abort") return;
+
         var msg = null;
         if (m==="timeout") {
             dfd.reject(new api.NetworkTimeout(msg, opt));
         } else {
+            if ((x) &&
+               (x.statusText) &&
+               (x.statusText.indexOf("Notify user:") > -1)) {
+               msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
+            }
+
             switch(x.status) {
                 case 400: dfd.reject(new api.ApiBadRequest(msg, opt)); break;
                 case 401: dfd.reject(new api.ApiUnauthorized(msg, opt)); break;

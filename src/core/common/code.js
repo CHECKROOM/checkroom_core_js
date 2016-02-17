@@ -52,6 +52,51 @@ define(function () {
 		},
 
 		/**
+		 * isValidQRCode
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean}  
+		 */
+		isValidQRCode: function(qrCode){
+			return this.isValidItemQRCode(qrCode) || 
+					this.isValidTransferQRCode(qrCode);
+		},
+
+		/**
+		 * isValidTransferQRCode
+		 * For example: http://cheqroom.com/ordertransfer/tTfZXW6eTianQU3UQVELdn
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidTransferQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean} 
+		 */
+		isValidTransferQRCode: function(qrCode){
+			return qrCode.match(/^http:\/\/cheqroom\.com\/ordertransfer\/[a-zA-Z0-9]{22}$/i) != null;
+		},
+
+		/**
+		 * isValidItemQRCode 
+		 * For example: http://cheqroom.com/qr/eeaa37ed
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidItemQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean} 
+		 */
+		isValidItemQRCode: function(qrCode){
+			return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+		},
+
+		/**
 		 * getCheqRoomRedirectUrl
 		 *
 		 * @memberOf  common

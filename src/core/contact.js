@@ -13,7 +13,8 @@ define([
         name: "",
         company: "",
         phone: "",
-        email: ""
+        email: "",
+        user: {}
     };
 
     // Allow overriding the ctor during inheritance
@@ -39,6 +40,7 @@ define([
         this.company = spec.company || DEFAULTS.company;
         this.phone = spec.phone || DEFAULTS.phone;
         this.email = spec.email || DEFAULTS.email;
+        this.user = spec.user || DEFAULTS.user;
     };
 
     Contact.prototype = new tmp();
@@ -162,6 +164,8 @@ define([
                 that.company = data.company || DEFAULTS.company;
                 that.phone = data.phone || DEFAULTS.phone;
                 that.email = data.email || DEFAULTS.email;
+                that.user = data.user || DEFAULTS.user;
+                
                 $.publish('contact.fromJson', data);
                 return data;
             });

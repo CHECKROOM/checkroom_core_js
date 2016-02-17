@@ -90,6 +90,9 @@ define([
     };
 
     api.ApiAjax.prototype._handleAjaxError = function(dfd, x, t, m, opt) {
+        // ajax call was aborted
+        if(t == "abort") return;
+
         var msg = null;
         if (m==="timeout") {
             dfd.reject(new api.NetworkTimeout(msg, opt));

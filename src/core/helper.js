@@ -145,6 +145,7 @@ define(["jquery",
             var useOrderAgreements = (limits.allowGeneratePdf) && (profile.useOrderAgreements);
             var useWebHooks = (limits.allowWebHooks);
             var useKits = (limits.allowKits) && (profile.useKits);
+            var useOrderTransfers = (limits.allowOrderTransfers) && (profile.useOrderTransfers);
 
             return {
                 contacts: {
@@ -166,7 +167,8 @@ define(["jquery",
                     update: true,
                     updateContact: (role != "selfservice"),
                     updateLocation: true,
-                    generatePdf: useOrderAgreements && isRootOrAdminOrUser
+                    generatePdf: useOrderAgreements && isRootOrAdminOrUser,
+                    transferOrder: useOrderTransfers
                 },
                 reservations: {
                     create: useReservations,

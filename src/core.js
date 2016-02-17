@@ -22,7 +22,8 @@ define([
     'Reservation',
     'Transaction',
     'User',
-    'common'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common) {
+    'common',
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common, OrderTransfer) {
 
     var core = {};
 
@@ -48,6 +49,7 @@ define([
     core.Reservation = Reservation;
     core.Transaction = Transaction;
     core.User = User;
+    core.OrderTransfer = OrderTransfer;
 
     return core;
 });

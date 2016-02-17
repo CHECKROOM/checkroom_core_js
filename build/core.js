@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common, api, document, Availability, settings, helper, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, transaction, conflict, Order, Reservation, Transaction, User, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common, api, document, Availability, settings, helper, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, transaction, conflict, Order, Reservation, Transaction, User, OrderTransfer, core;
 common_code = {
   /**
      * isCodeValid
@@ -54,6 +54,47 @@ common_code = {
    */
   isValidBarcode: function (barCode) {
     return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
+  },
+  /**
+   * isValidQRCode
+   * 
+   * @memberOf common
+   * @name  common#isValidQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean}  
+   */
+  isValidQRCode: function (qrCode) {
+    return this.isValidItemQRCode(qrCode) || this.isValidTransferQRCode(qrCode);
+  },
+  /**
+   * isValidTransferQRCode
+   * For example: http://cheqroom.com/ordertransfer/tTfZXW6eTianQU3UQVELdn
+   * 
+   * @memberOf common
+   * @name  common#isValidTransferQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidTransferQRCode: function (qrCode) {
+    return qrCode.match(/^http:\/\/cheqroom\.com\/ordertransfer\/[a-zA-Z0-9]{22}$/i) != null;
+  },
+  /**
+   * isValidItemQRCode 
+   * For example: http://cheqroom.com/qr/eeaa37ed
+   * 
+   * @memberOf common
+   * @name  common#isValidItemQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidItemQRCode: function (qrCode) {
+    return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
   },
   /**
    * getCheqRoomRedirectUrl
@@ -2227,6 +2268,9 @@ api = function ($, jsonp, moment, common) {
     return dfd.resolve(data);
   };
   api.ApiAjax.prototype._handleAjaxError = function (dfd, x, t, m, opt) {
+    // ajax call was aborted
+    if (t == 'abort')
+      return;
     var msg = null;
     if (m === 'timeout') {
       dfd.reject(new api.NetworkTimeout(msg, opt));
@@ -3437,6 +3481,7 @@ helper = function ($, settings) {
       var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
       var useWebHooks = limits.allowWebHooks;
       var useKits = limits.allowKits && profile.useKits;
+      var useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
       return {
         contacts: {
           create: isRootOrAdminOrUser,
@@ -3457,7 +3502,8 @@ helper = function ($, settings) {
           update: true,
           updateContact: role != 'selfservice',
           updateLocation: true,
-          generatePdf: useOrderAgreements && isRootOrAdminOrUser
+          generatePdf: useOrderAgreements && isRootOrAdminOrUser,
+          transferOrder: useOrderTransfers
         },
         reservations: {
           create: useReservations,
@@ -3671,10 +3717,12 @@ Attachment = function ($, helper, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
+    'jpeg',
     'png'
   ];
   var PREVIEWS = [
     'jpg',
+    'jpeg',
     'png',
     'doc',
     'docx',
@@ -3793,10 +3841,12 @@ attachment = function ($, helper, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
+    'jpeg',
     'png'
   ];
   var PREVIEWS = [
     'jpg',
+    'jpeg',
     'png',
     'doc',
     'docx',
@@ -4835,7 +4885,8 @@ Contact = function ($, Base, common) {
     name: '',
     company: '',
     phone: '',
-    email: ''
+    email: '',
+    user: {}
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -4859,6 +4910,7 @@ Contact = function ($, Base, common) {
     this.company = spec.company || DEFAULTS.company;
     this.phone = spec.phone || DEFAULTS.phone;
     this.email = spec.email || DEFAULTS.email;
+    this.user = spec.user || DEFAULTS.user;
   };
   Contact.prototype = new tmp();
   Contact.prototype.constructor = Contact;
@@ -4955,6 +5007,7 @@ Contact = function ($, Base, common) {
       that.company = data.company || DEFAULTS.company;
       that.phone = data.phone || DEFAULTS.phone;
       that.email = data.email || DEFAULTS.email;
+      that.user = data.user || DEFAULTS.user;
       $.publish('contact.fromJson', data);
       return data;
     });
@@ -7540,7 +7593,7 @@ conflict = function ($) {
   };
   return Conflict;
 }(jquery);
-Order = function ($, api, Transaction, Conflict) {
+Order = function ($, api, Transaction, Conflict, common, helper) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -7665,7 +7718,10 @@ Order = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Order.prototype.canCheckout = function () {
-    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length;
+    var that = this;
+    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length && common.getItemsByStatus(this.items, function (item) {
+      return that.id == helper.ensureId(item.order);
+    }).length == this.items.length;
   };
   /**
    * Checks if order can undo checkout
@@ -7745,8 +7801,8 @@ Order = function ($, api, Transaction, Conflict) {
               // Order cannot conflict with itself
               if (av.order != that.id) {
                 kind = '';
-                kind = kind || av.order ? 'order' : '';
-                kind = kind || av.reservation ? 'reservation' : '';
+                kind = kind || (av.order ? 'order' : '');
+                kind = kind || (av.reservation ? 'reservation' : '');
                 conflicts.push(new Conflict({
                   kind: kind,
                   item: transItem._id,
@@ -7967,7 +8023,7 @@ Order = function ($, api, Transaction, Conflict) {
     }
   };
   return Order;
-}(jquery, api, transaction, conflict);
+}(jquery, api, transaction, conflict, common, helper);
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9362,7 +9418,172 @@ User = function ($, Base, common) {
   };
   return User;
 }(jquery, base, common);
-core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common) {
+OrderTransfer = function ($, Base) {
+  var DEFAULTS = {
+    by: null,
+    created: null,
+    modified: null,
+    status: 'creating',
+    items: [],
+    started: null,
+    accepted: null,
+    fromOrder: null,
+    toOrder: null,
+    startedBy: null
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Base.prototype;
+  /**
+   * OrderTransfer
+   * @name OrderTransfer
+   * @class OrderTransfer
+   * @constructor
+   * @property {string} id            short UUID
+   * @property {cr.User} by           who created this doc
+   * @property {Date} created         when was this doc created
+   * @property {Date} modified        when was this doc last modified
+   * @property {string} status        creating, open, closed
+   * @property {Array} items          list of items
+   * @property {Date} started         when was the transfer started
+   * @property {Date} accepted        when was the transfer accepted
+   * @property {Date} fromOrder       from order
+   * @property {Date} toOrder         to order    
+   * @property {cr.User} startedBy    who started the transfer    
+   * @extends Base
+   */
+  var OrderTransfer = function (opt) {
+    var spec = $.extend({
+      fields: ['*'],
+      crtype: 'cheqroom.types.reservation.ordertransfer'
+    }, opt);
+    Base.call(this, spec);
+    this.by = spec.by || DEFAULTS.by;
+    this.created = spec.created || DEFAULTS.created;
+    this.modified = spec.modified || DEFAULTS.modified;
+    this.status = spec.status || DEFAULTS.status;
+    this.items = spec.items || DEFAULTS.items;
+    this.started = spec.started || DEFAULTS.started;
+    this.accepted = spec.accepted || DEFAULTS.accepted;
+    this.fromOrder = spec.fromOrder || DEFAULTS.fromOrder;
+    this.toOrder = spec.toOrder || DEFAULTS.toOrder;
+    this.startedBy = spec.startedBy || DEFAULTS.startedBy;
+  };
+  OrderTransfer.prototype = new tmp();
+  OrderTransfer.prototype.constructor = OrderTransfer;
+  // Base overrides
+  // ----
+  /**
+   * Checks if the order transfer is empty
+   * @name OrderTransfer#isEmpty
+   * @returns {boolean}
+   */
+  OrderTransfer.prototype.isEmpty = function () {
+    return false;
+  };
+  OrderTransfer.prototype._toJson = function (options) {
+    // Writes out; id, items
+    var data = Base.prototype._toJson.call(this, options);
+    data.items = this.items || DEFAULTS.items;
+    return data;
+  };
+  OrderTransfer.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Base.prototype._fromJson.call(this, data, options).then(function () {
+      that.by = data.by || DEFAULTS.by;
+      that.created = data.created || DEFAULTS.created;
+      that.modified = data.modified || DEFAULTS.modified;
+      that.items = data.items || DEFAULTS.items;
+      that.status = data.status || DEFAULTS.status;
+      that.started = data.started || DEFAULTS.started;
+      that.accepted = data.accepted || DEFAULTS.accepted;
+      that.fromOrder = data.fromOrder || DEFAULTS.fromOrder;
+      that.toOrder = data.toOrder || DEFAULTS.toOrder;
+      that.startedBy = data.startedBy || DEFAULTS.startedBy;
+      return data;
+    });
+  };
+  // Business logic
+  // ----
+  /**
+   * addItems adds items to transfer from an order (must be items of the same order)
+   *
+   * @name OrderTransfer#addItems
+   * @returns {promise}
+   */
+  OrderTransfer.prototype.addItems = function (items, skipRead) {
+    return this._doApiCall({
+      method: 'addItems',
+      params: { items: items },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * removeItems removes items from transfer
+   * 
+   * @name OrderTransfer#removeItems
+   * @returns {promise}
+   */
+  OrderTransfer.prototype.removeItems = function (items, skipRead) {
+    return this._doApiCall({
+      method: 'removeItems',
+      params: { items: items },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * start puts the transfer in status "open"
+   * 
+   * @name OrderTransfer#start
+   * @return {promise}
+   */
+  OrderTransfer.prototype.start = function (skipRead) {
+    return this._doApiCall({
+      method: 'start',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * undoStart puts the transfer in status "creating" again
+   * 
+   * @name OrderTransfer#undoStart
+   * @return {promise}
+   */
+  OrderTransfer.prototype.undoStart = function (skipRead) {
+    return this._doApiCall({
+      method: 'undoStart',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * accept transfers the items to another customer
+   * 
+   * @name OrderTransfer#accept
+   * @return {promise}
+   */
+  OrderTransfer.prototype.accept = function (params, skipRead) {
+    return this._doApiCall({
+      method: 'accept',
+      params: params,
+      skipRead: skipRead
+    });
+  };
+  /**
+   * getQRUrl returns path to transfer qr code
+   * 
+   * @name OrderTransfer#qr
+   * @return {string}
+   */
+  OrderTransfer.prototype.getQRUrl = function (size) {
+    return this.ds._baseUrl + '/' + this.id + '/call/qr?size=' + (size || 300);
+  };
+  return OrderTransfer;
+}(jquery, base);
+core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common, OrderTransfer) {
   var core = {};
   // namespaces
   core.api = api;
@@ -9385,7 +9606,8 @@ core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact
   core.Reservation = Reservation;
   core.Transaction = Transaction;
   core.User = User;
+  core.OrderTransfer = OrderTransfer;
   return core;
-}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common);
+}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common, OrderTransfer);
 return core;
 }))

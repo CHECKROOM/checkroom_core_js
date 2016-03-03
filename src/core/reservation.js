@@ -67,7 +67,8 @@ define([
         return (
             (this.status=="creating") &&
                 (this.location) &&
-                (this.contact) &&
+                ((this.contact) &&
+                 (this.contact.status == "active")) &&
                 (this.from) &&
                 (this.to) &&
                 (this.items) &&

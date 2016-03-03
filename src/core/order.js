@@ -8,8 +8,7 @@ define([
     "api",
     "transaction",
     "conflict",
-    "common",
-    "helper"], /** @lends Transaction */  function ($, api, Transaction, Conflict, common, helper) {
+    "common"], /** @lends Transaction */  function ($, api, Transaction, Conflict, common) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -153,13 +152,14 @@ define([
         return (
             (this.status=="creating") &&
             (this.location) &&
-            (this.contact) &&
+            ((this.contact) &&
+             (this.contact.status == "active")) &&
             (this.due) &&
             (this.due.isAfter(this._getDateHelper().getNow())) &&
             (this.items) &&
             (this.items.length) &&
             (common.getItemsByStatus(this.items, function(item){
-                return that.id == helper.ensureId(item.order);
+                return that.id == that.helper.ensureId(item.order);
             }).length == this.items.length));
     };
 

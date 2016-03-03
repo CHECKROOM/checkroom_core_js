@@ -12,7 +12,7 @@ define([
     "base",
     "location",
     "dateHelper",
-    "helper"], /** @lends Base */ function ($, api, Base, Location, DateHelper, helper) {
+    "helper"], /** @lends Base */ function ($, api, Base, Location, DateHelper, Helper) {
 
     var DEFAULTS = {
         status: "creating",
@@ -55,6 +55,7 @@ define([
         // should we automatically delete the transaction from the database?
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.dateHelper = spec.dateHelper || new DateHelper();
+        this.helper = spec.helper || new Helper();
 
         this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
         this.from = spec.from || DEFAULTS.from;                           // a date in the future

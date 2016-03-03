@@ -59,6 +59,7 @@ define([
         this.picture = spec.picture || DEFAULTS.picture;
         this.email = spec.email || DEFAULTS.email;
         this.role = spec.role || DEFAULTS.role;
+        this.group = spec.group || DEFAULTS.group;
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
     };
 

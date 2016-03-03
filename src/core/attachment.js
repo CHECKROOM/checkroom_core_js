@@ -6,12 +6,11 @@
  */
 define([
     'jquery',
-    'helper',
-    'keyvalue'], /** @lends Attachment */ function ($, helper, KeyValue) {
+    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
 
     var EXT = /(?:\.([^.]+))?$/;
-    var IMAGES = ['jpg', 'png'];
-    var PREVIEWS = ['jpg', 'png', 'doc', 'docx', 'pdf'];
+    var IMAGES = ['jpg', 'jpeg', 'png'];
+    var PREVIEWS = ['jpg', 'jpeg', 'png', 'doc', 'docx', 'pdf'];
     var DEFAULTS = {
         isCover: false,
         canBeCover: true
@@ -56,7 +55,7 @@ define([
      * @returns {string}
      */
     Attachment.prototype.getThumbnailUrl = function(size) {
-        return (this.hasPreview()) ? helper.getImageUrl(this.ds, this.id, size || 'S') : "";
+        return (this.hasPreview()) ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : "";
     };
 
     /**

@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common, api, document, Availability, settings, helper, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, transaction, conflict, Order, Reservation, Transaction, User, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, user, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, Reservation, Transaction, User, OrderTransfer, core;
 common_code = {
   /**
      * isCodeValid
@@ -54,6 +54,47 @@ common_code = {
    */
   isValidBarcode: function (barCode) {
     return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
+  },
+  /**
+   * isValidQRCode
+   * 
+   * @memberOf common
+   * @name  common#isValidQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean}  
+   */
+  isValidQRCode: function (qrCode) {
+    return this.isValidItemQRCode(qrCode) || this.isValidTransferQRCode(qrCode);
+  },
+  /**
+   * isValidTransferQRCode
+   * For example: http://cheqroom.com/ordertransfer/tTfZXW6eTianQU3UQVELdn
+   * 
+   * @memberOf common
+   * @name  common#isValidTransferQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidTransferQRCode: function (qrCode) {
+    return qrCode.match(/^http:\/\/cheqroom\.com\/ordertransfer\/[a-zA-Z0-9]{22}$/i) != null;
+  },
+  /**
+   * isValidItemQRCode 
+   * For example: http://cheqroom.com/qr/eeaa37ed
+   * 
+   * @memberOf common
+   * @name  common#isValidItemQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidItemQRCode: function (qrCode) {
+    return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
   },
   /**
    * getCheqRoomRedirectUrl
@@ -611,12 +652,12 @@ common_image = function ($) {
      * @return {string}              
      */
     getImageCDNUrl: function (settings, groupId, attachmentId, size) {
-      // Makes a CDN url for Item using the Item.cover property
       // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
       var url = 'https://cheqroom-cdn.s3.amazonaws.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
       if (size && size.length > 0) {
         var parts = url.split('.');
         var ext = parts.pop();
+        // pop off the extension, we'll change it
         url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
       }
       return url;
@@ -2227,10 +2268,16 @@ api = function ($, jsonp, moment, common) {
     return dfd.resolve(data);
   };
   api.ApiAjax.prototype._handleAjaxError = function (dfd, x, t, m, opt) {
+    // ajax call was aborted
+    if (t == 'abort')
+      return;
     var msg = null;
     if (m === 'timeout') {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
+      if (x && x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+        msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+      }
       switch (x.status) {
       case 400:
         dfd.reject(new api.ApiBadRequest(msg, opt));
@@ -3295,234 +3342,6 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
-settings = {
-  cdn: 'https://cheqroom-cdn.s3.amazonaws.com',
-  amazonBucket: 'app'
-};
-helper = function ($, settings) {
-  return {
-    /**
-     * getImageCDNUrl gets an image by using the path to a CDN location
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#getImageCDNUrl
-     * 
-     * @param groupId
-     * @param attachmentId
-     * @param size
-     * @returns {string}
-     */
-    getImageCDNUrl: function (groupId, attachmentId, size) {
-      // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-      var url = settings.cdn + '/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
-      if (size && size.length > 0) {
-        var parts = url.split('.');
-        var ext = parts.pop();
-        // pop off the extension, we'll change it
-        url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
-      }
-      return url;
-    },
-    /**
-     * getImageUrl gets an image by using the datasource /get style and a mimeType
-     * 'XS': (64, 64),
-     * 'S': (128, 128),
-     * 'M': (256, 256),
-     * 'L': (512, 512)
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#getImageUrl
-     * 
-     * @param ds
-     * @param pk
-     * @param size
-     * @param bustCache
-     * @returns {string}
-     */
-    getImageUrl: function (ds, pk, size, bustCache) {
-      var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-      if (size) {
-        url += '&size=' + size;
-      }
-      if (bustCache) {
-        url += '&_bust=' + new Date().getTime();
-      }
-      return url;
-    },
-    /**
-     * getNumItemsLeft
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#getNumItemsLeft
-     * 
-     * @param limits
-     * @param stats 
-     * @return {Number}
-     */
-    getNumItemsLeft: function (limits, stats) {
-      var itemsPerStatus = this.getStat(stats, 'items', 'status');
-      return limits.maxItems - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
-    },
-    /**
-     * getNumUsersLeft
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#getNumUsersLeft
-     *  
-     * @param limits
-     * @param stats 
-     * @return {Number}
-     */
-    getNumUsersLeft: function (limits, stats) {
-      var usersPerStatus = this.getStat(stats, 'users', 'status');
-      return limits.maxUsers - usersPerStatus.active;
-    },
-    /**
-     * getStat for location
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#getStat
-     *
-     * @param stats
-     * @param location
-     * @param type
-     * @param name
-     * @param mode
-     * @return {object}         number or object
-     */
-    getStat: function (stats, type, name, location, mode) {
-      // make sure stats object isn't undefined
-      stats = stats || {};
-      //if no stats for given location found, use all stats object
-      stats = stats[location && location != 'null' ? location : 'all'] || stats['all'];
-      if (stats === undefined)
-        throw 'Invalid stats';
-      // load stats for given mode (defaults to production)
-      stats = stats[mode || 'production'];
-      var statType = stats[type];
-      if (statType === undefined)
-        throw 'Stat doesn\'t exist';
-      if (!name)
-        return statType;
-      var statTypeValue = statType[name];
-      if (statTypeValue === undefined)
-        throw 'Stat value doesn\'t exist';
-      return statTypeValue;
-    },
-    /**
-     * getAccessRights returns access rights based on the user role, profile settings 
-     * and account limits 
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#getAccessRights 
-     * 
-     * @param  role   
-     * @param  profile 
-     * @param  limits
-     * @return {object}       
-     */
-    getAccessRights: function (role, profile, limits) {
-      var isRootOrAdmin = role == 'root' || role == 'admin';
-      var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
-      var useReservations = limits.allowReservations && profile.useReservations;
-      var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
-      var useWebHooks = limits.allowWebHooks;
-      var useKits = limits.allowKits && profile.useKits;
-      return {
-        contacts: {
-          create: isRootOrAdminOrUser,
-          remove: isRootOrAdminOrUser,
-          update: true
-        },
-        items: {
-          create: isRootOrAdmin,
-          remove: isRootOrAdmin,
-          update: isRootOrAdmin,
-          updateFlag: isRootOrAdmin,
-          updateLocation: isRootOrAdmin,
-          updateGeo: true
-        },
-        orders: {
-          create: true,
-          remove: true,
-          update: true,
-          updateContact: role != 'selfservice',
-          updateLocation: true,
-          generatePdf: useOrderAgreements && isRootOrAdminOrUser
-        },
-        reservations: {
-          create: useReservations,
-          remove: useReservations,
-          update: useReservations,
-          updateContact: useReservations && role != 'selfservice',
-          updateLocation: useReservations
-        },
-        locations: {
-          create: isRootOrAdmin,
-          remove: isRootOrAdmin,
-          update: isRootOrAdmin
-        },
-        users: {
-          create: isRootOrAdmin,
-          remove: isRootOrAdmin,
-          update: isRootOrAdmin,
-          updateOther: isRootOrAdmin,
-          updateOwn: true
-        },
-        webHooks: {
-          create: useWebHooks && isRootOrAdmin,
-          remove: useWebHooks && isRootOrAdmin,
-          update: useWebHooks && isRootOrAdmin
-        },
-        stickers: {
-          print: isRootOrAdmin,
-          buy: isRootOrAdmin
-        },
-        categories: {
-          create: isRootOrAdmin,
-          update: isRootOrAdmin
-        },
-        account: { update: isRootOrAdmin }
-      };
-    },
-    /**
-     * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
-     * 
-     * @memberOf helper
-     * @method
-     * @name  helper#ensureValue 
-     * 
-     * @param  obj   
-     * @param  prop        
-     * @return {string}       
-     */
-    ensureValue: function (obj, prop) {
-      return typeof obj === 'string' ? obj : obj[prop];
-    },
-    /**
-     * ensureId, returns id value of object or if you pass a string it returns that exact string 
-     * For example:
-     * ensureId("abc123") --> "abc123"
-     * ensureId({ id:"abc123", name:"example" }) --> "abc123"
-     *
-     * @memberOf helper
-     * @method
-     * @name  helper#ensureId 
-     * 
-     * @param  obj   
-     * @return {string}       
-     */
-    ensureId: function (obj) {
-      return this.ensureValue(obj, '_id');
-    }
-  };
-}(jquery, settings);
 keyvalue = function ($) {
   var DEFAULTS = {
     id: '',
@@ -3664,14 +3483,16 @@ keyvalue = function ($) {
   };
   return KeyValue;
 }(jquery);
-Attachment = function ($, helper, KeyValue) {
+Attachment = function ($, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
+    'jpeg',
     'png'
   ];
   var PREVIEWS = [
     'jpg',
+    'jpeg',
     'png',
     'doc',
     'docx',
@@ -3717,7 +3538,7 @@ Attachment = function ($, helper, KeyValue) {
    * @returns {string}
    */
   Attachment.prototype.getThumbnailUrl = function (size) {
-    return this.hasPreview() ? helper.getImageUrl(this.ds, this.id, size || 'S') : '';
+    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : '';
   };
   /**
    * Gets the url where the attachment can be downloaded
@@ -3762,7 +3583,7 @@ Attachment = function ($, helper, KeyValue) {
     return $.inArray(ext, PREVIEWS) >= 0;
   };
   return Attachment;
-}(jquery, helper, keyvalue);
+}(jquery, keyvalue);
 comment = function ($, KeyValue) {
   var KEY = 'cheqroom.Comment';
   // Allow overriding the ctor during inheritance
@@ -3786,14 +3607,16 @@ comment = function ($, KeyValue) {
   Comment.prototype.constructor = Comment;
   return Comment;
 }(jquery, keyvalue);
-attachment = function ($, helper, KeyValue) {
+attachment = function ($, KeyValue) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
+    'jpeg',
     'png'
   ];
   var PREVIEWS = [
     'jpg',
+    'jpeg',
     'png',
     'doc',
     'docx',
@@ -3839,7 +3662,7 @@ attachment = function ($, helper, KeyValue) {
    * @returns {string}
    */
   Attachment.prototype.getThumbnailUrl = function (size) {
-    return this.hasPreview() ? helper.getImageUrl(this.ds, this.id, size || 'S') : '';
+    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : '';
   };
   /**
    * Gets the url where the attachment can be downloaded
@@ -3884,7 +3707,7 @@ attachment = function ($, helper, KeyValue) {
     return $.inArray(ext, PREVIEWS) >= 0;
   };
   return Attachment;
-}(jquery, helper, keyvalue);
+}(jquery, keyvalue);
 Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   // Some constant values
   var COMMENT = 'cheqroom.Comment', ATTACHMENT = 'cheqroom.Attachment', IMAGE = 'cheqroom.prop.Image', IMAGE_OTHER = 'cheqroom.attachment.Image', DEFAULTS = {
@@ -4827,12 +4650,221 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   };
   return Base;
 }(jquery, common, api, document, comment, attachment, keyvalue);
-Contact = function ($, Base, common) {
+user = function ($, Base, common) {
+  var DEFAULTS = {
+    name: '',
+    email: '',
+    group: '',
+    // groupid
+    picture: '',
+    role: 'user',
+    // user, admin
+    active: true
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Base.prototype;
+  /**
+   * @name User
+   * @class User
+   * @constructor
+   * @extends Base
+   * @property {string}  name               - The name
+   * @property {string}  role               - The role (admin, user)
+   * @property {boolean} active             - Is the user active?
+   */
+  var User = function (opt) {
+    var spec = $.extend({
+      fields: [
+        '*',
+        'group',
+        'picture'
+      ]
+    }, opt);
+    Base.call(this, spec);
+    this.helper = spec.helper;
+    /*
+            from API:
+    
+            login = StringField(primary_key=True, min_length=4)
+            role = StringField(required=True, choices=USER_ROLE)
+            group = ReferenceField(Group)
+            password = StringField(min_length=4)
+            name = StringField(min_length=4)
+            email = EmailField(required=True, unique=True)
+            lastLogin = DateTimeField()
+            profile = EmbeddedDocumentField(UserProfile)
+            active = BooleanField(default=True)
+            picture = ReferenceField(Attachment)
+            timezone = StringField(default="Etc/GMT")  # stored as
+            */
+    this.name = spec.name || DEFAULTS.name;
+    this.picture = spec.picture || DEFAULTS.picture;
+    this.email = spec.email || DEFAULTS.email;
+    this.role = spec.role || DEFAULTS.role;
+    this.group = spec.group || DEFAULTS.group;
+    this.active = spec.active != null ? spec.active : DEFAULTS.active;
+  };
+  User.prototype = new tmp();
+  User.prototype.constructor = User;
+  //
+  // Document overrides
+  //
+  User.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    return this.name.length >= 4;
+  };
+  User.prototype.isValidEmail = function () {
+    this.email = $.trim(this.email);
+    return common.isValidEmail(this.email);
+  };
+  User.prototype.isValidRole = function () {
+    switch (this.role) {
+    case 'user':
+    case 'admin':
+    case 'root':
+      return true;
+    default:
+      return false;
+    }
+  };
+  User.prototype.isValidPassword = function () {
+    this.password = $.trim(this.password);
+    var length = this.password.length;
+    var hasDigit = this.password.match(/[0-9]/);
+    return length >= 4 && hasDigit;
+  };
+  /**
+   * Checks if the user is valid
+   * @returns {boolean}
+   */
+  User.prototype.isValid = function () {
+    return this.isValidName() && this.isValidEmail() && this.isValidRole();
+  };
+  /**
+   * Checks if the user is empty
+   * @method
+   * @name User#isEmpty
+   * @returns {boolean}
+   */
+  User.prototype.isEmpty = function () {
+    // We check: name, role
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
+  };
+  /**
+   * Checks if the user is dirty and needs saving
+   * @method
+   * @name User#isDirty
+   * @returns {boolean}
+   */
+  User.prototype.isDirty = function () {
+    var isDirty = Base.prototype.isDirty.call(this);
+    if (!isDirty && this.raw) {
+      var name = this.raw.name || DEFAULTS.name;
+      var role = this.raw.role || DEFAULTS.role;
+      var email = this.raw.email || DEFAULTS.email;
+      var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
+      return this.name != name || this.email != email || this.role != role || this.active != active;
+    }
+    return isDirty;
+  };
+  /**
+   * Gets an url for a user avatar
+   * 'XS': (64, 64),
+   * 'S': (128, 128),
+   * 'M': (256, 256),
+   * 'L': (512, 512)
+   * @param size {string} default null is original size
+   * @param bustCache {boolean}
+   * @returns {string}
+   */
+  User.prototype.getImageUrl = function (size, bustCache) {
+    return this.picture != null && this.picture.length > 0 ? this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+  };
+  User.prototype._getDefaults = function () {
+    return DEFAULTS;
+  };
+  // OVERRIDE BASE: addKeyValue not implemented
+  User.prototype.addKeyValue = function (key, value, kind, skipRead) {
+    return $.Deferred().reject('Not implemented for User, use setPicture instead?');
+  };
+  // OVERRIDE BASE: addKeyValue not implemented
+  User.prototype.addKeyValue = function (id, key, value, kind, skipRead) {
+    return $.Deferred().reject('Not implemented for User, use setPicture instead?');
+  };
+  // OVERRIDE BASE: removeKeyValue not implemented
+  User.prototype.removeKeyValue = function (id, skipRead) {
+    return $.Deferred().reject('Not implemented for User, use clearPicture instead?');
+  };
+  User.prototype.setPicture = function (attachmentId, skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    this.picture = attachmentId;
+    return this._doApiCall({
+      method: 'setPicture',
+      params: { attachment: attachmentId },
+      skipRead: skipRead
+    });
+  };
+  User.prototype.clearPicture = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'clearPicture',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Writes the user to a json object
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  User.prototype._toJson = function (options) {
+    var data = Base.prototype._toJson.call(this, options);
+    data.name = this.name || DEFAULTS.name;
+    data.email = this.email || DEFAULTS.email;
+    data.group = this.group || DEFAULTS.group;
+    data.role = this.role || DEFAULTS.role;
+    data.active = this.active || DEFAULTS.active;
+    return data;
+  };
+  /**
+   * Reads the user from the json object
+   * @param data
+   * @param options
+   * @returns {promise}
+   * @private
+   */
+  User.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Base.prototype._fromJson.call(this, data, options).then(function () {
+      // Read the group id from group or group._id
+      // depending on the fields
+      that.group = data.group && data.group._id != null ? data.group._id : data.group || DEFAULTS.group;
+      that.name = data.name || DEFAULTS.name;
+      that.picture = data.picture || DEFAULTS.picture;
+      that.email = data.email || DEFAULTS.email;
+      that.role = data.role || DEFAULTS.role;
+      that.active = data.active != null ? data.active : DEFAULTS.active;
+      $.publish('user.fromJson', data);
+      return data;
+    });
+  };
+  return User;
+}(jquery, base, common);
+Contact = function ($, Base, common, User) {
   var DEFAULTS = {
     name: '',
     company: '',
     phone: '',
-    email: ''
+    email: '',
+    status: 'active',
+    user: {}
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -4856,6 +4888,8 @@ Contact = function ($, Base, common) {
     this.company = spec.company || DEFAULTS.company;
     this.phone = spec.phone || DEFAULTS.phone;
     this.email = spec.email || DEFAULTS.email;
+    this.status = spec.status || DEFAULTS.status;
+    this.user = spec.user || DEFAULTS.user;
   };
   Contact.prototype = new tmp();
   Contact.prototype.constructor = Contact;
@@ -4934,6 +4968,24 @@ Contact = function ($, Base, common) {
     }
     return isDirty;
   };
+  /**
+   * Archive a contact
+   * @name Contact#archive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.archive = function (skipRead) {
+    return this.ds.call(this.id, 'archive', {}, skipRead);
+  };
+  /**
+   * Undo archive of a contact
+   * @name Contact#undoArchive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.undoArchive = function (skipRead) {
+    return this.ds.call(this.id, 'undoArchive', {}, skipRead);
+  };
   Contact.prototype._getDefaults = function () {
     return DEFAULTS;
   };
@@ -4952,12 +5004,14 @@ Contact = function ($, Base, common) {
       that.company = data.company || DEFAULTS.company;
       that.phone = data.phone || DEFAULTS.phone;
       that.email = data.email || DEFAULTS.email;
+      that.status = data.status || DEFAULTS.status;
+      that.user = data.user || DEFAULTS.user;
       $.publish('contact.fromJson', data);
       return data;
     });
   };
   return Contact;
-}(jquery, base, common);
+}(jquery, base, common, user);
 DateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
@@ -6752,7 +6806,245 @@ dateHelper = function ($, moment) {
   };
   return DateHelper;
 }(jquery, moment);
-transaction = function ($, api, Base, Location, DateHelper, helper) {
+settings = { amazonBucket: 'app' };
+helper = function ($, defaultSettings, common) {
+  /**
+   * Allows you to call helpers based on the settings file 
+   * and also settings in group.profile and user.profile
+   * @name Helper
+   * @class Helper
+   * @constructor
+   * @property {object} settings         
+   */
+  return function (settings) {
+    settings = settings || defaultSettings;
+    return {
+      /**
+       * getSettings return settings file which helper uses internally
+       * @return {object}
+       */
+      getSettings: function () {
+        return settings;
+      },
+      /**
+       * getImageCDNUrl gets an image by using the path to a CDN location
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getImageCDNUrl
+       * 
+       * @param groupId
+       * @param attachmentId
+       * @param size
+       * @returns {string}
+       */
+      getImageCDNUrl: function (groupId, attachmentId, size) {
+        return common.getImageCDNUrl(settings, groupId, attachmentId, size);
+      },
+      /**
+       * getImageUrl gets an image by using the datasource /get style and a mimeType
+       * 'XS': (64, 64),
+       * 'S': (128, 128),
+       * 'M': (256, 256),
+       * 'L': (512, 512)
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getImageUrl
+       * 
+       * @param ds
+       * @param pk
+       * @param size
+       * @param bustCache
+       * @returns {string}
+       */
+      getImageUrl: function (ds, pk, size, bustCache) {
+        var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+        if (size) {
+          url += '&size=' + size;
+        }
+        if (bustCache) {
+          url += '&_bust=' + new Date().getTime();
+        }
+        return url;
+      },
+      /**
+       * getNumItemsLeft
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getNumItemsLeft
+       * 
+       * @param limits
+       * @param stats 
+       * @return {Number}
+       */
+      getNumItemsLeft: function (limits, stats) {
+        var itemsPerStatus = this.getStat(stats, 'items', 'status');
+        return limits.maxItems - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
+      },
+      /**
+       * getNumUsersLeft
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getNumUsersLeft
+       *  
+       * @param limits
+       * @param stats 
+       * @return {Number}
+       */
+      getNumUsersLeft: function (limits, stats) {
+        var usersPerStatus = this.getStat(stats, 'users', 'status');
+        return limits.maxUsers - usersPerStatus.active;
+      },
+      /**
+       * getStat for location
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getStat
+       *
+       * @param stats
+       * @param location
+       * @param type
+       * @param name
+       * @param mode
+       * @return {object}         number or object
+       */
+      getStat: function (stats, type, name, location, mode) {
+        // make sure stats object isn't undefined
+        stats = stats || {};
+        //if no stats for given location found, use all stats object
+        stats = stats[location && location != 'null' ? location : 'all'] || stats['all'];
+        if (stats === undefined)
+          throw 'Invalid stats';
+        // load stats for given mode (defaults to production)
+        stats = stats[mode || 'production'];
+        var statType = stats[type];
+        if (statType === undefined)
+          throw 'Stat doesn\'t exist';
+        if (!name)
+          return statType;
+        var statTypeValue = statType[name];
+        if (statTypeValue === undefined)
+          throw 'Stat value doesn\'t exist';
+        return statTypeValue;
+      },
+      /**
+       * getAccessRights returns access rights based on the user role, profile settings 
+       * and account limits 
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getAccessRights 
+       * 
+       * @param  role   
+       * @param  profile 
+       * @param  limits
+       * @return {object}       
+       */
+      getAccessRights: function (role, profile, limits) {
+        var isRootOrAdmin = role == 'root' || role == 'admin';
+        var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+        var useReservations = limits.allowReservations && profile.useReservations;
+        var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
+        var useWebHooks = limits.allowWebHooks;
+        var useKits = limits.allowKits && profile.useKits;
+        var useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
+        return {
+          contacts: {
+            create: isRootOrAdminOrUser,
+            remove: isRootOrAdminOrUser,
+            update: true,
+            archive: isRootOrAdminOrUser
+          },
+          items: {
+            create: isRootOrAdmin,
+            remove: isRootOrAdmin,
+            update: isRootOrAdmin,
+            updateFlag: isRootOrAdmin,
+            updateLocation: isRootOrAdmin,
+            updateGeo: true
+          },
+          orders: {
+            create: true,
+            remove: true,
+            update: true,
+            updateContact: role != 'selfservice',
+            updateLocation: true,
+            generatePdf: useOrderAgreements && isRootOrAdminOrUser,
+            transferOrder: useOrderTransfers
+          },
+          reservations: {
+            create: useReservations,
+            remove: useReservations,
+            update: useReservations,
+            updateContact: useReservations && role != 'selfservice',
+            updateLocation: useReservations
+          },
+          locations: {
+            create: isRootOrAdmin,
+            remove: isRootOrAdmin,
+            update: isRootOrAdmin
+          },
+          users: {
+            create: isRootOrAdmin,
+            remove: isRootOrAdmin,
+            update: isRootOrAdmin,
+            updateOther: isRootOrAdmin,
+            updateOwn: true
+          },
+          webHooks: {
+            create: useWebHooks && isRootOrAdmin,
+            remove: useWebHooks && isRootOrAdmin,
+            update: useWebHooks && isRootOrAdmin
+          },
+          stickers: {
+            print: isRootOrAdmin,
+            buy: isRootOrAdmin
+          },
+          categories: {
+            create: isRootOrAdmin,
+            update: isRootOrAdmin
+          },
+          account: { update: isRootOrAdmin }
+        };
+      },
+      /**
+       * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
+       * 
+       * @memberOf helper
+       * @method
+       * @name  helper#ensureValue 
+       * 
+       * @param  obj   
+       * @param  prop        
+       * @return {string}       
+       */
+      ensureValue: function (obj, prop) {
+        return typeof obj === 'string' ? obj : obj[prop];
+      },
+      /**
+       * ensureId, returns id value of object or if you pass a string it returns that exact string 
+       * For example:
+       * ensureId("abc123") --> "abc123"
+       * ensureId({ id:"abc123", name:"example" }) --> "abc123"
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#ensureId 
+       * 
+       * @param  obj   
+       * @return {string}       
+       */
+      ensureId: function (obj) {
+        return this.ensureValue(obj, '_id');
+      }
+    };
+  };
+}(jquery, settings, common);
+transaction = function ($, api, Base, Location, DateHelper, Helper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
@@ -6792,6 +7084,7 @@ transaction = function ($, api, Base, Location, DateHelper, helper) {
     // should we automatically delete the transaction from the database?
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.dateHelper = spec.dateHelper || new DateHelper();
+    this.helper = spec.helper || new Helper();
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -7537,7 +7830,7 @@ conflict = function ($) {
   };
   return Conflict;
 }(jquery);
-Order = function ($, api, Transaction, Conflict) {
+Order = function ($, api, Transaction, Conflict, common) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -7662,7 +7955,10 @@ Order = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Order.prototype.canCheckout = function () {
-    return this.status == 'creating' && this.location && this.contact && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length;
+    var that = this;
+    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length && common.getItemsByStatus(this.items, function (item) {
+      return that.id == that.helper.ensureId(item.order);
+    }).length == this.items.length;
   };
   /**
    * Checks if order can undo checkout
@@ -7742,8 +8038,8 @@ Order = function ($, api, Transaction, Conflict) {
               // Order cannot conflict with itself
               if (av.order != that.id) {
                 kind = '';
-                kind = kind || av.order ? 'order' : '';
-                kind = kind || av.reservation ? 'reservation' : '';
+                kind = kind || (av.order ? 'order' : '');
+                kind = kind || (av.reservation ? 'reservation' : '');
                 conflicts.push(new Conflict({
                   kind: kind,
                   item: transItem._id,
@@ -7964,7 +8260,7 @@ Order = function ($, api, Transaction, Conflict) {
     }
   };
   return Order;
-}(jquery, api, transaction, conflict);
+}(jquery, api, transaction, conflict, common);
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8015,7 +8311,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canReserve = function () {
-    return this.status == 'creating' && this.location && this.contact && this.from && this.to && this.items && this.items.length;
+    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.from && this.to && this.items && this.items.length;
   };
   /**
    * Checks if the reservation can be cancelled
@@ -8447,7 +8743,7 @@ Reservation = function ($, api, Transaction, Conflict) {
   };
   return Reservation;
 }(jquery, api, transaction, conflict);
-Transaction = function ($, api, Base, Location, DateHelper, helper) {
+Transaction = function ($, api, Base, Location, DateHelper, Helper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
@@ -8487,6 +8783,7 @@ Transaction = function ($, api, Base, Location, DateHelper, helper) {
     // should we automatically delete the transaction from the database?
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.dateHelper = spec.dateHelper || new DateHelper();
+    this.helper = spec.helper || new Helper();
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -9207,6 +9504,7 @@ User = function ($, Base, common) {
     this.picture = spec.picture || DEFAULTS.picture;
     this.email = spec.email || DEFAULTS.email;
     this.role = spec.role || DEFAULTS.role;
+    this.group = spec.group || DEFAULTS.group;
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
   };
   User.prototype = new tmp();
@@ -9359,12 +9657,176 @@ User = function ($, Base, common) {
   };
   return User;
 }(jquery, base, common);
-core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common) {
+OrderTransfer = function ($, Base) {
+  var DEFAULTS = {
+    by: null,
+    created: null,
+    modified: null,
+    status: 'creating',
+    items: [],
+    started: null,
+    accepted: null,
+    fromOrder: null,
+    toOrder: null,
+    startedBy: null
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Base.prototype;
+  /**
+   * OrderTransfer
+   * @name OrderTransfer
+   * @class OrderTransfer
+   * @constructor
+   * @property {string} id            short UUID
+   * @property {cr.User} by           who created this doc
+   * @property {Date} created         when was this doc created
+   * @property {Date} modified        when was this doc last modified
+   * @property {string} status        creating, open, closed
+   * @property {Array} items          list of items
+   * @property {Date} started         when was the transfer started
+   * @property {Date} accepted        when was the transfer accepted
+   * @property {Date} fromOrder       from order
+   * @property {Date} toOrder         to order    
+   * @property {cr.User} startedBy    who started the transfer    
+   * @extends Base
+   */
+  var OrderTransfer = function (opt) {
+    var spec = $.extend({
+      fields: ['*'],
+      crtype: 'cheqroom.types.reservation.ordertransfer'
+    }, opt);
+    Base.call(this, spec);
+    this.by = spec.by || DEFAULTS.by;
+    this.created = spec.created || DEFAULTS.created;
+    this.modified = spec.modified || DEFAULTS.modified;
+    this.status = spec.status || DEFAULTS.status;
+    this.items = spec.items || DEFAULTS.items;
+    this.started = spec.started || DEFAULTS.started;
+    this.accepted = spec.accepted || DEFAULTS.accepted;
+    this.fromOrder = spec.fromOrder || DEFAULTS.fromOrder;
+    this.toOrder = spec.toOrder || DEFAULTS.toOrder;
+    this.startedBy = spec.startedBy || DEFAULTS.startedBy;
+  };
+  OrderTransfer.prototype = new tmp();
+  OrderTransfer.prototype.constructor = OrderTransfer;
+  // Base overrides
+  // ----
+  /**
+   * Checks if the order transfer is empty
+   * @name OrderTransfer#isEmpty
+   * @returns {boolean}
+   */
+  OrderTransfer.prototype.isEmpty = function () {
+    return false;
+  };
+  OrderTransfer.prototype._toJson = function (options) {
+    // Writes out; id, items
+    var data = Base.prototype._toJson.call(this, options);
+    data.items = this.items || DEFAULTS.items;
+    return data;
+  };
+  OrderTransfer.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Base.prototype._fromJson.call(this, data, options).then(function () {
+      that.by = data.by || DEFAULTS.by;
+      that.created = data.created || DEFAULTS.created;
+      that.modified = data.modified || DEFAULTS.modified;
+      that.items = data.items || DEFAULTS.items;
+      that.status = data.status || DEFAULTS.status;
+      that.started = data.started || DEFAULTS.started;
+      that.accepted = data.accepted || DEFAULTS.accepted;
+      that.fromOrder = data.fromOrder || DEFAULTS.fromOrder;
+      that.toOrder = data.toOrder || DEFAULTS.toOrder;
+      that.startedBy = data.startedBy || DEFAULTS.startedBy;
+      return data;
+    });
+  };
+  // Business logic
+  // ----
+  /**
+   * addItems adds items to transfer from an order (must be items of the same order)
+   *
+   * @name OrderTransfer#addItems
+   * @returns {promise}
+   */
+  OrderTransfer.prototype.addItems = function (items, skipRead) {
+    return this._doApiCall({
+      method: 'addItems',
+      params: { items: items },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * removeItems removes items from transfer
+   * 
+   * @name OrderTransfer#removeItems
+   * @returns {promise}
+   */
+  OrderTransfer.prototype.removeItems = function (items, skipRead) {
+    return this._doApiCall({
+      method: 'removeItems',
+      params: { items: items },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * start puts the transfer in status "open"
+   * 
+   * @name OrderTransfer#start
+   * @return {promise}
+   */
+  OrderTransfer.prototype.start = function (skipRead) {
+    return this._doApiCall({
+      method: 'start',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * undoStart puts the transfer in status "creating" again
+   * 
+   * @name OrderTransfer#undoStart
+   * @return {promise}
+   */
+  OrderTransfer.prototype.undoStart = function (skipRead) {
+    return this._doApiCall({
+      method: 'undoStart',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * accept transfers the items to another customer
+   * 
+   * @name OrderTransfer#accept
+   * @return {promise}
+   */
+  OrderTransfer.prototype.accept = function (params, skipRead) {
+    return this._doApiCall({
+      method: 'accept',
+      params: params,
+      skipRead: skipRead
+    });
+  };
+  /**
+   * getQRUrl returns path to transfer qr code
+   * 
+   * @name OrderTransfer#qr
+   * @return {string}
+   */
+  OrderTransfer.prototype.getQRUrl = function (size) {
+    return this.ds._baseUrl + '/' + this.id + '/call/qr?size=' + (size || 300);
+  };
+  return OrderTransfer;
+}(jquery, base);
+core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, Helper, Reservation, Transaction, User, common, OrderTransfer) {
   var core = {};
   // namespaces
   core.api = api;
   core.common = common;
-  core.helper = helper;
   // Constructors
   core.Availability = Availability;
   core.Attachment = Attachment;
@@ -9382,7 +9844,9 @@ core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact
   core.Reservation = Reservation;
   core.Transaction = Transaction;
   core.User = User;
+  core.OrderTransfer = OrderTransfer;
+  core.Helper = Helper;
   return core;
-}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common);
+}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common, OrderTransfer);
 return core;
 }))

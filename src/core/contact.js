@@ -7,13 +7,16 @@
 define([
     'jquery',
     'base',
-    'common'], /** @lends Contact */ function ($, Base, common) {
+    'common',
+    'user'], /** @lends Contact */ function ($, Base, common, User) {
 
     var DEFAULTS = {
         name: "",
         company: "",
         phone: "",
-        email: ""
+        email: "",
+        status: "active",
+        user: {}
     };
 
     // Allow overriding the ctor during inheritance
@@ -39,6 +42,8 @@ define([
         this.company = spec.company || DEFAULTS.company;
         this.phone = spec.phone || DEFAULTS.phone;
         this.email = spec.email || DEFAULTS.email;
+        this.status = spec.status || DEFAULTS.status;
+        this.user = spec.user || DEFAULTS.user;
     };
 
     Contact.prototype = new tmp();
@@ -140,6 +145,26 @@ define([
         }
         return isDirty;
     };
+ 
+    /**
+     * Archive a contact
+     * @name Contact#archive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.archive = function(skipRead) {
+        return this.ds.call(this.id, 'archive', {}, skipRead);
+    };
+
+    /**
+     * Undo archive of a contact
+     * @name Contact#undoArchive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.undoArchive = function(skipRead) {
+        return this.ds.call(this.id, 'undoArchive', {}, skipRead);
+    };
 
     Contact.prototype._getDefaults = function() {
         return DEFAULTS;
@@ -162,6 +187,9 @@ define([
                 that.company = data.company || DEFAULTS.company;
                 that.phone = data.phone || DEFAULTS.phone;
                 that.email = data.email || DEFAULTS.email;
+                that.status = data.status || DEFAULTS.status;
+                that.user = data.user || DEFAULTS.user;
+                
                 $.publish('contact.fromJson', data);
                 return data;
             });

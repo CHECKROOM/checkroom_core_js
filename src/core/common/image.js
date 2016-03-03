@@ -97,16 +97,15 @@ define(['jquery'], function ($) {
          * @return {string}              
          */
         getImageCDNUrl: function(settings, groupId, attachmentId, size) {
-            // Makes a CDN url for Item using the Item.cover property
-            // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
+             // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
             var url = "https://cheqroom-cdn.s3.amazonaws.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
             if( (size) &&
                 (size.length>0)) {
                 var parts = url.split('.');
-                var ext = parts.pop();
+                var ext = parts.pop();  // pop off the extension, we'll change it
                 url = parts.join('.') + "-" + size + ".jpg";  // resized images are always jpg
             }
-            return url;
+            return url;          
         }
     }
 });

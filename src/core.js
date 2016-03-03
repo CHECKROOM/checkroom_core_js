@@ -22,14 +22,14 @@ define([
     'Reservation',
     'Transaction',
     'User',
-    'common'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, common) {
+    'common',
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, Helper, Reservation, Transaction, User, common, OrderTransfer) {
 
     var core = {};
 
     // namespaces
     core.api = api;
     core.common = common;
-    core.helper = helper;
 
     // Constructors
     core.Availability = Availability;
@@ -48,6 +48,8 @@ define([
     core.Reservation = Reservation;
     core.Transaction = Transaction;
     core.User = User;
+    core.OrderTransfer = OrderTransfer;
+    core.Helper = Helper;
 
     return core;
 });

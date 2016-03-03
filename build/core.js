@@ -6808,6 +6808,14 @@ dateHelper = function ($, moment) {
 }(jquery, moment);
 settings = { amazonBucket: 'app' };
 helper = function ($, defaultSettings, common) {
+  /**
+   * Allows you to call helpers based on the settings file 
+   * and also settings in group.profile and user.profile
+   * @name Helper
+   * @class Helper
+   * @constructor
+   * @property {object} settings         
+   */
   return function (settings) {
     settings = settings || defaultSettings;
     return {

@@ -1,12 +1,19 @@
 /**
  * The Helper module
- * a Helper class which allows you to call helpers based on the settings in group.profile and user.profile
+ * 
  * @module helper
- * @namespace helper
  * @copyright CHECKROOM NV 2015
  */
 define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defaultSettings, common) {
 
+     /**
+     * Allows you to call helpers based on the settings file 
+     * and also settings in group.profile and user.profile
+     * @name Helper
+     * @class Helper
+     * @constructor
+     * @property {object} settings         
+     */
     return function(settings){
         settings = settings || defaultSettings;
 

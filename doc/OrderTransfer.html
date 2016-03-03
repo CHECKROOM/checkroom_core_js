@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Class: Location</title>
+    <title>Class: OrderTransfer</title>
     
     
     
@@ -1519,7 +1519,7 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="Location.html">Class: Location</h1>
+        <h1 class="page-title" data-filename="OrderTransfer.html">Class: OrderTransfer</h1>
         
 
 
@@ -1528,10 +1528,10 @@
     
 <header>
     <h2>
-    Location
+    OrderTransfer
     </h2>
     
-        <div class="class-description"><p>Location</p></div>
+        <div class="class-description"><p>OrderTransfer</p></div>
     
 </header>  
 
@@ -1543,14 +1543,14 @@
         
 <dt>
     <div class="nameContainer">
-        <h4 class="name" id="Location">
+        <h4 class="name" id="OrderTransfer">
             
-            new Location<span class="signature">()</span>
+            new OrderTransfer<span class="signature">()</span>
         </h4>
     
         
         <div class="tag-source">
-            <a href="location.js.html">location.js</a>, <a href="location.js.html#line21">line 21</a>
+            <a href="orderTransfer.js.html">orderTransfer.js</a>, <a href="orderTransfer.js.html#line28">line 28</a>
         </div>
         
     </div>
@@ -1559,6 +1559,10 @@
 </dt>
 <dd>
     
+    
+    <div class="description">
+        <p>OrderTransfer</p>
+    </div>
     
 
     
@@ -1597,7 +1601,7 @@
 	
         <tr>
             
-                <td class="name"><code>name</code></td>
+                <td class="name"><code>id</code></td>
             
             
             <td class="type">
@@ -1613,14 +1617,83 @@
             
             
             
-            <td class="description last"><p>the location name</p></td>
+            <td class="description last"><p>short UUID</p></td>
         </tr>
 	
 	
 	
         <tr>
             
-                <td class="name"><code>address</code></td>
+                <td class="name"><code>by</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">cr.User</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>who created this doc</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>created</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>when was this doc created</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>modified</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>when was this doc last modified</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>status</code></td>
             
             
             <td class="type">
@@ -1636,7 +1709,145 @@
             
             
             
-            <td class="description last"><p>the location address</p></td>
+            <td class="description last"><p>creating, open, closed</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>items</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Array</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>list of items</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>started</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>when was the transfer started</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>accepted</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>when was the transfer accepted</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>fromOrder</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>from order</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>toOrder</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Date</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>to order</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>startedBy</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">cr.User</span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"><p>who started the transfer</p></td>
         </tr>
 	
 	
@@ -1678,20 +1889,6 @@
     
     
     
-        <h5>Example</h5>
-        
-
-    
-    <pre class="prettyprint"><code><p>var loc = new cr.api.Location({ds: dsLocations});
-loc.name = &quot;Headquarters&quot;;
-loc.address = &quot;4280 Express Road, Sarasota, FL 34238&quot;;
-loc.create()
-    .done(function() {
-        console.log(loc);
-    });</p></code></pre>
-    
-
-    
 </dd>
 
     
@@ -1713,6 +1910,325 @@ loc.create()
     
     
     
+    
+        <h3 class="subsection-title">Members</h3>
+        
+        <dl>
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="accept">accept</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>accept transfers the items to another customer</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="addItems">addItems</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>addItems adds items to transfer from an order (must be items of the same order)</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="isEmpty">isEmpty</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Checks if the order transfer is empty</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="qr">qr</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>getQRUrl returns path to transfer qr code</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="removeItems">removeItems</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>removeItems removes items from transfer</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="start">start</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>start puts the transfer in status &quot;open&quot;</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="undoStart">undoStart</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>undoStart puts the transfer in status &quot;creating&quot; again</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        </dl>
     
     
     
@@ -3276,15 +3792,17 @@ or resets it when no old raw response was found</p>
         
             
 <dt>
-    <div class="nameContainer">
+    <div class="nameContainer inherited">
         <h4 class="name" id="isDirty">
+            
+                <span class="inherited"><a href="Document.html#isDirty">inherited</a></span>
             
             isDirty<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{boolean}</span>
         </h4>
     
         
         <div class="tag-source">
-            <a href="location.js.html">location.js</a>, <a href="location.js.html#line67">line 67</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line64">line 64</a>
         </div>
         
     </div>
@@ -3295,83 +3813,8 @@ or resets it when no old raw response was found</p>
     
     
     <div class="description">
-        <p>Checks if the location is dirty and needs saving</p>
-    </div>
-    
-
-    
-    
-    
-    
-    
-    
-    
-<dl class="details">
-    
-        
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-</dl>
-
-    
-    
-
-    
-
-    
-    
-    
-    
-    
-    
-    
-
-
-    
-    
-    
-</dd>
-
-        
-            
-<dt>
-    <div class="nameContainer">
-        <h4 class="name" id="isEmpty">
-            
-            isEmpty<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{boolean}</span>
-        </h4>
-    
-        
-        <div class="tag-source">
-            <a href="location.js.html">location.js</a>, <a href="location.js.html#line54">line 54</a>
-        </div>
-        
-    </div>
-
-    
-</dt>
-<dd>
-    
-    
-    <div class="description">
-        <p>Checks if the location is empty</p>
+        <p>Checks if the object needs to be saved
+We don't check any of the keyvalues (or comments, attachments) here</p>
     </div>
     
 
@@ -4776,7 +5219,7 @@ or resets it when no old raw response was found</p>
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Mar 03 2016 12:52:51 GMT+0100 (CET)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Thu Mar 03 2016 12:52:53 GMT+0100 (CET)
         </footer>
     </div>
 </div>

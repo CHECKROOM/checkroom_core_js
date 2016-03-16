@@ -3214,6 +3214,11 @@ document = function ($, common, api) {
   Document.prototype._getId = function (obj, prop) {
     return typeof obj === 'string' ? obj : obj[prop || '_id'];
   };
+  Document.prototype._getIds = function (objs, prop) {
+    return objs.map(function (obj) {
+      return typeof obj == 'string' ? obj : obj[prop || '_id'];
+    });
+  };
   /**
    * Wrapping the this.ds.call method
    * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
@@ -5509,6 +5514,11 @@ Document = function ($, common, api) {
   Document.prototype._getId = function (obj, prop) {
     return typeof obj === 'string' ? obj : obj[prop || '_id'];
   };
+  Document.prototype._getIds = function (objs, prop) {
+    return objs.map(function (obj) {
+      return typeof obj == 'string' ? obj : obj[prop || '_id'];
+    });
+  };
   /**
    * Wrapping the this.ds.call method
    * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
@@ -6299,6 +6309,19 @@ Kit = function ($, Base, common) {
       skipRead: skipRead
     });
   };
+  /**
+   * Duplicates an item a number of times
+   * @name Kit#duplicate
+   * @param  {int} times
+   * @return {promise}      
+   */
+  Kit.prototype.duplicate = function (times, skipRead) {
+    return this._doApiCall({
+      method: 'duplicate',
+      params: { times: times },
+      skipRead: skipRead || true
+    });
+  };
   //
   // Implementation stuff
   //
@@ -6320,6 +6343,29 @@ Kit = function ($, Base, common) {
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
+    });
+  };
+  // Override create method so we can pass items
+  // We don't override _toJson to include items, because this would
+  // mean that on an update items would also be passed
+  Kit.prototype.create = function (skipRead) {
+    if (this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
+    }
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot create empty document'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot create, invalid document'));
+    }
+    var that = this;
+    var data = {
+      name: this.name,
+      items: this._getIds(this.items)
+    };
+    delete data.id;
+    return this.ds.create(data, this.fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
     });
   };
   Kit.prototype._loadConflicts = function (items) {
@@ -7848,6 +7894,7 @@ Order = function ($, api, Transaction, Conflict, common) {
       fields: ['*']
     }, opt);
     Transaction.call(this, spec);
+    this.dsReservations = spec.dsReservations;
   };
   Order.prototype = new tmp();
   Order.prototype.constructor = Order;
@@ -7901,6 +7948,29 @@ Order = function ($, api, Transaction, Conflict, common) {
       $.publish('order.fromJson', data);
       return data;
     });
+  };
+  Order.prototype._fromKeyValuesJson = function (data, options) {
+    var that = this;
+    // Also parse reservation comments?
+    if (that.dsReservations && data.reservation && data.reservation.keyValues && data.reservation.keyValues.length > 0) {
+      // Parse Reservation keyValues
+      return Transaction.prototype._fromKeyValuesJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations })).then(function () {
+        var reservationComments = that.comments;
+        var reservationAttachments = that.attachments;
+        // Parse Order keyValues
+        return Transaction.prototype._fromKeyValuesJson.call(that, data, options).then(function () {
+          // Add reservation comments/attachments to order keyvalues
+          that.comments = that.comments.concat(reservationComments).sort(function (a, b) {
+            return b.modified > a.modified;
+          });
+          that.attachments = that.attachments.concat(reservationAttachments).sort(function (a, b) {
+            return b.modified > a.modified;
+          });
+        });
+      });
+    }
+    // Use Default keyValues parser
+    return Transaction.prototype._fromKeyValuesJson.call(that, data, options);
   };
   //
   // Helpers

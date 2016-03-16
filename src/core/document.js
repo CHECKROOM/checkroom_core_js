@@ -248,6 +248,12 @@ define([
         return (typeof obj === 'string') ? obj : obj[prop || "_id"];
     };
 
+    Document.prototype._getIds = function(objs, prop) {
+        return objs.map(function(obj){
+            return typeof(obj) == "string"? obj: obj[prop || "_id"];
+        });
+    }
+
     /**
      * Wrapping the this.ds.call method
      * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}

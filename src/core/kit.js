@@ -188,6 +188,15 @@ define([
         return this._doApiCall({method: 'removeCodes', params: {codes: [code]}, skipRead: skipRead});
     };
 
+    /**
+     * Duplicates an item a number of times
+     * @name Kit#duplicate
+     * @param  {int} times
+     * @return {promise}      
+     */
+    Kit.prototype.duplicate = function(times, skipRead){
+        return this._doApiCall({method: 'duplicate', params: {times: times}, skipRead: skipRead || true });
+    };
 
     //
     // Implementation stuff
@@ -216,6 +225,32 @@ define([
 
                 $.publish('Kit.fromJson', data);
                 return data;
+            });
+    };
+
+    // Override create method so we can pass items
+    // We don't override _toJson to include items, because this would
+    // mean that on an update items would also be passed
+    Kit.prototype.create = function(skipRead){
+        if (this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
+        }
+        if (this.isEmpty()) {
+            return $.Deferred().reject(new Error("Cannot create empty document"));
+        }
+        if (!this.isValid()) {
+            return $.Deferred().reject(new Error("Cannot create, invalid document"));
+        }
+
+        var that = this;
+        var data = {
+            name: this.name,
+            items: this._getIds(this.items)
+        };
+        delete data.id;
+        return this.ds.create(data, this.fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
             });
     };
 
@@ -258,7 +293,7 @@ define([
         }
             
         this.conflicts = conflicts;
-    }
+    };
 
     return Kit;
 

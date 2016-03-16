@@ -27,6 +27,8 @@ define([
             fields: ["*"]
         }, opt);
         Transaction.call(this, spec);
+
+        this.dsReservations = spec.dsReservations;       
     };
 
     Order.prototype = new tmp();
@@ -90,6 +92,39 @@ define([
                 return data;
             });
     };
+
+    Order.prototype._fromKeyValuesJson = function(data, options) {
+        var that = this;
+
+        // Also parse reservation comments?
+        if( (that.dsReservations) &&
+            (data.reservation) &&
+            (data.reservation.keyValues) &&
+            (data.reservation.keyValues.length > 0)){
+
+            // Parse Reservation keyValues
+            return Transaction.prototype._fromKeyValuesJson.call(that, data.reservation, $.extend(options, {
+                ds: that.dsReservations
+            })).then(function(){
+                var reservationComments = that.comments;
+                var reservationAttachments = that.attachments;
+
+                // Parse Order keyValues
+                return Transaction.prototype._fromKeyValuesJson.call(that, data, options).then(function(){
+                    // Add reservation comments/attachments to order keyvalues
+                    that.comments = that.comments.concat(reservationComments).sort(function(a, b) {
+                        return b.modified > a.modified;
+                    });
+                    that.attachments = that.attachments.concat(reservationAttachments).sort(function(a, b) {
+                        return b.modified > a.modified;
+                    });
+                });
+            });
+        }
+
+        // Use Default keyValues parser
+        return Transaction.prototype._fromKeyValuesJson.call(that, data, options);
+    }
 
     //
     // Helpers

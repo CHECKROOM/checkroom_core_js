@@ -16,7 +16,7 @@ define(function () {
         getFriendlyConflictKind: function(kind) {
             switch (kind) {
                 case "location": return "At wrong location";
-                case "order": return "Checked out in order";
+                case "order": return "Checked out";
                 case "reservation": return "Already reserved";
                 case "expired": return "Item is expired";
                 default: return "";

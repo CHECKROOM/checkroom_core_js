@@ -462,7 +462,7 @@ common_conflicts = {
     case 'location':
       return 'At wrong location';
     case 'order':
-      return 'Checked out in order';
+      return 'Checked out';
     case 'reservation':
       return 'Already reserved';
     case 'expired':

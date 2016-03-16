@@ -235,12 +235,15 @@ define([
         if (this.existsInDb()) {
             return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
         }
-        if (this.isEmpty()) {
-            return $.Deferred().reject(new Error("Cannot create empty document"));
-        }
-        if (!this.isValid()) {
-            return $.Deferred().reject(new Error("Cannot create, invalid document"));
-        }
+        
+        // Don't check for isEmpty/isValid, if no name is given,
+        // that we automatically generate a name on the server
+        //if (this.isEmpty()) {
+        //    return $.Deferred().reject(new Error("Cannot create empty document"));
+        //}
+        //if (!this.isValid()) {
+        //    return $.Deferred().reject(new Error("Cannot create, invalid document"));
+        //}
 
         var that = this;
         var data = {

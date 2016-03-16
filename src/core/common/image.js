@@ -61,6 +61,53 @@ define(['jquery'], function ($) {
             return $canvas.get(0).toDataURL();
         },
         /**
+         * Returns an maintenace avatar image
+         *
+         * @memberOf  common
+         * @name  common#getMaintenanceAvatar
+         * @method
+         * 
+         * @param  {string} size Possible values XS,S,M,L,XL
+         * @return {string} base64 image url    
+         */
+        getMaintenanceAvatar: function(size){
+            var sizes = {
+                "XS": 32,    
+                "S": 64,
+                "M": 128,
+                "L": 256,
+                "XL": 512
+            };
+
+            var canvasWidth = sizes[size],
+                canvasHeight = sizes[size],
+                canvasCssWidth = canvasWidth,
+                canvasCssHeight = canvasHeight;
+
+            var $canvas = $("<canvas />").attr({
+                width: canvasWidth,
+                height: canvasHeight
+            });
+            var context = $canvas.get(0).getContext("2d");
+
+            if (window.devicePixelRatio) {
+                $canvas.attr("width", canvasWidth * window.devicePixelRatio);
+                $canvas.attr("height", canvasHeight * window.devicePixelRatio);
+                $canvas.css("width", canvasCssWidth);
+                $canvas.css("height", canvasCssHeight);
+                context.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            context.fillStyle = "#f5f5f5";
+            context.fillRect(0, 0, canvasWidth, canvasHeight);
+            context.font = canvasWidth / 2 + "px FontAwesome";
+            context.textAlign = "center";
+            context.fillStyle = "#aaa";
+            context.fillText(String.fromCharCode("0xf0ad"), canvasCssWidth / 2, canvasCssHeight / 1.5);
+
+            return $canvas.get(0).toDataURL();
+        },
+        /**
          * getImageUrl 
          *
          * @memberOf  common

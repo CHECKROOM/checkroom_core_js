@@ -19,7 +19,8 @@ define([
     'common/validation',
     'common/utils',
     'common/slimdown',
-    'common/kit'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit) {  
+    'common/kit',
+    'common/contact'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact) {  
      /**
      * Return common object with different helper methods
      */
@@ -34,5 +35,6 @@ define([
         attachment,
         validation,
         utils,
-        kit);
+        kit,
+        contact);
 });

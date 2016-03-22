@@ -26,6 +26,7 @@ require([
     'dateHelperTest',
     'contactTest',
     'itemTest',
+    'keyvalueTest',
     'kitTest',
     'locationTest',
     'orderTest',
@@ -40,6 +41,7 @@ require([
         dateHelperTest,
         contactTest,
         itemTest,
+        keyValueTest,
         kitTest,
         locationTest,
         orderTest,
@@ -47,8 +49,8 @@ require([
         userTest,
         availabilityTest) {
 
-        orderTransferTest.run();
-        //commonTest.run();
+        //orderTransferTest.run();
+        commonTest.run();
         //helperTest.run();
         //simpleTest.run();
         //dateHelperTest.run();
@@ -56,6 +58,7 @@ require([
         //locationTest.run();
         //kitTest.run();
         //itemTest.run();
+        //keyValueTest.run();
         //orderTest.run();
         //reservationTest.run();
         //userTest.run();

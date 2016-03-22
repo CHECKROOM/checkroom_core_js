@@ -3,7 +3,7 @@
  */
 define(function () {
     var _getCategoryName = function(obj){
-        return typeof obj === 'string'?obj:obj["name"]; 
+        return typeof obj === 'string' ? obj : obj["name"];
     };
 
     return {
@@ -46,30 +46,36 @@ define(function () {
          */
         getCategorySummary: function(items) {
             items = items || [];
-            if(items.length == 0) return "No items";
+            if (items.length == 0) {
+                return "No items";
+            }
 
-            var catSummary = {};
-            var firstKey = "";
-            var firstKeyCount = 0;
-            var that = this;
+            var item = null,
+                key = null,
+                catName = null,
+                catSummary = {},
+                firstKey = "",
+                firstKeyCount = 0;
 
             for (var i = 0, len = items.length; i < len; i++) {
-                var item = items[i];
-                var key = (item.category) ? that.getCategoryNameFromKey(_getCategoryName(item.category)) : '';
+                item = items[i];
+                catName = (item.category) ? _getCategoryName(item.category) : '';
+                key = (catName) ? this.getCategoryNameFromKey(catName) : '';
+                //console.log(item.category, catName, key);
 
-                if(!catSummary[key]){
+                if (!catSummary[key]) {
                     catSummary[key] = 1;
-                }else{
+                } else {
                     catSummary[key] += 1;
                 }
 
                 // first key should be category with largest number of items
-                if(catSummary[key] > firstKeyCount){ 
+                if (catSummary[key] > firstKeyCount) {
                     firstKey = key;
                     firstKeyCount = catSummary[key];
                 }
             }
-            
+
             var summ = catSummary[firstKey] + " ";
             if (firstKeyCount == 1 && String.prototype.singularize) {
                 summ += firstKey.singularize();
@@ -79,10 +85,83 @@ define(function () {
 
             if (items.length > catSummary[firstKey]) {
                 var other = items.length - catSummary[firstKey];
-                summ += ' + ' + other + ' other';
+                summ += ' +' + other + ' other';
             }
 
             return summ;
+        },
+        /**
+         * getItemSummary
+         *
+         * Works much like getCategorySummary but prefers making summaries with kit names in it
+         *
+         * @memberOf common
+         * @name  common#getItemSummary
+         * @method
+         *
+         * @param  {array} items
+         * @return {string}
+         */
+        getItemSummary: function(items) {
+            items = items || [];
+            if (items.length == 0) {
+                return "No items";
+            }
+
+            var sep = ", ",
+                item = null,
+                numKits = 0,
+                kitItems = {},
+                unkittedItems = [];
+
+            // Do a first loop to extract all items for which we have a kit name
+            // If we don't have the kit.name field, we'll treat the item as if
+            // the item was not in a kit, and put it in unkittedItems
+            for (var i=0, len = items.length; i < len; i++) {
+                item = items[i];
+                if( (item.kit) &&
+                    (item.kit.name)) {
+                    if (kitItems[item.kit.name]) {
+                        kitItems[item.kit.name].push(item);
+                    } else {
+                        kitItems[item.kit.name] = [item];
+                        numKits += 1;
+                    }
+                } else {
+                    unkittedItems.push(item);
+                }
+            }
+
+            // If we have no kits (or no kit names),
+            // we'll just use getCategorySummary
+            // which works pretty well for that
+            if (numKits==0) {
+                return this.getCategorySummary(items);
+            } else {
+
+                // Get all the kit names as an array
+                var names = $.map(kitItems, function (val, key) {return key});
+
+                // We only have kits and not unkitted items
+                // We can try to make a very short summary of the kit names
+                // If we can't fit multiple kit names into a single string
+                // we'll take 1 (or more) and then add "+3 other kits"
+                if (unkittedItems.length == 0) {
+                    var maxKitNamesLength = 30;
+                    return names.joinOther(maxKitNamesLength, sep, "other kits");
+                } else {
+                    // We have a mix of kits an unkitted items
+                    // If we only have one kit, we'll use its name
+                    // and just paste getCategorySummary after it
+                    if (numKits==1) {
+                        return names[0] + sep + this.getCategorySummary(unkittedItems);
+                    } else {
+                        // We have multiple kits, so we'll put
+                        // 3 kits, 5 pumps +2 other
+                        return len(names) + " kits" + sep + this.getCategorySummary(unkittedItems);
+                    }
+                }
+            }
         }
     };
 });

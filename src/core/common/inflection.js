@@ -258,4 +258,59 @@ define(function () {
 	        return this >= min && this <= max;
 	    };
 	}
+
+	/**
+	 * ARRAY EXTENSTIONS
+	 */
+	if(!Array.prototype.joinOther) {
+		/**
+		 * joinOther
+		 *
+		 * Makes a friendly joined list of strings
+		 * constrained to a certain maxLength
+		 * where the text would be:
+		 * Kit 1, Kit2 +3 other
+		 * or
+		 * Kit 1 +4 other (if no params were passed)
+		 *
+		 * @memberOf Array
+		 * @name Array#joinOther
+		 * @method
+		 *
+		 * @param maxLength {int} 30
+		 * @param sep {string} ", "
+		 * @param other {string} "other"
+		 */
+		Array.prototype.joinOther = function(maxLength, sep, other) {
+			// If we only have 1 item, no need to join anything
+			if (this.length<2) {
+				return this.join(sep);
+			}
+
+			sep = sep || ", ";
+			other = other || "other";
+
+			// Take the minimum length if no maxLength was passed
+			if(	(!maxLength) ||
+				(maxLength<0)) {
+				maxLength = 1;
+			}
+
+			// Keep popping off entries in the array
+			// until there's only one left, or until
+			// the joined text is shorter than maxLength
+			var copy = this.slice(0);
+			var joined = copy.join(sep);
+			while((copy.length>1) && (joined.length>maxLength)) {
+				copy.pop();
+				joined = copy.join(sep)
+			}
+
+			var numOther = this.length - copy.length;
+			if (numOther>0) {
+				joined += " +" + numOther + " " + other;
+			}
+			return joined;
+		};
+	}
 });

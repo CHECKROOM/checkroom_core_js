@@ -68,7 +68,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
         return helper.getApiDataSource(collection, userName, password)
             .then(function(ds) {
                 if (pk==null) {
-                    return ds.list()
+                    return ds.list(null, null, 1)
                         .then(function(docs) {
                             return (docs!=null) && (docs.length>0) ? docs[0] : null;
                         });
@@ -78,10 +78,10 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             });
     };
 
-    helper.apiList = function(name, collection, userName, password) {
+    helper.apiList = function(name, collection, fields, limit, userName, password) {
         return helper.getApiDataSource(collection, userName, password)
             .then(function(ds) {
-                return ds.list(name);
+                return ds.list(name, fields, limit);
             });
     };
 

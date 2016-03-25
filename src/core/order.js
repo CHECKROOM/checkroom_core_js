@@ -70,6 +70,9 @@ define([
     // Document overrides
     //
     Order.prototype._toJson = function(options) {
+        // Should only be used during create
+        // and never be called on order update
+        // since most updates are done via setter methods
         var data = Transaction.prototype._toJson.call(this, options);
         data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
         data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
@@ -405,7 +408,7 @@ define([
         return this._checkDueDateBetweenMinMax(roundedDueDate)
             .then(function() {
                 that.due = roundedDueDate;
-                return that._handleTransaction(skipRead);
+                return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
             });
     };
 
@@ -422,8 +425,7 @@ define([
         }
 
         this.due = null;
-
-        return this._handleTransaction(skipRead);
+        return this._doApiCall({method: "clearDueDate", skipRead: skipRead});
     };
 
     Order.prototype.setToDate = function(date, skipRead) {

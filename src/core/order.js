@@ -408,7 +408,14 @@ define([
         return this._checkDueDateBetweenMinMax(roundedDueDate)
             .then(function() {
                 that.due = roundedDueDate;
-                return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
+
+                //If order doesn't exist yet, we set due date in create call
+                //otherwise use setDueDate to update transaction
+                if(!that.existsInDb()){
+                    return that._createTransaction(skipRead);
+                } else{
+                    return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
+                }                
             });
     };
 

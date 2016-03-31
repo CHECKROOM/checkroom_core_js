@@ -53,7 +53,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
+    return barCode && barCode.match(/^[0-9\-]{4,}$/i) != null;
   },
   /**
    * isValidQRCode
@@ -83,8 +83,21 @@ common_code = {
     return qrCode.match(/^http:\/\/cheqroom\.com\/ordertransfer\/[a-zA-Z0-9]{22}$/i) != null;
   },
   /**
-   * isValidItemQRCode 
+   * isValidDocQRCode 
    * For example: http://cheqroom.com/qr/eeaa37ed
+   * 
+   * @memberOf common
+   * @name  common#isValidDocQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidDocQRCode: function (qrCode) {
+    return qrCode && qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+  },
+  /**
+   * isValidItemQRCode 
    * 
    * @memberOf common
    * @name  common#isValidItemQRCode
@@ -94,7 +107,20 @@ common_code = {
    * @return {Boolean} 
    */
   isValidItemQRCode: function (qrCode) {
-    return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+    return this.isValidDocQRCode(qrCode);
+  },
+  /**
+   * isValidKitQRCode 
+   * 
+   * @memberOf common
+   * @name  common#isValidKitQRCode
+   * @method
+   * 
+   * @param  {string}  qrCode 
+   * @return {Boolean} 
+   */
+  isValidKitQRCode: function (qrCode) {
+    return this.isValidDocQRCode(qrCode);
   },
   /**
    * getCheqRoomRedirectUrl
@@ -516,15 +542,15 @@ common_keyValues = function () {
      */
     getCategorySummary: function (items) {
       items = items || [];
-      if (items.length == 0)
+      if (items.length == 0) {
         return 'No items';
-      var catSummary = {};
-      var firstKey = '';
-      var firstKeyCount = 0;
-      var that = this;
+      }
+      var item = null, key = null, catName = null, catSummary = {}, firstKey = '', firstKeyCount = 0;
       for (var i = 0, len = items.length; i < len; i++) {
-        var item = items[i];
-        var key = item.category ? that.getCategoryNameFromKey(_getCategoryName(item.category)) : '';
+        item = items[i];
+        catName = item.category ? _getCategoryName(item.category) : '';
+        key = catName ? this.getCategoryNameFromKey(catName) : '';
+        //console.log(item.category, catName, key);
         if (!catSummary[key]) {
           catSummary[key] = 1;
         } else {
@@ -544,9 +570,74 @@ common_keyValues = function () {
       }
       if (items.length > catSummary[firstKey]) {
         var other = items.length - catSummary[firstKey];
-        summ += ' + ' + other + ' other';
+        summ += ' +' + other + ' other';
       }
       return summ;
+    },
+    /**
+     * getItemSummary
+     *
+     * Works much like getCategorySummary but prefers making summaries with kit names in it
+     *
+     * @memberOf common
+     * @name  common#getItemSummary
+     * @method
+     *
+     * @param  {array} items
+     * @return {string}
+     */
+    getItemSummary: function (items) {
+      items = items || [];
+      if (items.length == 0) {
+        return 'No items';
+      }
+      var sep = ', ', item = null, numKits = 0, kitItems = {}, unkittedItems = [];
+      // Do a first loop to extract all items for which we have a kit name
+      // If we don't have the kit.name field, we'll treat the item as if
+      // the item was not in a kit, and put it in unkittedItems
+      for (var i = 0, len = items.length; i < len; i++) {
+        item = items[i];
+        if (item.kit && item.kit.name) {
+          if (kitItems[item.kit.name]) {
+            kitItems[item.kit.name].push(item);
+          } else {
+            kitItems[item.kit.name] = [item];
+            numKits += 1;
+          }
+        } else {
+          unkittedItems.push(item);
+        }
+      }
+      // If we have no kits (or no kit names),
+      // we'll just use getCategorySummary
+      // which works pretty well for that
+      if (numKits == 0) {
+        return this.getCategorySummary(items);
+      } else {
+        // Get all the kit names as an array
+        var names = $.map(kitItems, function (val, key) {
+          return key;
+        });
+        // We only have kits and not unkitted items
+        // We can try to make a very short summary of the kit names
+        // If we can't fit multiple kit names into a single string
+        // we'll take 1 (or more) and then add "+3 other kits"
+        if (unkittedItems.length == 0) {
+          var maxKitNamesLength = 30;
+          return names.joinOther(maxKitNamesLength, sep, 'other kits');
+        } else {
+          // We have a mix of kits an unkitted items
+          // If we only have one kit, we'll use its name
+          // and just paste getCategorySummary after it
+          if (numKits == 1) {
+            return names[0] + sep + this.getCategorySummary(unkittedItems);
+          } else {
+            // We have multiple kits, so we'll put
+            // 3 kits, 5 pumps +2 other
+            return len(names) + ' kits' + sep + this.getCategorySummary(unkittedItems);
+          }
+        }
+      }
     }
   };
 }();
@@ -1836,6 +1927,55 @@ common_inflection = function () {
       return this >= min && this <= max;
     };
   }
+  /**
+  * ARRAY EXTENSTIONS
+  */
+  if (!Array.prototype.joinOther) {
+    /**
+     * joinOther
+     *
+     * Makes a friendly joined list of strings
+     * constrained to a certain maxLength
+     * where the text would be:
+     * Kit 1, Kit2 +3 other
+     * or
+     * Kit 1 +4 other (if no params were passed)
+     *
+     * @memberOf Array
+     * @name Array#joinOther
+     * @method
+     *
+     * @param maxLength {int} 30
+     * @param sep {string} ", "
+     * @param other {string} "other"
+     */
+    Array.prototype.joinOther = function (maxLength, sep, other) {
+      // If we only have 1 item, no need to join anything
+      if (this.length < 2) {
+        return this.join(sep);
+      }
+      sep = sep || ', ';
+      other = other || 'other';
+      // Take the minimum length if no maxLength was passed
+      if (!maxLength || maxLength < 0) {
+        maxLength = 1;
+      }
+      // Keep popping off entries in the array
+      // until there's only one left, or until
+      // the joined text is shorter than maxLength
+      var copy = this.slice(0);
+      var joined = copy.join(sep);
+      while (copy.length > 1 && joined.length > maxLength) {
+        copy.pop();
+        joined = copy.join(sep);
+      }
+      var numOther = this.length - copy.length;
+      if (numOther > 0) {
+        joined += ' +' + numOther + ' ' + other;
+      }
+      return joined;
+    };
+  }
 }();
 common_validation = {
   /**
@@ -2185,9 +2325,12 @@ common_kit = function ($, itemHelpers) {
       var kitDictionary = {};
       var ids = [];
       $.each(items, function (i, item) {
-        if (item.kit && item.kit._id && !kitDictionary[item.kit._id]) {
-          kitDictionary[item.kit._id] = true;
-          ids.push(item.kit._id);
+        if (item.kit) {
+          var kitId = typeof item.kit == 'string' ? item.kit : item.kit._id;
+          if (!kitDictionary[kitId]) {
+            kitDictionary[kitId] = true;
+            ids.push(kitId);
+          }
         }
       });
       return ids;
@@ -7082,6 +7225,7 @@ helper = function ($, defaultSettings, common) {
       getAccessRights: function (role, profile, limits) {
         var isRootOrAdmin = role == 'root' || role == 'admin';
         var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+        var useOrders = limits.allowOrders && profile.useOrders;
         var useReservations = limits.allowReservations && profile.useReservations;
         var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
         var useWebHooks = limits.allowWebHooks;
@@ -7103,13 +7247,13 @@ helper = function ($, defaultSettings, common) {
             updateGeo: true
           },
           orders: {
-            create: true,
-            remove: true,
-            update: true,
+            create: useOrders,
+            remove: useOrders,
+            update: useOrders,
             updateContact: role != 'selfservice',
-            updateLocation: true,
-            generatePdf: useOrderAgreements && isRootOrAdminOrUser,
-            transferOrder: useOrderTransfers
+            updateLocation: useOrders,
+            generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
+            transferOrder: useOrders && useOrderTransfers
           },
           reservations: {
             create: useReservations,
@@ -7158,6 +7302,8 @@ helper = function ($, defaultSettings, common) {
        * @return {string}       
        */
       ensureValue: function (obj, prop) {
+        if (!obj)
+          return obj;
         return typeof obj === 'string' ? obj : obj[prop];
       },
       /**
@@ -8020,6 +8166,9 @@ Order = function ($, api, Transaction, Conflict, common) {
   // Document overrides
   //
   Order.prototype._toJson = function (options) {
+    // Should only be used during create
+    // and never be called on order update
+    // since most updates are done via setter methods
     var data = Transaction.prototype._toJson.call(this, options);
     data.fromDate = this.fromDate != null ? this.fromDate.toJSONDate() : 'null';
     data.toDate = this.toDate != null ? this.toDate.toJSONDate() : 'null';
@@ -8294,7 +8443,17 @@ Order = function ($, api, Transaction, Conflict, common) {
     this.from = this.getMinDateFrom();
     return this._checkDueDateBetweenMinMax(roundedDueDate).then(function () {
       that.due = roundedDueDate;
-      return that._handleTransaction(skipRead);
+      //If order doesn't exist yet, we set due date in create call
+      //otherwise use setDueDate to update transaction
+      if (!that.existsInDb()) {
+        return that._createTransaction(skipRead);
+      } else {
+        return that._doApiCall({
+          method: 'setDueDate',
+          params: { due: roundedDueDate },
+          skipRead: skipRead
+        });
+      }
     });
   };
   /**
@@ -8309,7 +8468,10 @@ Order = function ($, api, Transaction, Conflict, common) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot clear order due date, status is ' + this.status));
     }
     this.due = null;
-    return this._handleTransaction(skipRead);
+    return this._doApiCall({
+      method: 'clearDueDate',
+      skipRead: skipRead
+    });
   };
   Order.prototype.setToDate = function (date, skipRead) {
     throw 'Order.setToDate not implemented, it is set during order close';

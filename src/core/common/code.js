@@ -48,7 +48,7 @@ define(function () {
 		 * @return {Boolean}         
 		 */
 		isValidBarcode: function(barCode){
-			return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
+			return barCode && barCode.match(/^[0-9\-]{4,}$/i) != null;
 		},
 
 		/**
@@ -82,8 +82,22 @@ define(function () {
 		},
 
 		/**
-		 * isValidItemQRCode 
+		 * isValidDocQRCode 
 		 * For example: http://cheqroom.com/qr/eeaa37ed
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidDocQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean} 
+		 */
+		isValidDocQRCode: function(qrCode){
+			return qrCode && qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+		},
+
+		/**
+		 * isValidItemQRCode 
 		 * 
 		 * @memberOf common
 		 * @name  common#isValidItemQRCode
@@ -93,7 +107,21 @@ define(function () {
 		 * @return {Boolean} 
 		 */
 		isValidItemQRCode: function(qrCode){
-			return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+			return this.isValidDocQRCode(qrCode);
+		},
+
+		/**
+		 * isValidKitQRCode 
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidKitQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean} 
+		 */
+		isValidKitQRCode: function(qrCode){
+			return this.isValidDocQRCode(qrCode);
 		},
 
 		/**

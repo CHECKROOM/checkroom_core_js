@@ -63,6 +63,7 @@ define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, hel
                             });
                     });
 
+
                     /**
                      * Testing Order viewmodel calls
                      */
@@ -208,6 +209,25 @@ define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, hel
                                             });
                                     });
                             });*/
+        
+                            asyncTest("create Order object with due, setDueDate", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    dsItems: dsItems,
+                                    autoCleanup: true,
+                                    location: location._id,
+                                    contact: contact._id
+                                });
+
+                                ok(!order.existsInDb());
+
+                                order.setDueDate(moment().add(5, 'days'))
+                                    .done(function() {
+                                        ok(order.existsInDb());
+                                    }).always(function(){
+                                        start();
+                                    });
+                            });
 
                             asyncTest("create Order object via constructor, searchItems", function() {
                                 var order = new cr.Order({

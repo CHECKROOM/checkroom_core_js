@@ -96,9 +96,12 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
             var ids = [];
 
             $.each(items, function(i, item){
-                if(item.kit && item.kit._id && !kitDictionary[item.kit._id]){
-                    kitDictionary[item.kit._id] = true;
-                    ids.push(item.kit._id);
+                if(item.kit){
+                    var kitId = typeof(item.kit) == "string"?item.kit:item.kit._id;
+                    if(!kitDictionary[kitId]){
+                        kitDictionary[kitId] = true;
+                        ids.push(kitId);
+                    }
                 }
             });
 

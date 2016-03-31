@@ -149,6 +149,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
             getAccessRights: function(role, profile, limits) {
                 var isRootOrAdmin =         (role == "root") || (role == "admin");
                 var isRootOrAdminOrUser =   (role == "root") || (role == "admin") || (role == "user");
+                var useOrders = (limits.allowOrders) && (profile.useOrders);
                 var useReservations = (limits.allowReservations) && (profile.useReservations);
                 var useOrderAgreements = (limits.allowGeneratePdf) && (profile.useOrderAgreements);
                 var useWebHooks = (limits.allowWebHooks);
@@ -171,13 +172,13 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                         updateGeo: true
                     },
                     orders: {
-                        create: true,
-                        remove: true,
-                        update: true,
+                        create: useOrders,
+                        remove: useOrders,
+                        update: useOrders,
                         updateContact: (role != "selfservice"),
-                        updateLocation: true,
-                        generatePdf: useOrderAgreements && isRootOrAdminOrUser,
-                        transferOrder: useOrderTransfers
+                        updateLocation: useOrders,
+                        generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
+                        transferOrder: useOrders && useOrderTransfers
                     },
                     reservations: {
                         create: useReservations,
@@ -228,6 +229,8 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              * @return {string}       
              */
             ensureValue: function(obj, prop){
+                if(!obj) return obj;
+
                 return (typeof obj === 'string') ? obj : obj[prop]; 
             },
             /**

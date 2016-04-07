@@ -20,6 +20,7 @@ define(function () {
 	            case 'checkedout': return 'Checked out';
 	            case 'await_checkout': return 'Checking out';
 	            case 'in_transit': return 'In transit';
+				case 'in_custody': return 'In custody';
 	            case 'maintenance': return 'Maintenance';
 	            case 'repair': return 'Repair';
 	            case 'inspection': return 'Inspection';
@@ -43,6 +44,7 @@ define(function () {
 	            case 'checkedout': return 'label-checkedout';
 	            case 'await_checkout': return 'label-awaitcheckout';
 	            case 'in_transit': return 'label-transit';
+	            case 'in_custody': return 'label-custody';
 	            case 'maintenance': return 'label-maintenance';
 	            case 'repair': return 'label-repair';
 	            case 'inspection': return 'label-inspection';
@@ -66,6 +68,7 @@ define(function () {
 	            case 'checkedout': return 'fa fa-times-circle';
 	            case 'await_checkout': return 'fa fa-ellipsis-h';
 	            case 'in_transit': return 'fa fa-truck';
+	            case 'in_custody': return 'fa fa-hand-rock-o';
 	            case 'maintenance': return 'fa fa-wrench';
 	            case 'repair': return 'fa fa-wrench';
 	            case 'inspection': return 'fa fa-stethoscope';

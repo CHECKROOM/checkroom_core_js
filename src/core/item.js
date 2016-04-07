@@ -20,7 +20,8 @@ define([
         geo: [DEFAULT_LAT,DEFAULT_LONG],
         address: "",
         order: null,
-        kit: null
+        kit: null,
+        custody: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -36,11 +37,12 @@ define([
      * @property {string} name         the name of the item
      * @property {status} status       the status of the item in an order, or expired
      * @property {string} flag         the item flag
-     * @property {string} location     the item location primary key
+     * @property {string} location     the item location primary key (empty if in_custody)
      * @property {string} category     the item category primary key
-     * @propery {Array} geo            the item geo position in lat lng array
-     * @propery {string} address       the item geo position address
-     * @propery {string} order         the order pk, if the item is currently in an order
+     * @property {Array} geo           the item geo position in lat lng array
+     * @property {string} address      the item geo position address
+     * @property {string} order        the order pk, if the item is currently in an order
+     * @property {string} custody      the user pk, if the item is currently in custody of someone
      * @extends Base
      */
     var Item = function(opt) {
@@ -60,6 +62,7 @@ define([
         this.address = spec.address || DEFAULTS.address;
         this.order = spec.order || DEFAULTS.order;
         this.kit = spec.kit || DEFAULTS.kit;
+        this.custody = spec.custody || DEFAULTS.custody;
     };
 
     Item.prototype = new tmp();
@@ -167,6 +170,12 @@ define([
                     kitId = (data.kit._id) ? data.kit._id : data.kit;
                 }
                 that.kit = kitId;
+
+                var custodyId = DEFAULTS.custody;
+                if (data.custody) {
+                    custodyId = (data.custody._id) ? data.custody._id : data.custody;
+                }
+                that.custody = custodyId;
 
                 // Read the flag from the keyvalues
                 return that._fromJsonFlag(data, options)
@@ -491,6 +500,42 @@ define([
      */
     Item.prototype.clearFlag = function(skipRead) {
         return this._doApiCall({method: 'clearFlag', skipRead: skipRead});
+    };
+
+    /**
+     * Takes custody of an item
+     * Puts it in the *in_custody* status
+     * @name Item#takeCustody
+     * @param userId (when null, we'll take the user making the API call)
+     * @param skipRead
+     * @returns {promise}
+     */
+    Item.prototype.takeCustody = function(userId, skipRead) {
+        return this._doApiCall({method: 'takeCustody', params: {user: userId}, skipRead: skipRead});
+    };
+
+    /**
+     * Releases custody of an item at a certain location
+     * Puts it in the *available* status again
+     * @name Item#releaseCustody
+     * @param locationId
+     * @param skipRead
+     * @returns {promise}
+     */
+    Item.prototype.releaseCustody = function(locationId, skipRead) {
+        return this._doApiCall({method: 'releaseCustody', params: {location: locationId}, skipRead: skipRead});
+    };
+
+    /**
+     * Transfers custody of an item
+     * Keeps it in the *in_custody* status
+     * @name Item#transferCustody
+     * @param userId (when null, we'll take the user making the API call)
+     * @param skipRead
+     * @returns {promise}
+     */
+    Item.prototype.transferCustody = function(userId, skipRead) {
+        return this._doApiCall({method: 'transferCustody', params: {user: userId}, skipRead: skipRead});
     };
 
     return Item;

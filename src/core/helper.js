@@ -154,6 +154,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 var useOrderAgreements = (limits.allowGeneratePdf) && (profile.useOrderAgreements);
                 var useWebHooks = (limits.allowWebHooks);
                 var useKits = (limits.allowKits) && (profile.useKits);
+                var useCustody = (limits.allowCustody) && (profile.useCustody);
                 var useOrderTransfers = (limits.allowOrderTransfers) && (profile.useOrderTransfers);
 
                 return {

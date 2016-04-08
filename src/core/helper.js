@@ -230,9 +230,13 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              * @return {string}       
              */
             ensureValue: function(obj, prop){
-                if(!obj) return obj;
-
-                return (typeof obj === 'string') ? obj : obj[prop]; 
+                if (typeof obj === 'string') { 
+                    return obj;
+                }else if(obj && obj.hasOwnProperty(prop)){
+                    return obj[prop]; 
+                }else{
+                    return obj;
+                }
             },
             /**
              * ensureId, returns id value of object or if you pass a string it returns that exact string 

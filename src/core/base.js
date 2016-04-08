@@ -113,7 +113,11 @@ define([
      * @returns {promise}
      */
     Base.prototype.addComment = function(comment, skipRead) {
-        return this.addKeyValue(COMMENT, comment, "string", skipRead);
+        return this._doApiCall({
+            method: 'addComment',
+            params: {comment: comment},
+            skipRead: skipRead
+        });
     };
 
     /**
@@ -126,7 +130,14 @@ define([
      * @returns {promise}
      */
     Base.prototype.updateComment = function(id, comment, skipRead) {
-        return this.updateKeyValue(id, COMMENT, comment, "string", skipRead);
+        return this._doApiCall({
+            method: 'updateComment',
+            params: {
+                commentId: id,
+                comment: comment
+            },
+            skipRead: skipRead
+        });
     };
 
     /**
@@ -138,7 +149,13 @@ define([
      * @returns {promise}
      */
     Base.prototype.deleteComment = function(id, skipRead) {
-        return this.removeKeyValue(id, skipRead);
+        return this._doApiCall({
+            method: 'removeComment',
+            params: {
+                commentId: id
+            },
+            skipRead: skipRead
+        });
     };
 
     // KeyValue stuff
@@ -188,10 +205,10 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.removeKeyValue = function(id, skipRead) {
+    Base.prototype.removeKeyValue = function(id, key, kind, skipRead) {
         return this._doApiCall({
             method: 'removeKeyValue',
-            params: {id: id},
+            params: {id: id, key: key, kind: kind},
             skipRead: skipRead
         });
     };
@@ -228,16 +245,12 @@ define([
      * @param pos
      * @returns {promise}
      */
-    Base.prototype.moveKeyValueIndex = function(id, pos) {
-        /*
-        // def moveKeyValueById(self, model, kvId, toPos, kvList=None, validate=True):
-        var that = this;
-        var pk = this.itemId();
-        return this.ds.call(pk, "moveKeyValueById", {kvId: kvId, toPos: newPos})
-            .pipe(function(item) {
-                return that._updateFromItemResponse(item);
-            });
-        */
+    Base.prototype.moveKeyValueIndex = function(id, pos, key, kind, skipRead) {
+         return this._doApiCall({
+            method: 'moveKeyValueById',
+            params: {id: id, toPos: pos, key: key, kind: kind},
+            skipRead: skipRead
+        });
     };
 
     // Attachments stuff
@@ -405,6 +418,8 @@ define([
             });
 
             $.each(kvs, function(i, kv) {
+                kv.index = i;  // original index needed for sorting, swapping positions
+
                 switch(kv.key) {
                     case COMMENT:
                         obj = that._getComment(kv, options);

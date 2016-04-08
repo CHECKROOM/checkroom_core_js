@@ -47,6 +47,8 @@ define([
     api.ApiUnprocessableEntity.prototype = new Error();
     api.ApiPaymentRequired = function (msg, opt) {        this.code = 402; this.message = msg || "Your subscription has expired"; this.opt = opt; };
     api.ApiPaymentRequired.prototype = new Error();
+    api.ApiServerCapicity = function(msg, opt){                 this.code = 503; this.message = msg || "Back-end server is at capacity"; this.opt = opt; };
+    api.ApiServerCapicity.prototype = new Error();
 
     //*************
     // ApiAjax
@@ -111,6 +113,7 @@ define([
                 case 404: dfd.reject(new api.ApiNotFound(msg, opt)); break;
                 case 408: dfd.reject(new api.NetworkTimeout(msg, opt)); break;
                 case 422: dfd.reject(new api.ApiUnprocessableEntity(msg, opt)); break;
+                case 503: dfd.reject(new api.ApiServerCapicity(msg, opt)); break;
                 case 500:
                 default: dfd.reject(new api.ApiError(msg, opt)); break;
             }

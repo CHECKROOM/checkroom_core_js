@@ -42,7 +42,7 @@ define([
      * @property {Array} geo           the item geo position in lat lng array
      * @property {string} address      the item geo position address
      * @property {string} order        the order pk, if the item is currently in an order
-     * @property {string} custody      the user pk, if the item is currently in custody of someone
+     * @property {string} custody      the customer pk, if the item is currently in custody of someone
      * @extends Base
      */
     var Item = function(opt) {
@@ -506,12 +506,12 @@ define([
      * Takes custody of an item
      * Puts it in the *in_custody* status
      * @name Item#takeCustody
-     * @param userId (when null, we'll take the user making the API call)
+     * @param customerId (when null, we'll take the customer of the user making the API call)
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.takeCustody = function(userId, skipRead) {
-        return this._doApiCall({method: 'takeCustody', params: {user: userId}, skipRead: skipRead});
+    Item.prototype.takeCustody = function(customerId, skipRead) {
+        return this._doApiCall({method: 'takeCustody', params: {customer: customerId}, skipRead: skipRead});
     };
 
     /**
@@ -530,12 +530,12 @@ define([
      * Transfers custody of an item
      * Keeps it in the *in_custody* status
      * @name Item#transferCustody
-     * @param userId (when null, we'll take the user making the API call)
+     * @param customerId (when null, we'll take the customer of the user making the API call)
      * @param skipRead
      * @returns {promise}
      */
     Item.prototype.transferCustody = function(userId, skipRead) {
-        return this._doApiCall({method: 'transferCustody', params: {user: userId}, skipRead: skipRead});
+        return this._doApiCall({method: 'transferCustody', params: {customer: customerId}, skipRead: skipRead});
     };
 
     return Item;

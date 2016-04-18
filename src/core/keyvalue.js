@@ -13,7 +13,8 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
         kind: 'string',
         value: null,
         modified: null,
-        by: null
+        by: null,
+        index: 0
     };
 
     /**
@@ -36,6 +37,7 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
         this.value = spec.value || DEFAULTS.value;
         this.modified = spec.modified || DEFAULTS.modified;
         this.by = spec.by || DEFAULTS.by;
+        this.index = spec.index || DEFAULTS.index;
     };
 
     /**
@@ -71,6 +73,16 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
     KeyValue.prototype.getUnit = function() {
         var keyParts = this.key.split(";");
         return (keyParts.length==2) ? keyParts[1] : "";
+    };
+
+    /**
+     * Returns if keyValue is a url 
+     * @name  KeyValue#isUrl
+     * @method
+     * @returns {boolean}
+     */
+    KeyValue.prototype.isUrl = function() {
+        return (this.key == "cheqroom.prop.Hyperlink") && (this.value.isValidUrl());
     };
 
     /**

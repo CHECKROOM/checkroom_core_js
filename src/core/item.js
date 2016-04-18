@@ -21,7 +21,8 @@ define([
         address: "",
         order: null,
         kit: null,
-        custody: null
+        custody: null,
+        cover: ""
     };
 
     // Allow overriding the ctor during inheritance
@@ -63,6 +64,7 @@ define([
         this.order = spec.order || DEFAULTS.order;
         this.kit = spec.kit || DEFAULTS.kit;
         this.custody = spec.custody || DEFAULTS.custody;
+        this.cover = spec.cover || DEFAULTS.cover;
     };
 
     Item.prototype = new tmp();
@@ -145,6 +147,7 @@ define([
                 that.codes = data.codes || DEFAULTS.codes;
                 that.address = data.address || DEFAULTS.address;
                 that.geo = data.geo || DEFAULTS.geo.slice();
+                this.cover = data.cover || DEFAULTS.cover;
 
                 // Depending on the fields we'll need to get the _id directly or from the dicts
                 var locId = DEFAULTS.location;
@@ -286,64 +289,74 @@ define([
         return this.ds.call(this.id, 'getAvailability', {fromDate: from, toDate: to});
     };
 
-//    /**
-//     * updates the Item
-//     * We override because Item.update does not support updating categories
-//     * @param skipRead
-//     * @returns {*}
-//     */
-//    Item.prototype.update = function(skipRead) {
-//        if (this.isEmpty()) {
-//            return $.Deferred().reject(new Error("Cannot update to empty document"));
-//        }
-//        if (!this.existsInDb()) {
-//            return $.Deferred().reject(new Error("Cannot update document without id"));
-//        }
-//        if (!this.isValid()) {
-//            return $.Deferred().reject(new Error("Cannot update, invalid document"));
-//        }
-//
-//        var that = this;
-//        this.isBusy(true);
-//        var pk = this.id;
-//        var data = this._toJson();
-//
-//        // Category is not allowed during update
-//        delete data.category;
-//
-//        return this.ds.update(pk, data, this.fields)
-//            .then(function(data) {
-//                return (skipRead==true) ? data : that._fromJson(data);
-//            }).always(function() {
-//                that.isBusy(false);
-//            });
-//    };
-//
-//    /**
-//     * save
-//     */
-//    Item.prototype.save = function() {
-//        // Works for: name, location, category, flag & geo
-//
-//        // Avoid doing saves if we try to change a category and it's not allowed
-//        var isDirtyCategory = this._isDirtyCategory();
-//        var okCategory = null;
-//        if (isDirtyCategory) {
-//            okCategory = this.canChangeCategory();
-//        } else {
-//            okCategory = $.Deferred().resolve({result: true});
-//        }
-//
-//        okCategory
-//            .done(function(resp) {
-//
-//            });
-//
-//        var isNameDirty = this._isDirtyName();
-//        var isLocationDirty = this._isDirtyLocation();
-//        var isDirtyFlag = this._isDirtyFlag();
-//        var isDirtyGeo = this._isDirtyGeo();
-//    };
+   /**
+    * updates the Item
+    * We override because Item.update does not support updating categories
+    * @param skipRead
+    * @returns {*}
+    */
+   Item.prototype.update = function(skipRead) {
+        if (this.isEmpty()) {
+           return $.Deferred().reject(new Error("Cannot update to empty document"));
+        }
+        if (!this.existsInDb()) {
+           return $.Deferred().reject(new Error("Cannot update document without id"));
+        }
+        if (!this.isValid()) {
+           return $.Deferred().reject(new Error("Cannot update, invalid document"));
+        }
+
+        var that = this;
+        var dfdCheck = $.Deferred();
+        var dfdCategory = $.Deferred();
+        var dfdLocation = $.Deferred();
+        var dfdName = $.Deferred();
+        var dfdFlag = $.Deferred();
+
+        if (this._isDirtyCategory()) {
+            this.canChangeCategory(this.category)
+                .done(function(data) {
+                    if (data.result) {
+                        dfdCheck.resolve();
+                    } else {
+                        dfdCheck.reject(new Error("Unable to change item category"));
+                    }
+                });
+        } else {
+            dfdCheck.resolve();
+        }
+
+        return dfdCheck
+            .then(function() {
+                if (that._isDirtyCategory()) {
+                    dfdCategory = that.changeCategory(that.category);
+                } else {
+                    dfdCategory.resolve();
+                }
+
+                if (that._isDirtyLocation()) {
+                    dfdLocation = that.changeLocation(that.location);
+                } else {
+                    dfdLocation.resolve();
+                }
+
+                if (that._isDirtyName()) {
+                    dfdName = that.updateName(that.name);
+                } else {
+                    dfdName.resolve();
+                }
+
+                if (that._isDirtyFlag()) {
+                    dfdFlag = that.setFlag(that.flag);
+                } else {
+                    dfdFlag.resolve();
+                }
+
+                return $.when(dfdCategory, dfdLocation, dfdName, dfdFlag);
+            });
+   };
+
+
 
     //
     // TODO: Function calls specific for Item

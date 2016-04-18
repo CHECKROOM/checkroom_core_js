@@ -343,6 +343,8 @@ common_item = {
       return 'Checking out';
     case 'in_transit':
       return 'In transit';
+    case 'in_custody':
+      return 'In custody';
     case 'maintenance':
       return 'Maintenance';
     case 'repair':
@@ -375,6 +377,8 @@ common_item = {
       return 'label-awaitcheckout';
     case 'in_transit':
       return 'label-transit';
+    case 'in_custody':
+      return 'label-custody';
     case 'maintenance':
       return 'label-maintenance';
     case 'repair':
@@ -407,6 +411,8 @@ common_item = {
       return 'fa fa-ellipsis-h';
     case 'in_transit':
       return 'fa fa-truck';
+    case 'in_custody':
+      return 'fa fa-hand-rock-o';
     case 'maintenance':
       return 'fa fa-wrench';
     case 'repair':
@@ -2458,6 +2464,12 @@ api = function ($, jsonp, moment, common) {
     this.opt = opt;
   };
   api.ApiPaymentRequired.prototype = new Error();
+  api.ApiServerCapicity = function (msg, opt) {
+    this.code = 503;
+    this.message = msg || 'Back-end server is at capacity';
+    this.opt = opt;
+  };
+  api.ApiServerCapicity.prototype = new Error();
   //*************
   // ApiAjax
   //*************
@@ -2526,6 +2538,9 @@ api = function ($, jsonp, moment, common) {
         break;
       case 422:
         dfd.reject(new api.ApiUnprocessableEntity(msg, opt));
+        break;
+      case 503:
+        dfd.reject(new api.ApiServerCapicity(msg, opt));
         break;
       case 500:
       default:
@@ -3582,7 +3597,8 @@ keyvalue = function ($) {
     kind: 'string',
     value: null,
     modified: null,
-    by: null
+    by: null,
+    index: 0
   };
   /**
    * KeyValue class
@@ -3605,6 +3621,7 @@ keyvalue = function ($) {
     this.value = spec.value || DEFAULTS.value;
     this.modified = spec.modified || DEFAULTS.modified;
     this.by = spec.by || DEFAULTS.by;
+    this.index = spec.index || DEFAULTS.index;
   };
   /**
    * Checks if the document exists in the database
@@ -3637,6 +3654,15 @@ keyvalue = function ($) {
   KeyValue.prototype.getUnit = function () {
     var keyParts = this.key.split(';');
     return keyParts.length == 2 ? keyParts[1] : '';
+  };
+  /**
+   * Returns if keyValue is a url 
+   * @name  KeyValue#isUrl
+   * @method
+   * @returns {boolean}
+   */
+  KeyValue.prototype.isUrl = function () {
+    return this.key == 'cheqroom.prop.Hyperlink' && this.value.isValidUrl();
   };
   /**
    * Checks if the object is empty
@@ -4034,7 +4060,11 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @returns {promise}
    */
   Base.prototype.addComment = function (comment, skipRead) {
-    return this.addKeyValue(COMMENT, comment, 'string', skipRead);
+    return this._doApiCall({
+      method: 'addComment',
+      params: { comment: comment },
+      skipRead: skipRead
+    });
   };
   /**
    * Updates a comment by id
@@ -4046,7 +4076,14 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @returns {promise}
    */
   Base.prototype.updateComment = function (id, comment, skipRead) {
-    return this.updateKeyValue(id, COMMENT, comment, 'string', skipRead);
+    return this._doApiCall({
+      method: 'updateComment',
+      params: {
+        commentId: id,
+        comment: comment
+      },
+      skipRead: skipRead
+    });
   };
   /**
    * Deletes a Comment by id
@@ -4057,7 +4094,11 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @returns {promise}
    */
   Base.prototype.deleteComment = function (id, skipRead) {
-    return this.removeKeyValue(id, skipRead);
+    return this._doApiCall({
+      method: 'removeComment',
+      params: { commentId: id },
+      skipRead: skipRead
+    });
   };
   // KeyValue stuff
   // ----
@@ -4113,10 +4154,14 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.removeKeyValue = function (id, skipRead) {
+  Base.prototype.removeKeyValue = function (id, key, kind, skipRead) {
     return this._doApiCall({
       method: 'removeKeyValue',
-      params: { id: id },
+      params: {
+        id: id,
+        key: key,
+        kind: kind
+      },
       skipRead: skipRead
     });
   };
@@ -4154,7 +4199,17 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @param pos
    * @returns {promise}
    */
-  Base.prototype.moveKeyValueIndex = function (id, pos) {
+  Base.prototype.moveKeyValueIndex = function (id, pos, key, kind, skipRead) {
+    return this._doApiCall({
+      method: 'moveKeyValueById',
+      params: {
+        id: id,
+        toPos: pos,
+        key: key,
+        kind: kind
+      },
+      skipRead: skipRead
+    });
   };
   // Attachments stuff
   // ----
@@ -4307,6 +4362,8 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
         return b.modified > a.modified;
       });
       $.each(kvs, function (i, kv) {
+        kv.index = i;
+        // original index needed for sorting, swapping positions
         switch (kv.key) {
         case COMMENT:
           obj = that._getComment(kv, options);
@@ -4556,7 +4613,11 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @returns {promise}
    */
   Base.prototype.addComment = function (comment, skipRead) {
-    return this.addKeyValue(COMMENT, comment, 'string', skipRead);
+    return this._doApiCall({
+      method: 'addComment',
+      params: { comment: comment },
+      skipRead: skipRead
+    });
   };
   /**
    * Updates a comment by id
@@ -4568,7 +4629,14 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @returns {promise}
    */
   Base.prototype.updateComment = function (id, comment, skipRead) {
-    return this.updateKeyValue(id, COMMENT, comment, 'string', skipRead);
+    return this._doApiCall({
+      method: 'updateComment',
+      params: {
+        commentId: id,
+        comment: comment
+      },
+      skipRead: skipRead
+    });
   };
   /**
    * Deletes a Comment by id
@@ -4579,7 +4647,11 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @returns {promise}
    */
   Base.prototype.deleteComment = function (id, skipRead) {
-    return this.removeKeyValue(id, skipRead);
+    return this._doApiCall({
+      method: 'removeComment',
+      params: { commentId: id },
+      skipRead: skipRead
+    });
   };
   // KeyValue stuff
   // ----
@@ -4635,10 +4707,14 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.removeKeyValue = function (id, skipRead) {
+  Base.prototype.removeKeyValue = function (id, key, kind, skipRead) {
     return this._doApiCall({
       method: 'removeKeyValue',
-      params: { id: id },
+      params: {
+        id: id,
+        key: key,
+        kind: kind
+      },
       skipRead: skipRead
     });
   };
@@ -4676,7 +4752,17 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @param pos
    * @returns {promise}
    */
-  Base.prototype.moveKeyValueIndex = function (id, pos) {
+  Base.prototype.moveKeyValueIndex = function (id, pos, key, kind, skipRead) {
+    return this._doApiCall({
+      method: 'moveKeyValueById',
+      params: {
+        id: id,
+        toPos: pos,
+        key: key,
+        kind: kind
+      },
+      skipRead: skipRead
+    });
   };
   // Attachments stuff
   // ----
@@ -4829,6 +4915,8 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
         return b.modified > a.modified;
       });
       $.each(kvs, function (i, kv) {
+        kv.index = i;
+        // original index needed for sorting, swapping positions
         switch (kv.key) {
         case COMMENT:
           obj = that._getComment(kv, options);
@@ -5779,7 +5867,9 @@ Item = function ($, Base) {
       ],
       address: '',
       order: null,
-      kit: null
+      kit: null,
+      custody: null,
+      cover: ''
     };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5794,11 +5884,12 @@ Item = function ($, Base) {
    * @property {string} name         the name of the item
    * @property {status} status       the status of the item in an order, or expired
    * @property {string} flag         the item flag
-   * @property {string} location     the item location primary key
+   * @property {string} location     the item location primary key (empty if in_custody)
    * @property {string} category     the item category primary key
-   * @propery {Array} geo            the item geo position in lat lng array
-   * @propery {string} address       the item geo position address
-   * @propery {string} order         the order pk, if the item is currently in an order
+   * @property {Array} geo           the item geo position in lat lng array
+   * @property {string} address      the item geo position address
+   * @property {string} order        the order pk, if the item is currently in an order
+   * @property {string} custody      the user pk, if the item is currently in custody of someone
    * @extends Base
    */
   var Item = function (opt) {
@@ -5820,6 +5911,8 @@ Item = function ($, Base) {
     this.address = spec.address || DEFAULTS.address;
     this.order = spec.order || DEFAULTS.order;
     this.kit = spec.kit || DEFAULTS.kit;
+    this.custody = spec.custody || DEFAULTS.custody;
+    this.cover = spec.cover || DEFAULTS.cover;
   };
   Item.prototype = new tmp();
   Item.prototype.constructor = Item;
@@ -5875,6 +5968,7 @@ Item = function ($, Base) {
       that.codes = data.codes || DEFAULTS.codes;
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
+      this.cover = data.cover || DEFAULTS.cover;
       // Depending on the fields we'll need to get the _id directly or from the dicts
       var locId = DEFAULTS.location;
       if (data.location) {
@@ -5896,6 +5990,11 @@ Item = function ($, Base) {
         kitId = data.kit._id ? data.kit._id : data.kit;
       }
       that.kit = kitId;
+      var custodyId = DEFAULTS.custody;
+      if (data.custody) {
+        custodyId = data.custody._id ? data.custody._id : data.custody;
+      }
+      that.custody = custodyId;
       // Read the flag from the keyvalues
       return that._fromJsonFlag(data, options).then(function () {
         $.publish('item.fromJson', data);
@@ -5991,64 +6090,63 @@ Item = function ($, Base) {
       toDate: to
     });
   };
-  //    /**
-  //     * updates the Item
-  //     * We override because Item.update does not support updating categories
-  //     * @param skipRead
-  //     * @returns {*}
-  //     */
-  //    Item.prototype.update = function(skipRead) {
-  //        if (this.isEmpty()) {
-  //            return $.Deferred().reject(new Error("Cannot update to empty document"));
-  //        }
-  //        if (!this.existsInDb()) {
-  //            return $.Deferred().reject(new Error("Cannot update document without id"));
-  //        }
-  //        if (!this.isValid()) {
-  //            return $.Deferred().reject(new Error("Cannot update, invalid document"));
-  //        }
-  //
-  //        var that = this;
-  //        this.isBusy(true);
-  //        var pk = this.id;
-  //        var data = this._toJson();
-  //
-  //        // Category is not allowed during update
-  //        delete data.category;
-  //
-  //        return this.ds.update(pk, data, this.fields)
-  //            .then(function(data) {
-  //                return (skipRead==true) ? data : that._fromJson(data);
-  //            }).always(function() {
-  //                that.isBusy(false);
-  //            });
-  //    };
-  //
-  //    /**
-  //     * save
-  //     */
-  //    Item.prototype.save = function() {
-  //        // Works for: name, location, category, flag & geo
-  //
-  //        // Avoid doing saves if we try to change a category and it's not allowed
-  //        var isDirtyCategory = this._isDirtyCategory();
-  //        var okCategory = null;
-  //        if (isDirtyCategory) {
-  //            okCategory = this.canChangeCategory();
-  //        } else {
-  //            okCategory = $.Deferred().resolve({result: true});
-  //        }
-  //
-  //        okCategory
-  //            .done(function(resp) {
-  //
-  //            });
-  //
-  //        var isNameDirty = this._isDirtyName();
-  //        var isLocationDirty = this._isDirtyLocation();
-  //        var isDirtyFlag = this._isDirtyFlag();
-  //        var isDirtyGeo = this._isDirtyGeo();
-  //    };
+  /**
+  * updates the Item
+  * We override because Item.update does not support updating categories
+  * @param skipRead
+  * @returns {*}
+  */
+  Item.prototype.update = function (skipRead) {
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot update to empty document'));
+    }
+    if (!this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot update document without id'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot update, invalid document'));
+    }
+    var that = this;
+    var dfdCheck = $.Deferred();
+    var dfdCategory = $.Deferred();
+    var dfdLocation = $.Deferred();
+    var dfdName = $.Deferred();
+    var dfdFlag = $.Deferred();
+    if (this._isDirtyCategory()) {
+      this.canChangeCategory(this.category).done(function (data) {
+        if (data.result) {
+          dfdCheck.resolve();
+        } else {
+          dfdCheck.reject(new Error('Unable to change item category'));
+        }
+      });
+    } else {
+      dfdCheck.resolve();
+    }
+    return dfdCheck.then(function () {
+      if (that._isDirtyCategory()) {
+        dfdCategory = that.changeCategory(that.category);
+      } else {
+        dfdCategory.resolve();
+      }
+      if (that._isDirtyLocation()) {
+        dfdLocation = that.changeLocation(that.location);
+      } else {
+        dfdLocation.resolve();
+      }
+      if (that._isDirtyName()) {
+        dfdName = that.updateName(that.name);
+      } else {
+        dfdName.resolve();
+      }
+      if (that._isDirtyFlag()) {
+        dfdFlag = that.setFlag(that.flag);
+      } else {
+        dfdFlag.resolve();
+      }
+      return $.when(dfdCategory, dfdLocation, dfdName, dfdFlag);
+    });
+  };
   //
   // TODO: Function calls specific for Item
   //
@@ -6229,6 +6327,51 @@ Item = function ($, Base) {
       skipRead: skipRead
     });
   };
+  /**
+   * Takes custody of an item
+   * Puts it in the *in_custody* status
+   * @name Item#takeCustody
+   * @param userId (when null, we'll take the user making the API call)
+   * @param skipRead
+   * @returns {promise}
+   */
+  Item.prototype.takeCustody = function (userId, skipRead) {
+    return this._doApiCall({
+      method: 'takeCustody',
+      params: { user: userId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Releases custody of an item at a certain location
+   * Puts it in the *available* status again
+   * @name Item#releaseCustody
+   * @param locationId
+   * @param skipRead
+   * @returns {promise}
+   */
+  Item.prototype.releaseCustody = function (locationId, skipRead) {
+    return this._doApiCall({
+      method: 'releaseCustody',
+      params: { location: locationId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Transfers custody of an item
+   * Keeps it in the *in_custody* status
+   * @name Item#transferCustody
+   * @param userId (when null, we'll take the user making the API call)
+   * @param skipRead
+   * @returns {promise}
+   */
+  Item.prototype.transferCustody = function (userId, skipRead) {
+    return this._doApiCall({
+      method: 'transferCustody',
+      params: { user: userId },
+      skipRead: skipRead
+    });
+  };
   return Item;
 }(jquery, base);
 KeyValue = function ($) {
@@ -6239,7 +6382,8 @@ KeyValue = function ($) {
     kind: 'string',
     value: null,
     modified: null,
-    by: null
+    by: null,
+    index: 0
   };
   /**
    * KeyValue class
@@ -6262,6 +6406,7 @@ KeyValue = function ($) {
     this.value = spec.value || DEFAULTS.value;
     this.modified = spec.modified || DEFAULTS.modified;
     this.by = spec.by || DEFAULTS.by;
+    this.index = spec.index || DEFAULTS.index;
   };
   /**
    * Checks if the document exists in the database
@@ -6294,6 +6439,15 @@ KeyValue = function ($) {
   KeyValue.prototype.getUnit = function () {
     var keyParts = this.key.split(';');
     return keyParts.length == 2 ? keyParts[1] : '';
+  };
+  /**
+   * Returns if keyValue is a url 
+   * @name  KeyValue#isUrl
+   * @method
+   * @returns {boolean}
+   */
+  KeyValue.prototype.isUrl = function () {
+    return this.key == 'cheqroom.prop.Hyperlink' && this.value.isValidUrl();
   };
   /**
    * Checks if the object is empty
@@ -7230,6 +7384,7 @@ helper = function ($, defaultSettings, common) {
         var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
         var useWebHooks = limits.allowWebHooks;
         var useKits = limits.allowKits && profile.useKits;
+        var useCustody = limits.allowCustody && profile.useCustody;
         var useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
         return {
           contacts: {
@@ -7302,9 +7457,13 @@ helper = function ($, defaultSettings, common) {
        * @return {string}       
        */
       ensureValue: function (obj, prop) {
-        if (!obj)
+        if (typeof obj === 'string') {
           return obj;
-        return typeof obj === 'string' ? obj : obj[prop];
+        } else if (obj && obj.hasOwnProperty(prop)) {
+          return obj[prop];
+        } else {
+          return obj;
+        }
       },
       /**
        * ensureId, returns id value of object or if you pass a string it returns that exact string 

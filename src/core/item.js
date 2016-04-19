@@ -547,7 +547,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.transferCustody = function(userId, skipRead) {
+    Item.prototype.transferCustody = function(customerId, skipRead) {
         return this._doApiCall({method: 'transferCustody', params: {customer: customerId}, skipRead: skipRead});
     };
 

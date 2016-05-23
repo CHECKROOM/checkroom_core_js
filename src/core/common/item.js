@@ -68,7 +68,7 @@ define(function () {
 	            case 'checkedout': return 'fa fa-times-circle';
 	            case 'await_checkout': return 'fa fa-ellipsis-h';
 	            case 'in_transit': return 'fa fa-truck';
-	            case 'in_custody': return 'fa fa-hand-rock-o';
+	            case 'in_custody': return 'fa fa-exchange';
 	            case 'maintenance': return 'fa fa-wrench';
 	            case 'repair': return 'fa fa-wrench';
 	            case 'inspection': return 'fa fa-stethoscope';

@@ -412,7 +412,7 @@ common_item = {
     case 'in_transit':
       return 'fa fa-truck';
     case 'in_custody':
-      return 'fa fa-hand-rock-o';
+      return 'fa fa-exchange';
     case 'maintenance':
       return 'fa fa-wrench';
     case 'repair':
@@ -1981,6 +1981,36 @@ common_inflection = function () {
       }
       return joined;
     };
+    if (!Array.prototype.find) {
+      /**
+       * Returns a value in the array, if an element in the array 
+       * satisfies the provided testing function. 
+       * Otherwise undefined is returned.
+       * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
+       * 
+       * @param  {function} function to contains check to find item 
+       * @return {object}           
+       */
+      Array.prototype.find = function (predicate) {
+        if (this === null) {
+          throw new TypeError('Array.prototype.find called on null or undefined');
+        }
+        if (typeof predicate !== 'function') {
+          throw new TypeError('predicate must be a function');
+        }
+        var list = Object(this);
+        var length = list.length >>> 0;
+        var thisArg = arguments[1];
+        var value;
+        for (var i = 0; i < length; i++) {
+          value = list[i];
+          if (predicate.call(thisArg, value, i, list)) {
+            return value;
+          }
+        }
+        return undefined;
+      };
+    }
   }
 }();
 common_validation = {
@@ -4353,15 +4383,7 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     this.keyValues = DEFAULTS.keyValues.slice();
     this.cover = data.cover || DEFAULTS.cover;
     if (data.keyValues && data.keyValues.length) {
-      // Reverse sorting with underscorejs
-      //var kvs = _.sortBy(data.keyValues, function(kv) { return kv.modified});
-      //kvs.reverse();
-      // TODO?
-      // Sort so the newest keyvalues are first in the array
-      var kvs = data.keyValues.sort(function (a, b) {
-        return b.modified > a.modified;
-      });
-      $.each(kvs, function (i, kv) {
+      $.each(data.keyValues, function (i, kv) {
         kv.index = i;
         // original index needed for sorting, swapping positions
         switch (kv.key) {
@@ -4391,6 +4413,12 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
         }
       });
     }
+    that.attachments.sort(function (a, b) {
+      return b.modified > a.modified;
+    });
+    that.comments.sort(function (a, b) {
+      return b.modified > a.modified;
+    });
     return $.Deferred().resolve(data);
   };
   Base.prototype._getComment = function (kv, options) {
@@ -4906,15 +4934,7 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     this.keyValues = DEFAULTS.keyValues.slice();
     this.cover = data.cover || DEFAULTS.cover;
     if (data.keyValues && data.keyValues.length) {
-      // Reverse sorting with underscorejs
-      //var kvs = _.sortBy(data.keyValues, function(kv) { return kv.modified});
-      //kvs.reverse();
-      // TODO?
-      // Sort so the newest keyvalues are first in the array
-      var kvs = data.keyValues.sort(function (a, b) {
-        return b.modified > a.modified;
-      });
-      $.each(kvs, function (i, kv) {
+      $.each(data.keyValues, function (i, kv) {
         kv.index = i;
         // original index needed for sorting, swapping positions
         switch (kv.key) {
@@ -4944,6 +4964,12 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
         }
       });
     }
+    that.attachments.sort(function (a, b) {
+      return b.modified > a.modified;
+    });
+    that.comments.sort(function (a, b) {
+      return b.modified > a.modified;
+    });
     return $.Deferred().resolve(data);
   };
   Base.prototype._getComment = function (kv, options) {
@@ -5477,6 +5503,12 @@ DateHelper = function ($, moment) {
     result.fromText = result.fromDate;
     result.toText = result.toDate;
     if (useHours) {
+      if (result.fromTime) {
+        result.fromText += ' ' + result.fromTime;
+      }
+      if (result.toTime) {
+        result.toText += ' ' + result.toTime;
+      }
       result.fromText += ' ' + result.fromTime;
       result.toText += ' ' + result.toTime;
     }
@@ -5930,7 +5962,7 @@ Item = function ($, Base) {
     return $.trim(this.location).length > 0;
   };
   Item.prototype.isValid = function () {
-    return this.isValidName() && this.isValidCategory() && this.isValidLocation();
+    return this.isValidName() && this.isValidCategory() && this.status == 'in_custody' ? true : this.isValidLocation();
   };
   /**
    * Checks if the item is empty
@@ -6154,12 +6186,16 @@ Item = function ($, Base) {
    * Duplicates an item a number of times
    * @name Item#duplicate
    * @param times
+   * @param location
    * @returns {promise}
    */
-  Item.prototype.duplicate = function (times) {
+  Item.prototype.duplicate = function (times, location) {
     return this._doApiCall({
       method: 'duplicate',
-      params: { times: times },
+      params: {
+        times: times,
+        location: location
+      },
       skipRead: true  // response is an array of new Item objects!!
     });
   };
@@ -6699,10 +6735,13 @@ Kit = function ($, Base, common) {
    * @param  {int} times
    * @return {promise}      
    */
-  Kit.prototype.duplicate = function (times, skipRead) {
+  Kit.prototype.duplicate = function (times, location, skipRead) {
     return this._doApiCall({
       method: 'duplicate',
-      params: { times: times },
+      params: {
+        times: times,
+        location: location
+      },
       skipRead: skipRead || true
     });
   };
@@ -7098,6 +7137,12 @@ dateHelper = function ($, moment) {
     result.fromText = result.fromDate;
     result.toText = result.toDate;
     if (useHours) {
+      if (result.fromTime) {
+        result.fromText += ' ' + result.fromTime;
+      }
+      if (result.toTime) {
+        result.toText += ' ' + result.toTime;
+      }
       result.fromText += ' ' + result.fromTime;
       result.toText += ' ' + result.toTime;
     }

@@ -407,17 +407,7 @@ define([
         if( (data.keyValues) &&
             (data.keyValues.length)) {
 
-            // Reverse sorting with underscorejs
-            //var kvs = _.sortBy(data.keyValues, function(kv) { return kv.modified});
-            //kvs.reverse();
-
-            // TODO?
-            // Sort so the newest keyvalues are first in the array
-            var kvs = data.keyValues.sort(function(a, b) {
-                return b.modified > a.modified;
-            });
-
-            $.each(kvs, function(i, kv) {
+            $.each(data.keyValues, function(i, kv) {
                 kv.index = i;  // original index needed for sorting, swapping positions
 
                 switch(kv.key) {
@@ -447,6 +437,15 @@ define([
                 }
             });
         }
+
+
+        that.attachments.sort(function (a, b) {
+          return b.modified > a.modified;
+        });
+        that.comments.sort(function (a, b) {
+          return b.modified > a.modified;
+        });
+    
 
         return $.Deferred().resolve(data);
     };

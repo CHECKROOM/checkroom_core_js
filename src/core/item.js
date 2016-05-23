@@ -90,7 +90,7 @@ define([
         return (
             this.isValidName() &&
             this.isValidCategory() &&
-            this.isValidLocation());
+            this.status == "in_custody"?true:this.isValidLocation());
     };
 
     /**
@@ -366,12 +366,13 @@ define([
      * Duplicates an item a number of times
      * @name Item#duplicate
      * @param times
+     * @param location
      * @returns {promise}
      */
-    Item.prototype.duplicate = function(times) {
+    Item.prototype.duplicate = function(times, location) {
         return this._doApiCall({
             method: 'duplicate',
-            params: {times: times},
+            params: {times: times, location: location},
             skipRead: true  // response is an array of new Item objects!!
         });
     };

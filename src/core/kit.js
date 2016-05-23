@@ -194,8 +194,8 @@ define([
      * @param  {int} times
      * @return {promise}      
      */
-    Kit.prototype.duplicate = function(times, skipRead){
-        return this._doApiCall({method: 'duplicate', params: {times: times}, skipRead: skipRead || true });
+    Kit.prototype.duplicate = function(times, location, skipRead){
+        return this._doApiCall({method: 'duplicate', params: {times: times, location: location}, skipRead: skipRead || true });
     };
 
     //

@@ -246,7 +246,9 @@ define([
                         locationCurrent: item.location,
                         locationDesired: locId
                     }));
-                } else if (item.location != locId) {
+                // If order location is defined, check if item
+                // is at the right location
+                } else if (locId && item.location != locId) {
                     conflicts.push(new Conflict({
                         kind: "location",
                         item: item._id,

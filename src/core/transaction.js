@@ -22,7 +22,8 @@ define([
         contact: "",
         location: "",
         items: [],
-        conflicts: []
+        conflicts: [],
+        by: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -65,6 +66,7 @@ define([
         this.location = spec.location || DEFAULTS.location;               // a location id
         this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
         this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
+        this.by = spec.by || DEFAULTS.by;
     };
 
     Transaction.prototype = new tmp();
@@ -345,6 +347,7 @@ define([
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();
+                that.by = data.by || DEFAULTS.by;
                 return that._getConflicts()
                     .then(function(conflicts) {
                         that.conflicts = conflicts;

@@ -170,8 +170,6 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             if(result.toTime){
                 result.toText += ' ' + result.toTime;
             }
-            result.fromText += " " + result.fromTime;
-            result.toText += " " + result.toTime;
         }
 
 

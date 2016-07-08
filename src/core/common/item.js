@@ -126,7 +126,7 @@ define(function () {
          */
         getActiveItems: function(items){
             return this.getItemsByStatus(items, function(item){
-                return item.status != "expired";
+                return item.status != "expired" && item.status != "in_custody";
             });
         }
 	};

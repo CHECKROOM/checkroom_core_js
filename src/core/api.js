@@ -9,6 +9,7 @@ define([
     'jquery-jsonp',
     'moment',
     'common'], function ($, jsonp, moment, common) {
+    var MAX_QUERYSTRING_LENGTH = 2048;
 
     //TODO change this
     //system.log fallback
@@ -99,10 +100,20 @@ define([
         if (m==="timeout") {
             dfd.reject(new api.NetworkTimeout(msg, opt));
         } else {
-            if ((x) &&
-               (x.statusText) &&
-               (x.statusText.indexOf("Notify user:") > -1)) {
-               msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
+            if (x){
+               if((x.statusText) &&
+                  (x.statusText.indexOf("Notify user:") > -1)) {
+                    msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
+                }
+
+
+                if( (x.status == 422) &&
+                    (x.responseText) &&
+                    (x.responseText.match(/HTTPError: \(.+\)/g).length > 0)){
+                    opt = {
+                        detail: x.responseText.match(/HTTPError: \(.+\)/g)[0]
+                    }
+                }
             }
 
             switch(x.status) {
@@ -665,7 +676,7 @@ define([
     };
 
     /**
-     * Creates multiple objects in one goe
+     * Creates multiple objects in one go
      * @method
      * @name ApiDataSource#createMultiple
      * @param objects
@@ -776,12 +787,12 @@ define([
             this.getBaseUrl() + pk + '/call/' + method :
             this.getBaseUrl() + 'call/' + method;
         var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
-
-        if (usePost) {
+        var getUrl = url + '?' + this.getParams(p);
+            
+        if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
             return this._ajaxPost(cmd, url, p, timeOut);
         } else {
-            url += '?' + this.getParams(p);
-            return this._ajaxGet(cmd, url, timeOut);
+            return this._ajaxGet(cmd, getUrl, timeOut);
         }
     };
 

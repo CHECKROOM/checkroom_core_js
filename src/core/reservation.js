@@ -452,6 +452,16 @@ define([
         return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
     };
 
+    /**
+     * Switch reservation to order
+     * @method
+     * @name Reservation#switchToOrder
+     * @return {*}
+     */
+    Reservation.prototype.switchToOrder = function() {
+        return this._doApiCall({method: "switchToOrder", skipRead: true});
+    };
+
 //
 // Implementation
 //

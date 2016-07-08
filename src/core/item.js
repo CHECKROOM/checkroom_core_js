@@ -22,7 +22,8 @@ define([
         order: null,
         kit: null,
         custody: null,
-        cover: ""
+        cover: "",
+        catalog: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -65,6 +66,7 @@ define([
         this.kit = spec.kit || DEFAULTS.kit;
         this.custody = spec.custody || DEFAULTS.custody;
         this.cover = spec.cover || DEFAULTS.cover;
+        this.catalog = spec.catalog || DEFAULTS.catalog;
     };
 
     Item.prototype = new tmp();
@@ -130,11 +132,13 @@ define([
     };
 
     Item.prototype._toJson = function(options) {
-        // Writes out; id, name, category, location
+        // Writes out; id, name, category, location, catalog
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.category = this.category || DEFAULTS.category;
         data.location = this.location || DEFAULTS.location;
+        data.catalog = this.catalog || DEFAULTS.catalog;
+
         return data;
     };
 
@@ -147,7 +151,8 @@ define([
                 that.codes = data.codes || DEFAULTS.codes;
                 that.address = data.address || DEFAULTS.address;
                 that.geo = data.geo || DEFAULTS.geo.slice();
-                this.cover = data.cover || DEFAULTS.cover;
+                that.cover = data.cover || DEFAULTS.cover;
+                that.catalog = data.catalog || DEFAULTS.catalog;
 
                 // Depending on the fields we'll need to get the _id directly or from the dicts
                 var locId = DEFAULTS.location;
@@ -204,6 +209,22 @@ define([
         }
 
         return $.Deferred().resolve(data);
+    };
+
+    Item.prototype._toJsonKeyValues = function(){
+        var that = this;
+        var params = {};
+
+         if( (this.keyValues!=null) &&
+            (this.keyValues.length>0)) {
+            $.each(this.keyValues, function(i, kv) {
+                var param = 'keyValues__' + kv.key;
+                params[param + "__kind"] = kv.kind;
+                params[param + "__value"] = kv.value;
+            });
+        }
+
+        return params;
     };
 
     Item.prototype._getKeyValue = function(kv, options) {
@@ -356,11 +377,72 @@ define([
             });
    };
 
+    /**
+     * Creates an Item
+     * @name  Item#create
+     * @method
+     * @param skipRead skips reading the response via _fromJson (false)
+     * @returns {promise}
+     */
+    Item.prototype.create = function(skipRead) {
+        if (this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
+        }
+        if (this.isEmpty()) {
+            return $.Deferred().reject(new Error("Cannot create empty document"));
+        }
+        if (!this.isValid()) {
+            return $.Deferred().reject(new Error("Cannot create, invalid document"));
+        }
 
+        var that = this;
+        var data = $.extend(this._toJson(), this._toJsonKeyValues());
+        delete data.id;
 
-    //
-    // TODO: Function calls specific for Item
-    //
+        return this.ds.create(data, this.fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * Creates multiple instances of the same item
+     * @name  Item#createMultiple
+     * @method
+     * @param  times
+     * @param  autoNumber
+     * @param  startFrom
+     * @return {promise}       
+     */
+    Item.prototype.createMultiple = function(times, autoNumber, startFrom, skipRead){
+        if (this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
+        }
+        if (this.isEmpty()) {
+            return $.Deferred().reject(new Error("Cannot create empty document"));
+        }
+        if (!this.isValid()) {
+            return $.Deferred().reject(new Error("Cannot create, invalid document"));
+        }
+
+        var that = this;
+        var data = $.extend(this._toJson(), this._toJsonKeyValues(), {
+            times: times || 1,
+            autoNumber: autoNumber || false,
+            startFrom: startFrom
+        });
+        delete data.id;
+        
+        return this._doApiCall({
+            method: 'createMultiple',
+            params: data
+        }).then(function(data) {
+            var dfd = (skipRead==true) ? $.Deferred().resolve(data[0]) : that._fromJson(data[0]);
+            return dfd.then(function(){
+                return data;
+            });
+        });
+    };
 
     /**
      * Duplicates an item a number of times
@@ -369,10 +451,15 @@ define([
      * @param location
      * @returns {promise}
      */
-    Item.prototype.duplicate = function(times, location) {
+    Item.prototype.duplicate = function(times, location, autoNumber, startFrom) {
         return this._doApiCall({
             method: 'duplicate',
-            params: {times: times, location: location},
+            params: {
+                times: times, 
+                location: location, 
+                autoNumber: autoNumber, 
+                startFrom: startFrom 
+            },
             skipRead: true  // response is an array of new Item objects!!
         });
     };

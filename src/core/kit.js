@@ -11,7 +11,8 @@ define([
 
     var DEFAULTS = {
         name: "",
-        items: []
+        items: [],
+        status: "unknown"
     };
 
     // Allow overriding the ctor during inheritance
@@ -37,6 +38,7 @@ define([
         this.items = spec.items || DEFAULTS.items.slice();
         this.codes = [];
         this.conflicts = [];
+        this.status = spec.status || DEFAULTS.status;
     };
 
     Kit.prototype = new tmp();
@@ -220,6 +222,7 @@ define([
                 that.name = data.name || DEFAULTS.name;
                 that.items = data.items || DEFAULTS.items.slice();
                 that.codes = data.codes || [];
+                that.status = data.status || DEFAULTS.status;
 
                 that._loadConflicts(that.items);
 

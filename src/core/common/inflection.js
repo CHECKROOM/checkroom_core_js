@@ -238,6 +238,19 @@ define(function () {
 	}
 
 	/**
+	 * Pad a number with leading zeros f.e. "5".lpad('0',2) -> 005
+	 * @param padString 
+	 * @param length    
+	 * @return {string}           
+	 */
+	String.prototype.lpad = function(padString, length) {
+	    var str = this;
+	    while (str.length < length)
+	        str = padString + str;
+	    return str;
+	}
+
+	/**
 	 * NUMBER EXTENSIONS
 	 */
 	if(!Number.prototype.between){

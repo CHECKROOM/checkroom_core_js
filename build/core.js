@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, user, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, Reservation, Transaction, User, OrderTransfer, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_clientStorage, common, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, user, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, Reservation, Transaction, User, OrderTransfer, core;
 common_code = {
   /**
      * isCodeValid
@@ -474,7 +474,7 @@ common_item = {
      */
   getActiveItems: function (items) {
     return this.getItemsByStatus(items, function (item) {
-      return item.status != 'expired';
+      return item.status != 'expired' && item.status != 'in_custody';
     });
   }
 };
@@ -1914,6 +1914,18 @@ common_inflection = function () {
     };
   }
   /**
+  * Pad a number with leading zeros f.e. "5".lpad('0',2) -> 005
+  * @param padString 
+  * @param length    
+  * @return {string}           
+  */
+  String.prototype.lpad = function (padString, length) {
+    var str = this;
+    while (str.length < length)
+      str = padString + str;
+    return str;
+  };
+  /**
   * NUMBER EXTENSIONS
   */
   if (!Number.prototype.between) {
@@ -2418,13 +2430,64 @@ common_user = function (imageHelper) {
     }
   };
 }(common_image);
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user) {
+common_clientStorage = function () {
+  var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
+  /**
+   * Override default localStorage.setItem
+   * Try to set an object for a key in local storage
+   * 
+   * @param {string} k
+   * @param {object|string} v
+   * @return {bool}
+   */
+  Storage.prototype.setItem = function (k, v) {
+    try {
+      setItem(k, v);
+    } catch (e) {
+      //console.log(e);
+      return false;
+    }
+    return true;
+  };
+  /**
+   * Override default localStorage.getItem
+   * Try to get an object for a key in local storage
+   * 
+   * @param {string} k
+   * @return {object|string|null}
+   */
+  Storage.prototype.getItem = function (k) {
+    try {
+      return getItem(k);
+    } catch (e) {
+    }
+    return null;
+  };
+  /**
+   * Override default localStorage.removeItem
+   * Try to remove an object for a key in local storage
+   * 
+   * @param {string} k
+   * @return {object|string|null}
+   */
+  Storage.prototype.removeItem = function (k) {
+    try {
+      removeItem(k);
+    } catch (e) {
+      //console.log(e);
+      return false;
+    }
+    return true;
+  };
+}();
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, clientStorage) {
   /**
    * Return common object with different helper methods
    */
   return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_clientStorage);
 api = function ($, jsonp, moment, common) {
+  var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
   //system.log fallback
   var system = {
@@ -2544,8 +2607,13 @@ api = function ($, jsonp, moment, common) {
     if (m === 'timeout') {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
-      if (x && x.statusText && x.statusText.indexOf('Notify user:') > -1) {
-        msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+      if (x) {
+        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+          msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+        }
+        if (x.status == 422 && x.responseText && x.responseText.match(/HTTPError: \(.+\)/g).length > 0) {
+          opt = { detail: x.responseText.match(/HTTPError: \(.+\)/g)[0] };
+        }
       }
       switch (x.status) {
       case 400:
@@ -3072,7 +3140,7 @@ api = function ($, jsonp, moment, common) {
     return this._ajaxGet(cmd, url);
   };
   /**
-   * Creates multiple objects in one goe
+   * Creates multiple objects in one go
    * @method
    * @name ApiDataSource#createMultiple
    * @param objects
@@ -3171,11 +3239,11 @@ api = function ($, jsonp, moment, common) {
     var cmd = 'call.' + method;
     var url = pk != null && pk.length > 0 ? this.getBaseUrl() + pk + '/call/' + method : this.getBaseUrl() + 'call/' + method;
     var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
-    if (usePost) {
+    var getUrl = url + '?' + this.getParams(p);
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
       return this._ajaxPost(cmd, url, p, timeOut);
     } else {
-      url += '?' + this.getParams(p);
-      return this._ajaxGet(cmd, url, timeOut);
+      return this._ajaxGet(cmd, getUrl, timeOut);
     }
   };
   /**
@@ -3692,7 +3760,7 @@ keyvalue = function ($) {
    * @returns {boolean}
    */
   KeyValue.prototype.isUrl = function () {
-    return this.key == 'cheqroom.prop.Hyperlink' && this.value.isValidUrl();
+    return this.key == 'cheqroom.prop.Hyperlink' && (this.value && this.value.isValidUrl());
   };
   /**
    * Checks if the object is empty
@@ -5509,8 +5577,6 @@ DateHelper = function ($, moment) {
       if (result.toTime) {
         result.toText += ' ' + result.toTime;
       }
-      result.fromText += ' ' + result.fromTime;
-      result.toText += ' ' + result.toTime;
     }
     // Build a text based on the dates and times we have
     if (result.dayDiff == 0) {
@@ -5901,7 +5967,8 @@ Item = function ($, Base) {
       order: null,
       kit: null,
       custody: null,
-      cover: ''
+      cover: '',
+      catalog: null
     };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5945,6 +6012,7 @@ Item = function ($, Base) {
     this.kit = spec.kit || DEFAULTS.kit;
     this.custody = spec.custody || DEFAULTS.custody;
     this.cover = spec.cover || DEFAULTS.cover;
+    this.catalog = spec.catalog || DEFAULTS.catalog;
   };
   Item.prototype = new tmp();
   Item.prototype.constructor = Item;
@@ -5985,11 +6053,12 @@ Item = function ($, Base) {
     return DEFAULTS;
   };
   Item.prototype._toJson = function (options) {
-    // Writes out; id, name, category, location
+    // Writes out; id, name, category, location, catalog
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.category = this.category || DEFAULTS.category;
     data.location = this.location || DEFAULTS.location;
+    data.catalog = this.catalog || DEFAULTS.catalog;
     return data;
   };
   Item.prototype._fromJson = function (data, options) {
@@ -6000,7 +6069,8 @@ Item = function ($, Base) {
       that.codes = data.codes || DEFAULTS.codes;
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
-      this.cover = data.cover || DEFAULTS.cover;
+      that.cover = data.cover || DEFAULTS.cover;
+      that.catalog = data.catalog || DEFAULTS.catalog;
       // Depending on the fields we'll need to get the _id directly or from the dicts
       var locId = DEFAULTS.location;
       if (data.location) {
@@ -6046,6 +6116,18 @@ Item = function ($, Base) {
       });
     }
     return $.Deferred().resolve(data);
+  };
+  Item.prototype._toJsonKeyValues = function () {
+    var that = this;
+    var params = {};
+    if (this.keyValues != null && this.keyValues.length > 0) {
+      $.each(this.keyValues, function (i, kv) {
+        var param = 'keyValues__' + kv.key;
+        params[param + '__kind'] = kv.kind;
+        params[param + '__value'] = kv.value;
+      });
+    }
+    return params;
   };
   Item.prototype._getKeyValue = function (kv, options) {
     // Flag is a special keyvalue, we won't read it into keyValues
@@ -6179,9 +6261,66 @@ Item = function ($, Base) {
       return $.when(dfdCategory, dfdLocation, dfdName, dfdFlag);
     });
   };
-  //
-  // TODO: Function calls specific for Item
-  //
+  /**
+   * Creates an Item
+   * @name  Item#create
+   * @method
+   * @param skipRead skips reading the response via _fromJson (false)
+   * @returns {promise}
+   */
+  Item.prototype.create = function (skipRead) {
+    if (this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
+    }
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot create empty document'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot create, invalid document'));
+    }
+    var that = this;
+    var data = $.extend(this._toJson(), this._toJsonKeyValues());
+    delete data.id;
+    return this.ds.create(data, this.fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  /**
+   * Creates multiple instances of the same item
+   * @name  Item#createMultiple
+   * @method
+   * @param  times
+   * @param  autoNumber
+   * @param  startFrom
+   * @return {promise}       
+   */
+  Item.prototype.createMultiple = function (times, autoNumber, startFrom, skipRead) {
+    if (this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
+    }
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot create empty document'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot create, invalid document'));
+    }
+    var that = this;
+    var data = $.extend(this._toJson(), this._toJsonKeyValues(), {
+      times: times || 1,
+      autoNumber: autoNumber || false,
+      startFrom: startFrom
+    });
+    delete data.id;
+    return this._doApiCall({
+      method: 'createMultiple',
+      params: data
+    }).then(function (data) {
+      var dfd = skipRead == true ? $.Deferred().resolve(data[0]) : that._fromJson(data[0]);
+      return dfd.then(function () {
+        return data;
+      });
+    });
+  };
   /**
    * Duplicates an item a number of times
    * @name Item#duplicate
@@ -6189,12 +6328,14 @@ Item = function ($, Base) {
    * @param location
    * @returns {promise}
    */
-  Item.prototype.duplicate = function (times, location) {
+  Item.prototype.duplicate = function (times, location, autoNumber, startFrom) {
     return this._doApiCall({
       method: 'duplicate',
       params: {
         times: times,
-        location: location
+        location: location,
+        autoNumber: autoNumber,
+        startFrom: startFrom
       },
       skipRead: true  // response is an array of new Item objects!!
     });
@@ -6483,7 +6624,7 @@ KeyValue = function ($) {
    * @returns {boolean}
    */
   KeyValue.prototype.isUrl = function () {
-    return this.key == 'cheqroom.prop.Hyperlink' && this.value.isValidUrl();
+    return this.key == 'cheqroom.prop.Hyperlink' && (this.value && this.value.isValidUrl());
   };
   /**
    * Checks if the object is empty
@@ -6565,7 +6706,8 @@ KeyValue = function ($) {
 Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
-    items: []
+    items: [],
+    status: 'unknown'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -6589,6 +6731,7 @@ Kit = function ($, Base, common) {
     this.items = spec.items || DEFAULTS.items.slice();
     this.codes = [];
     this.conflicts = [];
+    this.status = spec.status || DEFAULTS.status;
   };
   Kit.prototype = new tmp();
   Kit.prototype.constructor = Kit;
@@ -6763,6 +6906,7 @@ Kit = function ($, Base, common) {
       that.name = data.name || DEFAULTS.name;
       that.items = data.items || DEFAULTS.items.slice();
       that.codes = data.codes || [];
+      that.status = data.status || DEFAULTS.status;
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
@@ -7143,8 +7287,6 @@ dateHelper = function ($, moment) {
       if (result.toTime) {
         result.toText += ' ' + result.toTime;
       }
-      result.fromText += ' ' + result.fromTime;
-      result.toText += ' ' + result.toTime;
     }
     // Build a text based on the dates and times we have
     if (result.dayDiff == 0) {
@@ -7538,7 +7680,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     contact: '',
     location: '',
     items: [],
-    conflicts: []
+    conflicts: [],
+    by: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7584,7 +7727,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // a location id
     this.items = spec.items || DEFAULTS.items.slice();
     // an array of item ids
-    this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();  // an array of Conflict objects
+    this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
+    // an array of Conflict objects
+    this.by = spec.by || DEFAULTS.by;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -7822,6 +7967,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.location = data.location || DEFAULTS.location;
       that.contact = data.customer || DEFAULTS.contact;
       that.items = data.items || DEFAULTS.items.slice();
+      that.by = data.by || DEFAULTS.by;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -8510,8 +8656,9 @@ Order = function ($, api, Transaction, Conflict, common) {
             itemName: item.name,
             locationCurrent: item.location,
             locationDesired: locId
-          }));
-        } else if (item.location != locId) {
+          }));  // If order location is defined, check if item
+                // is at the right location
+        } else if (locId && item.location != locId) {
           conflicts.push(new Conflict({
             kind: 'location',
             item: item._id,
@@ -9172,6 +9319,18 @@ Reservation = function ($, api, Transaction, Conflict) {
       skipRead: true
     });  // response is an Order object!!
   };
+  /**
+   * Switch reservation to order
+   * @method
+   * @name Reservation#switchToOrder
+   * @return {*}
+   */
+  Reservation.prototype.switchToOrder = function () {
+    return this._doApiCall({
+      method: 'switchToOrder',
+      skipRead: true
+    });
+  };
   //
   // Implementation
   //
@@ -9277,7 +9436,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     contact: '',
     location: '',
     items: [],
-    conflicts: []
+    conflicts: [],
+    by: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9323,7 +9483,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // a location id
     this.items = spec.items || DEFAULTS.items.slice();
     // an array of item ids
-    this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();  // an array of Conflict objects
+    this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
+    // an array of Conflict objects
+    this.by = spec.by || DEFAULTS.by;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -9561,6 +9723,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.location = data.location || DEFAULTS.location;
       that.contact = data.customer || DEFAULTS.contact;
       that.items = data.items || DEFAULTS.items.slice();
+      that.by = data.by || DEFAULTS.by;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });

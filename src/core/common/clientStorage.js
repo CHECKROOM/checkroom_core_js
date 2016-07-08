@@ -23,7 +23,7 @@ define([], function() {
      */
     Storage.prototype.setItem = function (k, v) {
         try {
-            setItem(k, v);
+            setItem.apply(this, [k, v]);
         } catch (e) {
             //console.log(e);
             return false;
@@ -41,7 +41,7 @@ define([], function() {
      */
     Storage.prototype.getItem = function (k) {
         try {
-            return getItem(k);
+            return getItem.apply(this, [k]);
         } catch (e) {
             //console.log(e);
         }
@@ -58,7 +58,7 @@ define([], function() {
      */
     Storage.prototype.removeItem = function(k) {
         try{
-            removeItem(k);
+            removeItem.apply(this, [k]);
         } catch (e){
             //console.log(e);
             return false;    

@@ -40,6 +40,36 @@ define(function () {
                 case 'cancelled': return 'Cancelled';
                 default: return 'Unknown';
             }
+        },
+        /**
+         * isReservationArchived
+         *
+         * @memberOf common
+         * @name  common#isReservationArchived
+         * @method
+         * 
+         * @param  {object}  reservation 
+         * @return {Boolean}       
+         */
+        isReservationArchived: function(reservation) {
+            return reservation && reservation.archived != null;
+        },
+        /**
+         * getReservationCss
+         *
+         * @memberOf common
+         * @name  common#getReservationCss
+         * @method
+         * 
+         * @param  {object} reservation
+         * @return {string}       
+         */
+        getReservationCss: function(reservation) {
+            if(this.isOrderArchived(reservation)){
+                return this.getFriendlyReservationCss(reservation.status) + " label-striped";
+            }else{
+                return this.getFriendlyReservationCss(reservation.status);
+            }
         }
     };
 });

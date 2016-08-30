@@ -240,6 +240,19 @@ common_order = function (moment) {
       return order.status == 'open' && now.isAfter(order.due);
     },
     /**
+    * isOrderArchived
+    *
+    * @memberOf common
+    * @name  common#isOrderArchived
+    * @method
+    * 
+    * @param  {object}  order 
+    * @return {Boolean}       
+    */
+    isOrderArchived: function (order) {
+      return order && order.archived != null;
+    },
+    /**
     * getOrderStatus
     *
     * @memberOf common
@@ -267,7 +280,13 @@ common_order = function (moment) {
     */
     getOrderCss: function (order, now) {
       now = now || moment();
-      return this.isOrderOverdue(order, now) ? 'label-overdue' : this.getFriendlyOrderCss(order.status);
+      if (this.isOrderOverdue(order, now)) {
+        return 'label-overdue';
+      } else if (this.isOrderArchived(order)) {
+        return this.getFriendlyOrderCss(order.status) + ' label-striped';
+      } else {
+        return this.getFriendlyOrderCss(order.status);
+      }
     }
   };
 }(moment);
@@ -318,6 +337,36 @@ common_reservation = {
       return 'Cancelled';
     default:
       return 'Unknown';
+    }
+  },
+  /**
+   * isReservationArchived
+   *
+   * @memberOf common
+   * @name  common#isReservationArchived
+   * @method
+   * 
+   * @param  {object}  reservation 
+   * @return {Boolean}       
+   */
+  isReservationArchived: function (reservation) {
+    return reservation && reservation.archived != null;
+  },
+  /**
+   * getReservationCss
+   *
+   * @memberOf common
+   * @name  common#getReservationCss
+   * @method
+   * 
+   * @param  {object} reservation
+   * @return {string}       
+   */
+  getReservationCss: function (reservation) {
+    if (this.isOrderArchived(reservation)) {
+      return this.getFriendlyReservationCss(reservation.status) + ' label-striped';
+    } else {
+      return this.getFriendlyReservationCss(reservation.status);
     }
   }
 };
@@ -499,6 +548,8 @@ common_conflicts = {
       return 'Already reserved';
     case 'expired':
       return 'Item is expired';
+    case 'custody':
+      return 'Item is in custody';
     default:
       return '';
     }
@@ -3763,7 +3814,7 @@ keyvalue = function ($) {
    * @returns {boolean}
    */
   KeyValue.prototype.isUrl = function () {
-    return this.key == 'cheqroom.prop.Hyperlink' && (this.value && this.value.isValidUrl());
+    return this.value && (typeof this.value == 'string' && this.value.isValidUrl());
   };
   /**
    * Checks if the object is empty
@@ -5626,7 +5677,7 @@ DateHelper = function ($, moment) {
       return 'Not set';
     }
     var parts = this.getFriendlyDateParts(date, now, format);
-    return useHours ? parts.join('') : parts[0];
+    return useHours ? parts.join(' ') : parts[0];
   };
   /**
    * [addAverageDuration]
@@ -6627,7 +6678,7 @@ KeyValue = function ($) {
    * @returns {boolean}
    */
   KeyValue.prototype.isUrl = function () {
-    return this.key == 'cheqroom.prop.Hyperlink' && (this.value && this.value.isValidUrl());
+    return this.value && (typeof this.value == 'string' && this.value.isValidUrl());
   };
   /**
    * Checks if the object is empty
@@ -7336,7 +7387,7 @@ dateHelper = function ($, moment) {
       return 'Not set';
     }
     var parts = this.getFriendlyDateParts(date, now, format);
-    return useHours ? parts.join('') : parts[0];
+    return useHours ? parts.join(' ') : parts[0];
   };
   /**
    * [addAverageDuration]
@@ -7598,14 +7649,16 @@ helper = function ($, defaultSettings, common) {
             updateContact: role != 'selfservice',
             updateLocation: useOrders,
             generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
-            transferOrder: useOrders && useOrderTransfers
+            transferOrder: useOrders && useOrderTransfers,
+            archive: useOrders && isRootOrAdminOrUser
           },
           reservations: {
             create: useReservations,
             remove: useReservations,
             update: useReservations,
             updateContact: useReservations && role != 'selfservice',
-            updateLocation: useReservations
+            updateLocation: useReservations,
+            archive: useReservations && isRootOrAdminOrUser
           },
           locations: {
             create: isRootOrAdmin,
@@ -7684,7 +7737,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     location: '',
     items: [],
     conflicts: [],
-    by: null
+    by: null,
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7971,6 +8025,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.contact = data.customer || DEFAULTS.contact;
       that.items = data.items || DEFAULTS.items.slice();
       that.by = data.by || DEFAULTS.by;
+      that.archived = data.archived || DEFAULTS.archived;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -8256,6 +8311,38 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       }
     });
     return duplicates;
+  };
+  /**
+   * Archive a transaction
+   * @name Transaction#archive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Transaction.prototype.archive = function (skipRead) {
+    if (this.status != 'closed') {
+      return $.Deferred().reject(new Error('Cannot archive document that isn\'t closed'));
+    }
+    return this._doApiCall({
+      method: 'archive',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Undo archive of a transaction
+   * @name Transaction#undoArchive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Transaction.prototype.undoArchive = function (skipRead) {
+    if (this.status == 'archived') {
+      return $.Deferred().reject(new Error('Cannot unarchive document that isn\'t archived'));
+    }
+    return this._doApiCall({
+      method: 'undoArchive',
+      params: {},
+      skipRead: skipRead
+    });
   };
   //
   // Implementation stuff
@@ -9440,7 +9527,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     location: '',
     items: [],
     conflicts: [],
-    by: null
+    by: null,
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9727,6 +9815,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.contact = data.customer || DEFAULTS.contact;
       that.items = data.items || DEFAULTS.items.slice();
       that.by = data.by || DEFAULTS.by;
+      that.archived = data.archived || DEFAULTS.archived;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -10012,6 +10101,38 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       }
     });
     return duplicates;
+  };
+  /**
+   * Archive a transaction
+   * @name Transaction#archive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Transaction.prototype.archive = function (skipRead) {
+    if (this.status != 'closed') {
+      return $.Deferred().reject(new Error('Cannot archive document that isn\'t closed'));
+    }
+    return this._doApiCall({
+      method: 'archive',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Undo archive of a transaction
+   * @name Transaction#undoArchive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Transaction.prototype.undoArchive = function (skipRead) {
+    if (this.status == 'archived') {
+      return $.Deferred().reject(new Error('Cannot unarchive document that isn\'t archived'));
+    }
+    return this._doApiCall({
+      method: 'undoArchive',
+      params: {},
+      skipRead: skipRead
+    });
   };
   //
   // Implementation stuff

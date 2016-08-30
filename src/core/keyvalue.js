@@ -82,7 +82,7 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
      * @returns {boolean}
      */
     KeyValue.prototype.isUrl = function() {
-        return (this.key == "cheqroom.prop.Hyperlink") && (this.value && this.value.isValidUrl());
+        return (this.value && (typeof(this.value) == "string" && this.value.isValidUrl()));
     };
 
     /**

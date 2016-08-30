@@ -19,6 +19,7 @@ define(function () {
                 case "order": return "Checked out";
                 case "reservation": return "Already reserved";
                 case "expired": return "Item is expired";
+                case "custody": return "Item is in custody";
                 default: return "";
             }
         }

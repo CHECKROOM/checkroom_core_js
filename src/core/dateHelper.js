@@ -221,7 +221,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             return "Not set";
         }
         var parts = this.getFriendlyDateParts(date, now, format);
-        return (useHours) ? parts.join("") : parts[0];
+        return (useHours) ? parts.join(" ") : parts[0];
     };
 
     /**

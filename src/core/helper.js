@@ -179,14 +179,16 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                         updateContact: (role != "selfservice"),
                         updateLocation: useOrders,
                         generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
-                        transferOrder: useOrders && useOrderTransfers
+                        transferOrder: useOrders && useOrderTransfers,
+                        archive: useOrders && isRootOrAdminOrUser
                     },
                     reservations: {
                         create: useReservations,
                         remove: useReservations,
                         update: useReservations,
                         updateContact: useReservations && (role != "selfservice"),
-                        updateLocation: useReservations
+                        updateLocation: useReservations,
+                        archive: useReservations && isRootOrAdminOrUser
                     },
                     locations: {
                         create: isRootOrAdmin,

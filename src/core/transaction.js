@@ -23,7 +23,8 @@ define([
         location: "",
         items: [],
         conflicts: [],
-        by: null
+        by: null,
+        archived: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -348,6 +349,8 @@ define([
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();
                 that.by = data.by || DEFAULTS.by;
+                that.archived = data.archived || DEFAULTS.archived;
+
                 return that._getConflicts()
                     .then(function(conflicts) {
                         that.conflicts = conflicts;
@@ -652,6 +655,42 @@ define([
         });
 
         return duplicates;
+    };
+
+    /**
+     * Archive a transaction
+     * @name Transaction#archive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Transaction.prototype.archive = function(skipRead) {
+        if (this.status != "closed") {
+            return $.Deferred().reject(new Error("Cannot archive document that isn't closed"));
+        }
+
+        return this._doApiCall({
+            method: 'archive',
+            params: {},
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Undo archive of a transaction
+     * @name Transaction#undoArchive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Transaction.prototype.undoArchive = function(skipRead) {
+        if (this.status == "archived") {
+            return $.Deferred().reject(new Error("Cannot unarchive document that isn't archived"));
+        }
+
+        return this._doApiCall({
+            method: 'undoArchive',
+            params: {},
+            skipRead: skipRead
+        });
     };
 
     //

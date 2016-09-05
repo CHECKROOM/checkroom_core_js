@@ -19,7 +19,7 @@ Call `grunt` to build and run the tests
 
 Call `grunt docs` to rebuild the documentation
 
-Call 'grunt gh-pages' to publish the documentation
+Call `grunt gh-pages` to publish the documentation
 
 ## Sample code
 
@@ -81,16 +81,27 @@ dsAvailabilities.search({item: 'ITEM-ID'})
         console.log(resp);
     });
 
+// Creating a new User (send invite email and create a corresponding Customer document)
+var dsUsers = new cr.api.ApiDataSource({collection: 'users', ajax: ajax, user: authUser, urlApi: baseUrl});
+dsUsers.create({name: 'New User', email: 'newuser@gmail.com', role: 'selfservice', invite: true, createCustomer: true})
+    .done(function(resp) {
+        console.log(resp);
+    });
+
 //
 // Using models
 //
+// Getting an Item by its primary key
 var item = new cr.Item({ds: dsItems, id: 'ANY-ITEM-ID');
+
 item.get()
     .done(function() {
         console.log(item.name, item.status);
     });
 
+// Getting a Contact by its primary key and updating its company name
 var contact = new cr.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
+
 contact.get()
     .done(function() {
         contact.company = "New Company Name";

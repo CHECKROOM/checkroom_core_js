@@ -599,8 +599,12 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.clearFlag = function(skipRead) {
-        return this._doApiCall({method: 'clearFlag', skipRead: skipRead});
+    Item.prototype.clearFlag = function (skipRead) {
+      return this._doApiCall({
+        method: 'clearFlag',
+        params: {},
+        skipRead: skipRead
+      });
     };
 
     /**

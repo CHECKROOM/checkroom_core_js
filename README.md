@@ -28,7 +28,7 @@ Call 'grunt gh-pages' to publish the documentation
 //
 // Authenticating via username and password
 //
-var baseUrl = 'https://app.cheqroom.com/api/v2_0';
+var baseUrl = 'https://app.cheqroom.com/api/v2_2';
 var userName = "";
 var password = "";
 
@@ -84,13 +84,13 @@ dsAvailabilities.search({item: 'ITEM-ID'})
 //
 // Using models
 //
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
+var item = new cr.Item({ds: dsItems, id: 'ANY-ITEM-ID');
 item.get()
     .done(function() {
         console.log(item.name, item.status);
     });
 
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
+var contact = new cr.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
 contact.get()
     .done(function() {
         contact.company = "New Company Name";
@@ -104,4 +104,4 @@ contact.get()
 
 - - -
 
-Copyright CHECKROOM NV 2015
+Copyright CHECKROOM NV 2016

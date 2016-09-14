@@ -6555,6 +6555,7 @@ Item = function ($, Base) {
   Item.prototype.clearFlag = function (skipRead) {
     return this._doApiCall({
       method: 'clearFlag',
+      params: {},
       skipRead: skipRead
     });
   };
@@ -8198,6 +8199,34 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       skipRead: skipRead
     }).then(function () {
       return that._ensureTransactionDeleted();
+    });
+  };
+  /**
+   * Sets transaction name
+   * @method
+   * @name Transaction#setName
+   * @param name
+   * @param skipRead skip parsing the returned json response into the transaction
+   * @returns {promise}
+   */
+  Transaction.prototype.setName = function (name, skipRead) {
+    return this._doApiCall({
+      method: 'setName',
+      params: { name: name },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears transaction name
+   * @method
+   * @name Transaction#clearName
+   * @param skipRead skip parsing the returned json response into the transaction
+   * @returns {promise}
+   */
+  Transaction.prototype.clearName = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearName',
+      skipRead: skipRead
     });
   };
   // Business logic
@@ -9988,6 +10017,34 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       skipRead: skipRead
     }).then(function () {
       return that._ensureTransactionDeleted();
+    });
+  };
+  /**
+   * Sets transaction name
+   * @method
+   * @name Transaction#setName
+   * @param name
+   * @param skipRead skip parsing the returned json response into the transaction
+   * @returns {promise}
+   */
+  Transaction.prototype.setName = function (name, skipRead) {
+    return this._doApiCall({
+      method: 'setName',
+      params: { name: name },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears transaction name
+   * @method
+   * @name Transaction#clearName
+   * @param skipRead skip parsing the returned json response into the transaction
+   * @returns {promise}
+   */
+  Transaction.prototype.clearName = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearName',
+      skipRead: skipRead
     });
   };
   // Business logic

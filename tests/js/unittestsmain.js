@@ -50,7 +50,7 @@ require([
         availabilityTest) {
 
         //orderTransferTest.run();
-        commonTest.run();
+        //commonTest.run();
         //helperTest.run();
         //simpleTest.run();
         //dateHelperTest.run();
@@ -59,7 +59,7 @@ require([
         //kitTest.run();
         //itemTest.run();
         //keyValueTest.run();
-        //orderTest.run();
+        orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

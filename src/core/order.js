@@ -416,7 +416,19 @@ define([
                 if(!that.existsInDb()){
                     return that._createTransaction(skipRead);
                 } else{
-                    return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
+                    // If status is open when due date is changed, 
+                    // we need to check for conflicts
+                    if(that.status == "open"){
+                        return that.canExtendCheckout(roundedDueDate).then(function(resp){
+                            if(resp && resp.result == true){
+                                return that.extendCheckout(roundedDueDate, skipRead);
+                            }else{
+                                return $.Deferred().reject("Cannot extend order to given date because it has conflicts.", resp);
+                            }
+                        })
+                    }else{
+                        return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
+                    }
                 }                
             });
     };
@@ -495,6 +507,30 @@ define([
      */
     Order.prototype.undoCheckout = function(skipRead) {
         return this._doApiCall({method: "undoCheckout", skipRead: skipRead});
+    };
+
+    /**
+     * Checks of order due date can be extended to given date
+     * @param  {moment} due      
+     * @param  {bool} skipRead 
+     * @return {promise}          
+     */
+    Order.prototype.canExtendCheckout = function(due){
+        //return this._doApiCall({ method: "canExtendCheckout", params: { due: due }, skipRead: true });
+        
+        // TODO CHANGE THIS
+        // Currently always allow order to be extended
+        return $.Deferred().resolve({ result: true });
+    }
+
+    /**
+     * Extends order due date
+     * @param  {moment} due      
+     * @param  {bool} skipRead 
+     * @return {promise}          
+     */
+    Order.prototype.extendCheckout = function(due, skipRead){
+        return this._doApiCall({ method: "extendCheckout", params: { due: due }, skipRead: skipRead });
     };
 
     /**

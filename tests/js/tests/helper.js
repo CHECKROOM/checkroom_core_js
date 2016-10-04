@@ -127,5 +127,67 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             });
     };
 
+    helper.getAnyCategory = function(){
+         return helper.apiSearch({pk__startswith:'cheqroom.types.item.', _sort:'pk'}, "categories").then(function(resp){
+            return (resp!=null)  && (resp.docs!=null) && (resp.docs.length > 0)? resp.docs[0] : null;
+         });
+    };
+
+    helper.getNewItem = function(ds, category, location, name){
+       var item = new cr.Item({
+            ds: ds,
+            name: name, 
+            category: category._id,
+            location: location._id
+        });
+        var dfd = $.Deferred();
+
+        item.create().done(function(){
+            dfd.resolve(item);
+        });
+
+        return dfd;
+    };
+
+    helper.getNewOpenOrder = function(ds, dsItems, due, location, contact, items){
+        var order = new cr.Order({
+            ds: ds,
+            dsItems: dsItems,
+            autoCleanup: true,
+            location: location._id,
+            contact: contact._id,
+            due: due
+        });
+        var dfd = $.Deferred();
+
+        order.addItems(items).then(function(){
+            order.checkout().done(function(){
+                dfd.resolve(order);
+            });
+        });     
+
+        return dfd; 
+    }
+
+    helper.getNewOpenReservation = function(ds, dsItems, from, to, location, contact, items){
+        var reservation = new cr.Reservation({
+            ds: ds,
+            dsItems: dsItems,
+            location: location._id,
+            contact: contact._id,
+            from: from,
+            to: to
+        });
+        var dfd = $.Deferred();
+
+        reservation.addItems(items).then(function(){
+            reservation.reserve().done(function(){
+                dfd.resolve(reservation);
+            })
+        })
+
+        return dfd;
+    }
+
     return helper;
 });

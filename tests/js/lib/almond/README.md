@@ -14,7 +14,7 @@ almond is around **1 kilobyte** when minified with Closure Compiler and gzipped.
 
 Since it can support certain types of loader plugin-optimized resources, it is a great
 fit for a library that wants to use [text templates](http://requirejs.org/docs/api.html#text)
-or [CoffeeScript](https://github.com/jrburke/require-cs) as part of
+or [CoffeeScript](https://github.com/requirejs/require-cs) as part of
 their project, but get a tiny download in one file after using the
 [RequireJS Optimizer](http://requirejs.org/docs/optimization.html).
 
@@ -49,20 +49,20 @@ What is supported:
 * loader plugins that can inline their resources into optimized files, and
 can access those inlined resources synchronously after the optimization pass.
 The [text](http://requirejs.org/docs/api.html#text) and
-[CoffeeScript](https://github.com/jrburke/require-cs) plugins are two such plugins.
+[CoffeeScript](https://github.com/requirejs/require-cs) plugins are two such plugins.
 
 ## Download
 
-[Latest release](https://github.com/jrburke/almond/raw/latest/almond.js)
+[Latest release](https://github.com/requirejs/almond/raw/latest/almond.js)
 
 
 ## Usage
 
 [Download the RequireJS optimizer](http://requirejs.org/docs/download.html#rjs).
 
-[Download the current release of almond.js](https://github.com/jrburke/almond/raw/latest/almond.js).
+[Download the current release of almond.js](https://github.com/requirejs/almond/raw/latest/almond.js).
 
-Run the optimizer using [Node](http://nodejs.org) (also [works in Java](https://github.com/jrburke/r.js/blob/master/README.md)):
+Run the optimizer using [Node](http://nodejs.org) (also [works in Java](https://github.com/requirejs/r.js/blob/master/README.md)):
 
     node r.js -o baseUrl=. name=path/to/almond include=main out=main-built.js wrap=true
 
@@ -79,7 +79,7 @@ wrap=true will add this wrapper around the main-built.js contents (which will be
 If you do not want that wrapper, leave off the wrap=true argument.
 
 These optimizer arguments can also be used in a build config object, so it can be used
-in [runtime-generated server builds](https://github.com/jrburke/r.js/blob/master/build/tests/http/httpBuild.js).
+in [runtime-generated server builds](https://github.com/requirejs/r.js/blob/master/build/tests/http/httpBuild.js).
 
 
 ## Triggering module execution <a name="execution"></a>
@@ -169,17 +169,28 @@ After the build, then the built file should be structured like so:
 * modules for your lib, including 'main'
 * end.frag
 
+## License
+
+MIT
+
+## Code of Conduct
+
+[jQuery Foundation Code of Conduct](https://jquery.org/conduct/).
+
 ## Common errors
 
 Explanations of common errors:
 
-### deps is undefined
+### incorrect module build, no module name
 
-Where this line is mentioned:
+In almond 3.0.0 and earlier, this would show up as "deps is undefined", where
+this line is mentioned:
 
     if (!deps.splice) {
 
-It usually means that there is a define()'d module, but it is missing a name,
+In 3.0.1+ the error is explicitly: "incorrect module build, no module name".
+
+This means that there is a define()'d module, but it is missing a name,
 something that looks like this:
 
     define(function () {});
@@ -196,6 +207,14 @@ when it should look like:
 
 This is usually a sign that the tool you used to combine all the modules
 together did not properly name an anonymous AMD module.
+
+Multiple modules built into a single file **must** have names in the define calls.
+Otherwise almond has no way to assign the module to a name key for use in the code.
+
+The fix is to use a build tool that understand AMD modules and inserts the module
+IDs in the build. The
+[requirejs optimizer](http://requirejs.org/docs/optimization.html) is a build tool
+that can do this correctly.
 
 ### x missing y
 
@@ -218,8 +237,7 @@ modules from the network.
 
 ## How to get help
 
-* Contact the [requirejs list](https://groups.google.com/group/requirejs).
-* Open issues in the [issue tracker](https://github.com/jrburke/almond/issues).
+* Open issues in the [issue tracker](https://github.com/requirejs/almond/issues).
 
 ## Contributing
 

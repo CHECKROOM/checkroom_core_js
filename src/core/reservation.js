@@ -148,16 +148,7 @@ define([
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
-                // TODO: existsInDb should always return true?
-                // If that is the case we can simplify the part below
-                if (that.existsInDb()) {
-                    return that._loadConflicts(data, options)
-                        .then(function() {
-                            $.publish("reservation.fromJson", data);
-                        });
-                } else {
-                    $.publish("reservation.fromJson", data);
-                }
+                $.publish("reservation.fromJson", data);
             });
     };
 
@@ -191,7 +182,14 @@ define([
                 var locId = this._getId(this.location);
 
                 $.each(this.items, function(i, item) {
-                    if (item.status!="available") {
+                    if (item.status=="expired") {
+                        conflicts.push(new Conflict({
+                            kind: "expired",
+                            item: item._id,
+                            itemName: item.name,
+                            doc: item.order
+                        }));
+                    } else if (item.status!="available") {
                         conflicts.push(new Conflict({
                             kind: "status",
                             item: item._id,
@@ -223,9 +221,11 @@ define([
                             // Now we have the conflicts for this reservation
                             // run over the items again and find the conflict for each item
                             $.each(that.items, function(i, item) {
-                                conflict = $.grep(cnflcts, function(c) { return c.item==item._id});
+                                conflict = cnflcts.find(function(conflictObj){
+                                    return conflictObj.item == item._id;
+                                })
                                 if (conflict) {
-                                    var kind = "";
+                                    var kind = conflict.kind || "";
                                     kind = kind || (conflict.order) ? "order" : "";
                                     kind = kind || (conflict.reservation) ? "reservation" : "";
 
@@ -238,6 +238,8 @@ define([
                                 }
                             });
                         }
+
+                        return conflicts;
                     });
             }
         }
@@ -515,69 +517,6 @@ define([
         }
 
         return unavailable;
-    };
-
-    Reservation.prototype._loadConflicts = function(data, options) {
-        // Only load conflicts when it"s possible to have conflicts
-        // location, at least 1 date and at least 1 item
-        var that = this;
-        var locId = this._getId(this.location);
-        var hasLocation = (locId!=null) && (locId.length>0);
-        var hasAnyDate = (this.from!=null) || (this.to!=null);
-        var hasAnyItem = (this.items!=null) && (this.items.length>0);
-        var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
-
-        if( (hasNonConflictStatus) ||
-            (!hasLocation && !hasAnyDate && !hasAnyItem)) {
-
-            // We cannot have conflicts, so make the conflicts array empty
-            this.conflicts = [];
-            return $.Deferred().resolve(data);
-
-        } else if (this.status == "creating") {
-
-            // We can have conflicts,
-            // so we better check the server if there are any
-            return this.ds.call(this.id, "getConflicts")
-                .then(function(conflicts) {
-                    that.conflicts = conflicts || [];
-                });
-
-        } else if (this.status == "open") {
-
-            this.conflicts = [];
-
-            // The reservation is already open,
-            // so the only conflicts we can have
-            // are for turning it into an order
-            $.each(this.raw.items, function(i, item) {
-                if (item.status=="expired") {
-                    that.conflicts.push(new Conflict({
-                        item: that._getId(item),
-                        kind: "expired"
-                    }));
-                } else if (item.status!="available") {
-                    that.conflicts.push(new Conflict({
-                        item: that._getId(item),
-                        kind: "status"
-                    }));
-                } else if(item.location!=locId) {
-                    that.conflicts.push(new Conflict({
-                        item: that._getId(item),
-                        kind: "location"
-                    }));
-                }
-            });
-
-            return $.Deferred().resolve(data);
-
-        } else {
-
-            // We should never get here :)
-            this.conflicts = [];
-            return $.Deferred().resolve(data);
-
-        }
     };
 
     return Reservation;

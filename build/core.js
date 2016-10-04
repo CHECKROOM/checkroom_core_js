@@ -8918,11 +8918,23 @@ Order = function ($, api, Transaction, Conflict, common) {
       if (!that.existsInDb()) {
         return that._createTransaction(skipRead);
       } else {
-        return that._doApiCall({
-          method: 'setDueDate',
-          params: { due: roundedDueDate },
-          skipRead: skipRead
-        });
+        // If status is open when due date is changed, 
+        // we need to check for conflicts
+        if (that.status == 'open') {
+          return that.canExtendCheckout(roundedDueDate).then(function (resp) {
+            if (resp && resp.result == true) {
+              return that.extendCheckout(roundedDueDate, skipRead);
+            } else {
+              return $.Deferred().reject('Cannot extend order to given date because it has conflicts.', resp);
+            }
+          });
+        } else {
+          return that._doApiCall({
+            method: 'setDueDate',
+            params: { due: roundedDueDate },
+            skipRead: skipRead
+          });
+        }
       }
     });
   };
@@ -9007,6 +9019,31 @@ Order = function ($, api, Transaction, Conflict, common) {
   Order.prototype.undoCheckout = function (skipRead) {
     return this._doApiCall({
       method: 'undoCheckout',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Checks of order due date can be extended to given date
+   * @param  {moment} due      
+   * @param  {bool} skipRead 
+   * @return {promise}          
+   */
+  Order.prototype.canExtendCheckout = function (due) {
+    //return this._doApiCall({ method: "canExtendCheckout", params: { due: due }, skipRead: true });
+    // TODO CHANGE THIS
+    // Currently always allow order to be extended
+    return $.Deferred().resolve({ result: true });
+  };
+  /**
+   * Extends order due date
+   * @param  {moment} due      
+   * @param  {bool} skipRead 
+   * @return {promise}          
+   */
+  Order.prototype.extendCheckout = function (due, skipRead) {
+    return this._doApiCall({
+      method: 'extendCheckout',
+      params: { due: due },
       skipRead: skipRead
     });
   };
@@ -9170,15 +9207,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.to = data.toDate == null || data.toDate == 'null' ? null : data.toDate;
     that.due = null;
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
-      // TODO: existsInDb should always return true?
-      // If that is the case we can simplify the part below
-      if (that.existsInDb()) {
-        return that._loadConflicts(data, options).then(function () {
-          $.publish('reservation.fromJson', data);
-        });
-      } else {
-        $.publish('reservation.fromJson', data);
-      }
+      $.publish('reservation.fromJson', data);
     });
   };
   //
@@ -9205,7 +9234,14 @@ Reservation = function ($, api, Transaction, Conflict) {
         // to see if there are any conflicts for fullfilling into an Order
         var locId = this._getId(this.location);
         $.each(this.items, function (i, item) {
-          if (item.status != 'available') {
+          if (item.status == 'expired') {
+            conflicts.push(new Conflict({
+              kind: 'expired',
+              item: item._id,
+              itemName: item.name,
+              doc: item.order
+            }));
+          } else if (item.status != 'available') {
             conflicts.push(new Conflict({
               kind: 'status',
               item: item._id,
@@ -9232,11 +9268,11 @@ Reservation = function ($, api, Transaction, Conflict) {
             // Now we have the conflicts for this reservation
             // run over the items again and find the conflict for each item
             $.each(that.items, function (i, item) {
-              conflict = $.grep(cnflcts, function (c) {
-                return c.item == item._id;
+              conflict = cnflcts.find(function (conflictObj) {
+                return conflictObj.item == item._id;
               });
               if (conflict) {
-                var kind = '';
+                var kind = conflict.kind || '';
                 kind = kind || conflict.order ? 'order' : '';
                 kind = kind || conflict.reservation ? 'reservation' : '';
                 conflicts.push(new Conflict({
@@ -9248,6 +9284,7 @@ Reservation = function ($, api, Transaction, Conflict) {
               }
             });
           }
+          return conflicts;
         });
       }
     }
@@ -9494,55 +9531,6 @@ Reservation = function ($, api, Transaction, Conflict) {
       });
     }
     return unavailable;
-  };
-  Reservation.prototype._loadConflicts = function (data, options) {
-    // Only load conflicts when it"s possible to have conflicts
-    // location, at least 1 date and at least 1 item
-    var that = this;
-    var locId = this._getId(this.location);
-    var hasLocation = locId != null && locId.length > 0;
-    var hasAnyDate = this.from != null || this.to != null;
-    var hasAnyItem = this.items != null && this.items.length > 0;
-    var hasNonConflictStatus = this.status != 'creating' && this.status != 'open';
-    if (hasNonConflictStatus || !hasLocation && !hasAnyDate && !hasAnyItem) {
-      // We cannot have conflicts, so make the conflicts array empty
-      this.conflicts = [];
-      return $.Deferred().resolve(data);
-    } else if (this.status == 'creating') {
-      // We can have conflicts,
-      // so we better check the server if there are any
-      return this.ds.call(this.id, 'getConflicts').then(function (conflicts) {
-        that.conflicts = conflicts || [];
-      });
-    } else if (this.status == 'open') {
-      this.conflicts = [];
-      // The reservation is already open,
-      // so the only conflicts we can have
-      // are for turning it into an order
-      $.each(this.raw.items, function (i, item) {
-        if (item.status == 'expired') {
-          that.conflicts.push(new Conflict({
-            item: that._getId(item),
-            kind: 'expired'
-          }));
-        } else if (item.status != 'available') {
-          that.conflicts.push(new Conflict({
-            item: that._getId(item),
-            kind: 'status'
-          }));
-        } else if (item.location != locId) {
-          that.conflicts.push(new Conflict({
-            item: that._getId(item),
-            kind: 'location'
-          }));
-        }
-      });
-      return $.Deferred().resolve(data);
-    } else {
-      // We should never get here :)
-      this.conflicts = [];
-      return $.Deferred().resolve(data);
-    }
   };
   return Reservation;
 }(jquery, api, transaction, conflict);

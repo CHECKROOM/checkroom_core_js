@@ -419,9 +419,9 @@ define([
                     // If status is open when due date is changed, 
                     // we need to check for conflicts
                     if(that.status == "open"){
-                        return that.canExtendCheckout(roundedDueDate).then(function(resp){
+                        return that.canExtend(roundedDueDate).then(function(resp){
                             if(resp && resp.result == true){
-                                return that.extendCheckout(roundedDueDate, skipRead);
+                                return that.extend(roundedDueDate, skipRead);
                             }else{
                                 return $.Deferred().reject("Cannot extend order to given date because it has conflicts.", resp);
                             }
@@ -515,8 +515,8 @@ define([
      * @param  {bool} skipRead 
      * @return {promise}          
      */
-    Order.prototype.canExtendCheckout = function(due){
-        //return this._doApiCall({ method: "canExtendCheckout", params: { due: due }, skipRead: true });
+    Order.prototype.canExtend = function(due){
+        //return this._doApiCall({ method: "canExtend", params: { due: due }, skipRead: true });
         
         // TODO CHANGE THIS
         // Currently always allow order to be extended
@@ -529,8 +529,8 @@ define([
      * @param  {bool} skipRead 
      * @return {promise}          
      */
-    Order.prototype.extendCheckout = function(due, skipRead){
-        return this._doApiCall({ method: "extendCheckout", params: { due: due }, skipRead: skipRead });
+    Order.prototype.extend = function(due, skipRead){
+        return this._doApiCall({ method: "extend", params: { due: due }, skipRead: skipRead });
     };
 
     /**

@@ -57,9 +57,9 @@ require([
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();
-        //itemTest.run();
+        itemTest.run();
         //keyValueTest.run();
-        orderTest.run();
+        //orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

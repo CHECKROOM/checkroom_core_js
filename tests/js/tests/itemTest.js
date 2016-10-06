@@ -145,11 +145,40 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                         });
                     });
 
+                    // Test create a new item
+                    asyncTest("create a new Item object with invalid name", function() {
+                        $.when(
+                            getAllCategoryTypes(),
+                            getAllLocations()
+                        ).done(function(categories, locations) {
+                            var item = new cr.Item({
+                                ds: ds,
+                                name: "a   ", 
+                                category: categories.docs[0]._id,
+                                location: locations[0]._id
+                            });
+
+
+                            ok(!item.isValidName());
+
+                            // Create a simple Item
+                            item.create()
+                                .done(function(){
+                                    ok(false);
+                                })
+                                .fail(function(resp) {
+                                    ok(true);                                  
+                                })
+                                .always(function(){
+                                    start();
+                                });
+                        });
+                    });
+
 
                     /**
                      * Testing Item viewmodel calls
                      */
-
                     asyncTest("get any Item object -- via get", function() {
                         var item = new cr.Item({
                             ds: ds
@@ -528,7 +557,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             });
                     });
 
-                    asyncTest("canChangeCategory, changeCategory Item object", function() {
+                   /* asyncTest("canChangeCategory, changeCategory Item object", function() {
                         var item = new cr.Item({
                             ds: ds
                         });
@@ -554,7 +583,7 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                                             });
                                     });
                             });
-                    });
+                    });*/
 
                     /**
                      * Availabilities

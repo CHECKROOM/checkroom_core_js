@@ -92,7 +92,7 @@ define([
         return (
             this.isValidName() &&
             this.isValidCategory() &&
-            this.status == "in_custody"?true:this.isValidLocation());
+            (this.status == "in_custody"?true:this.isValidLocation()));
     };
 
     /**

@@ -6084,7 +6084,7 @@ Item = function ($, Base) {
     return $.trim(this.location).length > 0;
   };
   Item.prototype.isValid = function () {
-    return this.isValidName() && this.isValidCategory() && this.status == 'in_custody' ? true : this.isValidLocation();
+    return this.isValidName() && this.isValidCategory() && (this.status == 'in_custody' ? true : this.isValidLocation());
   };
   /**
    * Checks if the item is empty

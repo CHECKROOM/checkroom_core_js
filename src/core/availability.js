@@ -26,7 +26,7 @@ define([
     tmp.prototype = Document.prototype;
 
     /**
-     * Availability represent the **un**availability of an Item between two dates
+     * Availability represents the **un**availability of an Item between two dates
      * Each of these unavailable timeslots have a reference to an Order or
      * a Reservation for which it's or will be booked
      *

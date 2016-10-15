@@ -32,7 +32,8 @@ require([
     'orderTest',
     'reservationTest',
     'userTest',
-    'availabilityTest'
+    'availabilityTest',
+    'webHookTest'
     ], function(
         orderTransferTest,
         commonTest,
@@ -47,7 +48,8 @@ require([
         orderTest,
         reservationTest,
         userTest,
-        availabilityTest) {
+        availabilityTest,
+        webHookTest) {
 
         //orderTransferTest.run();
         //commonTest.run();
@@ -57,12 +59,13 @@ require([
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();
-        itemTest.run();
+        //itemTest.run();
         //keyValueTest.run();
         //orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();
+        webHookTest.run();
 
         // start QUnit.
         QUnit.start();

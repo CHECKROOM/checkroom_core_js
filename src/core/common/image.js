@@ -107,6 +107,46 @@ define(['jquery'], function ($) {
 
             return $canvas.get(0).toDataURL();
         },
+        getTextImage: function(text, size, fontColorHex, backgroundColorHex){
+            var sizes = {
+                "XS": 32,    
+                "S": 64,
+                "M": 128,
+                "L": 256,
+                "XL": 512
+            };
+
+            if(!fontColorHex) fontColorHex = "#aaa";
+            if(!backgroundColorHex) backgroundColorHex = "#e5e5e5";
+
+            var canvasWidth = sizes[size],
+                canvasHeight = sizes[size],
+                canvasCssWidth = canvasWidth,
+                canvasCssHeight = canvasHeight;
+
+            var $canvas = $("<canvas />").attr({
+                width: canvasWidth,
+                height: canvasHeight
+            });
+            var context = $canvas.get(0).getContext("2d");
+
+            if (window.devicePixelRatio) {
+                $canvas.attr("width", canvasWidth * window.devicePixelRatio);
+                $canvas.attr("height", canvasHeight * window.devicePixelRatio);
+                $canvas.css("width", canvasCssWidth);
+                $canvas.css("height", canvasCssHeight);
+                context.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            context.fillStyle = backgroundColorHex;
+            context.fillRect(0, 0, canvasWidth, canvasHeight);
+            context.font = canvasWidth / 2.7 + "px Arial";
+            context.textAlign = "center";
+            context.fillStyle = fontColorHex;
+            context.fillText(text, canvasCssWidth / 2, canvasCssHeight / 1.5);
+
+            return $canvas.get(0).toDataURL();
+        },
         /**
          * getImageUrl 
          *

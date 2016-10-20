@@ -1,36 +1,70 @@
 /**
  * The Comment module
- * a helper class that can read a Comment KeyValue
- * Comment inherits from KeyValue and adds some specifics to it
  * @module comment
  * @copyright CHECKROOM NV 2015
  */
-define([
-    'jquery',
-    'keyvalue'],/** Comment */ function ($, KeyValue) {
+define(['jquery'],/** Comment */ function ($) {
 
-    var KEY = "cheqroom.Comment";
-
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = KeyValue.prototype;
+    var DEFAULTS = {
+        id: '',
+        value: null,
+        created: null,
+        modified: null,
+        by: null
+    };
 
     /**
      * @name  Comment
      * @class
+     * @param spec
      * @constructor
-     * @extends KeyValue
      */
     var Comment = function(spec) {
         spec = spec || {};
-        spec.key = KEY;
-        spec.kind = "string";
-        KeyValue.call(this, spec);
+        this.ds = spec.ds;
+        this.raw = null; // the raw json object
+
+        this.id = spec.id || DEFAULTS.id;
+        this.value = spec.value || DEFAULTS.value;
+        this.created = spec.created || DEFAULTS.created;
+        this.modified = spec.modified || DEFAULTS.modified;
+        this.by = spec.by || DEFAULTS.by;
     };
 
-    Comment.prototype = new tmp();
-    Comment.prototype.constructor = Comment;
+    /**
+     * _toJson, makes a dict of the object
+     * @method
+     * @param options
+     * @returns {object}
+     * @private
+     */
+    Comment.prototype._toJson = function(options) {
+        return {
+            id: this.id,
+            value: this.value,
+            created: this.created,
+            modified: this.modified,
+            by: this.by
+        };
+    };
+
+    /**
+     * _fromJson: reads the Comment object from json
+     * @method
+     * @param {object} data the json response
+     * @param {object} options dict
+     * @returns promise
+     * @private
+     */
+    Comment.prototype._fromJson = function(data, options) {
+        this.raw = data;
+        this.id = data.id || DEFAULTS.id;
+        this.value = data.value || DEFAULTS.value;
+        this.created = data.created || DEFAULTS.created;
+        this.modified = data.modified || DEFAULTS.modified;
+        this.by = data.by || DEFAULTS.by;
+        return $.Deferred().resolve(data);
+    };
 
     return Comment;
 });

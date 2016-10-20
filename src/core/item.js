@@ -14,7 +14,6 @@ define([
         name: "",
         status: "",
         codes: [],
-        flag: "",
         location: "",
         category: "",
         geo: [DEFAULT_LAT,DEFAULT_LONG],
@@ -38,7 +37,6 @@ define([
      * @constructor
      * @property {string} name         the name of the item
      * @property {status} status       the status of the item in an order, or expired
-     * @property {string} flag         the item flag
      * @property {string} location     the item location primary key (empty if in_custody)
      * @property {string} category     the item category primary key
      * @property {Array} geo           the item geo position in lat lng array
@@ -57,7 +55,6 @@ define([
         this.name = spec.name || DEFAULTS.name;
         this.status = spec.status || DEFAULTS.status;
         this.codes = spec.codes || DEFAULTS.codes;
-        this.flag = spec.flag || DEFAULTS.flag;
         this.location = spec.location || DEFAULTS.location;     // location._id
         this.category = spec.category || DEFAULTS.category;     // category._id
         this.geo = spec.geo || DEFAULTS.geo.slice();            // null or an array with 2 floats
@@ -101,13 +98,12 @@ define([
      * @returns {boolean}
      */
     Item.prototype.isEmpty = function() {
-        // Checks for: name, status, codes, flag, location, category
+        // Checks for: name, status, codes, location, category
         return (
             (Base.prototype.isEmpty.call(this)) &&
             (this.name==DEFAULTS.name) &&
             (this.status==DEFAULTS.status) &&
             (this.codes.length==0) &&  // not DEFAULTS.codes? :)
-            (this.flag==DEFAULTS.flag) &&
             (this.location==DEFAULTS.location) &&
             (this.category==DEFAULTS.category));
     };
@@ -123,7 +119,6 @@ define([
             this._isDirtyName() ||
             this._isDirtyCategory() ||
             this._isDirtyLocation() ||
-            this._isDirtyFlag() ||
             this._isDirtyGeo());
     };
 
@@ -185,30 +180,9 @@ define([
                 }
                 that.custody = custodyId;
 
-                // Read the flag from the keyvalues
-                return that._fromJsonFlag(data, options)
-                    .then(function() {
-                        $.publish('item.fromJson', data);
-                        return data;
-                    });
+                $.publish('item.fromJson', data);
+                return data;
             });
-    };
-
-    Item.prototype._fromJsonFlag = function(data, options) {
-        var that = this;
-        this.flag = DEFAULTS.flag;
-
-        if( (data.keyValues!=null) &&
-            (data.keyValues.length>0)) {
-            $.each(data.keyValues, function(i, kv) {
-                 if (kv.key == FLAG) {
-                     that.flag = kv.value;
-                     return false;
-                 }
-            });
-        }
-
-        return $.Deferred().resolve(data);
     };
 
     Item.prototype._toJsonKeyValues = function(){
@@ -265,24 +239,6 @@ define([
         }
     };
 
-    Item.prototype._isDirtyFlag = function() {
-        if (this.raw) {
-            var flag = DEFAULTS.flag;
-            if( (this.raw.keyValues) &&
-                (this.raw.keyValues.length)) {
-                $.each(this.raw.keyValues, function(i, kv) {
-                     if (kv.key == FLAG) {
-                         flag = kv.value;
-                         return false;
-                     }
-                });
-            }
-            return (this.flag!=flag);
-        } else {
-            return false;
-        }
-    };
-
     Item.prototype._isDirtyGeo = function() {
         if (this.raw) {
             var address = this.raw.address || DEFAULTS.address;
@@ -332,7 +288,6 @@ define([
         var dfdCategory = $.Deferred();
         var dfdLocation = $.Deferred();
         var dfdName = $.Deferred();
-        var dfdFlag = $.Deferred();
 
         if (this._isDirtyCategory()) {
             this.canChangeCategory(this.category)
@@ -367,13 +322,7 @@ define([
                     dfdName.resolve();
                 }
 
-                if (that._isDirtyFlag()) {
-                    dfdFlag = that.setFlag(that.flag);
-                } else {
-                    dfdFlag.resolve();
-                }
-
-                return $.when(dfdCategory, dfdLocation, dfdName, dfdFlag);
+                return $.when(dfdCategory, dfdLocation, dfdName);
             });
    };
 
@@ -577,34 +526,6 @@ define([
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data[0]);
             });
-    };
-
-    /**
-     * Sets the flag of an item
-     * @name Item#setFlag
-     * @param flag
-     * @param skipRead
-     * @returns {promise}
-     */
-    Item.prototype.setFlag = function(flag, skipRead) {
-        return this._doApiCall({
-            method: 'setFlag', 
-            params: { flag: flag }, 
-            skipRead: skipRead});
-    };
-
-    /**
-     * Clears the flag of an item
-     * @name Item#clearFlag
-     * @param skipRead
-     * @returns {promise}
-     */
-    Item.prototype.clearFlag = function (skipRead) {
-      return this._doApiCall({
-        method: 'clearFlag',
-        params: {},
-        skipRead: skipRead
-      });
     };
 
     /**

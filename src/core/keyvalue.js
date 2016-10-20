@@ -22,7 +22,6 @@ define(['jquery'], /** @lends KeyValue */ function ($) {
      * @name  KeyValue
      * @class    
      * @constructor
-     * 
      * @param spec
      */
     var KeyValue = function(spec) {

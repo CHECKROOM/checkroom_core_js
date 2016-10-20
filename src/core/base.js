@@ -15,14 +15,14 @@ define([
     'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
 
     // Some constant values
-    var COMMENT = "cheqroom.Comment",
-        ATTACHMENT = "cheqroom.Attachment",
+    var ATTACHMENT = "cheqroom.Attachment",
         IMAGE = "cheqroom.prop.Image",
         IMAGE_OTHER = "cheqroom.attachment.Image",
         DEFAULTS = {
             id: "",
             modified: null,
             cover: null,
+            flag: null,
             comments: [],
             attachments: [],
             keyValues: []
@@ -39,6 +39,7 @@ define([
      * @property {ApiDataSource} dsAttachments   attachments datasource
      * @property {string} crtype                 e.g. cheqroom.types.customer
      * @property {moment} modified               last modified timestamp
+     * @property {string} flag                   the item flag
      * @property {array} comments                array of Comment objects
      * @property {array} attachments             array of Attachment objects
      * @property {array} keyValues               array of KeyValue objects
@@ -53,6 +54,7 @@ define([
         this.dsAttachments = spec.dsAttachments;                                // ApiDataSource for the attachments coll
         this.crtype = spec.crtype;                                              // e.g. cheqroom.types.customer
         this.modified = spec.modified || DEFAULTS.modified;                     // last modified timestamp in momentjs
+        this.flag = spec.flag || DEFAULTS.flag;                                 // flag
         this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
         this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();          // keyValues array
@@ -80,10 +82,24 @@ define([
      */
     Base.prototype.isEmpty = function() {
         return (
+            (this.flag==DEFAULTS.flag) &&
             ((this.comments==null) || (this.comments.length==0)) &&
             ((this.attachments==null) || (this.attachments.length==0)) &&
             ((this.keyValues==null) || (this.keyValues.length==0))
         );
+    };
+
+    /**
+     * Checks if the base is dirty and needs saving
+     * @name Base#isDirty
+     * @returns {boolean}
+     */
+    Base.prototype.isDirty = function() {
+        if (this.raw) {
+            return (this.flag != this.raw.flag);
+        } else {
+            return false;
+        }
     };
 
     /**
@@ -246,7 +262,7 @@ define([
      * @returns {promise}
      */
     Base.prototype.moveKeyValueIndex = function(id, pos, key, kind, skipRead) {
-         return this._doApiCall({
+        return this._doApiCall({
             method: 'moveKeyValueById',
             params: {id: id, toPos: pos, key: key, kind: kind},
             skipRead: skipRead
@@ -357,6 +373,34 @@ define([
         }
     };
 
+    /**
+     * Sets the flag of an item
+     * @name Base#setFlag
+     * @param flag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setFlag = function(flag, skipRead) {
+        return this._doApiCall({
+            method: 'setFlag',
+            params: { flag: flag },
+            skipRead: skipRead});
+    };
+
+    /**
+     * Clears the flag of an item
+     * @name Base#clearFlag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.clearFlag = function (skipRead) {
+        return this._doApiCall({
+            method: 'clearFlag',
+            params: {},
+            skipRead: skipRead
+        });
+    };
+
     // toJson, fromJson
     // ----
 
@@ -381,9 +425,32 @@ define([
         var that = this;
         return Document.prototype._fromJson.call(this, data, options)
             .then(function() {
+                that.flag = data.flag || DEFAULTS.flag;
                 that.modified = data.modified || DEFAULTS.modified;
-                return that._fromKeyValuesJson(data, options);
+                return that._fromCommentsJson(data, options)
+                    .then(function() {
+                        return that._fromKeyValuesJson(data, options);
+                    });
             });
+    };
+
+    Base.prototype._fromCommentsJson = function(data, options) {
+        var obj = null,
+            that = this;
+
+        this.comments = DEFAULTS.comments.slice();
+
+        if( (data.comments) &&
+            (data.comments.length>0)) {
+            $.each(data.comments, function(i, comment) {
+                obj = that._getComment(comment, options);
+                if (obj) {
+                    that.comments.push(obj);
+                }
+            });
+        }
+
+        return $.Deferred().resolve(data);
     };
 
     /**
@@ -399,7 +466,6 @@ define([
         var obj = null;
         var that = this;
 
-        this.comments = DEFAULTS.comments.slice();
         this.attachments = DEFAULTS.attachments.slice();
         this.keyValues = DEFAULTS.keyValues.slice();
         this.cover = data.cover || DEFAULTS.cover;
@@ -412,11 +478,8 @@ define([
 
                 switch(kv.key) {
                     case COMMENT:
-                        obj = that._getComment(kv, options);
-                        if (obj) {
-                            that.comments = that.comments || [];
-                            that.comments.push(obj);
-                        }
+                        // This moved to a normal comments array
+                        // It's no longer stored as keyvalues
                         break;
                     case IMAGE:
                     case ATTACHMENT:
@@ -438,24 +501,15 @@ define([
             });
         }
 
-
         that.attachments.sort(function (a, b) {
-          return b.modified > a.modified;
+            return b.modified > a.modified;
         });
-        that.comments.sort(function (a, b) {
-          return b.modified > a.modified;
-        });
-    
 
         return $.Deferred().resolve(data);
     };
 
-    Base.prototype._getComment = function(kv, options) {
-        var spec = $.extend({
-                ds: this.ds,
-                fields: this.fields},
-            options || {},
-            kv);
+    Base.prototype._getComment = function(data, options) {
+        var spec = $.extend({ds: this.ds}, options || {}, data);
         return new Comment(spec);
     };
 

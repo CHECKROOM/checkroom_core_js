@@ -223,7 +223,7 @@ define([
                             $.each(that.items, function(i, item) {
                                 conflict = cnflcts.find(function(conflictObj){
                                     return conflictObj.item == item._id;
-                                })
+                                });
                                 if (conflict) {
                                     var kind = conflict.kind || "";
                                     kind = kind || (conflict.order) ? "order" : "";

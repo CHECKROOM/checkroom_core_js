@@ -1,7 +1,7 @@
 /**
  * The WebHook module
  * @copyright CHECKROOM NV 2015
- * @module availability
+ * @module webhook
  */
 define([
     'jquery',
@@ -53,7 +53,7 @@ define([
      * @property {string} name          the name
      * @property {string} address       the url which will be called
      * @property {string} topic         the topic name ('item.changelocation', 'item.changegeo', 'item.expire', ...)
-     * @property {string} fields        the fields which should be fetched from the db (default: `*, location.*, items.*, customer.*)
+     * @property {string} hookFields    the fields which should be fetched from the db (default: `*, location.*, items.*, customer.*)
      * @property {string} format        the output format (only `json` is supported)
      * @property {Moment} created       the creation date of the webhook
      * @property {Moment} modified      the modified date of the webhook

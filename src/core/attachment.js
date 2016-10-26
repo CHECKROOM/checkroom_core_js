@@ -4,9 +4,7 @@
  * @module attachment
  * @copyright CHECKROOM NV 2015
  */
-define([
-    'jquery',
-    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
+define(['jquery'], /** Attachment */ function ($) {
 
     var EXT = /(?:\.([^.]+))?$/;
     var IMAGES = ['jpg', 'jpeg', 'png'];
@@ -15,11 +13,6 @@ define([
         isCover: false,
         canBeCover: true
     };
-
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = KeyValue.prototype;
 
     /**
      * @name  Attachment
@@ -31,15 +24,17 @@ define([
      * @extends KeyValue
      */
     var Attachment = function(spec) {
-        KeyValue.call(this, spec);
-
+        spec = spec || {};
         this.ds = spec.ds;
+        this.raw = null; // the raw json object
+
+        this.id = spec.id || DEFAULTS.id;
+        this.value = spec.value || DEFAULTS.value;
+        this.created = spec.created || DEFAULTS.created;
+        this.by = spec.by || DEFAULTS.by;
         this.isCover = (spec.isCover!=null) ? spec.isCover : DEFAULTS.isCover;
         this.canBeCover = (spec.canBeCover!=null) ? spec.canBeCover : DEFAULTS.canBeCover;
     };
-
-    Attachment.prototype = new tmp();
-    Attachment.prototype.constructor = Attachment;
 
     /**
      * Gets the url of a thumbnail
@@ -102,6 +97,39 @@ define([
         var fileName = this.id;
         var ext = this.getExt(fileName);
         return ($.inArray(ext, PREVIEWS) >= 0);
+    };
+
+    /**
+     * _toJson, makes a dict of the object
+     * @method
+     * @param options
+     * @returns {object}
+     * @private
+     */
+    Attachment.prototype._toJson = function(options) {
+        return {
+            id: this.id,
+            value: this.value,
+            created: this.created,
+            by: this.by
+        };
+    };
+
+    /**
+     * _fromJson: reads the Comment object from json
+     * @method
+     * @param {object} data the json response
+     * @param {object} options dict
+     * @returns promise
+     * @private
+     */
+    Comment.prototype._fromJson = function(data, options) {
+        this.raw = data;
+        this.id = data.id || DEFAULTS.id;
+        this.value = data.value || DEFAULTS.value;
+        this.created = data.created || DEFAULTS.created;
+        this.by = data.by || DEFAULTS.by;
+        return $.Deferred().resolve(data);
     };
 
     return Attachment;

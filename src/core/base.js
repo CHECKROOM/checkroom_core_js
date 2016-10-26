@@ -174,97 +174,36 @@ define([
         });
     };
 
-    // KeyValue stuff
+    // Field stuff
     // ----
     /**
-     * Adds a key value
-     * @name  Base#addKeyValue
+     * Sets a custom field
+     * @name Base#setField
      * @method
-     * @param key
+     * @param field
      * @param value
-     * @param kind
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.addKeyValue = function(key, value, kind, skipRead) {
+    Base.prototype.setField = function(field, value, skipRead) {
         return this._doApiCall({
-            method: 'addKeyValue',
-            params: {key: key, value: value, kind: kind},
+            method: 'setField',
+            params: {field: field, value: value},
             skipRead: skipRead
         });
     };
 
     /**
-     * Updates a keyvalue by id
-     * @name  Base#updateKeyValue
+     * Clears a custom field
+     * @name Base#clearField
      * @method
-     * @param id
-     * @param key
-     * @param value
-     * @param kind
+     * @param field
      * @param skipRead
-     * @returns {promise}
      */
-    Base.prototype.updateKeyValue = function(id, key, value, kind, skipRead) {
+    Base.prototype.clearField = function(field, skipRead) {
         return this._doApiCall({
-            method: 'updateKeyValue',
-            params: {id: id, key: key, value: value, kind: kind},
-            skipRead: skipRead
-        });
-    };
-
-    /**
-     * Removes a keyvalue by id
-     * @name  Base#removeKeyValue
-     * @method
-     * @param id
-     * @param skipRead
-     * @returns {promise}
-     */
-    Base.prototype.removeKeyValue = function(id, key, kind, skipRead) {
-        return this._doApiCall({
-            method: 'removeKeyValue',
-            params: {id: id, key: key, kind: kind},
-            skipRead: skipRead
-        });
-    };
-
-    /**
-     * Sets a keyvalue by id
-     * @name  Base#setKeyValue
-     * @method
-     * @param id
-     * @param key
-     * @param value
-     * @param kind
-     * @param skipRead
-     * @returns {promise}
-     */
-    Base.prototype.setKeyValue = function(id, key, value, kind, skipRead) {
-        var params = {key: key, value: value, kind: kind};
-        if( (id!=null) &&
-            (id.length>0)) {
-            params.id = id;
-        }
-        return this._doApiCall({
-            method: 'setKeyValue',
-            params: params,
-            skipRead: skipRead
-        });
-    };
-
-    /**
-     * Moves a keyvalue by its id to a new position
-     * @name Base#moveKeyValueIndex
-     * @method
-     * @param id
-     * @param pos
-     * @returns {promise}
-     */
-    Base.prototype.moveKeyValueIndex = function(id, pos, key, kind, skipRead) {
-        return this._doApiCall({
-            method: 'moveKeyValueById',
-            params: {id: id, toPos: pos, key: key, kind: kind},
+            method: 'setField',
+            params: {field: field},
             skipRead: skipRead
         });
     };
@@ -466,9 +405,9 @@ define([
         var obj = null;
         var that = this;
 
-        this.attachments = DEFAULTS.attachments.slice();
+        //this.attachments = DEFAULTS.attachments.slice();
+        //this.cover = data.cover || DEFAULTS.cover;
         this.keyValues = DEFAULTS.keyValues.slice();
-        this.cover = data.cover || DEFAULTS.cover;
 
         if( (data.keyValues) &&
             (data.keyValues.length)) {
@@ -484,11 +423,8 @@ define([
                     case IMAGE:
                     case ATTACHMENT:
                     case IMAGE_OTHER:
-                        obj = that._getAttachment(kv, options);
-                        if (obj) {
-                            that.attachments = that.attachments || [];
-                            that.attachments.push(obj);
-                        }
+                        // This moved to a normal attachments array
+                        // It's no longer stored as keyvalues
                         break;
                     default:
                         obj = that._getKeyValue(kv, options);
@@ -513,12 +449,8 @@ define([
         return new Comment(spec);
     };
 
-    Base.prototype._getAttachment = function(kv, options) {
-        var spec = $.extend({
-                ds: this.dsAttachments,
-                fields: this.fields},
-            options || {},  // can contain; isCover, canBeCover
-            kv);
+    Base.prototype._getAttachment = function(data, options) {
+        var spec = $.extend({ds: this.ds}, options || {}, data);
         return new Attachment(spec);
     };
 

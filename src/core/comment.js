@@ -3,7 +3,7 @@
  * @module comment
  * @copyright CHECKROOM NV 2015
  */
-define(['jquery'],/** Comment */ function ($) {
+define(['jquery'], /** Comment */ function ($) {
 
     var DEFAULTS = {
         id: '',

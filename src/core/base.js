@@ -258,16 +258,15 @@ define([
      * attaches an Attachment object
      * @name  Base#attach
      * @method
-     * @param att
-     * @param key
+     * @param attachmentId
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.attach = function(att, skipRead) {
+    Base.prototype.attach = function(attachmentId, skipRead) {
         if (this.existsInDb()) {
             return this._doApiCall({
                 method: 'attach',
-                params: {attachments: [att._id]},
+                params: {attachments: [attachmentId]},
                 skipRead: skipRead
             });
         } else {
@@ -279,15 +278,15 @@ define([
      * detaches an Attachment by kvId (guid)
      * @name  Base#detach
      * @method
-     * @param keyId (usually the attachment._id)
+     * @param attachmentId
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.detach = function(keyId, skipRead) {
+    Base.prototype.detach = function(attachmentId, skipRead) {
         if (this.existsInDb()) {
             return this._doApiCall({
                 method: 'detach',
-                params: {attachments: [keyId], kvId: keyId},
+                params: {attachments: [attachmentId]},
                 skipRead: skipRead
             });
         } else {

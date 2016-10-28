@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_clientStorage, common, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, user, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, Reservation, Transaction, User, WebHook, OrderTransfer, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_clientStorage, common, api, document, Availability, Attachment, comment, attachment, Base, Comment, Conflict, base, user, Contact, DateHelper, Document, Item, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, Reservation, Transaction, User, WebHook, OrderTransfer, core;
 common_code = {
   /**
      * isCodeValid
@@ -1093,830 +1093,830 @@ common_inflection = function () {
   //http://stackoverflow.com/questions/286921/efficiently-replace-all-accented-characters-in-a-string
   var Latinise = {};
   Latinise.latin_map = {
-    '\xC1': 'A',
-    '\u0102': 'A',
-    '\u1EAE': 'A',
-    '\u1EB6': 'A',
-    '\u1EB0': 'A',
-    '\u1EB2': 'A',
-    '\u1EB4': 'A',
-    '\u01CD': 'A',
-    '\xC2': 'A',
-    '\u1EA4': 'A',
-    '\u1EAC': 'A',
-    '\u1EA6': 'A',
-    '\u1EA8': 'A',
-    '\u1EAA': 'A',
-    '\xC4': 'A',
-    '\u01DE': 'A',
-    '\u0226': 'A',
-    '\u01E0': 'A',
-    '\u1EA0': 'A',
-    '\u0200': 'A',
-    '\xC0': 'A',
-    '\u1EA2': 'A',
-    '\u0202': 'A',
-    '\u0100': 'A',
-    '\u0104': 'A',
-    '\xC5': 'A',
-    '\u01FA': 'A',
-    '\u1E00': 'A',
-    '\u023A': 'A',
-    '\xC3': 'A',
-    '\uA732': 'AA',
-    '\xC6': 'AE',
-    '\u01FC': 'AE',
-    '\u01E2': 'AE',
-    '\uA734': 'AO',
-    '\uA736': 'AU',
-    '\uA738': 'AV',
-    '\uA73A': 'AV',
-    '\uA73C': 'AY',
-    '\u1E02': 'B',
-    '\u1E04': 'B',
-    '\u0181': 'B',
-    '\u1E06': 'B',
-    '\u0243': 'B',
-    '\u0182': 'B',
-    '\u0106': 'C',
-    '\u010C': 'C',
-    '\xC7': 'C',
-    '\u1E08': 'C',
-    '\u0108': 'C',
-    '\u010A': 'C',
-    '\u0187': 'C',
-    '\u023B': 'C',
-    '\u010E': 'D',
-    '\u1E10': 'D',
-    '\u1E12': 'D',
-    '\u1E0A': 'D',
-    '\u1E0C': 'D',
-    '\u018A': 'D',
-    '\u1E0E': 'D',
-    '\u01F2': 'D',
-    '\u01C5': 'D',
-    '\u0110': 'D',
-    '\u018B': 'D',
-    '\u01F1': 'DZ',
-    '\u01C4': 'DZ',
-    '\xC9': 'E',
-    '\u0114': 'E',
-    '\u011A': 'E',
-    '\u0228': 'E',
-    '\u1E1C': 'E',
-    '\xCA': 'E',
-    '\u1EBE': 'E',
-    '\u1EC6': 'E',
-    '\u1EC0': 'E',
-    '\u1EC2': 'E',
-    '\u1EC4': 'E',
-    '\u1E18': 'E',
-    '\xCB': 'E',
-    '\u0116': 'E',
-    '\u1EB8': 'E',
-    '\u0204': 'E',
-    '\xC8': 'E',
-    '\u1EBA': 'E',
-    '\u0206': 'E',
-    '\u0112': 'E',
-    '\u1E16': 'E',
-    '\u1E14': 'E',
-    '\u0118': 'E',
-    '\u0246': 'E',
-    '\u1EBC': 'E',
-    '\u1E1A': 'E',
-    '\uA76A': 'ET',
-    '\u1E1E': 'F',
-    '\u0191': 'F',
-    '\u01F4': 'G',
-    '\u011E': 'G',
-    '\u01E6': 'G',
-    '\u0122': 'G',
-    '\u011C': 'G',
-    '\u0120': 'G',
-    '\u0193': 'G',
-    '\u1E20': 'G',
-    '\u01E4': 'G',
-    '\u1E2A': 'H',
-    '\u021E': 'H',
-    '\u1E28': 'H',
-    '\u0124': 'H',
-    '\u2C67': 'H',
-    '\u1E26': 'H',
-    '\u1E22': 'H',
-    '\u1E24': 'H',
-    '\u0126': 'H',
-    '\xCD': 'I',
-    '\u012C': 'I',
-    '\u01CF': 'I',
-    '\xCE': 'I',
-    '\xCF': 'I',
-    '\u1E2E': 'I',
-    '\u0130': 'I',
-    '\u1ECA': 'I',
-    '\u0208': 'I',
-    '\xCC': 'I',
-    '\u1EC8': 'I',
-    '\u020A': 'I',
-    '\u012A': 'I',
-    '\u012E': 'I',
-    '\u0197': 'I',
-    '\u0128': 'I',
-    '\u1E2C': 'I',
-    '\uA779': 'D',
-    '\uA77B': 'F',
-    '\uA77D': 'G',
-    '\uA782': 'R',
-    '\uA784': 'S',
-    '\uA786': 'T',
-    '\uA76C': 'IS',
-    '\u0134': 'J',
-    '\u0248': 'J',
-    '\u1E30': 'K',
-    '\u01E8': 'K',
-    '\u0136': 'K',
-    '\u2C69': 'K',
-    '\uA742': 'K',
-    '\u1E32': 'K',
-    '\u0198': 'K',
-    '\u1E34': 'K',
-    '\uA740': 'K',
-    '\uA744': 'K',
-    '\u0139': 'L',
-    '\u023D': 'L',
-    '\u013D': 'L',
-    '\u013B': 'L',
-    '\u1E3C': 'L',
-    '\u1E36': 'L',
-    '\u1E38': 'L',
-    '\u2C60': 'L',
-    '\uA748': 'L',
-    '\u1E3A': 'L',
-    '\u013F': 'L',
-    '\u2C62': 'L',
-    '\u01C8': 'L',
-    '\u0141': 'L',
-    '\u01C7': 'LJ',
-    '\u1E3E': 'M',
-    '\u1E40': 'M',
-    '\u1E42': 'M',
-    '\u2C6E': 'M',
-    '\u0143': 'N',
-    '\u0147': 'N',
-    '\u0145': 'N',
-    '\u1E4A': 'N',
-    '\u1E44': 'N',
-    '\u1E46': 'N',
-    '\u01F8': 'N',
-    '\u019D': 'N',
-    '\u1E48': 'N',
-    '\u0220': 'N',
-    '\u01CB': 'N',
-    '\xD1': 'N',
-    '\u01CA': 'NJ',
-    '\xD3': 'O',
-    '\u014E': 'O',
-    '\u01D1': 'O',
-    '\xD4': 'O',
-    '\u1ED0': 'O',
-    '\u1ED8': 'O',
-    '\u1ED2': 'O',
-    '\u1ED4': 'O',
-    '\u1ED6': 'O',
-    '\xD6': 'O',
-    '\u022A': 'O',
-    '\u022E': 'O',
-    '\u0230': 'O',
-    '\u1ECC': 'O',
-    '\u0150': 'O',
-    '\u020C': 'O',
-    '\xD2': 'O',
-    '\u1ECE': 'O',
-    '\u01A0': 'O',
-    '\u1EDA': 'O',
-    '\u1EE2': 'O',
-    '\u1EDC': 'O',
-    '\u1EDE': 'O',
-    '\u1EE0': 'O',
-    '\u020E': 'O',
-    '\uA74A': 'O',
-    '\uA74C': 'O',
-    '\u014C': 'O',
-    '\u1E52': 'O',
-    '\u1E50': 'O',
-    '\u019F': 'O',
-    '\u01EA': 'O',
-    '\u01EC': 'O',
-    '\xD8': 'O',
-    '\u01FE': 'O',
-    '\xD5': 'O',
-    '\u1E4C': 'O',
-    '\u1E4E': 'O',
-    '\u022C': 'O',
-    '\u01A2': 'OI',
-    '\uA74E': 'OO',
-    '\u0190': 'E',
-    '\u0186': 'O',
-    '\u0222': 'OU',
-    '\u1E54': 'P',
-    '\u1E56': 'P',
-    '\uA752': 'P',
-    '\u01A4': 'P',
-    '\uA754': 'P',
-    '\u2C63': 'P',
-    '\uA750': 'P',
-    '\uA758': 'Q',
-    '\uA756': 'Q',
-    '\u0154': 'R',
-    '\u0158': 'R',
-    '\u0156': 'R',
-    '\u1E58': 'R',
-    '\u1E5A': 'R',
-    '\u1E5C': 'R',
-    '\u0210': 'R',
-    '\u0212': 'R',
-    '\u1E5E': 'R',
-    '\u024C': 'R',
-    '\u2C64': 'R',
-    '\uA73E': 'C',
-    '\u018E': 'E',
-    '\u015A': 'S',
-    '\u1E64': 'S',
-    '\u0160': 'S',
-    '\u1E66': 'S',
-    '\u015E': 'S',
-    '\u015C': 'S',
-    '\u0218': 'S',
-    '\u1E60': 'S',
-    '\u1E62': 'S',
-    '\u1E68': 'S',
-    '\u0164': 'T',
-    '\u0162': 'T',
-    '\u1E70': 'T',
-    '\u021A': 'T',
-    '\u023E': 'T',
-    '\u1E6A': 'T',
-    '\u1E6C': 'T',
-    '\u01AC': 'T',
-    '\u1E6E': 'T',
-    '\u01AE': 'T',
-    '\u0166': 'T',
-    '\u2C6F': 'A',
-    '\uA780': 'L',
-    '\u019C': 'M',
-    '\u0245': 'V',
-    '\uA728': 'TZ',
-    '\xDA': 'U',
-    '\u016C': 'U',
-    '\u01D3': 'U',
-    '\xDB': 'U',
-    '\u1E76': 'U',
-    '\xDC': 'U',
-    '\u01D7': 'U',
-    '\u01D9': 'U',
-    '\u01DB': 'U',
-    '\u01D5': 'U',
-    '\u1E72': 'U',
-    '\u1EE4': 'U',
-    '\u0170': 'U',
-    '\u0214': 'U',
-    '\xD9': 'U',
-    '\u1EE6': 'U',
-    '\u01AF': 'U',
-    '\u1EE8': 'U',
-    '\u1EF0': 'U',
-    '\u1EEA': 'U',
-    '\u1EEC': 'U',
-    '\u1EEE': 'U',
-    '\u0216': 'U',
-    '\u016A': 'U',
-    '\u1E7A': 'U',
-    '\u0172': 'U',
-    '\u016E': 'U',
-    '\u0168': 'U',
-    '\u1E78': 'U',
-    '\u1E74': 'U',
-    '\uA75E': 'V',
-    '\u1E7E': 'V',
-    '\u01B2': 'V',
-    '\u1E7C': 'V',
-    '\uA760': 'VY',
-    '\u1E82': 'W',
-    '\u0174': 'W',
-    '\u1E84': 'W',
-    '\u1E86': 'W',
-    '\u1E88': 'W',
-    '\u1E80': 'W',
-    '\u2C72': 'W',
-    '\u1E8C': 'X',
-    '\u1E8A': 'X',
-    '\xDD': 'Y',
-    '\u0176': 'Y',
-    '\u0178': 'Y',
-    '\u1E8E': 'Y',
-    '\u1EF4': 'Y',
-    '\u1EF2': 'Y',
-    '\u01B3': 'Y',
-    '\u1EF6': 'Y',
-    '\u1EFE': 'Y',
-    '\u0232': 'Y',
-    '\u024E': 'Y',
-    '\u1EF8': 'Y',
-    '\u0179': 'Z',
-    '\u017D': 'Z',
-    '\u1E90': 'Z',
-    '\u2C6B': 'Z',
-    '\u017B': 'Z',
-    '\u1E92': 'Z',
-    '\u0224': 'Z',
-    '\u1E94': 'Z',
-    '\u01B5': 'Z',
-    '\u0132': 'IJ',
-    '\u0152': 'OE',
-    '\u1D00': 'A',
-    '\u1D01': 'AE',
-    '\u0299': 'B',
-    '\u1D03': 'B',
-    '\u1D04': 'C',
-    '\u1D05': 'D',
-    '\u1D07': 'E',
-    '\uA730': 'F',
-    '\u0262': 'G',
-    '\u029B': 'G',
-    '\u029C': 'H',
-    '\u026A': 'I',
-    '\u0281': 'R',
-    '\u1D0A': 'J',
-    '\u1D0B': 'K',
-    '\u029F': 'L',
-    '\u1D0C': 'L',
-    '\u1D0D': 'M',
-    '\u0274': 'N',
-    '\u1D0F': 'O',
-    '\u0276': 'OE',
-    '\u1D10': 'O',
-    '\u1D15': 'OU',
-    '\u1D18': 'P',
-    '\u0280': 'R',
-    '\u1D0E': 'N',
-    '\u1D19': 'R',
-    '\uA731': 'S',
-    '\u1D1B': 'T',
-    '\u2C7B': 'E',
-    '\u1D1A': 'R',
-    '\u1D1C': 'U',
-    '\u1D20': 'V',
-    '\u1D21': 'W',
-    '\u028F': 'Y',
-    '\u1D22': 'Z',
-    '\xE1': 'a',
-    '\u0103': 'a',
-    '\u1EAF': 'a',
-    '\u1EB7': 'a',
-    '\u1EB1': 'a',
-    '\u1EB3': 'a',
-    '\u1EB5': 'a',
-    '\u01CE': 'a',
-    '\xE2': 'a',
-    '\u1EA5': 'a',
-    '\u1EAD': 'a',
-    '\u1EA7': 'a',
-    '\u1EA9': 'a',
-    '\u1EAB': 'a',
-    '\xE4': 'a',
-    '\u01DF': 'a',
-    '\u0227': 'a',
-    '\u01E1': 'a',
-    '\u1EA1': 'a',
-    '\u0201': 'a',
-    '\xE0': 'a',
-    '\u1EA3': 'a',
-    '\u0203': 'a',
-    '\u0101': 'a',
-    '\u0105': 'a',
-    '\u1D8F': 'a',
-    '\u1E9A': 'a',
-    '\xE5': 'a',
-    '\u01FB': 'a',
-    '\u1E01': 'a',
-    '\u2C65': 'a',
-    '\xE3': 'a',
-    '\uA733': 'aa',
-    '\xE6': 'ae',
-    '\u01FD': 'ae',
-    '\u01E3': 'ae',
-    '\uA735': 'ao',
-    '\uA737': 'au',
-    '\uA739': 'av',
-    '\uA73B': 'av',
-    '\uA73D': 'ay',
-    '\u1E03': 'b',
-    '\u1E05': 'b',
-    '\u0253': 'b',
-    '\u1E07': 'b',
-    '\u1D6C': 'b',
-    '\u1D80': 'b',
-    '\u0180': 'b',
-    '\u0183': 'b',
-    '\u0275': 'o',
-    '\u0107': 'c',
-    '\u010D': 'c',
-    '\xE7': 'c',
-    '\u1E09': 'c',
-    '\u0109': 'c',
-    '\u0255': 'c',
-    '\u010B': 'c',
-    '\u0188': 'c',
-    '\u023C': 'c',
-    '\u010F': 'd',
-    '\u1E11': 'd',
-    '\u1E13': 'd',
-    '\u0221': 'd',
-    '\u1E0B': 'd',
-    '\u1E0D': 'd',
-    '\u0257': 'd',
-    '\u1D91': 'd',
-    '\u1E0F': 'd',
-    '\u1D6D': 'd',
-    '\u1D81': 'd',
-    '\u0111': 'd',
-    '\u0256': 'd',
-    '\u018C': 'd',
-    '\u0131': 'i',
-    '\u0237': 'j',
-    '\u025F': 'j',
-    '\u0284': 'j',
-    '\u01F3': 'dz',
-    '\u01C6': 'dz',
-    '\xE9': 'e',
-    '\u0115': 'e',
-    '\u011B': 'e',
-    '\u0229': 'e',
-    '\u1E1D': 'e',
-    '\xEA': 'e',
-    '\u1EBF': 'e',
-    '\u1EC7': 'e',
-    '\u1EC1': 'e',
-    '\u1EC3': 'e',
-    '\u1EC5': 'e',
-    '\u1E19': 'e',
-    '\xEB': 'e',
-    '\u0117': 'e',
-    '\u1EB9': 'e',
-    '\u0205': 'e',
-    '\xE8': 'e',
-    '\u1EBB': 'e',
-    '\u0207': 'e',
-    '\u0113': 'e',
-    '\u1E17': 'e',
-    '\u1E15': 'e',
-    '\u2C78': 'e',
-    '\u0119': 'e',
-    '\u1D92': 'e',
-    '\u0247': 'e',
-    '\u1EBD': 'e',
-    '\u1E1B': 'e',
-    '\uA76B': 'et',
-    '\u1E1F': 'f',
-    '\u0192': 'f',
-    '\u1D6E': 'f',
-    '\u1D82': 'f',
-    '\u01F5': 'g',
-    '\u011F': 'g',
-    '\u01E7': 'g',
-    '\u0123': 'g',
-    '\u011D': 'g',
-    '\u0121': 'g',
-    '\u0260': 'g',
-    '\u1E21': 'g',
-    '\u1D83': 'g',
-    '\u01E5': 'g',
-    '\u1E2B': 'h',
-    '\u021F': 'h',
-    '\u1E29': 'h',
-    '\u0125': 'h',
-    '\u2C68': 'h',
-    '\u1E27': 'h',
-    '\u1E23': 'h',
-    '\u1E25': 'h',
-    '\u0266': 'h',
-    '\u1E96': 'h',
-    '\u0127': 'h',
-    '\u0195': 'hv',
-    '\xED': 'i',
-    '\u012D': 'i',
-    '\u01D0': 'i',
-    '\xEE': 'i',
-    '\xEF': 'i',
-    '\u1E2F': 'i',
-    '\u1ECB': 'i',
-    '\u0209': 'i',
-    '\xEC': 'i',
-    '\u1EC9': 'i',
-    '\u020B': 'i',
-    '\u012B': 'i',
-    '\u012F': 'i',
-    '\u1D96': 'i',
-    '\u0268': 'i',
-    '\u0129': 'i',
-    '\u1E2D': 'i',
-    '\uA77A': 'd',
-    '\uA77C': 'f',
-    '\u1D79': 'g',
-    '\uA783': 'r',
-    '\uA785': 's',
-    '\uA787': 't',
-    '\uA76D': 'is',
-    '\u01F0': 'j',
-    '\u0135': 'j',
-    '\u029D': 'j',
-    '\u0249': 'j',
-    '\u1E31': 'k',
-    '\u01E9': 'k',
-    '\u0137': 'k',
-    '\u2C6A': 'k',
-    '\uA743': 'k',
-    '\u1E33': 'k',
-    '\u0199': 'k',
-    '\u1E35': 'k',
-    '\u1D84': 'k',
-    '\uA741': 'k',
-    '\uA745': 'k',
-    '\u013A': 'l',
-    '\u019A': 'l',
-    '\u026C': 'l',
-    '\u013E': 'l',
-    '\u013C': 'l',
-    '\u1E3D': 'l',
-    '\u0234': 'l',
-    '\u1E37': 'l',
-    '\u1E39': 'l',
-    '\u2C61': 'l',
-    '\uA749': 'l',
-    '\u1E3B': 'l',
-    '\u0140': 'l',
-    '\u026B': 'l',
-    '\u1D85': 'l',
-    '\u026D': 'l',
-    '\u0142': 'l',
-    '\u01C9': 'lj',
-    '\u017F': 's',
-    '\u1E9C': 's',
-    '\u1E9B': 's',
-    '\u1E9D': 's',
-    '\u1E3F': 'm',
-    '\u1E41': 'm',
-    '\u1E43': 'm',
-    '\u0271': 'm',
-    '\u1D6F': 'm',
-    '\u1D86': 'm',
-    '\u0144': 'n',
-    '\u0148': 'n',
-    '\u0146': 'n',
-    '\u1E4B': 'n',
-    '\u0235': 'n',
-    '\u1E45': 'n',
-    '\u1E47': 'n',
-    '\u01F9': 'n',
-    '\u0272': 'n',
-    '\u1E49': 'n',
-    '\u019E': 'n',
-    '\u1D70': 'n',
-    '\u1D87': 'n',
-    '\u0273': 'n',
-    '\xF1': 'n',
-    '\u01CC': 'nj',
-    '\xF3': 'o',
-    '\u014F': 'o',
-    '\u01D2': 'o',
-    '\xF4': 'o',
-    '\u1ED1': 'o',
-    '\u1ED9': 'o',
-    '\u1ED3': 'o',
-    '\u1ED5': 'o',
-    '\u1ED7': 'o',
-    '\xF6': 'o',
-    '\u022B': 'o',
-    '\u022F': 'o',
-    '\u0231': 'o',
-    '\u1ECD': 'o',
-    '\u0151': 'o',
-    '\u020D': 'o',
-    '\xF2': 'o',
-    '\u1ECF': 'o',
-    '\u01A1': 'o',
-    '\u1EDB': 'o',
-    '\u1EE3': 'o',
-    '\u1EDD': 'o',
-    '\u1EDF': 'o',
-    '\u1EE1': 'o',
-    '\u020F': 'o',
-    '\uA74B': 'o',
-    '\uA74D': 'o',
-    '\u2C7A': 'o',
-    '\u014D': 'o',
-    '\u1E53': 'o',
-    '\u1E51': 'o',
-    '\u01EB': 'o',
-    '\u01ED': 'o',
-    '\xF8': 'o',
-    '\u01FF': 'o',
-    '\xF5': 'o',
-    '\u1E4D': 'o',
-    '\u1E4F': 'o',
-    '\u022D': 'o',
-    '\u01A3': 'oi',
-    '\uA74F': 'oo',
-    '\u025B': 'e',
-    '\u1D93': 'e',
-    '\u0254': 'o',
-    '\u1D97': 'o',
-    '\u0223': 'ou',
-    '\u1E55': 'p',
-    '\u1E57': 'p',
-    '\uA753': 'p',
-    '\u01A5': 'p',
-    '\u1D71': 'p',
-    '\u1D88': 'p',
-    '\uA755': 'p',
-    '\u1D7D': 'p',
-    '\uA751': 'p',
-    '\uA759': 'q',
-    '\u02A0': 'q',
-    '\u024B': 'q',
-    '\uA757': 'q',
-    '\u0155': 'r',
-    '\u0159': 'r',
-    '\u0157': 'r',
-    '\u1E59': 'r',
-    '\u1E5B': 'r',
-    '\u1E5D': 'r',
-    '\u0211': 'r',
-    '\u027E': 'r',
-    '\u1D73': 'r',
-    '\u0213': 'r',
-    '\u1E5F': 'r',
-    '\u027C': 'r',
-    '\u1D72': 'r',
-    '\u1D89': 'r',
-    '\u024D': 'r',
-    '\u027D': 'r',
-    '\u2184': 'c',
-    '\uA73F': 'c',
-    '\u0258': 'e',
-    '\u027F': 'r',
-    '\u015B': 's',
-    '\u1E65': 's',
-    '\u0161': 's',
-    '\u1E67': 's',
-    '\u015F': 's',
-    '\u015D': 's',
-    '\u0219': 's',
-    '\u1E61': 's',
-    '\u1E63': 's',
-    '\u1E69': 's',
-    '\u0282': 's',
-    '\u1D74': 's',
-    '\u1D8A': 's',
-    '\u023F': 's',
-    '\u0261': 'g',
-    '\u1D11': 'o',
-    '\u1D13': 'o',
-    '\u1D1D': 'u',
-    '\u0165': 't',
-    '\u0163': 't',
-    '\u1E71': 't',
-    '\u021B': 't',
-    '\u0236': 't',
-    '\u1E97': 't',
-    '\u2C66': 't',
-    '\u1E6B': 't',
-    '\u1E6D': 't',
-    '\u01AD': 't',
-    '\u1E6F': 't',
-    '\u1D75': 't',
-    '\u01AB': 't',
-    '\u0288': 't',
-    '\u0167': 't',
-    '\u1D7A': 'th',
-    '\u0250': 'a',
-    '\u1D02': 'ae',
-    '\u01DD': 'e',
-    '\u1D77': 'g',
-    '\u0265': 'h',
-    '\u02AE': 'h',
-    '\u02AF': 'h',
-    '\u1D09': 'i',
-    '\u029E': 'k',
-    '\uA781': 'l',
-    '\u026F': 'm',
-    '\u0270': 'm',
-    '\u1D14': 'oe',
-    '\u0279': 'r',
-    '\u027B': 'r',
-    '\u027A': 'r',
-    '\u2C79': 'r',
-    '\u0287': 't',
-    '\u028C': 'v',
-    '\u028D': 'w',
-    '\u028E': 'y',
-    '\uA729': 'tz',
-    '\xFA': 'u',
-    '\u016D': 'u',
-    '\u01D4': 'u',
-    '\xFB': 'u',
-    '\u1E77': 'u',
-    '\xFC': 'u',
-    '\u01D8': 'u',
-    '\u01DA': 'u',
-    '\u01DC': 'u',
-    '\u01D6': 'u',
-    '\u1E73': 'u',
-    '\u1EE5': 'u',
-    '\u0171': 'u',
-    '\u0215': 'u',
-    '\xF9': 'u',
-    '\u1EE7': 'u',
-    '\u01B0': 'u',
-    '\u1EE9': 'u',
-    '\u1EF1': 'u',
-    '\u1EEB': 'u',
-    '\u1EED': 'u',
-    '\u1EEF': 'u',
-    '\u0217': 'u',
-    '\u016B': 'u',
-    '\u1E7B': 'u',
-    '\u0173': 'u',
-    '\u1D99': 'u',
-    '\u016F': 'u',
-    '\u0169': 'u',
-    '\u1E79': 'u',
-    '\u1E75': 'u',
-    '\u1D6B': 'ue',
-    '\uA778': 'um',
-    '\u2C74': 'v',
-    '\uA75F': 'v',
-    '\u1E7F': 'v',
-    '\u028B': 'v',
-    '\u1D8C': 'v',
-    '\u2C71': 'v',
-    '\u1E7D': 'v',
-    '\uA761': 'vy',
-    '\u1E83': 'w',
-    '\u0175': 'w',
-    '\u1E85': 'w',
-    '\u1E87': 'w',
-    '\u1E89': 'w',
-    '\u1E81': 'w',
-    '\u2C73': 'w',
-    '\u1E98': 'w',
-    '\u1E8D': 'x',
-    '\u1E8B': 'x',
-    '\u1D8D': 'x',
-    '\xFD': 'y',
-    '\u0177': 'y',
-    '\xFF': 'y',
-    '\u1E8F': 'y',
-    '\u1EF5': 'y',
-    '\u1EF3': 'y',
-    '\u01B4': 'y',
-    '\u1EF7': 'y',
-    '\u1EFF': 'y',
-    '\u0233': 'y',
-    '\u1E99': 'y',
-    '\u024F': 'y',
-    '\u1EF9': 'y',
-    '\u017A': 'z',
-    '\u017E': 'z',
-    '\u1E91': 'z',
-    '\u0291': 'z',
-    '\u2C6C': 'z',
-    '\u017C': 'z',
-    '\u1E93': 'z',
-    '\u0225': 'z',
-    '\u1E95': 'z',
-    '\u1D76': 'z',
-    '\u1D8E': 'z',
-    '\u0290': 'z',
-    '\u01B6': 'z',
-    '\u0240': 'z',
-    '\uFB00': 'ff',
-    '\uFB03': 'ffi',
-    '\uFB04': 'ffl',
-    '\uFB01': 'fi',
-    '\uFB02': 'fl',
-    '\u0133': 'ij',
-    '\u0153': 'oe',
-    '\uFB06': 'st',
-    '\u2090': 'a',
-    '\u2091': 'e',
-    '\u1D62': 'i',
-    '\u2C7C': 'j',
-    '\u2092': 'o',
-    '\u1D63': 'r',
-    '\u1D64': 'u',
-    '\u1D65': 'v',
-    '\u2093': 'x'
+    'Á': 'A',
+    'Ă': 'A',
+    'Ắ': 'A',
+    'Ặ': 'A',
+    'Ằ': 'A',
+    'Ẳ': 'A',
+    'Ẵ': 'A',
+    'Ǎ': 'A',
+    'Â': 'A',
+    'Ấ': 'A',
+    'Ậ': 'A',
+    'Ầ': 'A',
+    'Ẩ': 'A',
+    'Ẫ': 'A',
+    'Ä': 'A',
+    'Ǟ': 'A',
+    'Ȧ': 'A',
+    'Ǡ': 'A',
+    'Ạ': 'A',
+    'Ȁ': 'A',
+    'À': 'A',
+    'Ả': 'A',
+    'Ȃ': 'A',
+    'Ā': 'A',
+    'Ą': 'A',
+    'Å': 'A',
+    'Ǻ': 'A',
+    'Ḁ': 'A',
+    'Ⱥ': 'A',
+    'Ã': 'A',
+    'Ꜳ': 'AA',
+    'Æ': 'AE',
+    'Ǽ': 'AE',
+    'Ǣ': 'AE',
+    'Ꜵ': 'AO',
+    'Ꜷ': 'AU',
+    'Ꜹ': 'AV',
+    'Ꜻ': 'AV',
+    'Ꜽ': 'AY',
+    'Ḃ': 'B',
+    'Ḅ': 'B',
+    'Ɓ': 'B',
+    'Ḇ': 'B',
+    'Ƀ': 'B',
+    'Ƃ': 'B',
+    'Ć': 'C',
+    'Č': 'C',
+    'Ç': 'C',
+    'Ḉ': 'C',
+    'Ĉ': 'C',
+    'Ċ': 'C',
+    'Ƈ': 'C',
+    'Ȼ': 'C',
+    'Ď': 'D',
+    'Ḑ': 'D',
+    'Ḓ': 'D',
+    'Ḋ': 'D',
+    'Ḍ': 'D',
+    'Ɗ': 'D',
+    'Ḏ': 'D',
+    'ǲ': 'D',
+    'ǅ': 'D',
+    'Đ': 'D',
+    'Ƌ': 'D',
+    'Ǳ': 'DZ',
+    'Ǆ': 'DZ',
+    'É': 'E',
+    'Ĕ': 'E',
+    'Ě': 'E',
+    'Ȩ': 'E',
+    'Ḝ': 'E',
+    'Ê': 'E',
+    'Ế': 'E',
+    'Ệ': 'E',
+    'Ề': 'E',
+    'Ể': 'E',
+    'Ễ': 'E',
+    'Ḙ': 'E',
+    'Ë': 'E',
+    'Ė': 'E',
+    'Ẹ': 'E',
+    'Ȅ': 'E',
+    'È': 'E',
+    'Ẻ': 'E',
+    'Ȇ': 'E',
+    'Ē': 'E',
+    'Ḗ': 'E',
+    'Ḕ': 'E',
+    'Ę': 'E',
+    'Ɇ': 'E',
+    'Ẽ': 'E',
+    'Ḛ': 'E',
+    'Ꝫ': 'ET',
+    'Ḟ': 'F',
+    'Ƒ': 'F',
+    'Ǵ': 'G',
+    'Ğ': 'G',
+    'Ǧ': 'G',
+    'Ģ': 'G',
+    'Ĝ': 'G',
+    'Ġ': 'G',
+    'Ɠ': 'G',
+    'Ḡ': 'G',
+    'Ǥ': 'G',
+    'Ḫ': 'H',
+    'Ȟ': 'H',
+    'Ḩ': 'H',
+    'Ĥ': 'H',
+    'Ⱨ': 'H',
+    'Ḧ': 'H',
+    'Ḣ': 'H',
+    'Ḥ': 'H',
+    'Ħ': 'H',
+    'Í': 'I',
+    'Ĭ': 'I',
+    'Ǐ': 'I',
+    'Î': 'I',
+    'Ï': 'I',
+    'Ḯ': 'I',
+    'İ': 'I',
+    'Ị': 'I',
+    'Ȉ': 'I',
+    'Ì': 'I',
+    'Ỉ': 'I',
+    'Ȋ': 'I',
+    'Ī': 'I',
+    'Į': 'I',
+    'Ɨ': 'I',
+    'Ĩ': 'I',
+    'Ḭ': 'I',
+    'Ꝺ': 'D',
+    'Ꝼ': 'F',
+    'Ᵹ': 'G',
+    'Ꞃ': 'R',
+    'Ꞅ': 'S',
+    'Ꞇ': 'T',
+    'Ꝭ': 'IS',
+    'Ĵ': 'J',
+    'Ɉ': 'J',
+    'Ḱ': 'K',
+    'Ǩ': 'K',
+    'Ķ': 'K',
+    'Ⱪ': 'K',
+    'Ꝃ': 'K',
+    'Ḳ': 'K',
+    'Ƙ': 'K',
+    'Ḵ': 'K',
+    'Ꝁ': 'K',
+    'Ꝅ': 'K',
+    'Ĺ': 'L',
+    'Ƚ': 'L',
+    'Ľ': 'L',
+    'Ļ': 'L',
+    'Ḽ': 'L',
+    'Ḷ': 'L',
+    'Ḹ': 'L',
+    'Ⱡ': 'L',
+    'Ꝉ': 'L',
+    'Ḻ': 'L',
+    'Ŀ': 'L',
+    'Ɫ': 'L',
+    'ǈ': 'L',
+    'Ł': 'L',
+    'Ǉ': 'LJ',
+    'Ḿ': 'M',
+    'Ṁ': 'M',
+    'Ṃ': 'M',
+    'Ɱ': 'M',
+    'Ń': 'N',
+    'Ň': 'N',
+    'Ņ': 'N',
+    'Ṋ': 'N',
+    'Ṅ': 'N',
+    'Ṇ': 'N',
+    'Ǹ': 'N',
+    'Ɲ': 'N',
+    'Ṉ': 'N',
+    'Ƞ': 'N',
+    'ǋ': 'N',
+    'Ñ': 'N',
+    'Ǌ': 'NJ',
+    'Ó': 'O',
+    'Ŏ': 'O',
+    'Ǒ': 'O',
+    'Ô': 'O',
+    'Ố': 'O',
+    'Ộ': 'O',
+    'Ồ': 'O',
+    'Ổ': 'O',
+    'Ỗ': 'O',
+    'Ö': 'O',
+    'Ȫ': 'O',
+    'Ȯ': 'O',
+    'Ȱ': 'O',
+    'Ọ': 'O',
+    'Ő': 'O',
+    'Ȍ': 'O',
+    'Ò': 'O',
+    'Ỏ': 'O',
+    'Ơ': 'O',
+    'Ớ': 'O',
+    'Ợ': 'O',
+    'Ờ': 'O',
+    'Ở': 'O',
+    'Ỡ': 'O',
+    'Ȏ': 'O',
+    'Ꝋ': 'O',
+    'Ꝍ': 'O',
+    'Ō': 'O',
+    'Ṓ': 'O',
+    'Ṑ': 'O',
+    'Ɵ': 'O',
+    'Ǫ': 'O',
+    'Ǭ': 'O',
+    'Ø': 'O',
+    'Ǿ': 'O',
+    'Õ': 'O',
+    'Ṍ': 'O',
+    'Ṏ': 'O',
+    'Ȭ': 'O',
+    'Ƣ': 'OI',
+    'Ꝏ': 'OO',
+    'Ɛ': 'E',
+    'Ɔ': 'O',
+    'Ȣ': 'OU',
+    'Ṕ': 'P',
+    'Ṗ': 'P',
+    'Ꝓ': 'P',
+    'Ƥ': 'P',
+    'Ꝕ': 'P',
+    'Ᵽ': 'P',
+    'Ꝑ': 'P',
+    'Ꝙ': 'Q',
+    'Ꝗ': 'Q',
+    'Ŕ': 'R',
+    'Ř': 'R',
+    'Ŗ': 'R',
+    'Ṙ': 'R',
+    'Ṛ': 'R',
+    'Ṝ': 'R',
+    'Ȑ': 'R',
+    'Ȓ': 'R',
+    'Ṟ': 'R',
+    'Ɍ': 'R',
+    'Ɽ': 'R',
+    'Ꜿ': 'C',
+    'Ǝ': 'E',
+    'Ś': 'S',
+    'Ṥ': 'S',
+    'Š': 'S',
+    'Ṧ': 'S',
+    'Ş': 'S',
+    'Ŝ': 'S',
+    'Ș': 'S',
+    'Ṡ': 'S',
+    'Ṣ': 'S',
+    'Ṩ': 'S',
+    'Ť': 'T',
+    'Ţ': 'T',
+    'Ṱ': 'T',
+    'Ț': 'T',
+    'Ⱦ': 'T',
+    'Ṫ': 'T',
+    'Ṭ': 'T',
+    'Ƭ': 'T',
+    'Ṯ': 'T',
+    'Ʈ': 'T',
+    'Ŧ': 'T',
+    'Ɐ': 'A',
+    'Ꞁ': 'L',
+    'Ɯ': 'M',
+    'Ʌ': 'V',
+    'Ꜩ': 'TZ',
+    'Ú': 'U',
+    'Ŭ': 'U',
+    'Ǔ': 'U',
+    'Û': 'U',
+    'Ṷ': 'U',
+    'Ü': 'U',
+    'Ǘ': 'U',
+    'Ǚ': 'U',
+    'Ǜ': 'U',
+    'Ǖ': 'U',
+    'Ṳ': 'U',
+    'Ụ': 'U',
+    'Ű': 'U',
+    'Ȕ': 'U',
+    'Ù': 'U',
+    'Ủ': 'U',
+    'Ư': 'U',
+    'Ứ': 'U',
+    'Ự': 'U',
+    'Ừ': 'U',
+    'Ử': 'U',
+    'Ữ': 'U',
+    'Ȗ': 'U',
+    'Ū': 'U',
+    'Ṻ': 'U',
+    'Ų': 'U',
+    'Ů': 'U',
+    'Ũ': 'U',
+    'Ṹ': 'U',
+    'Ṵ': 'U',
+    'Ꝟ': 'V',
+    'Ṿ': 'V',
+    'Ʋ': 'V',
+    'Ṽ': 'V',
+    'Ꝡ': 'VY',
+    'Ẃ': 'W',
+    'Ŵ': 'W',
+    'Ẅ': 'W',
+    'Ẇ': 'W',
+    'Ẉ': 'W',
+    'Ẁ': 'W',
+    'Ⱳ': 'W',
+    'Ẍ': 'X',
+    'Ẋ': 'X',
+    'Ý': 'Y',
+    'Ŷ': 'Y',
+    'Ÿ': 'Y',
+    'Ẏ': 'Y',
+    'Ỵ': 'Y',
+    'Ỳ': 'Y',
+    'Ƴ': 'Y',
+    'Ỷ': 'Y',
+    'Ỿ': 'Y',
+    'Ȳ': 'Y',
+    'Ɏ': 'Y',
+    'Ỹ': 'Y',
+    'Ź': 'Z',
+    'Ž': 'Z',
+    'Ẑ': 'Z',
+    'Ⱬ': 'Z',
+    'Ż': 'Z',
+    'Ẓ': 'Z',
+    'Ȥ': 'Z',
+    'Ẕ': 'Z',
+    'Ƶ': 'Z',
+    'Ĳ': 'IJ',
+    'Œ': 'OE',
+    'ᴀ': 'A',
+    'ᴁ': 'AE',
+    'ʙ': 'B',
+    'ᴃ': 'B',
+    'ᴄ': 'C',
+    'ᴅ': 'D',
+    'ᴇ': 'E',
+    'ꜰ': 'F',
+    'ɢ': 'G',
+    'ʛ': 'G',
+    'ʜ': 'H',
+    'ɪ': 'I',
+    'ʁ': 'R',
+    'ᴊ': 'J',
+    'ᴋ': 'K',
+    'ʟ': 'L',
+    'ᴌ': 'L',
+    'ᴍ': 'M',
+    'ɴ': 'N',
+    'ᴏ': 'O',
+    'ɶ': 'OE',
+    'ᴐ': 'O',
+    'ᴕ': 'OU',
+    'ᴘ': 'P',
+    'ʀ': 'R',
+    'ᴎ': 'N',
+    'ᴙ': 'R',
+    'ꜱ': 'S',
+    'ᴛ': 'T',
+    'ⱻ': 'E',
+    'ᴚ': 'R',
+    'ᴜ': 'U',
+    'ᴠ': 'V',
+    'ᴡ': 'W',
+    'ʏ': 'Y',
+    'ᴢ': 'Z',
+    'á': 'a',
+    'ă': 'a',
+    'ắ': 'a',
+    'ặ': 'a',
+    'ằ': 'a',
+    'ẳ': 'a',
+    'ẵ': 'a',
+    'ǎ': 'a',
+    'â': 'a',
+    'ấ': 'a',
+    'ậ': 'a',
+    'ầ': 'a',
+    'ẩ': 'a',
+    'ẫ': 'a',
+    'ä': 'a',
+    'ǟ': 'a',
+    'ȧ': 'a',
+    'ǡ': 'a',
+    'ạ': 'a',
+    'ȁ': 'a',
+    'à': 'a',
+    'ả': 'a',
+    'ȃ': 'a',
+    'ā': 'a',
+    'ą': 'a',
+    'ᶏ': 'a',
+    'ẚ': 'a',
+    'å': 'a',
+    'ǻ': 'a',
+    'ḁ': 'a',
+    'ⱥ': 'a',
+    'ã': 'a',
+    'ꜳ': 'aa',
+    'æ': 'ae',
+    'ǽ': 'ae',
+    'ǣ': 'ae',
+    'ꜵ': 'ao',
+    'ꜷ': 'au',
+    'ꜹ': 'av',
+    'ꜻ': 'av',
+    'ꜽ': 'ay',
+    'ḃ': 'b',
+    'ḅ': 'b',
+    'ɓ': 'b',
+    'ḇ': 'b',
+    'ᵬ': 'b',
+    'ᶀ': 'b',
+    'ƀ': 'b',
+    'ƃ': 'b',
+    'ɵ': 'o',
+    'ć': 'c',
+    'č': 'c',
+    'ç': 'c',
+    'ḉ': 'c',
+    'ĉ': 'c',
+    'ɕ': 'c',
+    'ċ': 'c',
+    'ƈ': 'c',
+    'ȼ': 'c',
+    'ď': 'd',
+    'ḑ': 'd',
+    'ḓ': 'd',
+    'ȡ': 'd',
+    'ḋ': 'd',
+    'ḍ': 'd',
+    'ɗ': 'd',
+    'ᶑ': 'd',
+    'ḏ': 'd',
+    'ᵭ': 'd',
+    'ᶁ': 'd',
+    'đ': 'd',
+    'ɖ': 'd',
+    'ƌ': 'd',
+    'ı': 'i',
+    'ȷ': 'j',
+    'ɟ': 'j',
+    'ʄ': 'j',
+    'ǳ': 'dz',
+    'ǆ': 'dz',
+    'é': 'e',
+    'ĕ': 'e',
+    'ě': 'e',
+    'ȩ': 'e',
+    'ḝ': 'e',
+    'ê': 'e',
+    'ế': 'e',
+    'ệ': 'e',
+    'ề': 'e',
+    'ể': 'e',
+    'ễ': 'e',
+    'ḙ': 'e',
+    'ë': 'e',
+    'ė': 'e',
+    'ẹ': 'e',
+    'ȅ': 'e',
+    'è': 'e',
+    'ẻ': 'e',
+    'ȇ': 'e',
+    'ē': 'e',
+    'ḗ': 'e',
+    'ḕ': 'e',
+    'ⱸ': 'e',
+    'ę': 'e',
+    'ᶒ': 'e',
+    'ɇ': 'e',
+    'ẽ': 'e',
+    'ḛ': 'e',
+    'ꝫ': 'et',
+    'ḟ': 'f',
+    'ƒ': 'f',
+    'ᵮ': 'f',
+    'ᶂ': 'f',
+    'ǵ': 'g',
+    'ğ': 'g',
+    'ǧ': 'g',
+    'ģ': 'g',
+    'ĝ': 'g',
+    'ġ': 'g',
+    'ɠ': 'g',
+    'ḡ': 'g',
+    'ᶃ': 'g',
+    'ǥ': 'g',
+    'ḫ': 'h',
+    'ȟ': 'h',
+    'ḩ': 'h',
+    'ĥ': 'h',
+    'ⱨ': 'h',
+    'ḧ': 'h',
+    'ḣ': 'h',
+    'ḥ': 'h',
+    'ɦ': 'h',
+    'ẖ': 'h',
+    'ħ': 'h',
+    'ƕ': 'hv',
+    'í': 'i',
+    'ĭ': 'i',
+    'ǐ': 'i',
+    'î': 'i',
+    'ï': 'i',
+    'ḯ': 'i',
+    'ị': 'i',
+    'ȉ': 'i',
+    'ì': 'i',
+    'ỉ': 'i',
+    'ȋ': 'i',
+    'ī': 'i',
+    'į': 'i',
+    'ᶖ': 'i',
+    'ɨ': 'i',
+    'ĩ': 'i',
+    'ḭ': 'i',
+    'ꝺ': 'd',
+    'ꝼ': 'f',
+    'ᵹ': 'g',
+    'ꞃ': 'r',
+    'ꞅ': 's',
+    'ꞇ': 't',
+    'ꝭ': 'is',
+    'ǰ': 'j',
+    'ĵ': 'j',
+    'ʝ': 'j',
+    'ɉ': 'j',
+    'ḱ': 'k',
+    'ǩ': 'k',
+    'ķ': 'k',
+    'ⱪ': 'k',
+    'ꝃ': 'k',
+    'ḳ': 'k',
+    'ƙ': 'k',
+    'ḵ': 'k',
+    'ᶄ': 'k',
+    'ꝁ': 'k',
+    'ꝅ': 'k',
+    'ĺ': 'l',
+    'ƚ': 'l',
+    'ɬ': 'l',
+    'ľ': 'l',
+    'ļ': 'l',
+    'ḽ': 'l',
+    'ȴ': 'l',
+    'ḷ': 'l',
+    'ḹ': 'l',
+    'ⱡ': 'l',
+    'ꝉ': 'l',
+    'ḻ': 'l',
+    'ŀ': 'l',
+    'ɫ': 'l',
+    'ᶅ': 'l',
+    'ɭ': 'l',
+    'ł': 'l',
+    'ǉ': 'lj',
+    'ſ': 's',
+    'ẜ': 's',
+    'ẛ': 's',
+    'ẝ': 's',
+    'ḿ': 'm',
+    'ṁ': 'm',
+    'ṃ': 'm',
+    'ɱ': 'm',
+    'ᵯ': 'm',
+    'ᶆ': 'm',
+    'ń': 'n',
+    'ň': 'n',
+    'ņ': 'n',
+    'ṋ': 'n',
+    'ȵ': 'n',
+    'ṅ': 'n',
+    'ṇ': 'n',
+    'ǹ': 'n',
+    'ɲ': 'n',
+    'ṉ': 'n',
+    'ƞ': 'n',
+    'ᵰ': 'n',
+    'ᶇ': 'n',
+    'ɳ': 'n',
+    'ñ': 'n',
+    'ǌ': 'nj',
+    'ó': 'o',
+    'ŏ': 'o',
+    'ǒ': 'o',
+    'ô': 'o',
+    'ố': 'o',
+    'ộ': 'o',
+    'ồ': 'o',
+    'ổ': 'o',
+    'ỗ': 'o',
+    'ö': 'o',
+    'ȫ': 'o',
+    'ȯ': 'o',
+    'ȱ': 'o',
+    'ọ': 'o',
+    'ő': 'o',
+    'ȍ': 'o',
+    'ò': 'o',
+    'ỏ': 'o',
+    'ơ': 'o',
+    'ớ': 'o',
+    'ợ': 'o',
+    'ờ': 'o',
+    'ở': 'o',
+    'ỡ': 'o',
+    'ȏ': 'o',
+    'ꝋ': 'o',
+    'ꝍ': 'o',
+    'ⱺ': 'o',
+    'ō': 'o',
+    'ṓ': 'o',
+    'ṑ': 'o',
+    'ǫ': 'o',
+    'ǭ': 'o',
+    'ø': 'o',
+    'ǿ': 'o',
+    'õ': 'o',
+    'ṍ': 'o',
+    'ṏ': 'o',
+    'ȭ': 'o',
+    'ƣ': 'oi',
+    'ꝏ': 'oo',
+    'ɛ': 'e',
+    'ᶓ': 'e',
+    'ɔ': 'o',
+    'ᶗ': 'o',
+    'ȣ': 'ou',
+    'ṕ': 'p',
+    'ṗ': 'p',
+    'ꝓ': 'p',
+    'ƥ': 'p',
+    'ᵱ': 'p',
+    'ᶈ': 'p',
+    'ꝕ': 'p',
+    'ᵽ': 'p',
+    'ꝑ': 'p',
+    'ꝙ': 'q',
+    'ʠ': 'q',
+    'ɋ': 'q',
+    'ꝗ': 'q',
+    'ŕ': 'r',
+    'ř': 'r',
+    'ŗ': 'r',
+    'ṙ': 'r',
+    'ṛ': 'r',
+    'ṝ': 'r',
+    'ȑ': 'r',
+    'ɾ': 'r',
+    'ᵳ': 'r',
+    'ȓ': 'r',
+    'ṟ': 'r',
+    'ɼ': 'r',
+    'ᵲ': 'r',
+    'ᶉ': 'r',
+    'ɍ': 'r',
+    'ɽ': 'r',
+    'ↄ': 'c',
+    'ꜿ': 'c',
+    'ɘ': 'e',
+    'ɿ': 'r',
+    'ś': 's',
+    'ṥ': 's',
+    'š': 's',
+    'ṧ': 's',
+    'ş': 's',
+    'ŝ': 's',
+    'ș': 's',
+    'ṡ': 's',
+    'ṣ': 's',
+    'ṩ': 's',
+    'ʂ': 's',
+    'ᵴ': 's',
+    'ᶊ': 's',
+    'ȿ': 's',
+    'ɡ': 'g',
+    'ᴑ': 'o',
+    'ᴓ': 'o',
+    'ᴝ': 'u',
+    'ť': 't',
+    'ţ': 't',
+    'ṱ': 't',
+    'ț': 't',
+    'ȶ': 't',
+    'ẗ': 't',
+    'ⱦ': 't',
+    'ṫ': 't',
+    'ṭ': 't',
+    'ƭ': 't',
+    'ṯ': 't',
+    'ᵵ': 't',
+    'ƫ': 't',
+    'ʈ': 't',
+    'ŧ': 't',
+    'ᵺ': 'th',
+    'ɐ': 'a',
+    'ᴂ': 'ae',
+    'ǝ': 'e',
+    'ᵷ': 'g',
+    'ɥ': 'h',
+    'ʮ': 'h',
+    'ʯ': 'h',
+    'ᴉ': 'i',
+    'ʞ': 'k',
+    'ꞁ': 'l',
+    'ɯ': 'm',
+    'ɰ': 'm',
+    'ᴔ': 'oe',
+    'ɹ': 'r',
+    'ɻ': 'r',
+    'ɺ': 'r',
+    'ⱹ': 'r',
+    'ʇ': 't',
+    'ʌ': 'v',
+    'ʍ': 'w',
+    'ʎ': 'y',
+    'ꜩ': 'tz',
+    'ú': 'u',
+    'ŭ': 'u',
+    'ǔ': 'u',
+    'û': 'u',
+    'ṷ': 'u',
+    'ü': 'u',
+    'ǘ': 'u',
+    'ǚ': 'u',
+    'ǜ': 'u',
+    'ǖ': 'u',
+    'ṳ': 'u',
+    'ụ': 'u',
+    'ű': 'u',
+    'ȕ': 'u',
+    'ù': 'u',
+    'ủ': 'u',
+    'ư': 'u',
+    'ứ': 'u',
+    'ự': 'u',
+    'ừ': 'u',
+    'ử': 'u',
+    'ữ': 'u',
+    'ȗ': 'u',
+    'ū': 'u',
+    'ṻ': 'u',
+    'ų': 'u',
+    'ᶙ': 'u',
+    'ů': 'u',
+    'ũ': 'u',
+    'ṹ': 'u',
+    'ṵ': 'u',
+    'ᵫ': 'ue',
+    'ꝸ': 'um',
+    'ⱴ': 'v',
+    'ꝟ': 'v',
+    'ṿ': 'v',
+    'ʋ': 'v',
+    'ᶌ': 'v',
+    'ⱱ': 'v',
+    'ṽ': 'v',
+    'ꝡ': 'vy',
+    'ẃ': 'w',
+    'ŵ': 'w',
+    'ẅ': 'w',
+    'ẇ': 'w',
+    'ẉ': 'w',
+    'ẁ': 'w',
+    'ⱳ': 'w',
+    'ẘ': 'w',
+    'ẍ': 'x',
+    'ẋ': 'x',
+    'ᶍ': 'x',
+    'ý': 'y',
+    'ŷ': 'y',
+    'ÿ': 'y',
+    'ẏ': 'y',
+    'ỵ': 'y',
+    'ỳ': 'y',
+    'ƴ': 'y',
+    'ỷ': 'y',
+    'ỿ': 'y',
+    'ȳ': 'y',
+    'ẙ': 'y',
+    'ɏ': 'y',
+    'ỹ': 'y',
+    'ź': 'z',
+    'ž': 'z',
+    'ẑ': 'z',
+    'ʑ': 'z',
+    'ⱬ': 'z',
+    'ż': 'z',
+    'ẓ': 'z',
+    'ȥ': 'z',
+    'ẕ': 'z',
+    'ᵶ': 'z',
+    'ᶎ': 'z',
+    'ʐ': 'z',
+    'ƶ': 'z',
+    'ɀ': 'z',
+    'ﬀ': 'ff',
+    'ﬃ': 'ffi',
+    'ﬄ': 'ffl',
+    'ﬁ': 'fi',
+    'ﬂ': 'fl',
+    'ĳ': 'ij',
+    'œ': 'oe',
+    'ﬆ': 'st',
+    'ₐ': 'a',
+    'ₑ': 'e',
+    'ᵢ': 'i',
+    'ⱼ': 'j',
+    'ₒ': 'o',
+    'ᵣ': 'r',
+    'ᵤ': 'u',
+    'ᵥ': 'v',
+    'ₓ': 'x'
   };
   /**
   * latinise 
@@ -3789,117 +3789,103 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
-keyvalue = function ($) {
+Attachment = function ($) {
+  var EXT = /(?:\.([^.]+))?$/;
+  var IMAGES = [
+    'jpg',
+    'jpeg',
+    'png'
+  ];
+  var PREVIEWS = [
+    'jpg',
+    'jpeg',
+    'png',
+    'doc',
+    'docx',
+    'pdf'
+  ];
   var DEFAULTS = {
-    id: '',
-    pk: '',
-    key: '',
-    kind: 'string',
-    value: null,
-    modified: null,
-    by: null,
-    index: 0
+    isCover: false,
+    canBeCover: true
   };
   /**
-   * KeyValue class
-   * @name  KeyValue
-   * @class    
+   * @name  Attachment
+   * @class
+   * @property {ApiDataSource} ds    attachments datasource
+   * @property {bool} isCover        is this the cover image of a document
+   * @property {bool} canBeCover     can this attachment be the cover of a document?
    * @constructor
-   * 
-   * @param spec
+   * @extends KeyValue
    */
-  var KeyValue = function (spec) {
+  var Attachment = function (spec) {
+    spec = spec || {};
     this.ds = spec.ds;
-    this.fields = spec.fields;
     this.raw = null;
     // the raw json object
     this.id = spec.id || DEFAULTS.id;
-    this.pk = spec.pk || DEFAULTS.pk;
-    this.key = spec.key || DEFAULTS.key;
-    this.kind = spec.kind || DEFAULTS.kind;
-    // string, int, float, bool, date, attachment
     this.value = spec.value || DEFAULTS.value;
-    this.modified = spec.modified || DEFAULTS.modified;
+    this.created = spec.created || DEFAULTS.created;
     this.by = spec.by || DEFAULTS.by;
-    this.index = spec.index || DEFAULTS.index;
+    this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
+    this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
   };
   /**
-   * Checks if the document exists in the database
-   * @name  KeyValue#existsInDb
+   * Gets the url of a thumbnail
+   * "XS": 32,
+   * "S": 64,
+   * "M": 128,
+   * "L": 256,
+   * "XL": 512
+   * "orig": original size
+   * @name Attachment#getThumbnailUrl
    * @method
-   * @returns {boolean}
+   * @param size
+   * @returns {string}
    */
-  KeyValue.prototype.existsInDb = function () {
-    return this.id != null && this.id.length > 0;
+  Attachment.prototype.getThumbnailUrl = function (size) {
+    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : '';
   };
   /**
-   * Gets the name for this keyValue
-   * @name  KeyValue#getName
+   * Gets the url where the attachment can be downloaded
+   * @name Attachment#getDownloadUrl
    * @method
    * @returns {string}
    */
-  KeyValue.prototype.getName = function () {
-    // cheqroom.prop.Warranty+date
-    // cheqroom.prop.Buy+price;EUR
-    var keyParts = this.key.split(';');
-    var noUnit = keyParts[0];
-    return noUnit.split('.').pop().split('+').join(' ');
+  Attachment.prototype.getDownloadUrl = function () {
+    return this.ds.getBaseUrl() + this.id + '?download=True';
   };
   /**
-   * Gets the unit for this keyValue, if no unit returns ""
-   * @name  KeyValue#getUnit
+   * Gets the extension part of a filename
+   * @name  Attachment#getExt
    * @method
+   * @param fileName
    * @returns {string}
    */
-  KeyValue.prototype.getUnit = function () {
-    var keyParts = this.key.split(';');
-    return keyParts.length == 2 ? keyParts[1] : '';
+  Attachment.prototype.getExt = function (fileName) {
+    fileName = fileName || this.id;
+    return EXT.exec(fileName)[1] || '';
   };
   /**
-   * Returns if keyValue is a url 
-   * @name  KeyValue#isUrl
+   * Checks if the attachment is an image
+   * @name  Attachment#isImage
    * @method
    * @returns {boolean}
    */
-  KeyValue.prototype.isUrl = function () {
-    return this.value && (typeof this.value == 'string' && this.value.isValidUrl());
+  Attachment.prototype.isImage = function () {
+    var fileName = this.id;
+    var ext = this.getExt(fileName);
+    return $.inArray(ext, IMAGES) >= 0;
   };
   /**
-   * Checks if the object is empty
-   * after calling reset() isEmpty() should return true
-   * @name  KeyValue#isEmpty
+   * Checks if the attachment has a preview
+   * @name  Attachment#hasPreview
    * @method
    * @returns {boolean}
    */
-  KeyValue.prototype.isEmpty = function () {
-    return this.id == DEFAULTS.id && this.pk == DEFAULTS.pk && this.key == DEFAULTS.key && this.kind == DEFAULTS.kind && this.value == DEFAULTS.value && this.modified == DEFAULTS.modified && this.by == DEFAULTS.by;
-  };
-  /**
-   * Checks if the object has changed
-   * @name KeyValue#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isDirty = function () {
-    return false;
-  };
-  /**
-   * Checks if the object is valid
-   * @name  KeyValue#isValid
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isValid = function () {
-    return true;
-  };
-  /**
-   * Resets the object
-   * @name  KeyValue#reset
-   * @method
-   * @returns promise
-   */
-  KeyValue.prototype.reset = function () {
-    return this._fromJson(DEFAULTS, null);
+  Attachment.prototype.hasPreview = function () {
+    var fileName = this.id;
+    var ext = this.getExt(fileName);
+    return $.inArray(ext, PREVIEWS) >= 0;
   };
   /**
    * _toJson, makes a dict of the object
@@ -3908,164 +3894,93 @@ keyvalue = function ($) {
    * @returns {object}
    * @private
    */
-  KeyValue.prototype._toJson = function (options) {
+  Attachment.prototype._toJson = function (options) {
     return {
       id: this.id,
-      pk: this.pk,
-      key: this.key,
-      kind: this.kind,
       value: this.value,
-      modified: this.modified,
+      created: this.created,
       by: this.by
     };
   };
   /**
-   * _fromJson: in this implementation we'll only read
-   * the data.keyValues into: comments, attachments, keyValues
+   * _fromJson: reads the Attachment object from json
    * @method
    * @param {object} data the json response
    * @param {object} options dict
    * @returns promise
    * @private
    */
-  KeyValue.prototype._fromJson = function (data, options) {
+  Attachment.prototype._fromJson = function (data, options) {
     this.raw = data;
     this.id = data.id || DEFAULTS.id;
-    this.pk = data.pk || DEFAULTS.pk;
-    this.key = data.key || DEFAULTS.key;
-    this.kind = data.kind || DEFAULTS.kind;
     this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
+    this.by = data.by || DEFAULTS.by;
+    return $.Deferred().resolve(data);
+  };
+  return Attachment;
+}(jquery);
+comment = function ($) {
+  var DEFAULTS = {
+    id: '',
+    value: null,
+    created: null,
+    modified: null,
+    by: null
+  };
+  /**
+   * @name  Comment
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var Comment = function (spec) {
+    spec = spec || {};
+    this.ds = spec.ds;
+    this.raw = null;
+    // the raw json object
+    this.id = spec.id || DEFAULTS.id;
+    this.value = spec.value || DEFAULTS.value;
+    this.created = spec.created || DEFAULTS.created;
+    this.modified = spec.modified || DEFAULTS.modified;
+    this.by = spec.by || DEFAULTS.by;
+  };
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  Comment.prototype._toJson = function (options) {
+    return {
+      id: this.id,
+      value: this.value,
+      created: this.created,
+      modified: this.modified,
+      by: this.by
+    };
+  };
+  /**
+   * _fromJson: reads the Comment object from json
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns promise
+   * @private
+   */
+  Comment.prototype._fromJson = function (data, options) {
+    this.raw = data;
+    this.id = data.id || DEFAULTS.id;
+    this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
     this.modified = data.modified || DEFAULTS.modified;
     this.by = data.by || DEFAULTS.by;
     return $.Deferred().resolve(data);
   };
-  return KeyValue;
-}(jquery);
-Attachment = function ($, KeyValue) {
-  var EXT = /(?:\.([^.]+))?$/;
-  var IMAGES = [
-    'jpg',
-    'jpeg',
-    'png'
-  ];
-  var PREVIEWS = [
-    'jpg',
-    'jpeg',
-    'png',
-    'doc',
-    'docx',
-    'pdf'
-  ];
-  var DEFAULTS = {
-    isCover: false,
-    canBeCover: true
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = KeyValue.prototype;
-  /**
-   * @name  Attachment
-   * @class
-   * @property {ApiDataSource} ds    attachments datasource
-   * @property {bool} isCover        is this the cover image of a document
-   * @property {bool} canBeCover     can this attachment be the cover of a document?
-   * @constructor
-   * @extends KeyValue
-   */
-  var Attachment = function (spec) {
-    KeyValue.call(this, spec);
-    this.ds = spec.ds;
-    this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
-    this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
-  };
-  Attachment.prototype = new tmp();
-  Attachment.prototype.constructor = Attachment;
-  /**
-   * Gets the url of a thumbnail
-   * "XS": 32,
-   * "S": 64,
-   * "M": 128,
-   * "L": 256,
-   * "XL": 512
-   * "orig": original size
-   * @name Attachment#getThumbnailUrl
-   * @method
-   * @param size
-   * @returns {string}
-   */
-  Attachment.prototype.getThumbnailUrl = function (size) {
-    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : '';
-  };
-  /**
-   * Gets the url where the attachment can be downloaded
-   * @name Attachment#getDownloadUrl
-   * @method
-   * @returns {string}
-   */
-  Attachment.prototype.getDownloadUrl = function () {
-    return this.ds.getBaseUrl() + this.id + '?download=True';
-  };
-  /**
-   * Gets the extension part of a filename
-   * @name  Attachment#getExt
-   * @method
-   * @param fileName
-   * @returns {string}
-   */
-  Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.id;
-    return EXT.exec(fileName)[1] || '';
-  };
-  /**
-   * Checks if the attachment is an image
-   * @name  Attachment#isImage
-   * @method
-   * @returns {boolean}
-   */
-  Attachment.prototype.isImage = function () {
-    var fileName = this.id;
-    var ext = this.getExt(fileName);
-    return $.inArray(ext, IMAGES) >= 0;
-  };
-  /**
-   * Checks if the attachment has a preview
-   * @name  Attachment#hasPreview
-   * @method
-   * @returns {boolean}
-   */
-  Attachment.prototype.hasPreview = function () {
-    var fileName = this.id;
-    var ext = this.getExt(fileName);
-    return $.inArray(ext, PREVIEWS) >= 0;
-  };
-  return Attachment;
-}(jquery, keyvalue);
-comment = function ($, KeyValue) {
-  var KEY = 'cheqroom.Comment';
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = KeyValue.prototype;
-  /**
-   * @name  Comment
-   * @class
-   * @constructor
-   * @extends KeyValue
-   */
-  var Comment = function (spec) {
-    spec = spec || {};
-    spec.key = KEY;
-    spec.kind = 'string';
-    KeyValue.call(this, spec);
-  };
-  Comment.prototype = new tmp();
-  Comment.prototype.constructor = Comment;
   return Comment;
-}(jquery, keyvalue);
-attachment = function ($, KeyValue) {
+}(jquery);
+attachment = function ($) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
@@ -4084,11 +3999,6 @@ attachment = function ($, KeyValue) {
     isCover: false,
     canBeCover: true
   };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = KeyValue.prototype;
   /**
    * @name  Attachment
    * @class
@@ -4099,13 +4009,17 @@ attachment = function ($, KeyValue) {
    * @extends KeyValue
    */
   var Attachment = function (spec) {
-    KeyValue.call(this, spec);
+    spec = spec || {};
     this.ds = spec.ds;
+    this.raw = null;
+    // the raw json object
+    this.id = spec.id || DEFAULTS.id;
+    this.value = spec.value || DEFAULTS.value;
+    this.created = spec.created || DEFAULTS.created;
+    this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
   };
-  Attachment.prototype = new tmp();
-  Attachment.prototype.constructor = Attachment;
   /**
    * Gets the url of a thumbnail
    * "XS": 32,
@@ -4164,18 +4078,49 @@ attachment = function ($, KeyValue) {
     var ext = this.getExt(fileName);
     return $.inArray(ext, PREVIEWS) >= 0;
   };
-  return Attachment;
-}(jquery, keyvalue);
-Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
-  // Some constant values
-  var COMMENT = 'cheqroom.Comment', ATTACHMENT = 'cheqroom.Attachment', IMAGE = 'cheqroom.prop.Image', IMAGE_OTHER = 'cheqroom.attachment.Image', DEFAULTS = {
-      id: '',
-      modified: null,
-      cover: null,
-      comments: [],
-      attachments: [],
-      keyValues: []
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  Attachment.prototype._toJson = function (options) {
+    return {
+      id: this.id,
+      value: this.value,
+      created: this.created,
+      by: this.by
     };
+  };
+  /**
+   * _fromJson: reads the Attachment object from json
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns promise
+   * @private
+   */
+  Attachment.prototype._fromJson = function (data, options) {
+    this.raw = data;
+    this.id = data.id || DEFAULTS.id;
+    this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
+    this.by = data.by || DEFAULTS.by;
+    return $.Deferred().resolve(data);
+  };
+  return Attachment;
+}(jquery);
+Base = function ($, common, api, Document, Comment, Attachment) {
+  // Some constant values
+  var DEFAULTS = {
+    id: '',
+    modified: null,
+    cover: null,
+    flag: null,
+    comments: [],
+    attachments: []
+  };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -4187,9 +4132,9 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @property {ApiDataSource} dsAttachments   attachments datasource
    * @property {string} crtype                 e.g. cheqroom.types.customer
    * @property {moment} modified               last modified timestamp
+   * @property {string} flag                   the item flag
    * @property {array} comments                array of Comment objects
    * @property {array} attachments             array of Attachment objects
-   * @property {array} keyValues               array of KeyValue objects
    * @property {string} cover                  cover attachment id, default null
    * @constructor
    * @extends Document
@@ -4203,12 +4148,12 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     // e.g. cheqroom.types.customer
     this.modified = spec.modified || DEFAULTS.modified;
     // last modified timestamp in momentjs
+    this.flag = spec.flag || DEFAULTS.flag;
+    // flag
     this.comments = spec.comments || DEFAULTS.comments.slice();
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
     // attachments array
-    this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();
-    // keyValues array
     this.cover = spec.cover || DEFAULTS.cover;  // cover attachment id, default null
   };
   Base.prototype = new tmp();
@@ -4229,7 +4174,19 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @override
    */
   Base.prototype.isEmpty = function () {
-    return (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0) && (this.keyValues == null || this.keyValues.length == 0);
+    return this.flag == DEFAULTS.flag && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
+  };
+  /**
+   * Checks if the base is dirty and needs saving
+   * @name Base#isDirty
+   * @returns {boolean}
+   */
+  Base.prototype.isDirty = function () {
+    if (this.raw) {
+      return this.flag != this.raw.flag;
+    } else {
+      return false;
+    }
   };
   /**
    * Checks via the api if we can delete the document
@@ -4300,114 +4257,38 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
       skipRead: skipRead
     });
   };
-  // KeyValue stuff
+  // Field stuff
   // ----
   /**
-   * Adds a key value
-   * @name  Base#addKeyValue
+   * Sets a custom field
+   * @name Base#setField
    * @method
-   * @param key
+   * @param field
    * @param value
-   * @param kind
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.addKeyValue = function (key, value, kind, skipRead) {
+  Base.prototype.setField = function (field, value, skipRead) {
     return this._doApiCall({
-      method: 'addKeyValue',
+      method: 'setField',
       params: {
-        key: key,
-        value: value,
-        kind: kind
+        field: field,
+        value: value
       },
       skipRead: skipRead
     });
   };
   /**
-   * Updates a keyvalue by id
-   * @name  Base#updateKeyValue
+   * Clears a custom field
+   * @name Base#clearField
    * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
+   * @param field
    * @param skipRead
-   * @returns {promise}
    */
-  Base.prototype.updateKeyValue = function (id, key, value, kind, skipRead) {
+  Base.prototype.clearField = function (field, skipRead) {
     return this._doApiCall({
-      method: 'updateKeyValue',
-      params: {
-        id: id,
-        key: key,
-        value: value,
-        kind: kind
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Removes a keyvalue by id
-   * @name  Base#removeKeyValue
-   * @method
-   * @param id
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.removeKeyValue = function (id, key, kind, skipRead) {
-    return this._doApiCall({
-      method: 'removeKeyValue',
-      params: {
-        id: id,
-        key: key,
-        kind: kind
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Sets a keyvalue by id
-   * @name  Base#setKeyValue
-   * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setKeyValue = function (id, key, value, kind, skipRead) {
-    var params = {
-      key: key,
-      value: value,
-      kind: kind
-    };
-    if (id != null && id.length > 0) {
-      params.id = id;
-    }
-    return this._doApiCall({
-      method: 'setKeyValue',
-      params: params,
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Moves a keyvalue by its id to a new position
-   * @name Base#moveKeyValueIndex
-   * @method
-   * @param id
-   * @param pos
-   * @returns {promise}
-   */
-  Base.prototype.moveKeyValueIndex = function (id, pos, key, kind, skipRead) {
-    return this._doApiCall({
-      method: 'moveKeyValueById',
-      params: {
-        id: id,
-        toPos: pos,
-        key: key,
-        kind: kind
-      },
+      method: 'setField',
+      params: { field: field },
       skipRead: skipRead
     });
   };
@@ -4430,7 +4311,7 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     return attachment != null && attachment.length > 0 ? this.helper.getImageCDNUrl(groupId, attachment, size) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
   };
   /**
-   * changes the cover image to another Attachment
+   * Set the cover image to an Attachment
    * @name  Base#setCover
    * @method
    * @param att
@@ -4440,31 +4321,23 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype.setCover = function (att, skipRead) {
     return this._doApiCall({
       method: 'setCover',
-      params: { kvId: att._id },
+      params: { attachmentId: att._id },
       skipRead: skipRead
     });
   };
   /**
-   * attaches an image Attachment file, shortcut to attach
-   * @name  Base#attachImage
+   * Clears the cover image
+   * @name  Base#clearCover
    * @method
-   * @param att
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attachImage = function (att, skipRead) {
-    return this.attach(att, IMAGE, skipRead);
-  };
-  /**
-   * attaches an Attachment file, shortcut to attach
-   * @name  Base#attachFile
-   * @method
-   * @param att
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.attachFile = function (att, skipRead) {
-    return this.attach(att, ATTACHMENT, skipRead);
+  Base.prototype.clearCover = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearCover',
+      params: {},
+      skipRead: skipRead
+    });
   };
   /**
    * attaches an Attachment object
@@ -4475,14 +4348,11 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attach = function (att, key, skipRead) {
+  Base.prototype.attach = function (att, skipRead) {
     if (this.existsInDb()) {
       return this._doApiCall({
         method: 'attach',
-        params: {
-          attachments: [att._id],
-          key: key
-        },
+        params: { attachments: [att._id] },
         skipRead: skipRead
       });
     } else {
@@ -4511,6 +4381,33 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
       return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
     }
   };
+  /**
+   * Sets the flag of an item
+   * @name Base#setFlag
+   * @param flag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFlag = function (flag, skipRead) {
+    return this._doApiCall({
+      method: 'setFlag',
+      params: { flag: flag },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the flag of an item
+   * @name Base#clearFlag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearFlag = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearFlag',
+      params: {},
+      skipRead: skipRead
+    });
+  };
   // toJson, fromJson
   // ----
   /**
@@ -4532,112 +4429,123 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype._fromJson = function (data, options) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.flag = data.flag || DEFAULTS.flag;
       that.modified = data.modified || DEFAULTS.modified;
-      return that._fromKeyValuesJson(data, options);
+      return that._fromCommentsJson(data, options).then(function () {
+        return that._fromAttachmentsJson(data, options);
+      });
     });
   };
   /**
-   * _fromKeyValuesJson: reads the data.keyValues
-   * @method
+   * _fromCommentsJson: reads the data.comments
    * @param data
    * @param options
    * @returns {*}
    * @private
    */
-  Base.prototype._fromKeyValuesJson = function (data, options) {
-    // Read only the .keyValues part of the response
-    var obj = null;
-    var that = this;
+  Base.prototype._fromCommentsJson = function (data, options) {
+    var obj = null, that = this;
     this.comments = DEFAULTS.comments.slice();
-    this.attachments = DEFAULTS.attachments.slice();
-    this.keyValues = DEFAULTS.keyValues.slice();
-    this.cover = data.cover || DEFAULTS.cover;
-    if (data.keyValues && data.keyValues.length) {
-      $.each(data.keyValues, function (i, kv) {
-        kv.index = i;
-        // original index needed for sorting, swapping positions
-        switch (kv.key) {
-        case COMMENT:
-          obj = that._getComment(kv, options);
-          if (obj) {
-            that.comments = that.comments || [];
-            that.comments.push(obj);
-          }
-          break;
-        case IMAGE:
-        case ATTACHMENT:
-        case IMAGE_OTHER:
-          obj = that._getAttachment(kv, options);
-          if (obj) {
-            that.attachments = that.attachments || [];
-            that.attachments.push(obj);
-          }
-          break;
-        default:
-          obj = that._getKeyValue(kv, options);
-          if (obj) {
-            that.keyValues = that.keyValues || [];
-            that.keyValues.push(obj);
-          }
-          break;
+    if (data.comments && data.comments.length > 0) {
+      $.each(data.comments, function (i, comment) {
+        obj = that._getComment(comment, options);
+        if (obj) {
+          that.comments.push(obj);
         }
       });
     }
-    that.attachments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
-    that.comments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
     return $.Deferred().resolve(data);
   };
-  Base.prototype._getComment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
+  /**
+   * _fromAttachmentsJson: reads the data.attachments
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._fromAttachmentsJson = function (data, options) {
+    var obj = null, that = this;
+    this.attachments = DEFAULTS.attachments.slice();
+    if (data.attachments && data.attachments.length > 0) {
+      $.each(data.attachments, function (i, att) {
+        obj = that._getAttachment(att, options);
+        if (obj) {
+          that.attachments.push(obj);
+        }
+      });
+    }
+    return $.Deferred().resolve(data);
+  };
+  Base.prototype._getComment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Comment(spec);
   };
-  Base.prototype._getAttachment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.dsAttachments,
-      fields: this.fields
-    }, options || {}, // can contain; isCover, canBeCover
-    kv);
+  Base.prototype._getAttachment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Attachment(spec);
   };
-  Base.prototype._getKeyValue = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
-    return new KeyValue(spec);
-  };
   return Base;
-}(jquery, common, api, document, comment, attachment, keyvalue);
-Comment = function ($, KeyValue) {
-  var KEY = 'cheqroom.Comment';
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
+}(jquery, common, api, document, comment, attachment);
+Comment = function ($) {
+  var DEFAULTS = {
+    id: '',
+    value: null,
+    created: null,
+    modified: null,
+    by: null
   };
-  tmp.prototype = KeyValue.prototype;
   /**
    * @name  Comment
    * @class
+   * @param spec
    * @constructor
-   * @extends KeyValue
    */
   var Comment = function (spec) {
     spec = spec || {};
-    spec.key = KEY;
-    spec.kind = 'string';
-    KeyValue.call(this, spec);
+    this.ds = spec.ds;
+    this.raw = null;
+    // the raw json object
+    this.id = spec.id || DEFAULTS.id;
+    this.value = spec.value || DEFAULTS.value;
+    this.created = spec.created || DEFAULTS.created;
+    this.modified = spec.modified || DEFAULTS.modified;
+    this.by = spec.by || DEFAULTS.by;
   };
-  Comment.prototype = new tmp();
-  Comment.prototype.constructor = Comment;
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  Comment.prototype._toJson = function (options) {
+    return {
+      id: this.id,
+      value: this.value,
+      created: this.created,
+      modified: this.modified,
+      by: this.by
+    };
+  };
+  /**
+   * _fromJson: reads the Comment object from json
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns promise
+   * @private
+   */
+  Comment.prototype._fromJson = function (data, options) {
+    this.raw = data;
+    this.id = data.id || DEFAULTS.id;
+    this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
+    this.modified = data.modified || DEFAULTS.modified;
+    this.by = data.by || DEFAULTS.by;
+    return $.Deferred().resolve(data);
+  };
   return Comment;
-}(jquery, keyvalue);
+}(jquery);
 Conflict = function ($) {
   var DEFAULTS = {
     kind: '',
@@ -4717,16 +4625,16 @@ Conflict = function ($) {
   };
   return Conflict;
 }(jquery);
-base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
+base = function ($, common, api, Document, Comment, Attachment) {
   // Some constant values
-  var COMMENT = 'cheqroom.Comment', ATTACHMENT = 'cheqroom.Attachment', IMAGE = 'cheqroom.prop.Image', IMAGE_OTHER = 'cheqroom.attachment.Image', DEFAULTS = {
-      id: '',
-      modified: null,
-      cover: null,
-      comments: [],
-      attachments: [],
-      keyValues: []
-    };
+  var DEFAULTS = {
+    id: '',
+    modified: null,
+    cover: null,
+    flag: null,
+    comments: [],
+    attachments: []
+  };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -4738,9 +4646,9 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @property {ApiDataSource} dsAttachments   attachments datasource
    * @property {string} crtype                 e.g. cheqroom.types.customer
    * @property {moment} modified               last modified timestamp
+   * @property {string} flag                   the item flag
    * @property {array} comments                array of Comment objects
    * @property {array} attachments             array of Attachment objects
-   * @property {array} keyValues               array of KeyValue objects
    * @property {string} cover                  cover attachment id, default null
    * @constructor
    * @extends Document
@@ -4754,12 +4662,12 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     // e.g. cheqroom.types.customer
     this.modified = spec.modified || DEFAULTS.modified;
     // last modified timestamp in momentjs
+    this.flag = spec.flag || DEFAULTS.flag;
+    // flag
     this.comments = spec.comments || DEFAULTS.comments.slice();
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
     // attachments array
-    this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();
-    // keyValues array
     this.cover = spec.cover || DEFAULTS.cover;  // cover attachment id, default null
   };
   Base.prototype = new tmp();
@@ -4780,7 +4688,19 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @override
    */
   Base.prototype.isEmpty = function () {
-    return (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0) && (this.keyValues == null || this.keyValues.length == 0);
+    return this.flag == DEFAULTS.flag && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
+  };
+  /**
+   * Checks if the base is dirty and needs saving
+   * @name Base#isDirty
+   * @returns {boolean}
+   */
+  Base.prototype.isDirty = function () {
+    if (this.raw) {
+      return this.flag != this.raw.flag;
+    } else {
+      return false;
+    }
   };
   /**
    * Checks via the api if we can delete the document
@@ -4851,114 +4771,38 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
       skipRead: skipRead
     });
   };
-  // KeyValue stuff
+  // Field stuff
   // ----
   /**
-   * Adds a key value
-   * @name  Base#addKeyValue
+   * Sets a custom field
+   * @name Base#setField
    * @method
-   * @param key
+   * @param field
    * @param value
-   * @param kind
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.addKeyValue = function (key, value, kind, skipRead) {
+  Base.prototype.setField = function (field, value, skipRead) {
     return this._doApiCall({
-      method: 'addKeyValue',
+      method: 'setField',
       params: {
-        key: key,
-        value: value,
-        kind: kind
+        field: field,
+        value: value
       },
       skipRead: skipRead
     });
   };
   /**
-   * Updates a keyvalue by id
-   * @name  Base#updateKeyValue
+   * Clears a custom field
+   * @name Base#clearField
    * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
+   * @param field
    * @param skipRead
-   * @returns {promise}
    */
-  Base.prototype.updateKeyValue = function (id, key, value, kind, skipRead) {
+  Base.prototype.clearField = function (field, skipRead) {
     return this._doApiCall({
-      method: 'updateKeyValue',
-      params: {
-        id: id,
-        key: key,
-        value: value,
-        kind: kind
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Removes a keyvalue by id
-   * @name  Base#removeKeyValue
-   * @method
-   * @param id
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.removeKeyValue = function (id, key, kind, skipRead) {
-    return this._doApiCall({
-      method: 'removeKeyValue',
-      params: {
-        id: id,
-        key: key,
-        kind: kind
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Sets a keyvalue by id
-   * @name  Base#setKeyValue
-   * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setKeyValue = function (id, key, value, kind, skipRead) {
-    var params = {
-      key: key,
-      value: value,
-      kind: kind
-    };
-    if (id != null && id.length > 0) {
-      params.id = id;
-    }
-    return this._doApiCall({
-      method: 'setKeyValue',
-      params: params,
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Moves a keyvalue by its id to a new position
-   * @name Base#moveKeyValueIndex
-   * @method
-   * @param id
-   * @param pos
-   * @returns {promise}
-   */
-  Base.prototype.moveKeyValueIndex = function (id, pos, key, kind, skipRead) {
-    return this._doApiCall({
-      method: 'moveKeyValueById',
-      params: {
-        id: id,
-        toPos: pos,
-        key: key,
-        kind: kind
-      },
+      method: 'setField',
+      params: { field: field },
       skipRead: skipRead
     });
   };
@@ -4981,7 +4825,7 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     return attachment != null && attachment.length > 0 ? this.helper.getImageCDNUrl(groupId, attachment, size) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
   };
   /**
-   * changes the cover image to another Attachment
+   * Set the cover image to an Attachment
    * @name  Base#setCover
    * @method
    * @param att
@@ -4991,31 +4835,23 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype.setCover = function (att, skipRead) {
     return this._doApiCall({
       method: 'setCover',
-      params: { kvId: att._id },
+      params: { attachmentId: att._id },
       skipRead: skipRead
     });
   };
   /**
-   * attaches an image Attachment file, shortcut to attach
-   * @name  Base#attachImage
+   * Clears the cover image
+   * @name  Base#clearCover
    * @method
-   * @param att
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attachImage = function (att, skipRead) {
-    return this.attach(att, IMAGE, skipRead);
-  };
-  /**
-   * attaches an Attachment file, shortcut to attach
-   * @name  Base#attachFile
-   * @method
-   * @param att
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.attachFile = function (att, skipRead) {
-    return this.attach(att, ATTACHMENT, skipRead);
+  Base.prototype.clearCover = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearCover',
+      params: {},
+      skipRead: skipRead
+    });
   };
   /**
    * attaches an Attachment object
@@ -5026,14 +4862,11 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attach = function (att, key, skipRead) {
+  Base.prototype.attach = function (att, skipRead) {
     if (this.existsInDb()) {
       return this._doApiCall({
         method: 'attach',
-        params: {
-          attachments: [att._id],
-          key: key
-        },
+        params: { attachments: [att._id] },
         skipRead: skipRead
       });
     } else {
@@ -5062,6 +4895,33 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
       return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
     }
   };
+  /**
+   * Sets the flag of an item
+   * @name Base#setFlag
+   * @param flag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFlag = function (flag, skipRead) {
+    return this._doApiCall({
+      method: 'setFlag',
+      params: { flag: flag },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the flag of an item
+   * @name Base#clearFlag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearFlag = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearFlag',
+      params: {},
+      skipRead: skipRead
+    });
+  };
   // toJson, fromJson
   // ----
   /**
@@ -5083,89 +4943,63 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype._fromJson = function (data, options) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.flag = data.flag || DEFAULTS.flag;
       that.modified = data.modified || DEFAULTS.modified;
-      return that._fromKeyValuesJson(data, options);
+      return that._fromCommentsJson(data, options).then(function () {
+        return that._fromAttachmentsJson(data, options);
+      });
     });
   };
   /**
-   * _fromKeyValuesJson: reads the data.keyValues
-   * @method
+   * _fromCommentsJson: reads the data.comments
    * @param data
    * @param options
    * @returns {*}
    * @private
    */
-  Base.prototype._fromKeyValuesJson = function (data, options) {
-    // Read only the .keyValues part of the response
-    var obj = null;
-    var that = this;
+  Base.prototype._fromCommentsJson = function (data, options) {
+    var obj = null, that = this;
     this.comments = DEFAULTS.comments.slice();
-    this.attachments = DEFAULTS.attachments.slice();
-    this.keyValues = DEFAULTS.keyValues.slice();
-    this.cover = data.cover || DEFAULTS.cover;
-    if (data.keyValues && data.keyValues.length) {
-      $.each(data.keyValues, function (i, kv) {
-        kv.index = i;
-        // original index needed for sorting, swapping positions
-        switch (kv.key) {
-        case COMMENT:
-          obj = that._getComment(kv, options);
-          if (obj) {
-            that.comments = that.comments || [];
-            that.comments.push(obj);
-          }
-          break;
-        case IMAGE:
-        case ATTACHMENT:
-        case IMAGE_OTHER:
-          obj = that._getAttachment(kv, options);
-          if (obj) {
-            that.attachments = that.attachments || [];
-            that.attachments.push(obj);
-          }
-          break;
-        default:
-          obj = that._getKeyValue(kv, options);
-          if (obj) {
-            that.keyValues = that.keyValues || [];
-            that.keyValues.push(obj);
-          }
-          break;
+    if (data.comments && data.comments.length > 0) {
+      $.each(data.comments, function (i, comment) {
+        obj = that._getComment(comment, options);
+        if (obj) {
+          that.comments.push(obj);
         }
       });
     }
-    that.attachments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
-    that.comments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
     return $.Deferred().resolve(data);
   };
-  Base.prototype._getComment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
+  /**
+   * _fromAttachmentsJson: reads the data.attachments
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._fromAttachmentsJson = function (data, options) {
+    var obj = null, that = this;
+    this.attachments = DEFAULTS.attachments.slice();
+    if (data.attachments && data.attachments.length > 0) {
+      $.each(data.attachments, function (i, att) {
+        obj = that._getAttachment(att, options);
+        if (obj) {
+          that.attachments.push(obj);
+        }
+      });
+    }
+    return $.Deferred().resolve(data);
+  };
+  Base.prototype._getComment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Comment(spec);
   };
-  Base.prototype._getAttachment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.dsAttachments,
-      fields: this.fields
-    }, options || {}, // can contain; isCover, canBeCover
-    kv);
+  Base.prototype._getAttachment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Attachment(spec);
   };
-  Base.prototype._getKeyValue = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
-    return new KeyValue(spec);
-  };
   return Base;
-}(jquery, common, api, document, comment, attachment, keyvalue);
+}(jquery, common, api, document, comment, attachment);
 user = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
@@ -6058,7 +5892,10 @@ Item = function ($, Base) {
       name: '',
       status: '',
       codes: [],
-      flag: '',
+      brand: '',
+      model: '',
+      purchaseDate: null,
+      purchasePrice: null,
       location: '',
       category: '',
       geo: [
@@ -6084,7 +5921,6 @@ Item = function ($, Base) {
    * @constructor
    * @property {string} name         the name of the item
    * @property {status} status       the status of the item in an order, or expired
-   * @property {string} flag         the item flag
    * @property {string} location     the item location primary key (empty if in_custody)
    * @property {string} category     the item category primary key
    * @property {Array} geo           the item geo position in lat lng array
@@ -6101,8 +5937,11 @@ Item = function ($, Base) {
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.status = spec.status || DEFAULTS.status;
+    this.brand = spec.brand || DEFAULTS.brand;
+    this.model = spec.model || DEFAULTS.model;
     this.codes = spec.codes || DEFAULTS.codes;
-    this.flag = spec.flag || DEFAULTS.flag;
+    this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
+    this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
     this.location = spec.location || DEFAULTS.location;
     // location._id
     this.category = spec.category || DEFAULTS.category;
@@ -6140,8 +5979,8 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.isEmpty = function () {
-    // Checks for: name, status, codes, flag, location, category
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.codes.length == 0 && this.flag == DEFAULTS.flag && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
+    // Checks for: name, status, brand, model, purchaseDate, purchasePrice, codes, location, category
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.brand == DEFAULTS.brand && this.model == DEFAULTS.model && this.purchaseDate == DEFAULTS.purchaseDate && this.purchasePrice == DEFAULTS.purchasePrice && this.codes.length == 0 && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
   };
   /**
    * Checks if the item is dirty and needs saving
@@ -6149,7 +5988,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyFlag() || this._isDirtyGeo();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -6158,6 +5997,10 @@ Item = function ($, Base) {
     // Writes out; id, name, category, location, catalog
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
+    data.brand = this.brand || DEFAULTS.brand;
+    data.model = this.name || DEFAULTS.model;
+    data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
+    data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
     data.category = this.category || DEFAULTS.category;
     data.location = this.location || DEFAULTS.location;
     data.catalog = this.catalog || DEFAULTS.catalog;
@@ -6168,6 +6011,10 @@ Item = function ($, Base) {
     return Base.prototype._fromJson.call(this, data, options).then(function () {
       that.name = data.name || DEFAULTS.name;
       that.status = data.status || DEFAULTS.status;
+      that.brand = data.brand || DEFAULTS.brand;
+      that.model = data.model || DEFAULTS.model;
+      that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
+      that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
       that.codes = data.codes || DEFAULTS.codes;
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
@@ -6199,25 +6046,9 @@ Item = function ($, Base) {
         custodyId = data.custody._id ? data.custody._id : data.custody;
       }
       that.custody = custodyId;
-      // Read the flag from the keyvalues
-      return that._fromJsonFlag(data, options).then(function () {
-        $.publish('item.fromJson', data);
-        return data;
-      });
+      $.publish('item.fromJson', data);
+      return data;
     });
-  };
-  Item.prototype._fromJsonFlag = function (data, options) {
-    var that = this;
-    this.flag = DEFAULTS.flag;
-    if (data.keyValues != null && data.keyValues.length > 0) {
-      $.each(data.keyValues, function (i, kv) {
-        if (kv.key == FLAG) {
-          that.flag = kv.value;
-          return false;
-        }
-      });
-    }
-    return $.Deferred().resolve(data);
   };
   Item.prototype._toJsonKeyValues = function () {
     var that = this;
@@ -6243,6 +6074,34 @@ Item = function ($, Base) {
       return false;
     }
   };
+  Item.prototype._isDirtyBrand = function () {
+    if (this.raw) {
+      return this.brand != this.raw.brand;
+    } else {
+      return false;
+    }
+  };
+  Item.prototype._isDirtyModel = function () {
+    if (this.raw) {
+      return this.model != this.raw.model;
+    } else {
+      return false;
+    }
+  };
+  Item.prototype._isDirtyPurchaseDate = function () {
+    if (this.raw) {
+      return this.purchaseDate != this.raw.purchaseDate;
+    } else {
+      return false;
+    }
+  };
+  Item.prototype._isDirtyPurchasePrice = function () {
+    if (this.raw) {
+      return this.purchasePrice != this.raw.purchasePrice;
+    } else {
+      return false;
+    }
+  };
   Item.prototype._isDirtyLocation = function () {
     if (this.raw) {
       var locId = DEFAULTS.location;
@@ -6261,22 +6120,6 @@ Item = function ($, Base) {
         catId = this.raw.category._id ? this.raw.category._id : this.raw.category;
       }
       return this.category != catId;
-    } else {
-      return false;
-    }
-  };
-  Item.prototype._isDirtyFlag = function () {
-    if (this.raw) {
-      var flag = DEFAULTS.flag;
-      if (this.raw.keyValues && this.raw.keyValues.length) {
-        $.each(this.raw.keyValues, function (i, kv) {
-          if (kv.key == FLAG) {
-            flag = kv.value;
-            return false;
-          }
-        });
-      }
-      return this.flag != flag;
     } else {
       return false;
     }
@@ -6322,12 +6165,7 @@ Item = function ($, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this;
-    var dfdCheck = $.Deferred();
-    var dfdCategory = $.Deferred();
-    var dfdLocation = $.Deferred();
-    var dfdName = $.Deferred();
-    var dfdFlag = $.Deferred();
+    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdBasic = $.Deferred();
     if (this._isDirtyCategory()) {
       this.canChangeCategory(this.category).done(function (data) {
         if (data.result) {
@@ -6350,17 +6188,12 @@ Item = function ($, Base) {
       } else {
         dfdLocation.resolve();
       }
-      if (that._isDirtyName()) {
-        dfdName = that.updateName(that.name);
+      if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice()) {
+        dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.purchaseDate, that.purchasePrice);
       } else {
-        dfdName.resolve();
+        dfdBasic.resolve();
       }
-      if (that._isDirtyFlag()) {
-        dfdFlag = that.setFlag(that.flag);
-      } else {
-        dfdFlag.resolve();
-      }
-      return $.when(dfdCategory, dfdLocation, dfdName, dfdFlag);
+      return $.when(dfdCategory, dfdLocation, dfdBasic);
     });
   };
   /**
@@ -6528,15 +6361,21 @@ Item = function ($, Base) {
     });
   };
   /**
-   * Updates the name of an item
-   * @name Item#updateName
+   * Updates the basic fields of an item
+   * @name Item#updateBasicFields
    * @param name
    * @param skipRead
    * @returns {promise}
    */
-  Item.prototype.updateName = function (name, skipRead) {
+  Item.prototype.updateBasicFields = function (name, brand, model, purchaseDate, purchasePrice, skipRead) {
     var that = this;
-    return this.ds.update(this.id, { name: name }, this.fields).then(function (data) {
+    return this.ds.update(this.id, {
+      name: name,
+      brand: brand,
+      model: model,
+      purchaseDate: purchaseDate,
+      purchasePrice: purchasePrice
+    }, this.fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -6578,33 +6417,6 @@ Item = function ($, Base) {
       skipRead: true  // the response is a list of changed Items
     }).then(function (data) {
       return skipRead == true ? data : that._fromJson(data[0]);
-    });
-  };
-  /**
-   * Sets the flag of an item
-   * @name Item#setFlag
-   * @param flag
-   * @param skipRead
-   * @returns {promise}
-   */
-  Item.prototype.setFlag = function (flag, skipRead) {
-    return this._doApiCall({
-      method: 'setFlag',
-      params: { flag: flag },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears the flag of an item
-   * @name Item#clearFlag
-   * @param skipRead
-   * @returns {promise}
-   */
-  Item.prototype.clearFlag = function (skipRead) {
-    return this._doApiCall({
-      method: 'clearFlag',
-      params: {},
-      skipRead: skipRead
     });
   };
   /**
@@ -6654,158 +6466,6 @@ Item = function ($, Base) {
   };
   return Item;
 }(jquery, base);
-KeyValue = function ($) {
-  var DEFAULTS = {
-    id: '',
-    pk: '',
-    key: '',
-    kind: 'string',
-    value: null,
-    modified: null,
-    by: null,
-    index: 0
-  };
-  /**
-   * KeyValue class
-   * @name  KeyValue
-   * @class    
-   * @constructor
-   * 
-   * @param spec
-   */
-  var KeyValue = function (spec) {
-    this.ds = spec.ds;
-    this.fields = spec.fields;
-    this.raw = null;
-    // the raw json object
-    this.id = spec.id || DEFAULTS.id;
-    this.pk = spec.pk || DEFAULTS.pk;
-    this.key = spec.key || DEFAULTS.key;
-    this.kind = spec.kind || DEFAULTS.kind;
-    // string, int, float, bool, date, attachment
-    this.value = spec.value || DEFAULTS.value;
-    this.modified = spec.modified || DEFAULTS.modified;
-    this.by = spec.by || DEFAULTS.by;
-    this.index = spec.index || DEFAULTS.index;
-  };
-  /**
-   * Checks if the document exists in the database
-   * @name  KeyValue#existsInDb
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.existsInDb = function () {
-    return this.id != null && this.id.length > 0;
-  };
-  /**
-   * Gets the name for this keyValue
-   * @name  KeyValue#getName
-   * @method
-   * @returns {string}
-   */
-  KeyValue.prototype.getName = function () {
-    // cheqroom.prop.Warranty+date
-    // cheqroom.prop.Buy+price;EUR
-    var keyParts = this.key.split(';');
-    var noUnit = keyParts[0];
-    return noUnit.split('.').pop().split('+').join(' ');
-  };
-  /**
-   * Gets the unit for this keyValue, if no unit returns ""
-   * @name  KeyValue#getUnit
-   * @method
-   * @returns {string}
-   */
-  KeyValue.prototype.getUnit = function () {
-    var keyParts = this.key.split(';');
-    return keyParts.length == 2 ? keyParts[1] : '';
-  };
-  /**
-   * Returns if keyValue is a url 
-   * @name  KeyValue#isUrl
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isUrl = function () {
-    return this.value && (typeof this.value == 'string' && this.value.isValidUrl());
-  };
-  /**
-   * Checks if the object is empty
-   * after calling reset() isEmpty() should return true
-   * @name  KeyValue#isEmpty
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isEmpty = function () {
-    return this.id == DEFAULTS.id && this.pk == DEFAULTS.pk && this.key == DEFAULTS.key && this.kind == DEFAULTS.kind && this.value == DEFAULTS.value && this.modified == DEFAULTS.modified && this.by == DEFAULTS.by;
-  };
-  /**
-   * Checks if the object has changed
-   * @name KeyValue#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isDirty = function () {
-    return false;
-  };
-  /**
-   * Checks if the object is valid
-   * @name  KeyValue#isValid
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isValid = function () {
-    return true;
-  };
-  /**
-   * Resets the object
-   * @name  KeyValue#reset
-   * @method
-   * @returns promise
-   */
-  KeyValue.prototype.reset = function () {
-    return this._fromJson(DEFAULTS, null);
-  };
-  /**
-   * _toJson, makes a dict of the object
-   * @method
-   * @param options
-   * @returns {object}
-   * @private
-   */
-  KeyValue.prototype._toJson = function (options) {
-    return {
-      id: this.id,
-      pk: this.pk,
-      key: this.key,
-      kind: this.kind,
-      value: this.value,
-      modified: this.modified,
-      by: this.by
-    };
-  };
-  /**
-   * _fromJson: in this implementation we'll only read
-   * the data.keyValues into: comments, attachments, keyValues
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @returns promise
-   * @private
-   */
-  KeyValue.prototype._fromJson = function (data, options) {
-    this.raw = data;
-    this.id = data.id || DEFAULTS.id;
-    this.pk = data.pk || DEFAULTS.pk;
-    this.key = data.key || DEFAULTS.key;
-    this.kind = data.kind || DEFAULTS.kind;
-    this.value = data.value || DEFAULTS.value;
-    this.modified = data.modified || DEFAULTS.modified;
-    this.by = data.by || DEFAULTS.by;
-    return $.Deferred().resolve(data);
-  };
-  return KeyValue;
-}(jquery);
 Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
@@ -10605,7 +10265,7 @@ WebHook = function ($, common, api, Document) {
    * @property {string} name          the name
    * @property {string} address       the url which will be called
    * @property {string} topic         the topic name ('item.changelocation', 'item.changegeo', 'item.expire', ...)
-   * @property {string} fields        the fields which should be fetched from the db (default: `*, location.*, items.*, customer.*)
+   * @property {string} hookFields    the fields which should be fetched from the db (default: `*, location.*, items.*, customer.*)
    * @property {string} format        the output format (only `json` is supported)
    * @property {Moment} created       the creation date of the webhook
    * @property {Moment} modified      the modified date of the webhook
@@ -10915,7 +10575,7 @@ OrderTransfer = function ($, Base) {
   };
   return OrderTransfer;
 }(jquery, base);
-core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, Helper, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
+core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, Kit, Location, Order, Helper, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
   var core = {};
   // namespaces
   core.api = api;
@@ -10930,7 +10590,6 @@ core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact
   core.DateHelper = DateHelper;
   core.Document = Document;
   core.Item = Item;
-  core.KeyValue = KeyValue;
   core.Kit = Kit;
   core.Location = Location;
   core.Order = Order;
@@ -10941,6 +10600,6 @@ core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact
   core.OrderTransfer = OrderTransfer;
   core.Helper = Helper;
   return core;
-}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, WebHook, common, OrderTransfer);
+}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, Kit, Location, Order, helper, Reservation, Transaction, User, WebHook, common, OrderTransfer);
 return core;
 }))

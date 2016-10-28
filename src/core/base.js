@@ -11,21 +11,16 @@ define([
     'api',
     'document',
     'comment',
-    'attachment',
-    'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
+    'attachment'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment) {
 
     // Some constant values
-    var ATTACHMENT = "cheqroom.Attachment",
-        IMAGE = "cheqroom.prop.Image",
-        IMAGE_OTHER = "cheqroom.attachment.Image",
-        DEFAULTS = {
+    var DEFAULTS = {
             id: "",
             modified: null,
             cover: null,
             flag: null,
             comments: [],
-            attachments: [],
-            keyValues: []
+            attachments: []
         };
 
     // Allow overriding the ctor during inheritance
@@ -42,7 +37,6 @@ define([
      * @property {string} flag                   the item flag
      * @property {array} comments                array of Comment objects
      * @property {array} attachments             array of Attachment objects
-     * @property {array} keyValues               array of KeyValue objects
      * @property {string} cover                  cover attachment id, default null
      * @constructor
      * @extends Document
@@ -57,7 +51,6 @@ define([
         this.flag = spec.flag || DEFAULTS.flag;                                 // flag
         this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
-        this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();          // keyValues array
         this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
     };
 
@@ -84,8 +77,7 @@ define([
         return (
             (this.flag==DEFAULTS.flag) &&
             ((this.comments==null) || (this.comments.length==0)) &&
-            ((this.attachments==null) || (this.attachments.length==0)) &&
-            ((this.keyValues==null) || (this.keyValues.length==0))
+            ((this.attachments==null) || (this.attachments.length==0))
         );
     };
 
@@ -232,7 +224,7 @@ define([
     };
 
     /**
-     * changes the cover image to another Attachment
+     * Set the cover image to an Attachment
      * @name  Base#setCover
      * @method
      * @param att
@@ -242,33 +234,24 @@ define([
     Base.prototype.setCover = function(att, skipRead) {
         return this._doApiCall({
             method: 'setCover',
-            params: {kvId: att._id},
+            params: {attachmentId: att._id},
             skipRead: skipRead
         });
     };
 
     /**
-     * attaches an image Attachment file, shortcut to attach
-     * @name  Base#attachImage
+     * Clears the cover image
+     * @name  Base#clearCover
      * @method
-     * @param att
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.attachImage = function(att, skipRead) {
-        return this.attach(att, IMAGE, skipRead);
-    };
-
-    /**
-     * attaches an Attachment file, shortcut to attach
-     * @name  Base#attachFile
-     * @method
-     * @param att
-     * @param skipRead
-     * @returns {promise}
-     */
-    Base.prototype.attachFile = function(att, skipRead) {
-        return this.attach(att, ATTACHMENT, skipRead);
+    Base.prototype.clearCover = function(skipRead) {
+        return this._doApiCall({
+            method: 'clearCover',
+            params: {},
+            skipRead: skipRead
+        });
     };
 
     /**
@@ -280,11 +263,11 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.attach = function(att, key, skipRead) {
+    Base.prototype.attach = function(att, skipRead) {
         if (this.existsInDb()) {
             return this._doApiCall({
                 method: 'attach',
-                params: {attachments: [att._id], key: key},
+                params: {attachments: [att._id]},
                 skipRead: skipRead
             });
         } else {
@@ -366,13 +349,21 @@ define([
             .then(function() {
                 that.flag = data.flag || DEFAULTS.flag;
                 that.modified = data.modified || DEFAULTS.modified;
+
                 return that._fromCommentsJson(data, options)
                     .then(function() {
-                        return that._fromKeyValuesJson(data, options);
+                        return that._fromAttachmentsJson(data, options);
                     });
             });
     };
 
+    /**
+     * _fromCommentsJson: reads the data.comments
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
     Base.prototype._fromCommentsJson = function(data, options) {
         var obj = null,
             that = this;
@@ -393,53 +384,27 @@ define([
     };
 
     /**
-     * _fromKeyValuesJson: reads the data.keyValues
-     * @method
+     * _fromAttachmentsJson: reads the data.attachments
      * @param data
      * @param options
      * @returns {*}
      * @private
      */
-    Base.prototype._fromKeyValuesJson = function(data, options) {
-        // Read only the .keyValues part of the response
-        var obj = null;
-        var that = this;
+    Base.prototype._fromAttachmentsJson = function(data, options) {
+        var obj = null,
+            that = this;
 
-        //this.attachments = DEFAULTS.attachments.slice();
-        //this.cover = data.cover || DEFAULTS.cover;
-        this.keyValues = DEFAULTS.keyValues.slice();
+        this.attachments = DEFAULTS.attachments.slice();
 
-        if( (data.keyValues) &&
-            (data.keyValues.length)) {
-
-            $.each(data.keyValues, function(i, kv) {
-                kv.index = i;  // original index needed for sorting, swapping positions
-
-                switch(kv.key) {
-                    case COMMENT:
-                        // This moved to a normal comments array
-                        // It's no longer stored as keyvalues
-                        break;
-                    case IMAGE:
-                    case ATTACHMENT:
-                    case IMAGE_OTHER:
-                        // This moved to a normal attachments array
-                        // It's no longer stored as keyvalues
-                        break;
-                    default:
-                        obj = that._getKeyValue(kv, options);
-                        if (obj) {
-                            that.keyValues = that.keyValues || [];
-                            that.keyValues.push(obj);
-                        }
-                        break;
+        if( (data.attachments) &&
+            (data.attachments.length>0)) {
+            $.each(data.attachments, function(i, att) {
+                obj = that._getAttachment(att, options);
+                if (obj) {
+                    that.attachments.push(obj);
                 }
             });
         }
-
-        that.attachments.sort(function (a, b) {
-            return b.modified > a.modified;
-        });
 
         return $.Deferred().resolve(data);
     };
@@ -452,15 +417,6 @@ define([
     Base.prototype._getAttachment = function(data, options) {
         var spec = $.extend({ds: this.ds}, options || {}, data);
         return new Attachment(spec);
-    };
-
-    Base.prototype._getKeyValue = function(kv, options) {
-        var spec = $.extend({
-                ds: this.ds,
-                fields: this.fields},
-            options || {},
-            kv);
-        return new KeyValue(spec);
     };
 
     return Base;

@@ -116,14 +116,14 @@ define(['jquery'], /** Attachment */ function ($) {
     };
 
     /**
-     * _fromJson: reads the Comment object from json
+     * _fromJson: reads the Attachment object from json
      * @method
      * @param {object} data the json response
      * @param {object} options dict
      * @returns promise
      * @private
      */
-    Comment.prototype._fromJson = function(data, options) {
+    Attachment.prototype._fromJson = function(data, options) {
         this.raw = data;
         this.id = data.id || DEFAULTS.id;
         this.value = data.value || DEFAULTS.value;

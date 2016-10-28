@@ -14,7 +14,6 @@ define([
     'DateHelper',
     'Document',
     'Item',
-    'KeyValue',
     'Kit',
     'Location',
     'Order',
@@ -24,7 +23,7 @@ define([
     'User',
     'WebHook',
     'common',
-    'OrderTransfer'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, Helper, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, Kit, Location, Order, Helper, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
 
     var core = {};
 
@@ -42,7 +41,6 @@ define([
     core.DateHelper = DateHelper;
     core.Document = Document;   
     core.Item = Item;
-    core.KeyValue = KeyValue;
     core.Kit = Kit;
     core.Location = Location;
     core.Order = Order;

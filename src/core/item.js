@@ -14,6 +14,10 @@ define([
         name: "",
         status: "",
         codes: [],
+        brand: "",
+        model: "",
+        purchaseDate: null,
+        purchasePrice: null,
         location: "",
         category: "",
         geo: [DEFAULT_LAT,DEFAULT_LONG],
@@ -54,7 +58,11 @@ define([
 
         this.name = spec.name || DEFAULTS.name;
         this.status = spec.status || DEFAULTS.status;
+        this.brand = spec.brand || DEFAULTS.brand;
+        this.model = spec.model || DEFAULTS.model;
         this.codes = spec.codes || DEFAULTS.codes;
+        this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
+        this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
         this.location = spec.location || DEFAULTS.location;     // location._id
         this.category = spec.category || DEFAULTS.category;     // category._id
         this.geo = spec.geo || DEFAULTS.geo.slice();            // null or an array with 2 floats
@@ -98,11 +106,15 @@ define([
      * @returns {boolean}
      */
     Item.prototype.isEmpty = function() {
-        // Checks for: name, status, codes, location, category
+        // Checks for: name, status, brand, model, purchaseDate, purchasePrice, codes, location, category
         return (
             (Base.prototype.isEmpty.call(this)) &&
             (this.name==DEFAULTS.name) &&
             (this.status==DEFAULTS.status) &&
+            (this.brand==DEFAULTS.brand) &&
+            (this.model==DEFAULTS.model) &&
+            (this.purchaseDate==DEFAULTS.purchaseDate) &&
+            (this.purchasePrice==DEFAULTS.purchasePrice) &&
             (this.codes.length==0) &&  // not DEFAULTS.codes? :)
             (this.location==DEFAULTS.location) &&
             (this.category==DEFAULTS.category));
@@ -117,6 +129,10 @@ define([
         return (
             Base.prototype.isDirty.call(this) || 
             this._isDirtyName() ||
+            this._isDirtyBrand() ||
+            this._isDirtyModel() ||
+            this._isDirtyPurchaseDate() ||
+            this._isDirtyPurchasePrice() ||
             this._isDirtyCategory() ||
             this._isDirtyLocation() ||
             this._isDirtyGeo());
@@ -130,6 +146,10 @@ define([
         // Writes out; id, name, category, location, catalog
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
+        data.brand = this.brand || DEFAULTS.brand;
+        data.model = this.name || DEFAULTS.model;
+        data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
+        data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
         data.category = this.category || DEFAULTS.category;
         data.location = this.location || DEFAULTS.location;
         data.catalog = this.catalog || DEFAULTS.catalog;
@@ -143,6 +163,10 @@ define([
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
                 that.status = data.status || DEFAULTS.status;
+                that.brand = data.brand || DEFAULTS.brand;
+                that.model = data.model || DEFAULTS.model;
+                that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
+                that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
                 that.codes = data.codes || DEFAULTS.codes;
                 that.address = data.address || DEFAULTS.address;
                 that.geo = data.geo || DEFAULTS.geo.slice();
@@ -210,6 +234,38 @@ define([
     Item.prototype._isDirtyName = function() {
         if (this.raw) {
             return (this.name!=this.raw.name);
+        } else {
+            return false;
+        }
+    };
+
+    Item.prototype._isDirtyBrand = function() {
+        if (this.raw) {
+            return (this.brand!=this.raw.brand);
+        } else {
+            return false;
+        }
+    };
+
+    Item.prototype._isDirtyModel = function() {
+        if (this.raw) {
+            return (this.model!=this.raw.model);
+        } else {
+            return false;
+        }
+    };
+
+    Item.prototype._isDirtyPurchaseDate = function() {
+        if (this.raw) {
+            return (this.purchaseDate!=this.raw.purchaseDate);
+        } else {
+            return false;
+        }
+    };
+
+    Item.prototype._isDirtyPurchasePrice = function() {
+        if (this.raw) {
+            return (this.purchasePrice!=this.raw.purchasePrice);
         } else {
             return false;
         }
@@ -283,11 +339,11 @@ define([
            return $.Deferred().reject(new Error("Cannot update, invalid document"));
         }
 
-        var that = this;
-        var dfdCheck = $.Deferred();
-        var dfdCategory = $.Deferred();
-        var dfdLocation = $.Deferred();
-        var dfdName = $.Deferred();
+        var that = this,
+            dfdCheck = $.Deferred(),
+            dfdCategory = $.Deferred(),
+            dfdLocation = $.Deferred(),
+            dfdBasic = $.Deferred();
 
         if (this._isDirtyCategory()) {
             this.canChangeCategory(this.category)
@@ -316,13 +372,17 @@ define([
                     dfdLocation.resolve();
                 }
 
-                if (that._isDirtyName()) {
-                    dfdName = that.updateName(that.name);
+                if( (that._isDirtyName()) ||
+                    (that._isDirtyBrand()) ||
+                    (that._isDirtyModel()) ||
+                    (that._isDirtyPurchaseDate()) ||
+                    (that._isDirtyPurchasePrice())) {
+                    dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.purchaseDate, that.purchasePrice);
                 } else {
-                    dfdName.resolve();
+                    dfdBasic.resolve();
                 }
 
-                return $.when(dfdCategory, dfdLocation, dfdName);
+                return $.when(dfdCategory, dfdLocation, dfdBasic);
             });
    };
 
@@ -479,15 +539,20 @@ define([
     };
 
     /**
-     * Updates the name of an item
-     * @name Item#updateName
+     * Updates the basic fields of an item
+     * @name Item#updateBasicFields
      * @param name
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.updateName = function(name, skipRead) {
+    Item.prototype.updateBasicFields = function(name, brand, model, purchaseDate, purchasePrice, skipRead) {
         var that = this;
-        return this.ds.update(this.id, {name: name}, this.fields)
+        return this.ds.update(this.id, {
+            name: name,
+            brand: brand,
+            model: model,
+            purchaseDate: purchaseDate,
+            purchasePrice: purchasePrice}, this.fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });

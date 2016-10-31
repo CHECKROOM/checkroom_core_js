@@ -10,6 +10,8 @@ define(['jquery'], /** Attachment */ function ($) {
     var IMAGES = ['jpg', 'jpeg', 'png'];
     var PREVIEWS = ['jpg', 'jpeg', 'png', 'doc', 'docx', 'pdf'];
     var DEFAULTS = {
+        fileName: '',
+        fileSize: 0,
         isCover: false,
         canBeCover: true
     };
@@ -27,7 +29,8 @@ define(['jquery'], /** Attachment */ function ($) {
         this.ds = spec.ds;
         this.raw = null; // the raw json object
 
-        this.id = spec.id || DEFAULTS.id;
+        this.fileName = spec.fileName || DEFAULTS.fileName;
+        this.fileSize = spec.fileSize || DEFAULTS.fileSize;
         this.value = spec.value || DEFAULTS.value;
         this.created = spec.created || DEFAULTS.created;
         this.by = spec.by || DEFAULTS.by;
@@ -70,7 +73,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {string}
      */
     Attachment.prototype.getExt = function(fileName) {
-        fileName = fileName || this.id;
+        fileName = fileName || this.fileName;
         return EXT.exec(fileName)[1] || "";
     };
 
@@ -81,8 +84,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
-        var fileName = this.id;
-        var ext = this.getExt(fileName);
+        var ext = this.getExt(this.fileName);
         return ($.inArray(ext, IMAGES) >= 0);
     };
 
@@ -93,8 +95,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {boolean}
      */
     Attachment.prototype.hasPreview = function() {
-        var fileName = this.id;
-        var ext = this.getExt(fileName);
+        var ext = this.getExt(this.fileName);
         return ($.inArray(ext, PREVIEWS) >= 0);
     };
 
@@ -107,7 +108,8 @@ define(['jquery'], /** Attachment */ function ($) {
      */
     Attachment.prototype._toJson = function(options) {
         return {
-            id: this.id,
+            fileName: this.fileName,
+            fileSize: this.fileSize,
             value: this.value,
             created: this.created,
             by: this.by
@@ -124,7 +126,8 @@ define(['jquery'], /** Attachment */ function ($) {
      */
     Attachment.prototype._fromJson = function(data, options) {
         this.raw = data;
-        this.id = data.id || DEFAULTS.id;
+        this.fileName = data.fileName || DEFAULTS.fileName;
+        this.fileSize = data.fileSize || DEFAULTS.fileSize;
         this.value = data.value || DEFAULTS.value;
         this.created = data.created || DEFAULTS.created;
         this.by = data.by || DEFAULTS.by;

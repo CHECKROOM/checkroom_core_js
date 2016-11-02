@@ -18,15 +18,16 @@ define([
      * @name Document
      * @class
      * @constructor
+     * @property {ApiDataSource}  ds        - The documents primary key
+     * @property {array}  _fields           - The raw, unprocessed json response
      * @property {string}  id               - The documents primary key
      * @property {string}  raw              - The raw, unprocessed json response
      */
     var Document = function(spec) {
-        this.ds = spec.ds;                                              // ApiDataSource object
-        this.fields = spec.fields;                                      // e.g. [*]
-
         this.raw = null;                                                // raw json object
         this.id = spec.id || DEFAULTS.id;                               // doc _id
+        this.ds = spec.ds;                                              // ApiDataSource object
+        this._fields = spec._fields;                                    // e.g. [*]
     };
 
     /**
@@ -97,12 +98,12 @@ define([
      * Reloads the object from db
      * @name  Document#reload
      * @method
-     * @param fields
+     * @param _fields
      * @returns {promise}
      */
-    Document.prototype.reload = function(fields) {
+    Document.prototype.reload = function(_fields) {
         if (this.existsInDb()) {
-            return this.get(fields);
+            return this.get(_fields);
         } else {
             return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
         }
@@ -112,13 +113,13 @@ define([
      * Gets an object by the default api.get
      * @name  Document#get
      * @method
-     * @param fields
+     * @param _fields
      * @returns {promise}
      */
-    Document.prototype.get = function(fields) {
+    Document.prototype.get = function(_fields) {
         if (this.existsInDb()) {
             var that = this;
-            return this.ds.get(this.id, fields || this.fields)
+            return this.ds.get(this.id, _fields || this._fields)
                 .then(function(data) {
                     return that._fromJson(data);
                 });
@@ -148,7 +149,7 @@ define([
         var that = this;
         var data = this._toJson();
         delete data.id;
-        return this.ds.create(data, this.fields)
+        return this.ds.create(data, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });
@@ -175,7 +176,7 @@ define([
         var that = this;
         var data = this._toJson();
         delete data.id;
-        return this.ds.update(this.id, data, this.fields)
+        return this.ds.update(this.id, data, this._fields_fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });
@@ -256,7 +257,7 @@ define([
 
     /**
      * Wrapping the this.ds.call method
-     * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+     * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
      * @method
      * @param spec
      * @returns {promise}
@@ -268,7 +269,7 @@ define([
                 (spec.collectionCall==true) ? null : (spec.pk || this.id),
                 spec.method,
                 spec.params,
-                spec.fields || this.fields,
+                spec._fields || this._fields,
                 spec.timeOut,
                 spec.usePost)
             .then(function(data) {

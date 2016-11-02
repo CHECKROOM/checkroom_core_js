@@ -34,7 +34,7 @@ define([
      */
     var Contact = function(opt) {
         var spec = $.extend({
-            fields: ['*'],
+            _fields: ['*'],
             crtype: 'cheqroom.types.customer'
         }, opt);
         Base.call(this, spec);

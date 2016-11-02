@@ -9,22 +9,6 @@ define([
     'api',
     'document'],  /** @lends Document */ function ($, common, api, Document) {
 
-    /*
-    id = StringField(primary_key=True, default=shortuuid.uuid)
-    name = StringField(required=True, min_length=3)
-    address = URLField()  # e.g.: "http://my.domain.com/inventory_update"
-    topic = StringField(choices=WEBHOOK_TOPICS)
-    fields = StringField(default="*, location.*, items.*, customer.*")  # see also clean function
-    format = StringField(choices=WEBHOOK_FORMATS, default=WEBHOOK_FORMATS[0])
-    created_at = DateTimeField()
-    modified = DateTimeField(default=DateHelper.getNow)
-    enabled = BooleanField(default=True)
-    log = ListField(EmbeddedDocumentField(WebHookLog))  # a log per unique return code and doc id
-    log10 = ListField(EmbeddedDocumentField(WebHookLog))  # a log of the 10 latest fired hooks for this webhook
-    nr_consecutive_fails = IntField(default=0)  # number of consecutive fails of this webhook
-    by = ReferenceField("User")  # The user that added / updated this
-     */
-
     // Some constant values
     var DEFAULTS = {
         id: "",
@@ -38,7 +22,6 @@ define([
         enabled: true,
         log10: [],
         fails: 0
-
     };
 
     // Allow overriding the ctor during inheritance

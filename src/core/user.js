@@ -33,7 +33,7 @@ define([
      */
     var User = function(opt) {
         var spec = $.extend({
-            fields: ['*', 'group', 'picture']
+            _fields: ['*', 'group', 'picture']
         }, opt);
         Base.call(this, spec);
 

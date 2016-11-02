@@ -51,7 +51,7 @@ define([
      */
     var Item = function(opt) {
         var spec = $.extend({
-            fields: ['*'],
+            _fields: ['*'],
             crtype: 'cheqroom.types.item'
         }, opt);
         Base.call(this, spec);
@@ -408,7 +408,7 @@ define([
         var data = $.extend(this._toJson(), this._toJsonKeyValues());
         delete data.id;
 
-        return this.ds.create(data, this.fields)
+        return this.ds.create(data, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });
@@ -552,7 +552,7 @@ define([
             brand: brand,
             model: model,
             purchaseDate: purchaseDate,
-            purchasePrice: purchasePrice}, this.fields)
+            purchasePrice: purchasePrice}, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });

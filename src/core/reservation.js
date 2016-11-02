@@ -24,7 +24,7 @@ define([
     var Reservation = function(opt) {
         var spec = $.extend({
             crtype: "cheqroom.types.reservation",
-            fields: ["*"]
+            _fields: ["*"]
         }, opt);
         Transaction.call(this, spec);
 

@@ -24,7 +24,7 @@ define([
     var Order = function(opt) {
         var spec = $.extend({
             crtype: "cheqroom.types.order",
-            fields: ["*"]
+            _fields: ["*"]
         }, opt);
         Transaction.call(this, spec);
 

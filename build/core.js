@@ -2838,11 +2838,11 @@ api = function ($, jsonp, moment, common) {
   };
   /**
    * Turns all strings that look like datetimes into moment objects recursively
-   * 
+   *
    * @name  DateHelper#fixDates
    * @method
    * @private
-   * 
+   *
    * @param data
    * @returns {*}
    */
@@ -3448,17 +3448,19 @@ document = function ($, common, api) {
    * @name Document
    * @class
    * @constructor
+   * @property {ApiDataSource}  ds        - The documents primary key
+   * @property {array}  _fields           - The raw, unprocessed json response
    * @property {string}  id               - The documents primary key
    * @property {string}  raw              - The raw, unprocessed json response
    */
   var Document = function (spec) {
-    this.ds = spec.ds;
-    // ApiDataSource object
-    this.fields = spec.fields;
-    // e.g. [*]
     this.raw = null;
     // raw json object
-    this.id = spec.id || DEFAULTS.id;  // doc _id
+    this.id = spec.id || DEFAULTS.id;
+    // doc _id
+    this.ds = spec.ds;
+    // ApiDataSource object
+    this._fields = spec._fields;  // e.g. [*]
   };
   /**
    * Resets the object
@@ -3522,12 +3524,12 @@ document = function ($, common, api) {
    * Reloads the object from db
    * @name  Document#reload
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.reload = function (fields) {
+  Document.prototype.reload = function (_fields) {
     if (this.existsInDb()) {
-      return this.get(fields);
+      return this.get(_fields);
     } else {
       return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
     }
@@ -3536,13 +3538,13 @@ document = function ($, common, api) {
    * Gets an object by the default api.get
    * @name  Document#get
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.get = function (fields) {
+  Document.prototype.get = function (_fields) {
     if (this.existsInDb()) {
       var that = this;
-      return this.ds.get(this.id, fields || this.fields).then(function (data) {
+      return this.ds.get(this.id, _fields || this._fields).then(function (data) {
         return that._fromJson(data);
       });
     } else {
@@ -3569,7 +3571,7 @@ document = function ($, common, api) {
     var that = this;
     var data = this._toJson();
     delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
+    return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -3593,7 +3595,7 @@ document = function ($, common, api) {
     var that = this;
     var data = this._toJson();
     delete data.id;
-    return this.ds.update(this.id, data, this.fields).then(function (data) {
+    return this.ds.update(this.id, data, this._fields_fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -3663,7 +3665,7 @@ document = function ($, common, api) {
   };
   /**
    * Wrapping the this.ds.call method
-   * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
    * @method
    * @param spec
    * @returns {promise}
@@ -3671,7 +3673,7 @@ document = function ($, common, api) {
    */
   Document.prototype._doApiCall = function (spec) {
     var that = this;
-    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec.fields || this.fields, spec.timeOut, spec.usePost).then(function (data) {
+    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -4575,7 +4577,7 @@ Conflict = function ($) {
    */
   var Conflict = function (spec) {
     this.ds = spec.ds;
-    this.fields = spec.fields;
+    this._fields = spec._fields;
     this.raw = null;
     // the raw json object
     this.kind = spec.kind || DEFAULTS.kind;
@@ -5023,7 +5025,7 @@ user = function ($, Base, common) {
    */
   var User = function (opt) {
     var spec = $.extend({
-      fields: [
+      _fields: [
         '*',
         'group',
         'picture'
@@ -5227,7 +5229,7 @@ Contact = function ($, Base, common, User) {
    */
   var Contact = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.customer'
     }, opt);
     Base.call(this, spec);
@@ -5654,17 +5656,19 @@ Document = function ($, common, api) {
    * @name Document
    * @class
    * @constructor
+   * @property {ApiDataSource}  ds        - The documents primary key
+   * @property {array}  _fields           - The raw, unprocessed json response
    * @property {string}  id               - The documents primary key
    * @property {string}  raw              - The raw, unprocessed json response
    */
   var Document = function (spec) {
-    this.ds = spec.ds;
-    // ApiDataSource object
-    this.fields = spec.fields;
-    // e.g. [*]
     this.raw = null;
     // raw json object
-    this.id = spec.id || DEFAULTS.id;  // doc _id
+    this.id = spec.id || DEFAULTS.id;
+    // doc _id
+    this.ds = spec.ds;
+    // ApiDataSource object
+    this._fields = spec._fields;  // e.g. [*]
   };
   /**
    * Resets the object
@@ -5728,12 +5732,12 @@ Document = function ($, common, api) {
    * Reloads the object from db
    * @name  Document#reload
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.reload = function (fields) {
+  Document.prototype.reload = function (_fields) {
     if (this.existsInDb()) {
-      return this.get(fields);
+      return this.get(_fields);
     } else {
       return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
     }
@@ -5742,13 +5746,13 @@ Document = function ($, common, api) {
    * Gets an object by the default api.get
    * @name  Document#get
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.get = function (fields) {
+  Document.prototype.get = function (_fields) {
     if (this.existsInDb()) {
       var that = this;
-      return this.ds.get(this.id, fields || this.fields).then(function (data) {
+      return this.ds.get(this.id, _fields || this._fields).then(function (data) {
         return that._fromJson(data);
       });
     } else {
@@ -5775,7 +5779,7 @@ Document = function ($, common, api) {
     var that = this;
     var data = this._toJson();
     delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
+    return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -5799,7 +5803,7 @@ Document = function ($, common, api) {
     var that = this;
     var data = this._toJson();
     delete data.id;
-    return this.ds.update(this.id, data, this.fields).then(function (data) {
+    return this.ds.update(this.id, data, this._fields_fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -5869,7 +5873,7 @@ Document = function ($, common, api) {
   };
   /**
    * Wrapping the this.ds.call method
-   * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
    * @method
    * @param spec
    * @returns {promise}
@@ -5877,7 +5881,7 @@ Document = function ($, common, api) {
    */
   Document.prototype._doApiCall = function (spec) {
     var that = this;
-    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec.fields || this.fields, spec.timeOut, spec.usePost).then(function (data) {
+    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -5904,40 +5908,6 @@ Group = function ($, common, api, Document) {
   var tmp = function () {
   };
   tmp.prototype = Document.prototype;
-  /*
-       id = StringField(primary_key=True)
-       name = StringField(required=True, min_length=3)
-       admin = GenericReferenceField()
-       db = StringField()
-       signedup = DateTimeField()
-       activated = DateTimeField()
-       cancelled = DateTimeField()
-       extended = DateTimeField()
-       price = StringField()
-       dirty = EmbeddedDocumentField(DirtyFlags)
-       limits = EmbeddedDocumentField(SubscriptionLimits)
-       subscription = EmbeddedDocumentField(SubscriptionInfo)
-       profile = EmbeddedDocumentField(GroupProfile)
-       cleanup = EmbeddedDocumentField(GroupCleanup)
-       logo = ReferenceField(Attachment)
-       publicKey = UUIDField(binary=False, default=uuid.uuid4)
-       archived = BooleanField(default=False)  # Set to true by a cron called archiving script
-       isSandbox = BooleanField(default=False)  # Indicates that the group is working on sample data
-       referInvite = StringField()  # A unique id with which you can invite other accounts
-       referAccept = StringField()   # The referral id, can be set when the trial was started, or when paying started
-  
-       itemFlags = ListField(StringField(min_length=3))
-       kitFlags = ListField(StringField(min_length=3))
-       customerFlags = ListField(StringField(min_length=3))
-       orderFlags = ListField(StringField(min_length=3))
-       reservationFlags = ListField(StringField(min_length=3))
-  
-       itemFields = ListField(EmbeddedDocumentField(FieldDef))
-       kitFields = ListField(EmbeddedDocumentField(FieldDef))
-       customerFields = ListField(EmbeddedDocumentField(FieldDef))
-       orderFields = ListField(EmbeddedDocumentField(FieldDef))
-       reservationFields = ListField(EmbeddedDocumentField(FieldDef))
-       */
   /**
    * Group describes a group which can trigger on certain events (signals)
    * @name  Group
@@ -6250,7 +6220,7 @@ Item = function ($, Base) {
    */
   var Item = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.item'
     }, opt);
     Base.call(this, spec);
@@ -6535,7 +6505,7 @@ Item = function ($, Base) {
     var that = this;
     var data = $.extend(this._toJson(), this._toJsonKeyValues());
     delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
+    return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -6694,7 +6664,7 @@ Item = function ($, Base) {
       model: model,
       purchaseDate: purchaseDate,
       purchasePrice: purchasePrice
-    }, this.fields).then(function (data) {
+    }, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -6805,7 +6775,7 @@ Kit = function ($, Base, common) {
    */
   var Kit = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.kit'
     }, opt);
     Base.call(this, spec);
@@ -7015,7 +6985,7 @@ Kit = function ($, Base, common) {
       items: this._getIds(this.items)
     };
     delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
+    return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -7086,7 +7056,7 @@ Location = function ($, Base) {
    *     });
    */
   var Location = function (opt) {
-    var spec = $.extend({ fields: ['*'] }, opt);
+    var spec = $.extend({ _fields: ['*'] }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.address = spec.address || DEFAULTS.address;
@@ -7167,7 +7137,7 @@ location = function ($, Base) {
    *     });
    */
   var Location = function (opt) {
-    var spec = $.extend({ fields: ['*'] }, opt);
+    var spec = $.extend({ _fields: ['*'] }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.address = spec.address || DEFAULTS.address;
@@ -8557,7 +8527,7 @@ conflict = function ($) {
    */
   var Conflict = function (spec) {
     this.ds = spec.ds;
-    this.fields = spec.fields;
+    this._fields = spec._fields;
     this.raw = null;
     // the raw json object
     this.kind = spec.kind || DEFAULTS.kind;
@@ -8622,7 +8592,7 @@ Order = function ($, api, Transaction, Conflict, common) {
   var Order = function (opt) {
     var spec = $.extend({
       crtype: 'cheqroom.types.order',
-      fields: ['*']
+      _fields: ['*']
     }, opt);
     Transaction.call(this, spec);
     this.dsReservations = spec.dsReservations;
@@ -9132,7 +9102,7 @@ Reservation = function ($, api, Transaction, Conflict) {
   var Reservation = function (opt) {
     var spec = $.extend({
       crtype: 'cheqroom.types.reservation',
-      fields: ['*']
+      _fields: ['*']
     }, opt);
     Transaction.call(this, spec);
     this.conflicts = [];
@@ -10361,7 +10331,7 @@ User = function ($, Base, common) {
    */
   var User = function (opt) {
     var spec = $.extend({
-      fields: [
+      _fields: [
         '*',
         'group',
         'picture'
@@ -10542,21 +10512,6 @@ User = function ($, Base, common) {
   return User;
 }(jquery, base, common);
 WebHook = function ($, common, api, Document) {
-  /*
-  id = StringField(primary_key=True, default=shortuuid.uuid)
-  name = StringField(required=True, min_length=3)
-  address = URLField()  # e.g.: "http://my.domain.com/inventory_update"
-  topic = StringField(choices=WEBHOOK_TOPICS)
-  fields = StringField(default="*, location.*, items.*, customer.*")  # see also clean function
-  format = StringField(choices=WEBHOOK_FORMATS, default=WEBHOOK_FORMATS[0])
-  created_at = DateTimeField()
-  modified = DateTimeField(default=DateHelper.getNow)
-  enabled = BooleanField(default=True)
-  log = ListField(EmbeddedDocumentField(WebHookLog))  # a log per unique return code and doc id
-  log10 = ListField(EmbeddedDocumentField(WebHookLog))  # a log of the 10 latest fired hooks for this webhook
-  nr_consecutive_fails = IntField(default=0)  # number of consecutive fails of this webhook
-  by = ReferenceField("User")  # The user that added / updated this
-   */
   // Some constant values
   var DEFAULTS = {
     id: '',
@@ -10767,7 +10722,7 @@ OrderTransfer = function ($, Base) {
    */
   var OrderTransfer = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.reservation.ordertransfer'
     }, opt);
     Base.call(this, spec);

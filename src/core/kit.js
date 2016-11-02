@@ -29,7 +29,7 @@ define([
      */
     var Kit = function(opt) {
         var spec = $.extend({
-            fields: ['*'],
+            _fields: ['*'],
             crtype: 'cheqroom.types.kit'
         }, opt);
         Base.call(this, spec);
@@ -254,7 +254,7 @@ define([
             items: this._getIds(this.items)
         };
         delete data.id;
-        return this.ds.create(data, this.fields)
+        return this.ds.create(data, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });
@@ -292,7 +292,7 @@ define([
                             item: item._id,
                             itemName: item.name,                            
                             itemStatus: item.status
-                        })
+                        });
                         break;
                 }
             });

@@ -30,41 +30,6 @@ define([
     var tmp = function(){};
     tmp.prototype = Document.prototype;
 
-    /*
-     id = StringField(primary_key=True)
-     name = StringField(required=True, min_length=3)
-     admin = GenericReferenceField()
-     db = StringField()
-     signedup = DateTimeField()
-     activated = DateTimeField()
-     cancelled = DateTimeField()
-     extended = DateTimeField()
-     price = StringField()
-     dirty = EmbeddedDocumentField(DirtyFlags)
-     limits = EmbeddedDocumentField(SubscriptionLimits)
-     subscription = EmbeddedDocumentField(SubscriptionInfo)
-     profile = EmbeddedDocumentField(GroupProfile)
-     cleanup = EmbeddedDocumentField(GroupCleanup)
-     logo = ReferenceField(Attachment)
-     publicKey = UUIDField(binary=False, default=uuid.uuid4)
-     archived = BooleanField(default=False)  # Set to true by a cron called archiving script
-     isSandbox = BooleanField(default=False)  # Indicates that the group is working on sample data
-     referInvite = StringField()  # A unique id with which you can invite other accounts
-     referAccept = StringField()   # The referral id, can be set when the trial was started, or when paying started
-
-     itemFlags = ListField(StringField(min_length=3))
-     kitFlags = ListField(StringField(min_length=3))
-     customerFlags = ListField(StringField(min_length=3))
-     orderFlags = ListField(StringField(min_length=3))
-     reservationFlags = ListField(StringField(min_length=3))
-
-     itemFields = ListField(EmbeddedDocumentField(FieldDef))
-     kitFields = ListField(EmbeddedDocumentField(FieldDef))
-     customerFields = ListField(EmbeddedDocumentField(FieldDef))
-     orderFields = ListField(EmbeddedDocumentField(FieldDef))
-     reservationFields = ListField(EmbeddedDocumentField(FieldDef))
-     */
-
     /**
      * Group describes a group which can trigger on certain events (signals)
      * @name  Group

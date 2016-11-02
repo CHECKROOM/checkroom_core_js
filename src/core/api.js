@@ -101,11 +101,10 @@ define([
             dfd.reject(new api.NetworkTimeout(msg, opt));
         } else {
             if (x){
-               if((x.statusText) &&
-                  (x.statusText.indexOf("Notify user:") > -1)) {
+                if((x.statusText) &&
+                    (x.statusText.indexOf("Notify user:") > -1)) {
                     msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
                 }
-
 
                 if( (x.status == 422) &&
                     (x.responseText) &&
@@ -210,9 +209,10 @@ define([
 
     api.ApiAjax.prototype._prepareDict = function(data) {
         // Makes sure all values from the dict are serializable and understandable for json
-	if (!data) {
+        if (!data) {
             return {};
-	};
+        }
+
         $.each(data, function(key, value) {
             if(moment.isMoment(value)) {
                 data[key] = value.toJSONDate();
@@ -221,13 +221,13 @@ define([
         return data;
     };
 
-     /**
+    /**
      * Turns all strings that look like datetimes into moment objects recursively
-     * 
+     *
      * @name  DateHelper#fixDates
      * @method
      * @private
-     * 
+     *
      * @param data
      * @returns {*}
      */
@@ -252,7 +252,7 @@ define([
             });
         }
         return data;
-    }
+    };
 
     //*************
     // ApiUser
@@ -300,10 +300,10 @@ define([
     api.ApiUser.prototype.isValid = function() {
         system.log('ApiUser: isValid');
         return (
-            (this.userId) &&
-            (this.userId.length>0) &&
-            (this.userToken) &&
-            (this.userToken.length>0));
+        (this.userId) &&
+        (this.userId.length>0) &&
+        (this.userToken) &&
+        (this.userToken.length>0));
     };
 
     api.ApiUser.prototype._reset = function() {
@@ -539,9 +539,9 @@ define([
                 if (that.ajax.useJsonp) {
                     dfd.resolve(null);
                 } else if (error instanceof api.ApiNotFound) {
-                   dfd.resolve(null);
+                    dfd.resolve(null);
                 } else {
-                   dfd.reject(error);
+                    dfd.reject(error);
                 }
             });
         return dfd.promise();
@@ -784,11 +784,11 @@ define([
         system.log('ApiDataSource: ' + this.collection + ': call ' + method);
         var cmd = "call." + method;
         var url = ((pk!=null) && (pk.length>0)) ?
-            this.getBaseUrl() + pk + '/call/' + method :
-            this.getBaseUrl() + 'call/' + method;
+        this.getBaseUrl() + pk + '/call/' + method :
+        this.getBaseUrl() + 'call/' + method;
         var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
         var getUrl = url + '?' + this.getParams(p);
-            
+
         if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
             return this._ajaxPost(cmd, url, p, timeOut);
         } else {

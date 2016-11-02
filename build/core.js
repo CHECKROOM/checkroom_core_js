@@ -4489,7 +4489,7 @@ Base = function ($, common, api, Document, Comment, Attachment) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
       that.flag = data.flag || DEFAULTS.flag;
-      that.fields = data.fields || $.extend({}, DEFAULTS.fields);
+      that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
@@ -5026,7 +5026,7 @@ base = function ($, common, api, Document, Comment, Attachment) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
       that.flag = data.flag || DEFAULTS.flag;
-      that.fields = data.fields || $.extend({}, DEFAULTS.fields);
+      that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);

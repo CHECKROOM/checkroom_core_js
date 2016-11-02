@@ -395,39 +395,43 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
                             });
                     });
 
-                    test("isValid Item object", function() {
+                    asyncTest("isValid Item object", function() {
                         var item = new cr.Item({
                             ds: ds
                         });
 
-                        ok(item.isValid()==false);
-                        ok(item.isValidName()==false);
-                        ok(item.isValidCategory()==false);
-                        ok(item.isValidLocation()==false);
+                        ok(item.isValid()==false, "Item without name should not be valid");
+                        ok(item.isValidName()==false, "Item name should not be valid");
+                        ok(item.isValidCategory()==false, "Item category should not be valid");
+                        ok(item.isValidLocation()==false, "Item location should not be valid");
 
                         item.name = "Testing";
-                        ok(item.isValid()==false);
-                        ok(item.isValidName()==true);
-                        ok(item.isValidCategory()==false);
-                        ok(item.isValidLocation()==false);
+                        ok(item.isValid()==false, "Item without name should not be valid");
+                        ok(item.isValidName()==true, "Item name should be valid");
+                        ok(item.isValidCategory()==false, "Item category should not be valid");
+                        ok(item.isValidLocation()==false, "Item location should not be valid");
 
                         item.category = "FakeCategoryId";
-                        ok(item.isValid()==false);
-                        ok(item.isValidName()==true);
-                        ok(item.isValidCategory()==true);
-                        ok(item.isValidLocation()==false);
+                        ok(item.isValid()==false, "Item without location should not be valid");
+                        ok(item.isValidName()==true, "Item name should be valid");
+                        ok(item.isValidCategory()==true, "Item category should be valid");
+                        ok(item.isValidLocation()==false, "Item location should not be valid");
 
                         item.location = "FakeLocationId";
-                        ok(item.isValid()==true);
-                        ok(item.isValidName()==true);
-                        ok(item.isValidCategory()==true);
-                        ok(item.isValidLocation()==true);
+                        ok(item.isValid()==true, "Item should be valid");
+                        ok(item.isValidName()==true, "Item name should be valid");
+                        ok(item.isValidCategory()==true, "Item category should be valid");
+                        ok(item.isValidLocation()==true, "Item location should be valid");
 
-                        item.reset();
-                        ok(item.isValid()==false);
-                        ok(item.isValidName()==false);
-                        ok(item.isValidCategory()==false);
-                        ok(item.isValidLocation()==false);
+                        item.reset()
+                            .then(function() {
+                                ok(item.isValid()==false, "Item should not be valid after reset");
+                                ok(item.isValidName()==false, "Item name should not be valid after reset");
+                                ok(item.isValidCategory()==false, "Item category should not be valid after reset");
+                                ok(item.isValidLocation()==false, "Item location should not be vaild after reset");
+                            }).always(function(){
+                                start();
+                            });
                     });
 
                     asyncTest("change location Item object", function() {
@@ -478,27 +482,46 @@ define(["settings", "helper", "cheqroom-core"], function(settings, helper, cr) {
 
                                         item.name = "bla";
                                         ok(item.isDirty() == true);
-                                        item.discardChanges();
-                                        ok(item.isDirty() == false);
+                                        item.discardChanges()
+                                            .then(function() {
+                                                ok(item.isDirty() == false);
 
-                                        item.location = "bla";
-                                        ok(item.isDirty() == true);
-                                        item.discardChanges();
-                                        ok(item.isDirty() == false);
+                                                item.location = "bla";
+                                                ok(item.isDirty() == true);
 
-                                        item.category = "bla";
-                                        ok(item.isDirty() == true);
-                                        item.discardChanges();
-                                        ok(item.isDirty() == false);
+                                                item.discardChanges()
+                                                    .then(function() {
+                                                        ok(item.isDirty() == false);
 
-                                        item.flag = "bla";
-                                        ok(item.isDirty() == true);
-                                        item.discardChanges();
-                                        ok(item.isDirty() == false);
-                                    }).always(function(){
-                                        start();
+                                                        item.category = "bla";
+                                                        ok(item.isDirty() == true);
+
+                                                        item.discardChanges()
+                                                            .then(function() {
+                                                                ok(item.isDirty() == false);
+
+                                                                item.flag = "bla";
+                                                                ok(item.isDirty() == true);
+
+                                                                item.discardChanges()
+                                                                    .then(function() {
+                                                                        ok(item.isDirty() == false);
+
+                                                                        item.fields["bla"] = "No";
+                                                                        ok(item.isDirty() == true);
+
+                                                                        item.discardChanges()
+                                                                            .then(function() {
+                                                                                ok(item.isDirty() == false);
+                                                                            })
+                                                                            .always(function(){
+                                                                                start();
+                                                                            });
+                                                                    });
+                                                            });
+                                                    });
+                                            });
                                     });
-
                             });
                     });
 

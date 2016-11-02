@@ -176,7 +176,7 @@ define([
         var that = this;
         var data = this._toJson();
         delete data.id;
-        return this.ds.update(this.id, data, this._fields_fields)
+        return this.ds.update(this.id, data, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });

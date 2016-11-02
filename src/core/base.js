@@ -15,13 +15,14 @@ define([
 
     // Some constant values
     var DEFAULTS = {
-            id: "",
-            modified: null,
-            cover: null,
-            flag: null,
-            comments: [],
-            attachments: []
-        };
+        id: "",
+        modified: null,
+        cover: null,
+        flag: null,
+        fields: {},
+        comments: [],
+        attachments: []
+    };
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -34,7 +35,8 @@ define([
      * @property {ApiDataSource} dsAttachments   attachments datasource
      * @property {string} crtype                 e.g. cheqroom.types.customer
      * @property {moment} modified               last modified timestamp
-     * @property {string} flag                   the item flag
+     * @property {string} flag                   the document flag
+     * @property {object} fields                 dictionary of document fields
      * @property {array} comments                array of Comment objects
      * @property {array} attachments             array of Attachment objects
      * @property {string} cover                  cover attachment id, default null
@@ -49,6 +51,7 @@ define([
         this.crtype = spec.crtype;                                              // e.g. cheqroom.types.customer
         this.modified = spec.modified || DEFAULTS.modified;                     // last modified timestamp in momentjs
         this.flag = spec.flag || DEFAULTS.flag;                                 // flag
+        this.fields = spec.fields || $.extend({}, DEFAULTS.fields);             // fields dictionary
         this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
         this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
@@ -67,7 +70,7 @@ define([
     /**
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
-     * We'll only check for comments, attachments, keyValues here
+     * We'll only check for fields, comments, attachments here
      * @name  Base#isEmpty
      * @method
      * @returns {boolean}
@@ -76,6 +79,7 @@ define([
     Base.prototype.isEmpty = function() {
         return (
             (this.flag==DEFAULTS.flag) &&
+            ((this.fields==null) || (Object.keys(this.fields).length==0)) &&
             ((this.comments==null) || (this.comments.length==0)) &&
             ((this.attachments==null) || (this.attachments.length==0))
         );
@@ -87,11 +91,9 @@ define([
      * @returns {boolean}
      */
     Base.prototype.isDirty = function() {
-        if (this.raw) {
-            return (this.flag != this.raw.flag);
-        } else {
-            return false;
-        }
+        return (
+        (this._isDirtyFlag()) ||
+        (this._isDirtyFields()));
     };
 
     /**
@@ -140,10 +142,7 @@ define([
     Base.prototype.updateComment = function(id, comment, skipRead) {
         return this._doApiCall({
             method: 'updateComment',
-            params: {
-                commentId: id,
-                comment: comment
-            },
+            params: {commentId: id, comment: comment},
             skipRead: skipRead
         });
     };
@@ -159,9 +158,7 @@ define([
     Base.prototype.deleteComment = function(id, skipRead) {
         return this._doApiCall({
             method: 'removeComment',
-            params: {
-                commentId: id
-            },
+            params: {commentId: id},
             skipRead: skipRead
         });
     };
@@ -322,6 +319,35 @@ define([
         });
     };
 
+    // Implementation
+    // ----
+
+    /**
+     * Checks if the flag is dirty compared to the raw response
+     * @returns {boolean}
+     * @private
+     */
+    Base.prototype._isDirtyFlag = function() {
+        if (this.raw) {
+            return (this.flag != this.raw.flag);
+        } else {
+            return false;
+        }
+    };
+
+    /**
+     * Checks if the fields are dirty compared to the raw response
+     * @returns {boolean}
+     * @private
+     */
+    Base.prototype._isDirtyFields = function() {
+        if (this.raw) {
+            return !(common.areEqual(this.fields, this.raw.fields));
+        } else {
+            return false;
+        }
+    };
+
     // toJson, fromJson
     // ----
 
@@ -347,6 +373,7 @@ define([
         return Document.prototype._fromJson.call(this, data, options)
             .then(function() {
                 that.flag = data.flag || DEFAULTS.flag;
+                that.fields = data.fields || $.extend({}, DEFAULTS.fields);
                 that.modified = data.modified || DEFAULTS.modified;
 
                 return that._fromCommentsJson(data, options)

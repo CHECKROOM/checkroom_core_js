@@ -2159,81 +2159,112 @@ common_validation = {
   }
 };
 common_utils = function ($) {
-  return {
-    /**
-     * Turns an integer into a compact text to show in a badge
-     *
-     * @memberOf  common
-     * @name  common#badgeify
-     * @method         
-     * 
-     * @param  {int} count 
-     * @return {string}       
-     */
-    badgeify: function (count) {
-      if (count > 100) {
-        return '100+';
-      } else if (count > 10) {
-        return '10+';
-      } else if (count > 0) {
-        return '' + count;
-      } else {
-        return '';
-      }
-    },
-    /**
-     * getLoginName
-     *
-     * @memberOf common
-     * @name  common#getLoginName
-     * @method
-     * 
-     * @param  {string} firstName 
-     * @param  {string} lastName  
-     * @return {string}           
-     */
-    getLoginName: function (firstName, lastName) {
-      var patt = /[\s-]*/gim;
-      return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
-    },
-    /**
-     * getUrlParam
-     *
-     * @memberOf common
-     * @name  common#getUrlParam
-     * @method
-     * 
-     * @param  {string} name 
-     * @return {string}      
-     */
-    getUrlParam: function (name) {
-      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-      var regexS = '[\\?&]' + name + '=([^&#]*)';
-      var regex = new RegExp(regexS);
-      var results = regex.exec(window.location.href);
-      return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
-    },
-    /**
-     * getParsedLines 
-     *
-     * @memberOf common
-     * @name  common#getParsedLines
-     * @method
-     * 
-     * @param  {string} text 
-     * @return {Array}      
-     */
-    getParsedLines: function (text) {
-      if (text && text.length > 0) {
-        var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
-        return customs.filter(function (cust, idx, arr) {
-          return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
-        });
-      } else {
-        return [];
+  var utils = {};
+  /**
+   * Stringifies an object while first sorting the keys
+   * Ensures we can use it to check object equality
+   * http://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
+   * @memberOf  utils
+   * @name  utils#stringifyOrdered
+   * @method
+   * @param obj
+   * @return {string}
+   */
+  utils.stringifyOrdered = function (obj) {
+    keys = [];
+    if (obj) {
+      for (var key in obj) {
+        keys.push(key);
       }
     }
+    keys.sort();
+    var tObj = {};
+    var key;
+    for (var index in keys) {
+      key = keys[index];
+      tObj[key] = obj[key];
+    }
+    return JSON.stringify(tObj);
   };
+  /**
+   * Checks if two objects are equal
+   * Mimics behaviour from http://underscorejs.org/#isEqual
+   * @memberOf  utils
+   * @name  utils#areEqual
+   * @method
+   * @param obj1
+   * @param obj2
+   * @return {boolean}
+   */
+  utils.areEqual = function (obj1, obj2) {
+    return utils.stringifyOrdered(obj1 || {}) == utils.stringifyOrdered(obj2 || {});
+  };
+  /**
+   * Turns an integer into a compact text to show in a badge
+   * @memberOf  utils
+   * @name  utils#badgeify
+   * @method
+   * @param  {int} count
+   * @return {string}
+   */
+  utils.badgeify = function (count) {
+    if (count > 100) {
+      return '100+';
+    } else if (count > 10) {
+      return '10+';
+    } else if (count > 0) {
+      return '' + count;
+    } else {
+      return '';
+    }
+  };
+  /**
+   * Turns a firstName lastName into a fistname.lastname login
+   * @memberOf utils
+   * @name  utils#getLoginName
+   * @method
+   * @param  {string} firstName
+   * @param  {string} lastName
+   * @return {string}
+   */
+  utils.getLoginName = function (firstName, lastName) {
+    var patt = /[\s-]*/gim;
+    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+  };
+  /**
+   * Gets a parameter from the querystring (returns null if not found)
+   * @memberOf utils
+   * @name  utils#getUrlParam
+   * @method
+   * @param  {string} name
+   * @return {string}
+   */
+  utils.getUrlParam = function (name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regexS = '[\\?&]' + name + '=([^&#]*)';
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.href);
+    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+  };
+  /**
+   * getParsedLines
+   * @memberOf utils
+   * @name  utils#getParsedLines
+   * @method
+   * @param  {string} text
+   * @return {Array}
+   */
+  utils.getParsedLines = function (text) {
+    if (text && text.length > 0) {
+      var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
+      return customs.filter(function (cust, idx, arr) {
+        return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
+      });
+    } else {
+      return [];
+    }
+  };
+  return utils;
 }(jquery);
 common_slimdown = function () {
   /**
@@ -3595,7 +3626,7 @@ document = function ($, common, api) {
     var that = this;
     var data = this._toJson();
     delete data.id;
-    return this.ds.update(this.id, data, this._fields_fields).then(function (data) {
+    return this.ds.update(this.id, data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -4124,6 +4155,7 @@ Base = function ($, common, api, Document, Comment, Attachment) {
     modified: null,
     cover: null,
     flag: null,
+    fields: {},
     comments: [],
     attachments: []
   };
@@ -4138,7 +4170,8 @@ Base = function ($, common, api, Document, Comment, Attachment) {
    * @property {ApiDataSource} dsAttachments   attachments datasource
    * @property {string} crtype                 e.g. cheqroom.types.customer
    * @property {moment} modified               last modified timestamp
-   * @property {string} flag                   the item flag
+   * @property {string} flag                   the document flag
+   * @property {object} fields                 dictionary of document fields
    * @property {array} comments                array of Comment objects
    * @property {array} attachments             array of Attachment objects
    * @property {string} cover                  cover attachment id, default null
@@ -4156,6 +4189,8 @@ Base = function ($, common, api, Document, Comment, Attachment) {
     // last modified timestamp in momentjs
     this.flag = spec.flag || DEFAULTS.flag;
     // flag
+    this.fields = spec.fields || $.extend({}, DEFAULTS.fields);
+    // fields dictionary
     this.comments = spec.comments || DEFAULTS.comments.slice();
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
@@ -4173,14 +4208,14 @@ Base = function ($, common, api, Document, Comment, Attachment) {
   /**
    * Checks if the object is empty
    * after calling reset() isEmpty() should return true
-   * We'll only check for comments, attachments, keyValues here
+   * We'll only check for fields, comments, attachments here
    * @name  Base#isEmpty
    * @method
    * @returns {boolean}
    * @override
    */
   Base.prototype.isEmpty = function () {
-    return this.flag == DEFAULTS.flag && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
+    return this.flag == DEFAULTS.flag && (this.fields == null || Object.keys(this.fields).length == 0) && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
   };
   /**
    * Checks if the base is dirty and needs saving
@@ -4188,11 +4223,7 @@ Base = function ($, common, api, Document, Comment, Attachment) {
    * @returns {boolean}
    */
   Base.prototype.isDirty = function () {
-    if (this.raw) {
-      return this.flag != this.raw.flag;
-    } else {
-      return false;
-    }
+    return this._isDirtyFlag() || this._isDirtyFields();
   };
   /**
    * Checks via the api if we can delete the document
@@ -4410,6 +4441,32 @@ Base = function ($, common, api, Document, Comment, Attachment) {
       skipRead: skipRead
     });
   };
+  // Implementation
+  // ----
+  /**
+   * Checks if the flag is dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFlag = function () {
+    if (this.raw) {
+      return this.flag != this.raw.flag;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Checks if the fields are dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFields = function () {
+    if (this.raw) {
+      return !common.areEqual(this.fields, this.raw.fields);
+    } else {
+      return false;
+    }
+  };
   // toJson, fromJson
   // ----
   /**
@@ -4432,6 +4489,7 @@ Base = function ($, common, api, Document, Comment, Attachment) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
       that.flag = data.flag || DEFAULTS.flag;
+      that.fields = data.fields || $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
@@ -4634,6 +4692,7 @@ base = function ($, common, api, Document, Comment, Attachment) {
     modified: null,
     cover: null,
     flag: null,
+    fields: {},
     comments: [],
     attachments: []
   };
@@ -4648,7 +4707,8 @@ base = function ($, common, api, Document, Comment, Attachment) {
    * @property {ApiDataSource} dsAttachments   attachments datasource
    * @property {string} crtype                 e.g. cheqroom.types.customer
    * @property {moment} modified               last modified timestamp
-   * @property {string} flag                   the item flag
+   * @property {string} flag                   the document flag
+   * @property {object} fields                 dictionary of document fields
    * @property {array} comments                array of Comment objects
    * @property {array} attachments             array of Attachment objects
    * @property {string} cover                  cover attachment id, default null
@@ -4666,6 +4726,8 @@ base = function ($, common, api, Document, Comment, Attachment) {
     // last modified timestamp in momentjs
     this.flag = spec.flag || DEFAULTS.flag;
     // flag
+    this.fields = spec.fields || $.extend({}, DEFAULTS.fields);
+    // fields dictionary
     this.comments = spec.comments || DEFAULTS.comments.slice();
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
@@ -4683,14 +4745,14 @@ base = function ($, common, api, Document, Comment, Attachment) {
   /**
    * Checks if the object is empty
    * after calling reset() isEmpty() should return true
-   * We'll only check for comments, attachments, keyValues here
+   * We'll only check for fields, comments, attachments here
    * @name  Base#isEmpty
    * @method
    * @returns {boolean}
    * @override
    */
   Base.prototype.isEmpty = function () {
-    return this.flag == DEFAULTS.flag && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
+    return this.flag == DEFAULTS.flag && (this.fields == null || Object.keys(this.fields).length == 0) && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
   };
   /**
    * Checks if the base is dirty and needs saving
@@ -4698,11 +4760,7 @@ base = function ($, common, api, Document, Comment, Attachment) {
    * @returns {boolean}
    */
   Base.prototype.isDirty = function () {
-    if (this.raw) {
-      return this.flag != this.raw.flag;
-    } else {
-      return false;
-    }
+    return this._isDirtyFlag() || this._isDirtyFields();
   };
   /**
    * Checks via the api if we can delete the document
@@ -4920,6 +4978,32 @@ base = function ($, common, api, Document, Comment, Attachment) {
       skipRead: skipRead
     });
   };
+  // Implementation
+  // ----
+  /**
+   * Checks if the flag is dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFlag = function () {
+    if (this.raw) {
+      return this.flag != this.raw.flag;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Checks if the fields are dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFields = function () {
+    if (this.raw) {
+      return !common.areEqual(this.fields, this.raw.fields);
+    } else {
+      return false;
+    }
+  };
   // toJson, fromJson
   // ----
   /**
@@ -4942,6 +5026,7 @@ base = function ($, common, api, Document, Comment, Attachment) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
       that.flag = data.flag || DEFAULTS.flag;
+      that.fields = data.fields || $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
@@ -5803,7 +5888,7 @@ Document = function ($, common, api) {
     var that = this;
     var data = this._toJson();
     delete data.id;
-    return this.ds.update(this.id, data, this._fields_fields).then(function (data) {
+    return this.ds.update(this.id, data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };

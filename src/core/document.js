@@ -252,7 +252,7 @@ define([
         return objs.map(function(obj){
             return typeof(obj) == "string"? obj: obj[prop || "_id"];
         });
-    }
+    };
 
     /**
      * Wrapping the this.ds.call method

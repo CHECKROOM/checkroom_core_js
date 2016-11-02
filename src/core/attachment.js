@@ -52,7 +52,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {string}
      */
     Attachment.prototype.getThumbnailUrl = function(size) {
-        return (this.hasPreview()) ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : "";
+        return (this.hasPreview()) ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : "";
     };
 
     /**
@@ -62,7 +62,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {string}
      */
     Attachment.prototype.getDownloadUrl = function() {
-        return this.ds.getBaseUrl() + this.id + '?download=True';
+        return this.ds.getBaseUrl() + this.value + '?download=True';
     };
 
     /**

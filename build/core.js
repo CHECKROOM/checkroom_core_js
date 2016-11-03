@@ -4414,6 +4414,8 @@ Base = function ($, common, api, Document, Comment, Attachment) {
       return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
     }
   };
+  // Flags stuff
+  // ----
   /**
    * Sets the flag of an item
    * @name Base#setFlag
@@ -4465,6 +4467,26 @@ Base = function ($, common, api, Document, Comment, Attachment) {
       return !common.areEqual(this.fields, this.raw.fields);
     } else {
       return false;
+    }
+  };
+  /**
+   * Runs over the fields that are dirty and calls `setField`
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._updateFields = function () {
+    var calls = [];
+    if (this.raw) {
+      for (var key in this.fields) {
+        if (this.fields[key] != this.raw.fields[key]) {
+          calls.push(this.setField(key, this.fields[key], true));
+        }
+      }
+    }
+    if (calls.length > 0) {
+      return $.when(calls);
+    } else {
+      return $.Deferred().resolve(this);
     }
   };
   // toJson, fromJson
@@ -4951,6 +4973,8 @@ base = function ($, common, api, Document, Comment, Attachment) {
       return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
     }
   };
+  // Flags stuff
+  // ----
   /**
    * Sets the flag of an item
    * @name Base#setFlag
@@ -5002,6 +5026,26 @@ base = function ($, common, api, Document, Comment, Attachment) {
       return !common.areEqual(this.fields, this.raw.fields);
     } else {
       return false;
+    }
+  };
+  /**
+   * Runs over the fields that are dirty and calls `setField`
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._updateFields = function () {
+    var calls = [];
+    if (this.raw) {
+      for (var key in this.fields) {
+        if (this.fields[key] != this.raw.fields[key]) {
+          calls.push(this.setField(key, this.fields[key], true));
+        }
+      }
+    }
+    if (calls.length > 0) {
+      return $.when(calls);
+    } else {
+      return $.Deferred().resolve(this);
     }
   };
   // toJson, fromJson
@@ -6368,16 +6412,26 @@ Item = function ($, Base) {
     return DEFAULTS;
   };
   Item.prototype._toJson = function (options) {
-    // Writes out; id, name, category, location, catalog
+    // Writes out: id, name,
+    //             brand, model, purchaseDate, purchasePrice
+    //             category, location, catalog
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.brand = this.brand || DEFAULTS.brand;
-    data.model = this.name || DEFAULTS.model;
+    data.model = this.model || DEFAULTS.model;
     data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
     data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
     data.category = this.category || DEFAULTS.category;
     data.location = this.location || DEFAULTS.location;
     data.catalog = this.catalog || DEFAULTS.catalog;
+    // Remove values of null during create
+    // Avoids: 422 Unprocessable Entity
+    // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
+    for (var k in data) {
+      if (data[k] == null) {
+        delete data[k];
+      }
+    }
     return data;
   };
   Item.prototype._fromJson = function (data, options) {
@@ -6524,11 +6578,11 @@ Item = function ($, Base) {
     });
   };
   /**
-  * updates the Item
-  * We override because Item.update does not support updating categories
-  * @param skipRead
-  * @returns {*}
-  */
+   * updates the Item
+   * We override because Item.update does not support updating categories
+   * @param skipRead
+   * @returns {*}
+   */
   Item.prototype.update = function (skipRead) {
     if (this.isEmpty()) {
       return $.Deferred().reject(new Error('Cannot update to empty document'));
@@ -6539,7 +6593,7 @@ Item = function ($, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdBasic = $.Deferred();
+    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdBasic = $.Deferred();
     if (this._isDirtyCategory()) {
       this.canChangeCategory(this.category).done(function (data) {
         if (data.result) {
@@ -6562,12 +6616,17 @@ Item = function ($, Base) {
       } else {
         dfdLocation.resolve();
       }
+      if (that._isDirtyFields()) {
+        dfdFields = that._updateFields();
+      } else {
+        dfdFields.resolve();
+      }
       if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice()) {
         dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.purchaseDate, that.purchasePrice);
       } else {
         dfdBasic.resolve();
       }
-      return $.when(dfdCategory, dfdLocation, dfdBasic);
+      return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
     });
   };
   /**
@@ -6601,7 +6660,7 @@ Item = function ($, Base) {
    * @param  times
    * @param  autoNumber
    * @param  startFrom
-   * @return {promise}       
+   * @return {promise}
    */
   Item.prototype.createMultiple = function (times, autoNumber, startFrom, skipRead) {
     if (this.existsInDb()) {
@@ -6742,14 +6801,22 @@ Item = function ($, Base) {
    * @returns {promise}
    */
   Item.prototype.updateBasicFields = function (name, brand, model, purchaseDate, purchasePrice, skipRead) {
-    var that = this;
-    return this.ds.update(this.id, {
-      name: name,
-      brand: brand,
-      model: model,
-      purchaseDate: purchaseDate,
-      purchasePrice: purchasePrice
-    }, this._fields).then(function (data) {
+    var that = this, params = {
+        name: name,
+        brand: brand,
+        model: model,
+        purchaseDate: purchaseDate,
+        purchasePrice: purchasePrice
+      };
+    // Remove values of null during create
+    // Avoids: 422 Unprocessable Entity
+    // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
+    for (var k in params) {
+      if (params[k] == null) {
+        delete params[k];
+      }
+    }
+    return this.ds.update(this.id, params, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };

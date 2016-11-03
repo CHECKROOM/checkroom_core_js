@@ -11,23 +11,23 @@ define([
         DEFAULT_LAT = 0.0,
         DEFAULT_LONG = 0.0,
         DEFAULTS = {
-        name: "",
-        status: "",
-        codes: [],
-        brand: "",
-        model: "",
-        purchaseDate: null,
-        purchasePrice: null,
-        location: "",
-        category: "",
-        geo: [DEFAULT_LAT,DEFAULT_LONG],
-        address: "",
-        order: null,
-        kit: null,
-        custody: null,
-        cover: "",
-        catalog: null
-    };
+            name: "",
+            status: "",
+            codes: [],
+            brand: "",
+            model: "",
+            purchaseDate: null,
+            purchasePrice: null,
+            location: "",
+            category: "",
+            geo: [DEFAULT_LAT,DEFAULT_LONG],
+            address: "",
+            order: null,
+            kit: null,
+            custody: null,
+            cover: "",
+            catalog: null
+        };
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -95,9 +95,9 @@ define([
 
     Item.prototype.isValid = function() {
         return (
-            this.isValidName() &&
-            this.isValidCategory() &&
-            (this.status == "in_custody"?true:this.isValidLocation()));
+        this.isValidName() &&
+        this.isValidCategory() &&
+        (this.status == "in_custody"?true:this.isValidLocation()));
     };
 
     /**
@@ -108,16 +108,16 @@ define([
     Item.prototype.isEmpty = function() {
         // Checks for: name, status, brand, model, purchaseDate, purchasePrice, codes, location, category
         return (
-            (Base.prototype.isEmpty.call(this)) &&
-            (this.name==DEFAULTS.name) &&
-            (this.status==DEFAULTS.status) &&
-            (this.brand==DEFAULTS.brand) &&
-            (this.model==DEFAULTS.model) &&
-            (this.purchaseDate==DEFAULTS.purchaseDate) &&
-            (this.purchasePrice==DEFAULTS.purchasePrice) &&
-            (this.codes.length==0) &&  // not DEFAULTS.codes? :)
-            (this.location==DEFAULTS.location) &&
-            (this.category==DEFAULTS.category));
+        (Base.prototype.isEmpty.call(this)) &&
+        (this.name==DEFAULTS.name) &&
+        (this.status==DEFAULTS.status) &&
+        (this.brand==DEFAULTS.brand) &&
+        (this.model==DEFAULTS.model) &&
+        (this.purchaseDate==DEFAULTS.purchaseDate) &&
+        (this.purchasePrice==DEFAULTS.purchasePrice) &&
+        (this.codes.length==0) &&  // not DEFAULTS.codes? :)
+        (this.location==DEFAULTS.location) &&
+        (this.category==DEFAULTS.category));
     };
 
     /**
@@ -127,15 +127,15 @@ define([
      */
     Item.prototype.isDirty = function() {
         return (
-            Base.prototype.isDirty.call(this) || 
-            this._isDirtyName() ||
-            this._isDirtyBrand() ||
-            this._isDirtyModel() ||
-            this._isDirtyPurchaseDate() ||
-            this._isDirtyPurchasePrice() ||
-            this._isDirtyCategory() ||
-            this._isDirtyLocation() ||
-            this._isDirtyGeo());
+        Base.prototype.isDirty.call(this) ||
+        this._isDirtyName() ||
+        this._isDirtyBrand() ||
+        this._isDirtyModel() ||
+        this._isDirtyPurchaseDate() ||
+        this._isDirtyPurchasePrice() ||
+        this._isDirtyCategory() ||
+        this._isDirtyLocation() ||
+        this._isDirtyGeo());
     };
 
     Item.prototype._getDefaults = function() {
@@ -143,16 +143,27 @@ define([
     };
 
     Item.prototype._toJson = function(options) {
-        // Writes out; id, name, category, location, catalog
+        // Writes out: id, name,
+        //             brand, model, purchaseDate, purchasePrice
+        //             category, location, catalog
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.brand = this.brand || DEFAULTS.brand;
-        data.model = this.name || DEFAULTS.model;
+        data.model = this.model || DEFAULTS.model;
         data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
         data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
         data.category = this.category || DEFAULTS.category;
         data.location = this.location || DEFAULTS.location;
         data.catalog = this.catalog || DEFAULTS.catalog;
+
+        // Remove values of null during create
+        // Avoids: 422 Unprocessable Entity
+        // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
+        for (var k in data) {
+            if (data[k] == null) {
+                delete data[k];
+            }
+        }
 
         return data;
     };
@@ -213,7 +224,7 @@ define([
         var that = this;
         var params = {};
 
-         if( (this.keyValues!=null) &&
+        if( (this.keyValues!=null) &&
             (this.keyValues.length>0)) {
             $.each(this.keyValues, function(i, kv) {
                 var param = 'keyValues__' + kv.key;
@@ -300,9 +311,9 @@ define([
             var address = this.raw.address || DEFAULTS.address;
             var geo = this.raw.geo || DEFAULTS.geo.slice();
             return (
-                (this.address!=address) ||
-                (this.geo[0]!=geo[0]) ||
-                (this.geo[1]!=geo[1]));
+            (this.address!=address) ||
+            (this.geo[0]!=geo[0]) ||
+            (this.geo[1]!=geo[1]));
         } else {
             return false;
         }
@@ -322,27 +333,28 @@ define([
         return this.ds.call(this.id, 'getAvailability', {fromDate: from, toDate: to});
     };
 
-   /**
-    * updates the Item
-    * We override because Item.update does not support updating categories
-    * @param skipRead
-    * @returns {*}
-    */
-   Item.prototype.update = function(skipRead) {
+    /**
+     * updates the Item
+     * We override because Item.update does not support updating categories
+     * @param skipRead
+     * @returns {*}
+     */
+    Item.prototype.update = function(skipRead) {
         if (this.isEmpty()) {
-           return $.Deferred().reject(new Error("Cannot update to empty document"));
+            return $.Deferred().reject(new Error("Cannot update to empty document"));
         }
         if (!this.existsInDb()) {
-           return $.Deferred().reject(new Error("Cannot update document without id"));
+            return $.Deferred().reject(new Error("Cannot update document without id"));
         }
         if (!this.isValid()) {
-           return $.Deferred().reject(new Error("Cannot update, invalid document"));
+            return $.Deferred().reject(new Error("Cannot update, invalid document"));
         }
 
         var that = this,
             dfdCheck = $.Deferred(),
             dfdCategory = $.Deferred(),
             dfdLocation = $.Deferred(),
+            dfdFields = $.Deferred(),
             dfdBasic = $.Deferred();
 
         if (this._isDirtyCategory()) {
@@ -372,6 +384,12 @@ define([
                     dfdLocation.resolve();
                 }
 
+                if (that._isDirtyFields()) {
+                    dfdFields = that._updateFields();
+                } else {
+                    dfdFields.resolve();
+                }
+
                 if( (that._isDirtyName()) ||
                     (that._isDirtyBrand()) ||
                     (that._isDirtyModel()) ||
@@ -382,9 +400,9 @@ define([
                     dfdBasic.resolve();
                 }
 
-                return $.when(dfdCategory, dfdLocation, dfdBasic);
+                return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
             });
-   };
+    };
 
     /**
      * Creates an Item
@@ -421,7 +439,7 @@ define([
      * @param  times
      * @param  autoNumber
      * @param  startFrom
-     * @return {promise}       
+     * @return {promise}
      */
     Item.prototype.createMultiple = function(times, autoNumber, startFrom, skipRead){
         if (this.existsInDb()) {
@@ -441,7 +459,7 @@ define([
             startFrom: startFrom
         });
         delete data.id;
-        
+
         return this._doApiCall({
             method: 'createMultiple',
             params: data
@@ -464,10 +482,10 @@ define([
         return this._doApiCall({
             method: 'duplicate',
             params: {
-                times: times, 
-                location: location, 
-                autoNumber: autoNumber, 
-                startFrom: startFrom 
+                times: times,
+                location: location,
+                autoNumber: autoNumber,
+                startFrom: startFrom
             },
             skipRead: true  // response is an array of new Item objects!!
         });
@@ -546,13 +564,25 @@ define([
      * @returns {promise}
      */
     Item.prototype.updateBasicFields = function(name, brand, model, purchaseDate, purchasePrice, skipRead) {
-        var that = this;
-        return this.ds.update(this.id, {
-            name: name,
-            brand: brand,
-            model: model,
-            purchaseDate: purchaseDate,
-            purchasePrice: purchasePrice}, this._fields)
+        var that = this,
+            params = {
+                name: name,
+                brand: brand,
+                model: model,
+                purchaseDate: purchaseDate,
+                purchasePrice: purchasePrice
+            };
+
+        // Remove values of null during create
+        // Avoids: 422 Unprocessable Entity
+        // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
+        for (var k in params) {
+            if (params[k] == null) {
+                delete params[k];
+            }
+        }
+
+        return this.ds.update(this.id, params, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);
             });

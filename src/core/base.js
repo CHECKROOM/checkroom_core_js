@@ -291,6 +291,9 @@ define([
         }
     };
 
+    // Flags stuff
+    // ----
+
     /**
      * Sets the flag of an item
      * @name Base#setFlag
@@ -345,6 +348,29 @@ define([
             return !(common.areEqual(this.fields, this.raw.fields));
         } else {
             return false;
+        }
+    };
+
+    /**
+     * Runs over the fields that are dirty and calls `setField`
+     * @returns {*}
+     * @private
+     */
+    Base.prototype._updateFields = function() {
+        var calls = [];
+
+        if (this.raw) {
+            for (var key in this.fields) {
+                if (this.fields[key] != this.raw.fields[key]) {
+                    calls.push(this.setField(key, this.fields[key], true));
+                }
+            }
+        }
+
+        if (calls.length>0) {
+            return $.when(calls);
+        } else {
+            return $.Deferred().resolve(this);
         }
     };
 

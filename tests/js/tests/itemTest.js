@@ -156,36 +156,38 @@ define(["settings", "helper", "cheqroom-core", "moment"], function(settings, hel
                     //        });
                     //});
                     //
-                    //// Test create a new item
-                    //asyncTest("create a new Item object", function() {
-                    //    $.when(
-                    //        getAllCategoryTypes(),
-                    //        getAllLocations()
-                    //    ).done(function(categories, locations) {
-                    //            var item = new cr.Item({
-                    //                ds: ds,
-                    //                name: "qunit item",
-                    //                brand: "Apple",
-                    //                model: "iPhone",
-                    //                category: categories.docs[0]._id,
-                    //                location: locations[0]._id
-                    //            });
-                    //
-                    //            // Create a simple Item
-                    //            item.create()
-                    //                .done(function(resp) {
-                    //                    ok(resp != undefined);
-                    //                    ok(item.existsInDb());
-                    //                    ok(item.name == "qunit item");
-                    //                    ok(item.brand == "Apple");
-                    //                    ok(item.model == "iPhone");
-                    //                })
-                    //                .always(function(){
-                    //                    start();
-                    //                });
-                    //        });
-                    //});
-                    //
+                    // Test create a new item
+                    asyncTest("create a new Item object", function() {
+                        $.when(
+                            getAllCategoryTypes(),
+                            getAllLocations()
+                        ).done(function(categories, locations) {
+                                var item = new cr.Item({
+                                    ds: ds,
+                                    name: "qunit item",
+                                    brand: "Apple",
+                                    model: "iPhone",
+                                    category: categories.docs[0]._id,
+                                    location: locations[0]._id,
+                                    fields: {"Owner": "qunit"}
+                                });
+
+                                // Create a simple Item
+                                item.create()
+                                    .done(function(resp) {
+                                        ok(resp != undefined);
+                                        ok(item.existsInDb());
+                                        ok(item.name == "qunit item");
+                                        ok(item.brand == "Apple");
+                                        ok(item.model == "iPhone");
+                                        ok(item.fields["Owner"] == "qunit");
+                                    })
+                                    .always(function(){
+                                        start();
+                                    });
+                            });
+                    });
+
                     //// Test create a new item
                     //asyncTest("create a new Item object with invalid name", function() {
                     //    $.when(

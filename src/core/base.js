@@ -352,7 +352,7 @@ define([
     };
 
     /**
-     * Runs over the fields that are dirty and calls `setField`
+     * Runs over the fields that are dirty and calls `setField
      * @returns {*}
      * @private
      */
@@ -407,6 +407,23 @@ define([
                         return that._fromAttachmentsJson(data, options);
                     });
             });
+    };
+
+    /**
+     * _toJsonFields: makes json which can be used to set fields during `create`
+     * @method
+     * @param options
+     * @returns {{}}
+     * @private
+     */
+    Base.prototype._toJsonFields = function(options) {
+        var fields = {};
+        if (this.fields) {
+            for (var key in this.fields) {
+                fields["fields__"+key] = this.fields[key];
+            }
+        }
+        return fields;
     };
 
     /**

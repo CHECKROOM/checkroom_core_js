@@ -4470,7 +4470,7 @@ Base = function ($, common, api, Document, Comment, Attachment) {
     }
   };
   /**
-   * Runs over the fields that are dirty and calls `setField`
+   * Runs over the fields that are dirty and calls `setField
    * @returns {*}
    * @private
    */
@@ -4517,6 +4517,22 @@ Base = function ($, common, api, Document, Comment, Attachment) {
         return that._fromAttachmentsJson(data, options);
       });
     });
+  };
+  /**
+   * _toJsonFields: makes json which can be used to set fields during `create`
+   * @method
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Base.prototype._toJsonFields = function (options) {
+    var fields = {};
+    if (this.fields) {
+      for (var key in this.fields) {
+        fields['fields__' + key] = this.fields[key];
+      }
+    }
+    return fields;
   };
   /**
    * _fromCommentsJson: reads the data.comments
@@ -5029,7 +5045,7 @@ base = function ($, common, api, Document, Comment, Attachment) {
     }
   };
   /**
-   * Runs over the fields that are dirty and calls `setField`
+   * Runs over the fields that are dirty and calls `setField
    * @returns {*}
    * @private
    */
@@ -5076,6 +5092,22 @@ base = function ($, common, api, Document, Comment, Attachment) {
         return that._fromAttachmentsJson(data, options);
       });
     });
+  };
+  /**
+   * _toJsonFields: makes json which can be used to set fields during `create`
+   * @method
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Base.prototype._toJsonFields = function (options) {
+    var fields = {};
+    if (this.fields) {
+      for (var key in this.fields) {
+        fields['fields__' + key] = this.fields[key];
+      }
+    }
+    return fields;
   };
   /**
    * _fromCommentsJson: reads the data.comments
@@ -6337,14 +6369,22 @@ Item = function ($, Base) {
    * @name Item
    * @class Item
    * @constructor
-   * @property {string} name         the name of the item
-   * @property {status} status       the status of the item in an order, or expired
-   * @property {string} location     the item location primary key (empty if in_custody)
-   * @property {string} category     the item category primary key
-   * @property {Array} geo           the item geo position in lat lng array
-   * @property {string} address      the item geo position address
-   * @property {string} order        the order pk, if the item is currently in an order
-   * @property {string} custody      the customer pk, if the item is currently in custody of someone
+   * @property {string} name              the name of the item
+   * @property {string} status            the status of the item in an order, or expired
+   * @property {string} brand             the item brand
+   * @property {string} model             the item model
+   * @property {moment} purchaseDate      the item purchase date
+   * @property {string} purchasePrice     the item purchase price
+   * @property {Array} codes              the item qr codes
+   * @property {string} location          the item location primary key (empty if in_custody)
+   * @property {string} category          the item category primary key
+   * @property {Array} geo                the item geo position in lat lng array
+   * @property {string} address           the item geo position address
+   * @property {string} order             the order pk, if the item is currently in an order
+   * @property {string} kit               the kit pk, if the item is currently in a kit
+   * @property {string} custody           the customer pk, if the item is currently in custody of someone
+   * @property {string} cover             the attachment pk of the main image
+   * @property {string} catalog           the catalog pk, if the item was made based on a product in the catalog
    * @extends Base
    */
   var Item = function (opt) {
@@ -6357,9 +6397,9 @@ Item = function ($, Base) {
     this.status = spec.status || DEFAULTS.status;
     this.brand = spec.brand || DEFAULTS.brand;
     this.model = spec.model || DEFAULTS.model;
-    this.codes = spec.codes || DEFAULTS.codes;
     this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
     this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
+    this.codes = spec.codes || DEFAULTS.codes;
     this.location = spec.location || DEFAULTS.location;
     // location._id
     this.category = spec.category || DEFAULTS.category;
@@ -6646,8 +6686,7 @@ Item = function ($, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
-    var that = this;
-    var data = $.extend(this._toJson(), this._toJsonKeyValues());
+    var that = this, data = $.extend(this._toJson(), this._toJsonFields());
     delete data.id;
     return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);

@@ -11,7 +11,8 @@ define([
     'api',
     'document',
     'comment',
-    'attachment'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment) {
+    'attachment',
+    'field'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, Field) {
 
     // Some constant values
     var DEFAULTS = {
@@ -322,6 +323,57 @@ define([
         });
     };
 
+    /**
+     * Returns a list of Field objects
+     * @param fieldDefs     array of field definitions
+     * @return {array}
+     */
+    Base.prototype.getSortedFields = function(fieldDefs, onlyFormFields){
+        var that = this,
+            fields = [];
+
+        // Work on copy of fieldDefs array
+        fieldDefs = fieldDefs.slice();
+
+        // Return only form field definitions?
+        fieldDefs = fieldDefs.filter(function(def){ return onlyFormFields == true?def.form:true; });
+
+        // Create a Field object for each field definition
+        for(var i=0;i<fieldDefs.length;i++){
+            var fieldDef = fieldDefs[i];
+            var fieldValue = that.fields[fieldDef.name];
+
+            fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
+        }
+
+        return fields;
+    }
+
+    /**
+     * Update item fields based on the given Field objects
+     * @param {array} fields    array of Field objects
+     */
+    Base.prototype.setSortedFields = function(fields){
+        for(var i=0;i<fields.length;i++){
+            var field = fields[i];
+            this.fields[field.name] = field.value;
+        }
+    }
+
+    /**
+     * Checks if all item fields are valid
+     * @param  {array}  fields 
+     * @return {Boolean}        
+     */
+    Base.prototype.validateSortedFields = function(fields){
+        for(var i=0;i<fields.length;i++){
+            if(!fields[i].isValid()){
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Implementation
     // ----
 
@@ -487,6 +539,11 @@ define([
         var spec = $.extend({ds: this.ds}, options || {}, data);
         return new Attachment(spec);
     };
+
+    Base.prototype._getField = function(data, options){
+        var spec = $.extend({}, options || {}, data);
+        return new Field(spec);
+    }
 
     return Base;
 

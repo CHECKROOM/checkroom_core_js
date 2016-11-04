@@ -88,6 +88,7 @@ define([
         that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
         that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
         that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
+        that.reservation = data.reservation || null;
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
@@ -287,8 +288,10 @@ define([
                             if( (transItem!=null) &&
                                 (transItem.status!="expired")) {
 
-                                // Order cannot conflict with itself
-                                if(av.order != that.id) {
+                                // Order cannot conflict with itself 
+                                // or with the Reservation from which it was created
+                                if(av.order != that.id && 
+                                   av.reservation != that.helper.ensureId(that.reservation)) {
                                     kind = "";
                                     kind = kind || ((av.order) ? "order" : "");
                                     kind = kind || ((av.reservation) ? "reservation" : "");

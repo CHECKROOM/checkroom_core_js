@@ -93,7 +93,7 @@ define(function () {
 		 * @return {Boolean} 
 		 */
 		isValidDocQRCode: function(qrCode){
-			return qrCode && qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+			return qrCode && (qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null || qrCode.match(/^[a-z0-9]{8}$/i) != null);
 		},
 
 		/**

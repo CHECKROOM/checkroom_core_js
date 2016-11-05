@@ -21,6 +21,7 @@ define([
         due: null,
         contact: "",
         location: "",
+        number: "",
         items: [],
         conflicts: [],
         by: null,
@@ -37,16 +38,17 @@ define([
      * @class Transaction
      * @constructor
      * @extends Base
-     * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
-     * @property {DateHelper} dateHelper              - A DateHelper object ref
-     * @property {string}  status                     - The transaction status
-     * @property {moment}  from                       - The transaction from date
-     * @property {moment}  to                         - The transaction to date
-     * @property {moment}  due                        - The transaction due date
-     * @property {string}  contact                    - The Contact.id for this transaction
-     * @property {string}  location                   - The Location.id for this transaction
-     * @property {Array}  items                       - A list of Item.id strings
-     * @property {Array}  conflicts                   - A list of conflict hashes
+     * @property {boolean} autoCleanup      - Automatically cleanup the transaction if it becomes empty?
+     * @property {DateHelper} dateHelper    - A DateHelper object ref
+     * @property {string} status            - The transaction status
+     * @property {moment} from              - The transaction from date
+     * @property {moment} to                - The transaction to date
+     * @property {moment} due               - The transaction due date
+     * @property {string} number            - The booking number
+     * @property {string} contact           - The Contact.id for this transaction
+     * @property {string} location          - The Location.id for this transaction
+     * @property {Array} items              - A list of Item.id strings
+     * @property {Array} conflicts          - A list of conflict hashes
      */
     var Transaction = function(opt) {
         var spec = $.extend({}, opt);
@@ -63,6 +65,7 @@ define([
         this.from = spec.from || DEFAULTS.from;                           // a date in the future
         this.to = spec.to || DEFAULTS.to;                                 // a date in the future
         this.due = spec.due || DEFAULTS.due;                              // a date even further in the future, we suggest some standard avg durations
+        this.number = spec.number || DEFAULTS.number;                     // a booking number
         this.contact = spec.contact || DEFAULTS.contact;                  // a contact id
         this.location = spec.location || DEFAULTS.location;               // a location id
         this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
@@ -213,7 +216,7 @@ define([
      * Checks if the transaction is empty
      * @method isEmpty
      * @name Transaction#isEmpty
-     * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
+     * @returns {boolean}
      */
     Transaction.prototype.isEmpty = function() {
         return (
@@ -222,6 +225,7 @@ define([
             (this.from==DEFAULTS.from) &&
             (this.to==DEFAULTS.to) &&
             (this.due==DEFAULTS.due) &&
+            (this.number==DEFAULTS.number) &&
             (this.contact==DEFAULTS.contact) &&
             (this.location==DEFAULTS.location) &&
             (this.items.length==0)  // not DEFAULTS.items? :)
@@ -345,6 +349,7 @@ define([
             .then(function() {
                 that.cover = null;  // don't read cover property for Transactions
                 that.status = data.status || DEFAULTS.status;
+                that.number = data.number || DEFAULTS.number;
                 that.location = data.location || DEFAULTS.location;
                 that.contact = data.customer || DEFAULTS.contact;
                 that.items = data.items || DEFAULTS.items.slice();

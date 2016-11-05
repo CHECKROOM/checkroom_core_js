@@ -248,12 +248,17 @@ define([
         //    return $.Deferred().reject(new Error("Cannot create, invalid document"));
         //}
 
-        var that = this;
-        var data = {
+        var that = this,
+            data = {
             name: this.name,
             items: this._getIds(this.items)
         };
+
+        // Also add any possible fields we need during `create`
+        $.extend(data, this._toJsonFields());
+
         delete data.id;
+
         return this.ds.create(data, this._fields)
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data);

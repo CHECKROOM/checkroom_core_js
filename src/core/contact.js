@@ -98,6 +98,29 @@ define([
     };
 
     //
+    // Business logic
+    //
+    /**
+     * Archive a contact
+     * @name Contact#archive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.archive = function(skipRead) {
+        return this.ds.call(this.id, 'archive', {}, skipRead);
+    };
+
+    /**
+     * Undo archive of a contact
+     * @name Contact#undoArchive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.undoArchive = function(skipRead) {
+        return this.ds.call(this.id, 'undoArchive', {}, skipRead);
+    };
+
+    //
     // Base overrides
     //
 
@@ -140,32 +163,12 @@ define([
             (this.raw)) {
             isDirty = (
                 (this.name!=this.raw.name)||
-                    (this.company!=this.raw.company)||
-                    (this.phone!=this.raw.phone)||
-                    (this.email!=this.raw.email)
-                );
+                (this.company!=this.raw.company)||
+                (this.phone!=this.raw.phone)||
+                (this.email!=this.raw.email)
+            );
         }
         return isDirty;
-    };
- 
-    /**
-     * Archive a contact
-     * @name Contact#archive
-     * @param skipRead
-     * @returns {promise}
-     */
-    Contact.prototype.archive = function(skipRead) {
-        return this.ds.call(this.id, 'archive', {}, skipRead);
-    };
-
-    /**
-     * Undo archive of a contact
-     * @name Contact#undoArchive
-     * @param skipRead
-     * @returns {promise}
-     */
-    Contact.prototype.undoArchive = function(skipRead) {
-        return this.ds.call(this.id, 'undoArchive', {}, skipRead);
     };
 
     Contact.prototype._getDefaults = function() {
@@ -195,6 +198,20 @@ define([
                 
                 $.publish('contact.fromJson', data);
                 return data;
+            });
+    };
+
+    Contact.prototype._create = function(skipRead) {
+        // We override create because we also want
+        // to set possible `fields` during the `create` command
+        var that = this,
+            data = $.extend({}, this._toJson(), this._toJsonFields());
+
+        delete data.id;
+
+        return this.ds.create(data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
             });
     };
 

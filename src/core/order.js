@@ -128,7 +128,7 @@ define([
 
         // Use Default keyValues parser
         return Transaction.prototype._fromKeyValuesJson.call(that, data, options);
-    }
+    };
 
     //
     // Helpers

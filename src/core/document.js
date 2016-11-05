@@ -145,14 +145,7 @@ define([
         if (!this.isValid()) {
             return $.Deferred().reject(new Error("Cannot create, invalid document"));
         }
-
-        var that = this;
-        var data = this._toJson();
-        delete data.id;
-        return this.ds.create(data, this._fields)
-            .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
-            });
+        return this._create(skipRead);
     };
 
     /**
@@ -172,14 +165,7 @@ define([
         if (!this.isValid()) {
             return $.Deferred().reject(new Error("Cannot update, invalid document"));
         }
-
-        var that = this;
-        var data = this._toJson();
-        delete data.id;
-        return this.ds.update(this.id, data, this._fields)
-            .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
-            });
+        return this._update(skipRead);
     };
 
     /**
@@ -191,11 +177,7 @@ define([
     Document.prototype.delete = function() {
         // Call the api /delete on this document
         if (this.existsInDb()) {
-            var that = this;
-            return this.ds.delete(this.id)
-                .then(function() {
-                    return that.reset();
-                });
+            return this._delete();
         } else {
             return $.Deferred().reject(new Error("Document does not exist"));
         }
@@ -238,6 +220,62 @@ define([
 
     // Implementation stuff
     // ---
+    /**
+     * The actual _create implementation (after all the checks are done)
+     * @param skipRead
+     * @returns {*}
+     * @private
+     */
+    Document.prototype._create = function(skipRead) {
+        var that = this;
+        var data = this._toJson();
+        delete data.id;
+        return this.ds.create(data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * The actual _update implementation (after all the checks are done)
+     * @param skipRead
+     * @returns {*}
+     * @private
+     */
+    Document.prototype._update = function(skipRead) {
+        var that = this;
+        var data = this._toJson();
+        delete data.id;
+        return this.ds.update(this.id, data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * The actual _delete implementation (after all the checks are done)
+     * @returns {*}
+     * @private
+     */
+    Document.prototype._delete = function() {
+        var that = this;
+        return this.ds.delete(this.id)
+            .then(function() {
+                return that.reset();
+            });
+    };
+
+    /**
+     * Helper for checking if a simple object property is dirty
+     * compared to the original raw result
+     * @param prop
+     * @returns {boolean}
+     * @private
+     */
+    Document.prototype._isDirtyProperty = function(prop) {
+        return (this.raw) ? (this[prop]!=this.raw[prop]) : false;
+    };
+
     /**
      * Gets the id of a document
      * @param obj

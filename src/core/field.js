@@ -62,7 +62,7 @@ define(['jquery'], /** Field */ function ($) {
      */
     Field.prototype.isEmpty = function(){
         return this.value == null;
-    }
+    };
 
     return Field;
 });

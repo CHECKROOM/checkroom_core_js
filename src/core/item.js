@@ -253,40 +253,25 @@ define([
     };
 
     Item.prototype._isDirtyName = function() {
-        if (this.raw) {
-            return (this.name!=this.raw.name);
-        } else {
-            return false;
-        }
+        return this._isDirtyProperty("name");
     };
 
     Item.prototype._isDirtyBrand = function() {
-        if (this.raw) {
-            return (this.brand!=this.raw.brand);
-        } else {
-            return false;
-        }
+        return this._isDirtyProperty("brand");
     };
 
     Item.prototype._isDirtyModel = function() {
-        if (this.raw) {
-            return (this.model!=this.raw.model);
-        } else {
-            return false;
-        }
-    };
-
-    Item.prototype._isDirtyPurchaseDate = function() {
-        if (this.raw) {
-            return (this.purchaseDate!=this.raw.purchaseDate);
-        } else {
-            return false;
-        }
+        return this._isDirtyProperty("model");
     };
 
     Item.prototype._isDirtyPurchasePrice = function() {
+        return this._isDirtyProperty("purchasePrice");
+    };
+
+    Item.prototype._isDirtyPurchaseDate = function() {
+        // TODO: This needs another check because these are moment objects
         if (this.raw) {
-            return (this.purchasePrice!=this.raw.purchasePrice);
+            return (this.purchaseDate!=this.raw.purchaseDate);
         } else {
             return false;
         }
@@ -464,7 +449,7 @@ define([
         }
 
         var that = this;
-        var data = $.extend(this._toJson(), this._toJsonKeyValues(), {
+        var data = $.extend(this._toJson(), this._toJsonFields(), {
             times: times || 1,
             autoNumber: autoNumber || false,
             startFrom: startFrom

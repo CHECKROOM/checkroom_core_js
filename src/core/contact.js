@@ -12,8 +12,6 @@ define([
 
     var DEFAULTS = {
         name: "",
-        company: "",
-        phone: "",
         email: "",
         status: "active",
         user: {},
@@ -41,8 +39,6 @@ define([
 
         this.name = spec.name || DEFAULTS.name;
         this.company = spec.company || DEFAULTS.company;
-        this.phone = spec.phone || DEFAULTS.phone;
-        this.email = spec.email || DEFAULTS.email;
         this.status = spec.status || DEFAULTS.status;
         this.user = spec.user || DEFAULTS.user;
         this.kind = spec.kind || DEFAULTS.kind;
@@ -62,28 +58,6 @@ define([
     Contact.prototype.isValidName = function() {
         this.name = $.trim(this.name);
         return (this.name.length>=3);
-    };
-
-    /**
-     * Checks if company is valid
-     * @name  Contact#isValidCompany
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidCompany = function() {
-        this.company = $.trim(this.company);
-        return (this.company.length>=3);
-    };
-
-    /**
-     * Checks if phone is valid
-     * @name  Contact#isValidPhone
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidPhone = function() {
-        this.phone = $.trim(this.phone);
-        return common.isValidPhone(this.phone);
     };
 
     /**
@@ -132,10 +106,7 @@ define([
      * @override
      */
     Contact.prototype.isValid = function() {
-        return this.isValidName() &&
-            this.isValidCompany() &&
-            this.isValidPhone() &&
-            this.isValidEmail();
+        return this.isValidName() && this.isValidEmail();
     };
 
     /**
@@ -147,8 +118,6 @@ define([
         return (
             (Base.prototype.isEmpty.call(this)) &&
                 (this.name==DEFAULTS.name) &&
-                (this.company==DEFAULTS.company) &&
-                (this.phone==DEFAULTS.phone) &&
                 (this.email==DEFAULTS.email));
     };
 
@@ -163,8 +132,6 @@ define([
             (this.raw)) {
             isDirty = (
                 (this.name!=this.raw.name)||
-                (this.company!=this.raw.company)||
-                (this.phone!=this.raw.phone)||
                 (this.email!=this.raw.email)
             );
         }
@@ -178,8 +145,6 @@ define([
     Contact.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
-        data.company = this.company || DEFAULTS.company;
-        data.phone = this.phone || DEFAULTS.phone;
         data.email = this.email || DEFAULTS.email;
         return data;
     };
@@ -189,8 +154,6 @@ define([
         return Base.prototype._fromJson.call(this, data, options)
             .then(function(data) {
                 that.name = data.name || DEFAULTS.name;
-                that.company = data.company || DEFAULTS.company;
-                that.phone = data.phone || DEFAULTS.phone;
                 that.email = data.email || DEFAULTS.email;
                 that.status = data.status || DEFAULTS.status;
                 that.user = data.user || DEFAULTS.user;

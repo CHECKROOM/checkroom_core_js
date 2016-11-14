@@ -325,54 +325,61 @@ define([
 
     /**
      * Returns a list of Field objects
-     * @param fieldDefs     array of field definitions
-     * @return {array}
+     * @param fieldDefs         array of field definitions
+     * @param onlyFormFields    should return only form fields
+     * @param limit             return no more than x fields
+     * @return {Array}
      */
-    Base.prototype.getSortedFields = function(fieldDefs, onlyFormFields){
+    Base.prototype.getSortedFields = function(fieldDefs, onlyFormFields, limit) {
         var that = this,
-            fields = [];
+            fields = [],
+            fieldDef = null,
+            fieldValue = null;
 
         // Work on copy of fieldDefs array
         fieldDefs = fieldDefs.slice();
 
         // Return only form field definitions?
-        fieldDefs = fieldDefs.filter(function(def){ return onlyFormFields == true?def.form:true; });
+        fieldDefs = fieldDefs.filter(function(def) { return onlyFormFields == true ? def.form : true; });
 
         // Create a Field object for each field definition
-        for(var i=0;i<fieldDefs.length;i++){
-            var fieldDef = fieldDefs[i];
-            var fieldValue = that.fields[fieldDef.name];
+        for (var i=0;i<fieldDefs.length;i++) {
+            fieldDef = fieldDefs[i];
+            fieldValue = that.fields[fieldDef.name];
 
-            fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
+            if( (limit==null) ||
+                (limit>fields.length)) {
+                fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
+            }
         }
 
         return fields;
-    }
+    };
 
     /**
      * Update item fields based on the given Field objects
-     * @param {array} fields    array of Field objects
+     * @param {Array} fields    array of Field objects
      */
-    Base.prototype.setSortedFields = function(fields){
-        for(var i=0;i<fields.length;i++){
+    Base.prototype.setSortedFields = function(fields) {
+        for (var i=0;i<fields.length;i++) {
             var field = fields[i];
             this.fields[field.name] = field.value;
         }
-    }
+    };
 
     /**
      * Checks if all item fields are valid
-     * @param  {array}  fields 
+     * @param  {Array}  fields
      * @return {Boolean}        
      */
-    Base.prototype.validateSortedFields = function(fields){
-        for(var i=0;i<fields.length;i++){
-            if(!fields[i].isValid()){
+    Base.prototype.validateSortedFields = function(fields) {
+        for (var i=0;i<fields.length;i++) {
+            if (!fields[i].isValid()) {
                 return false;
             }
         }
         return true;
-    }
+    };
 
     // Implementation
     // ----

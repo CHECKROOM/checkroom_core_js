@@ -11,7 +11,9 @@ define(['jquery'], /** Field */ function ($) {
         required: false,
         unit: "",
         kind: "string",
-        form: false
+        form: false,
+        editor: null,
+        description: ""
     };
 
     /**
@@ -30,7 +32,9 @@ define(['jquery'], /** Field */ function ($) {
         this.required = spec.required || DEFAULTS.required;
         this.unit = spec.unit || DEFAULTS.unit;
         this.kind = spec.kind || DEFAULTS.kind;
-        this.form = spec.form || DEFAULTS.form;    
+        this.form = spec.form || DEFAULTS.form;
+        this.editor = spec.editor || DEFAULTS.editor;   
+        this.description = spec.description || DEFAULTS.description; 
     };
 
     /**
@@ -61,7 +65,7 @@ define(['jquery'], /** Field */ function ($) {
      * @returns {boolean}
      */
     Field.prototype.isEmpty = function(){
-        return this.value == null;
+        return $.trim(this.value) == "";
     };
 
     return Field;

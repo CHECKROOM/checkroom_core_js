@@ -192,7 +192,7 @@ define([
      */
     Base.prototype.clearField = function(field, skipRead) {
         return this._doApiCall({
-            method: 'setField',
+            method: 'clearField',
             params: {field: field},
             skipRead: skipRead
         });

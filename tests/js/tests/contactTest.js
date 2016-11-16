@@ -182,6 +182,24 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                             });
                     });
 
+                    asyncTest("contact isValidEmail", function() {
+                        var contact = new cr.Contact({
+                            ds: ds
+                        });
+
+                        contact.email = "test@test.com";
+                        ok(contact.isValidEmail());
+
+                        contact.email = "test";
+                        ok(!contact.isValidEmail());
+
+                        contact.email = "example@made.for.digital";
+                        ok(contact.isValidEmail());
+
+                        start();
+                    });
+
+
                 });
 
         };

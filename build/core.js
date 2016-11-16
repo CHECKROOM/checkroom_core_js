@@ -94,7 +94,7 @@ common_code = {
    * @return {Boolean} 
    */
   isValidDocQRCode: function (qrCode) {
-    return qrCode && qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+    return qrCode && (qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null || qrCode.match(/^[a-z0-9]{8}$/i) != null);
   },
   /**
    * isValidItemQRCode 
@@ -2121,7 +2121,7 @@ common_validation = {
    * @return {Boolean}       
    */
   isValidEmail: function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
     return re.test(email);
   },
   /**

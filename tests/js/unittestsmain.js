@@ -56,7 +56,7 @@ require([
         //helperTest.run();
         //simpleTest.run();
         //dateHelperTest.run();
-        //contactTest.run();
+        contactTest.run();
         //locationTest.run();
         //kitTest.run();
         //itemTest.run();
@@ -65,7 +65,7 @@ require([
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();
-        webHookTest.run();
+        //webHookTest.run();
 
         // start QUnit.
         QUnit.start();

@@ -363,7 +363,11 @@ define([
     Base.prototype.setSortedFields = function(fields) {
         for (var i=0;i<fields.length;i++) {
             var field = fields[i];
-            this.fields[field.name] = field.value;
+            if(field.isEmpty()){
+                delete this.fields[field.name];
+            }else{
+                this.fields[field.name] = field.value;
+            }
         }
     };
 

@@ -456,6 +456,14 @@ define([
         });
         delete data.id;
 
+        // BUGFFIX model name clash issue
+        // model == Item property
+        // model == database model
+        if(!data.model || $.trim(data.model) == ""){
+            data.brandModel = data.model;
+            delete data.model;
+        }
+
         return this._doApiCall({
             method: 'createMultiple',
             params: data

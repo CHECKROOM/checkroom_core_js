@@ -4571,7 +4571,11 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
   Base.prototype.setSortedFields = function (fields) {
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
-      this.fields[field.name] = field.value;
+      if (field.isEmpty()) {
+        delete this.fields[field.name];
+      } else {
+        this.fields[field.name] = field.value;
+      }
     }
   };
   /**
@@ -5198,7 +5202,11 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
   Base.prototype.setSortedFields = function (fields) {
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
-      this.fields[field.name] = field.value;
+      if (field.isEmpty()) {
+        delete this.fields[field.name];
+      } else {
+        this.fields[field.name] = field.value;
+      }
     }
   };
   /**
@@ -6923,6 +6931,13 @@ Item = function ($, Base) {
       startFrom: startFrom
     });
     delete data.id;
+    // BUGFFIX model name clash issue
+    // model == Item property
+    // model == database model
+    if (!data.model || $.trim(data.model) == '') {
+      data.brandModel = data.model;
+      delete data.model;
+    }
     return this._doApiCall({
       method: 'createMultiple',
       params: data

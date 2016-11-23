@@ -16,6 +16,7 @@ define([
             codes: [],
             brand: "",
             model: "",
+            warrantyDate: null,
             purchaseDate: null,
             purchasePrice: null,
             location: "",
@@ -43,6 +44,7 @@ define([
      * @property {string} status            the status of the item in an order, or expired
      * @property {string} brand             the item brand
      * @property {string} model             the item model
+     * @property {moment} warrantyDate      the item warranty date
      * @property {moment} purchaseDate      the item purchase date
      * @property {string} purchasePrice     the item purchase price
      * @property {Array} codes              the item qr codes
@@ -68,6 +70,7 @@ define([
         this.status = spec.status || DEFAULTS.status;
         this.brand = spec.brand || DEFAULTS.brand;
         this.model = spec.model || DEFAULTS.model;
+        this.warrantyDate = spec.warrantyDate || DEFAULTS.warrantyDate;
         this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
         this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
         this.codes = spec.codes || DEFAULTS.codes;
@@ -122,6 +125,7 @@ define([
         (this.status==DEFAULTS.status) &&
         (this.brand==DEFAULTS.brand) &&
         (this.model==DEFAULTS.model) &&
+        (this.warrantyDate==DEFAULTS.warrantyDate) &&
         (this.purchaseDate==DEFAULTS.purchaseDate) &&
         (this.purchasePrice==DEFAULTS.purchasePrice) &&
         (this.codes.length==0) &&  // not DEFAULTS.codes? :)
@@ -140,6 +144,7 @@ define([
             this._isDirtyName() ||
             this._isDirtyBrand() ||
             this._isDirtyModel() ||
+            this._isDirtyWarrantyDate() ||
             this._isDirtyPurchaseDate() ||
             this._isDirtyPurchasePrice() ||
             this._isDirtyCategory() ||
@@ -160,6 +165,7 @@ define([
         data.name = this.name || DEFAULTS.name;
         data.brand = this.brand || DEFAULTS.brand;
         data.model = this.model || DEFAULTS.model;
+        data.warrantyDate = this.warrantyDate || DEFAULTS.warrantyDate;
         data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
         data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
         data.category = this.category || DEFAULTS.category;
@@ -186,6 +192,7 @@ define([
                 that.status = data.status || DEFAULTS.status;
                 that.brand = data.brand || DEFAULTS.brand;
                 that.model = data.model || DEFAULTS.model;
+                that.warrantyDate = data.warrantyDate || DEFAULTS.warrantyDate;
                 that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
                 that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
                 that.codes = data.codes || DEFAULTS.codes;
@@ -230,6 +237,7 @@ define([
             });
     };
 
+    // Deprecated
     Item.prototype._toJsonKeyValues = function(){
         var that = this;
         var params = {};
@@ -246,6 +254,7 @@ define([
         return params;
     };
 
+    // Deprecated
     Item.prototype._getKeyValue = function(kv, options) {
         // Flag is a special keyvalue, we won't read it into keyValues
         // but set it via _fromJsonFlag
@@ -264,17 +273,16 @@ define([
         return this._isDirtyProperty("model");
     };
 
-    Item.prototype._isDirtyPurchasePrice = function() {
-        return this._isDirtyProperty("purchasePrice");
+    Item.prototype._isDirtyWarrantyDate = function() {
+        return this._isDirtyMomentProperty("warrantyDate");
     };
 
     Item.prototype._isDirtyPurchaseDate = function() {
-        // TODO: This needs another check because these are moment objects
-        if (this.raw) {
-            return (this.purchaseDate!=this.raw.purchaseDate);
-        } else {
-            return false;
-        }
+        return this._isDirtyMomentProperty("purchaseDate");
+    };
+
+    Item.prototype._isDirtyPurchasePrice = function() {
+        return this._isDirtyProperty("purchasePrice");
     };
 
     Item.prototype._isDirtyLocation = function() {
@@ -388,9 +396,10 @@ define([
                 if( (that._isDirtyName()) ||
                     (that._isDirtyBrand()) ||
                     (that._isDirtyModel()) ||
+                    (that._isDirtyWarrantyDate()) ||
                     (that._isDirtyPurchaseDate()) ||
                     (that._isDirtyPurchasePrice())) {
-                    dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.purchaseDate, that.purchasePrice);
+                    dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice);
                 } else {
                     dfdBasic.resolve();
                 }
@@ -567,12 +576,13 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.updateBasicFields = function(name, brand, model, purchaseDate, purchasePrice, skipRead) {
+    Item.prototype.updateBasicFields = function(name, brand, model, warrantyDate, purchaseDate, purchasePrice, skipRead) {
         var that = this,
             params = {
                 name: name,
                 brand: brand,
                 model: model,
+                warrantyDate: warrantyDate,
                 purchaseDate: purchaseDate,
                 purchasePrice: purchasePrice
             };

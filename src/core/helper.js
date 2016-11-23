@@ -135,7 +135,9 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
             },
             /**
              * getAccessRights returns access rights based on the user role, profile settings 
-             * and account limits 
+             * and account limits
+             *
+             * Deprecated: Use PermissionHandler instead
              *
              * @memberOf helper
              * @method

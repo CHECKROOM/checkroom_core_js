@@ -277,6 +277,29 @@ define([
     };
 
     /**
+     * Helper for checking if a simple object property is dirty
+     * compared to the original raw result
+     * @param prop
+     * @returns {boolean}
+     * @private
+     */
+    Document.prototype._isDirtyMomentProperty = function(prop) {
+        if (this.raw) {
+            var newVal = this[prop],
+                oldVal = this.raw[prop];
+            if (newVal==null && oldVal==null) {
+                return false;
+            } else if (newVal && oldVal) {
+                return !newVal.isSame(oldVal);
+            } else {
+                return true;
+            }
+        } else {
+            return false;
+        }
+    };
+
+    /**
      * Gets the id of a document
      * @param obj
      * @param prop

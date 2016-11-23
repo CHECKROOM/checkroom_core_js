@@ -7170,7 +7170,8 @@ Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     items: [],
-    status: 'unknown'
+    status: 'unknown',
+    cover: ''
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7195,6 +7196,7 @@ Kit = function ($, Base, common) {
     this.codes = [];
     this.conflicts = [];
     this.status = spec.status || DEFAULTS.status;
+    this.cover = spec.cover || DEFAULTS.cover;
   };
   Kit.prototype = new tmp();
   Kit.prototype.constructor = Kit;
@@ -7370,6 +7372,7 @@ Kit = function ($, Base, common) {
       that.items = data.items || DEFAULTS.items.slice();
       that.codes = data.codes || [];
       that.status = data.status || DEFAULTS.status;
+      that.cover = data.cover || DEFAULTS.cover;
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;

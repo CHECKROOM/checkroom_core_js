@@ -84,6 +84,7 @@ define([
             case "user":
             case "admin":
             case "root":
+            case "selfservice":
                 return true;
             default:
                 return false;

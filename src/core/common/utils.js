@@ -36,7 +36,7 @@ define(['jquery'], function ($) {
             sortedFields.push($.extend({value: fieldValue}, fieldDef));
 
             if( (limit!=null) &&
-                (sortedFields.length>limit)) {
+                (sortedFields.length>=limit)) {
                 break;
             }
         }

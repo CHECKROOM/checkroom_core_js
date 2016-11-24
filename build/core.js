@@ -2185,7 +2185,7 @@ common_utils = function ($) {
       fieldDef = fieldDefs[i];
       fieldValue = fields[fieldDef.name];
       sortedFields.push($.extend({ value: fieldValue }, fieldDef));
-      if (limit != null && sortedFields.length > limit) {
+      if (limit != null && sortedFields.length >= limit) {
         break;
       }
     }

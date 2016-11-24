@@ -554,7 +554,7 @@ define([
     Base.prototype._getField = function(data, options){
         var spec = $.extend({}, options || {}, data);
         return new Field(spec);
-    }
+    };
 
     return Base;
 

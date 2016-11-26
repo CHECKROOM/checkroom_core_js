@@ -25,7 +25,7 @@ define([
         name: "",
         count: 0,
         defs: [],
-        parent: ""
+        parent: "",
         modified: null
     };
 
@@ -70,9 +70,13 @@ define([
      */
     Category.prototype.isValidName = function() {
         this.name = $.trim(this.name);
-        return (this.name.length>=3);
+        if (this.name.length>=3) {
+            var nospecial = this.name.latinise().replace(/[`~!@#$%^&*()_|+\-=?;:'",.<\{\}\[\]\\\/]/gi, '');
+            return (this.name == nospecial);
+        } else {
+            return false;
+        }
     };
-
 
     //
     // Document overrides
@@ -128,12 +132,7 @@ define([
      * @override
      */
     Category.prototype.canDelete = function() {
-        return this.ds.call(this.id, 'canDeleteCategory', {omitFields: true})
-            .then(function(resp) {
-                // There's also resp.conflicts with more info
-                // if cannot delete category
-                return ((resp) && (resp.result==true));
-            });
+        return this.ds.call(this.id, 'canDeleteCategory', {omitFields: true});
     };
 
     /**
@@ -144,12 +143,7 @@ define([
      * @returns {promise}
      */
     Category.prototype.canChangeName = function(name) {
-        return this.ds.call(this.id, 'canChangeName', {name: name})
-            .then(function(resp) {
-                // There's also resp.conflicts with more info
-                // if cannot change name
-                return ((resp) && (resp.result==true));
-            });
+        return this.ds.call(this.id, 'canChangeName', {name: name});
     };
 
     /**
@@ -159,7 +153,7 @@ define([
      * @returns {promise}
      */
     Category.prototype.changeName = function(name) {
-        return this._doApiCall({pk: this.id, method: 'changeName', params: {name: name});
+        return this._doApiCall({pk: this.id, method: 'changeName', params: {name: name}});
     };
 
     /**
@@ -169,12 +163,7 @@ define([
      * @returns {promise}
      */
     Category.prototype.canChangeParent = function(parentId) {
-        return this.ds.call(this.id, 'canChangeParent', {parent: parentId, omitFields: true})
-            .then(function(resp) {
-                // There's also resp.conflicts with more info
-                // if cannot change parent
-                return ((resp) && (resp.result==true));
-            });
+        return this.ds.call(this.id, 'canChangeParent', {parent: parentId, omitFields: true});
     };
 
     /**
@@ -183,7 +172,7 @@ define([
      * @returns {promise}
      */
     Category.prototype.changeParent = function(parentId) {
-        return this._doApiCall({pk: this.id, method: 'changeParent', params: {parent: parentId, omitFields: true});
+        return this._doApiCall({pk: this.id, method: 'changeParent', params: {parent: parentId, omitFields: true}});
     };
 
     // toJson, fromJson

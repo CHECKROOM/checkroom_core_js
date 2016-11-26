@@ -570,6 +570,16 @@ define([
     };
 
     /**
+     * Gets the last number for items with this name
+     * @name Item#getLastNumber
+     * @returns {promise}
+     */
+    Item.prototype.getLastNumber = function() {
+        // Do a collection API call to get the last number for items with this name
+        return this.ds.call(null, "getLastItemNumber", {name: this.name});
+    };
+
+    /**
      * Updates the basic fields of an item
      * @name Item#updateBasicFields
      * @param name

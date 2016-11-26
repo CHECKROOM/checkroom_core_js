@@ -8,6 +8,7 @@ define([
     'Availability',
     'Attachment',
     'Base',
+    'Category',
     'Comment',
     'Conflict',
     'Contact',
@@ -25,7 +26,7 @@ define([
     'User',
     'WebHook',
     'common',
-    'OrderTransfer'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
 
     var core = {};
 
@@ -37,6 +38,7 @@ define([
     core.Availability = Availability;
     core.Attachment = Attachment;
     core.Base = Base;
+    core.Category = Category;
     core.Comment = Comment;
     core.Conflict = Conflict;
     core.Contact = Contact;

@@ -102,7 +102,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      * @name DateHelper#getFriendlyDuration
      * @method
      * @param  duration
-     * @return {} 
+     * @return {}
      */
     DateHelper.prototype.getFriendlyDuration = function(duration) {
         return duration.humanize();
@@ -117,23 +117,93 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      */
     DateHelper.prototype.getFriendlyDateParts = function(date, now, format) {
         /*
-        moment().calendar() shows friendlier dates
-        - when the date is <=7d away:
-          - Today at 4:15 PM
-          - Yesterday at 4:15 PM
-          - Last Monday at 4:15 PM
-          - Wednesday at 4:15 PM
-        - when the date is >7d away:
-          - 07/25/2015
-        */
+         moment().calendar() shows friendlier dates
+         - when the date is <=7d away:
+         - Today at 4:15 PM
+         - Yesterday at 4:15 PM
+         - Last Monday at 4:15 PM
+         - Wednesday at 4:15 PM
+         - when the date is >7d away:
+         - 07/25/2015
+         */
         now = now || this.getNow();
         format = format || "MMM D [at] h:mm a";
         var diff = now.diff(date, 'days');
         var str = (Math.abs(diff) < 7) ? date.calendar() : date.format(format);
         return str
-                .replace("AM", "am")
-                .replace("PM", "pm")
-                .split(" at ");
+            .replace("AM", "am")
+            .replace("PM", "pm")
+            .split(" at ");
+    };
+
+    /**
+     * Returns a number of friendly date ranges with a name
+     * Each date range is a standard transaction duration
+     * @name getDateRanges
+     * @method
+     * @param avgHours
+     * @param numRanges
+     * @param now
+     * @param i18n
+     * @returns {Array} [{counter: 1, from: m(), to: m(), hours: 24, option: 'days', title: '1 Day'}, {...}]
+     */
+    DateHelper.prototype.getDateRanges = function(avgHours, numRanges, now, i18n) {
+        if( (now) &&
+            (!moment.isMoment(now))) {
+            now = moment(now);
+        }
+
+        i18n = i18n || {
+            year: "Year",
+            years: "Years",
+            month: "Month",
+            months: "Months",
+            week: "Week",
+            weeks: "Weeks",
+            day: "Day",
+            days: "Days",
+            hour: "Hour",
+            hours: "Hours"
+        };
+        var timeOptions = ["years", "months", "weeks", "days", "hours"],
+            timeHourVals = [365*24, 30*24,    7*24,    24,     1],
+            opt = null,
+            val = null,
+            title = null,
+            counter = 0,
+            chosenIndex = -1,
+            ranges = [];
+
+        // Find the range kind that best fits the avgHours (search from long to short)
+        for (var i=0;i<timeOptions.length;i++) {
+            val = timeHourVals[i];
+            opt = timeOptions[i];
+            if (avgHours>=val) {
+                if( (avgHours % val) == 0) {
+                    chosenIndex = i;
+                    break;
+                }
+            }
+        }
+
+        now = now || this.getNow();
+        if (chosenIndex>=0) {
+            while (ranges.length < numRanges) {
+                counter = (avgHours / val);
+                counter += (ranges.length * counter);
+                title = i18n[(counter==1) ? opt.replace("s", "") : opt];
+                ranges.push({
+                    option: opt,
+                    hours: avgHours * counter,
+                    counter: counter,
+                    title: counter + " " + title,
+                    from: now.clone(),
+                    to: now.clone().add(ranges.length * avgHours, "hours")
+                })
+            }
+        }
+
+        return ranges;
     };
 
     /**
@@ -190,10 +260,10 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     /**
      * @deprecated use getFriendlyFromToInfo
      * [getFriendlyFromToOld]
-     * @param  fromDate    
-     * @param  toDate       
-     * @param  groupProfile 
-     * @return {}              
+     * @param  fromDate
+     * @param  toDate
+     * @param  groupProfile
+     * @return {}
      */
     DateHelper.prototype.getFriendlyFromToOld = function(fromDate, toDate, groupProfile) {
         var mFrom = this.roundFromTime(fromDate, groupProfile);
@@ -210,11 +280,11 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
     /**
      * [getFriendlyDateText]
-     * @param  date    
-     * @param  useHours 
-     * @param  now     
-     * @param  format  
-     * @return {string}         
+     * @param  date
+     * @param  useHours
+     * @param  now
+     * @param  format
+     * @return {string}
      */
     DateHelper.prototype.getFriendlyDateText = function(date, useHours, now, format) {
         if (date==null) {

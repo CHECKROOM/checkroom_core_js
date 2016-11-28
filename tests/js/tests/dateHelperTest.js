@@ -6,9 +6,45 @@ define(['settings', 'cheqroom-core'], function(settings, cr) {
 
         var run = function() {
 
+            test('getDateRanges day avg', function() {
+                // Fri Dec 13 2013 11:55:30 GMT+0100 (CET)
+                var d1 = new Date(2013, 11, 13, 11, 55, 30, 111);
+                var helper = new cr.DateHelper();
+                var ranges = helper.getDateRanges(24, 3, d1);
+
+                equal(ranges.length, 3);
+                equal(ranges[0].counter, 1);
+                equal(ranges[1].counter, 2);
+                equal(ranges[2].counter, 3);
+
+                equal(ranges[0].title, "1 Day");
+                equal(ranges[1].title, "2 Days");
+                equal(ranges[2].title, "3 Days");
+
+                equal(ranges[0].option, "days");
+                console.log(ranges);
+            });
+
+            test('getDateRanges hours avg', function() {
+                // Fri Dec 13 2013 11:55:30 GMT+0100 (CET)
+                var d1 = new Date(2013, 11, 13, 11, 55, 30, 111);
+                var helper = new cr.DateHelper();
+                var ranges = helper.getDateRanges(8, 3, d1);
+
+                equal(ranges.length, 3);
+                equal(ranges[0].counter, 8);
+                equal(ranges[1].counter, 16);
+                equal(ranges[2].counter, 24);
+
+                equal(ranges[0].title, "8 Hours");
+                equal(ranges[1].title, "16 Hours");
+                equal(ranges[2].title, "24 Hours");
+
+                equal(ranges[0].option, "days");
+            });
+
             test('fixDates', function() {
                 var helper = new cr.DateHelper();
-                var t = "2015-02-28T16:00:00+00:00";
                 var jsn = "2015-02-28T16:00:00.000Z";
 
                 var t1 = helper.fixDates(t);

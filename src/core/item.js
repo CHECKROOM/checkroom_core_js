@@ -505,6 +505,60 @@ define([
     };
 
     /**
+     * Checks if an item can be reserved (based on status)
+     * @name Item#canReserve
+     * @returns {boolean}
+     */
+    Item.prototype.canReserve = function() {
+        return (this.status!="expired") && (this.status!="in_custody");
+    };
+
+    /**
+     * Checks if an item can be checked out (based on status)
+     * @name Item#canCheckout
+     * @returns {boolean}
+     */
+    Item.prototype.canCheckout = function() {
+        return (this.status=="available");
+    };
+
+    /**
+     * Checks if we can go to the checkout of an item (based on status)
+     * @name Item#canGoToCheckout
+     * @returns {boolean}
+     */
+    Item.prototype.canGoToCheckout = function() {
+        return (this.status=="checkedout") || (this.status=="await_checkout");
+    };
+
+    /**
+     * Checks if an item can be checked in (based on status)
+     * @name Item#canCheckin
+     * @returns {boolean}
+     */
+    Item.prototype.canCheckin = function() {
+        return (this.status=="checkedout");
+    };
+
+    /**
+     * Checks if an item can be expired (based on status)
+     * @name Item#canExpire
+     * @returns {boolean}
+     */
+    Item.prototype.canExpire = function() {
+        return (this.status=="available");
+    };
+
+    /**
+     * Checks if an aitem can be made available again (based on status)
+     * @name Item#canUndoExpire
+     * @returns {boolean}
+     */
+    Item.prototype.canUndoExpire = function() {
+        return (this.status=="expired");
+    };
+
+    /**
      * Expires an item, puts it in the *expired* status
      * @name Item#expire
      * @param skipRead
@@ -645,6 +699,33 @@ define([
             .then(function(data) {
                 return (skipRead==true) ? data : that._fromJson(data[0]);
             });
+    };
+
+    /**
+     * Checks if custody can be taken for an item (based on status)
+     * @name Item#canTakeCustody
+     * @returns {boolean}
+     */
+    Item.prototype.canTakeCustody = function() {
+        return (this.status=="available");
+    };
+
+    /**
+     * Checks if custody can be released for an item (based on status)
+     * @name Item#canReleaseCustody
+     * @returns {boolean}
+     */
+    Item.prototype.canReleaseCustody = function() {
+        return (this.status=="in_custody");
+    };
+
+    /**
+     * Checks if custody can be transferred for an item (based on status)
+     * @name Item#canTransferCustody
+     * @returns {boolean}
+     */
+    Item.prototype.canTransferCustody = function() {
+        return (this.status=="in_custody");
     };
 
     /**

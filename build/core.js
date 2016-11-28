@@ -5883,6 +5883,38 @@ Contact = function ($, Base, common, User) {
   // Business logic
   //
   /**
+   * Checks if a contact can be used in a reservation (based on status)
+   * @name Contact#canReserve
+   * @returns {boolean}
+   */
+  Contact.prototype.canReserve = function () {
+    return this.status == 'active';
+  };
+  /**
+   * Checks if a contact can be used in a checkout (based on status)
+   * @name Contact#canCheckout
+   * @returns {boolean}
+   */
+  Contact.prototype.canCheckout = function () {
+    return this.status == 'active';
+  };
+  /**
+   * Checks if a contact can be archived (based on status)
+   * @name Contact#canArchive
+   * @returns {boolean}
+   */
+  Contact.prototype.canArchive = function () {
+    return this.status == 'active';
+  };
+  /**
+   * Checks if a contact can be unarchived (based on status)
+   * @name Contact#canUndoArchive
+   * @returns {boolean}
+   */
+  Contact.prototype.canUndoArchive = function () {
+    return this.status == 'archived';
+  };
+  /**
    * Archive a contact
    * @name Contact#archive
    * @param skipRead
@@ -7243,6 +7275,54 @@ Item = function ($, Base) {
     });
   };
   /**
+   * Checks if an item can be reserved (based on status)
+   * @name Item#canReserve
+   * @returns {boolean}
+   */
+  Item.prototype.canReserve = function () {
+    return this.status != 'expired' && this.status != 'in_custody';
+  };
+  /**
+   * Checks if an item can be checked out (based on status)
+   * @name Item#canCheckout
+   * @returns {boolean}
+   */
+  Item.prototype.canCheckout = function () {
+    return this.status == 'available';
+  };
+  /**
+   * Checks if we can go to the checkout of an item (based on status)
+   * @name Item#canGoToCheckout
+   * @returns {boolean}
+   */
+  Item.prototype.canGoToCheckout = function () {
+    return this.status == 'checkedout' || this.status == 'await_checkout';
+  };
+  /**
+   * Checks if an item can be checked in (based on status)
+   * @name Item#canCheckin
+   * @returns {boolean}
+   */
+  Item.prototype.canCheckin = function () {
+    return this.status == 'checkedout';
+  };
+  /**
+   * Checks if an item can be expired (based on status)
+   * @name Item#canExpire
+   * @returns {boolean}
+   */
+  Item.prototype.canExpire = function () {
+    return this.status == 'available';
+  };
+  /**
+   * Checks if an aitem can be made available again (based on status)
+   * @name Item#canUndoExpire
+   * @returns {boolean}
+   */
+  Item.prototype.canUndoExpire = function () {
+    return this.status == 'expired';
+  };
+  /**
    * Expires an item, puts it in the *expired* status
    * @name Item#expire
    * @param skipRead
@@ -7403,6 +7483,30 @@ Item = function ($, Base) {
     }).then(function (data) {
       return skipRead == true ? data : that._fromJson(data[0]);
     });
+  };
+  /**
+   * Checks if custody can be taken for an item (based on status)
+   * @name Item#canTakeCustody
+   * @returns {boolean}
+   */
+  Item.prototype.canTakeCustody = function () {
+    return this.status == 'available';
+  };
+  /**
+   * Checks if custody can be released for an item (based on status)
+   * @name Item#canReleaseCustody
+   * @returns {boolean}
+   */
+  Item.prototype.canReleaseCustody = function () {
+    return this.status == 'in_custody';
+  };
+  /**
+   * Checks if custody can be transferred for an item (based on status)
+   * @name Item#canTransferCustody
+   * @returns {boolean}
+   */
+  Item.prototype.canTransferCustody = function () {
+    return this.status == 'in_custody';
   };
   /**
    * Takes custody of an item
@@ -9924,6 +10028,7 @@ PermissionHandler = function () {
       case 'read':
         return true;
       case 'create':
+      case 'duplicate':
       case 'update':
       case 'delete':
       case 'expire':
@@ -9940,6 +10045,11 @@ PermissionHandler = function () {
       case 'export':
       case 'updateGeo':
         return this._isRootOrAdmin;
+      // Modules
+      case 'reserve':
+        return this._useReservations;
+      case 'checkout':
+        return this._useOrders;
       case 'takeCustody':
       case 'releaseCustody':
         return this._useCustody;
@@ -9954,6 +10064,7 @@ PermissionHandler = function () {
       case 'read':
         return this._useKits;
       case 'create':
+      case 'duplicate':
       case 'update':
       case 'delete':
       case 'setField':
@@ -10134,6 +10245,15 @@ Reservation = function ($, api, Transaction, Conflict) {
    */
   Reservation.prototype.canReserve = function () {
     return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.from && this.to && this.items && this.items.length;
+  };
+  /**
+   * Checks if the reservation can be undone (based on status)
+   * @method
+   * @name Reservation#canUndoReserve
+   * @returns {boolean}
+   */
+  Reservation.prototype.canUndoReserve = function () {
+    return this.status == 'open';
   };
   /**
    * Checks if the reservation can be cancelled

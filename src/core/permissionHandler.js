@@ -174,6 +174,7 @@ define([], function () {
                     case "read":
                         return true;
                     case "create":
+                    case "duplicate":
                     case "update":
                     case "delete":
                     case "expire":
@@ -190,6 +191,11 @@ define([], function () {
                     case "export":
                     case "updateGeo":
                         return this._isRootOrAdmin;
+                    // Modules
+                    case "reserve":
+                        return this._useReservations;
+                    case "checkout":
+                        return this._useOrders;
                     case "takeCustody":
                     case "releaseCustody":
                         return this._useCustody;
@@ -204,6 +210,7 @@ define([], function () {
                     case "read":
                         return this._useKits;
                     case "create":
+                    case "duplicate":
                     case "update":
                     case "delete":
                     case "setField":

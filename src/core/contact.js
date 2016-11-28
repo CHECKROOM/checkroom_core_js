@@ -75,6 +75,42 @@ define([
     // Business logic
     //
     /**
+     * Checks if a contact can be used in a reservation (based on status)
+     * @name Contact#canReserve
+     * @returns {boolean}
+     */
+    Contact.prototype.canReserve = function() {
+        return (this.status=="active");
+    };
+
+    /**
+     * Checks if a contact can be used in a checkout (based on status)
+     * @name Contact#canCheckout
+     * @returns {boolean}
+     */
+    Contact.prototype.canCheckout = function() {
+        return (this.status=="active");
+    };
+
+    /**
+     * Checks if a contact can be archived (based on status)
+     * @name Contact#canArchive
+     * @returns {boolean}
+     */
+    Contact.prototype.canArchive = function() {
+        return (this.status=="active");
+    };
+
+    /**
+     * Checks if a contact can be unarchived (based on status)
+     * @name Contact#canUndoArchive
+     * @returns {boolean}
+     */
+    Contact.prototype.canUndoArchive = function() {
+        return (this.status=="archived");
+    };
+
+    /**
      * Archive a contact
      * @name Contact#archive
      * @param skipRead

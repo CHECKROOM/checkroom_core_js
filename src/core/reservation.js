@@ -76,6 +76,16 @@ define([
     };
 
     /**
+     * Checks if the reservation can be undone (based on status)
+     * @method
+     * @name Reservation#canUndoReserve
+     * @returns {boolean}
+     */
+    Reservation.prototype.canUndoReserve = function() {
+        return (this.status=="open");
+    };
+
+    /**
      * Checks if the reservation can be cancelled
      * @method
      * @name Reservation#canCancel
@@ -394,9 +404,9 @@ define([
         throw "Reservation.setDueDate not implemented";
     };
 
-//
-// Business logic calls
-//
+    //
+    // Business logic calls
+    //
 
     /**
      * Searches for Items that are available for this reservation
@@ -464,9 +474,9 @@ define([
         return this._doApiCall({method: "switchToOrder", skipRead: true});
     };
 
-//
-// Implementation
-//
+    //
+    // Implementation
+    //
     Reservation.prototype._checkFromToDate = function(from, to) {
         var dateHelper = this._getDateHelper();
         var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;

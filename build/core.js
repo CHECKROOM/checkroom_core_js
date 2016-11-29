@@ -7737,6 +7737,25 @@ Kit = function ($, Base, common) {
   //
   // Business logic
   //
+  // KIT_STATUS = ( 'available', 'checkedout', 'await_checkout', 'in_transit', 'maintenance', 'repair', 'inspection', 'expired', 'in_custody', 'empty', 'incomplete')
+  /**
+   * Checks if a Kit can be checked out (based on status)
+   * @name Kit#canCheckout
+   * @method
+   * @returns {boolean}
+   */
+  Kit.prototype.canCheckout = function () {
+    return this.status == 'available' || this.status == 'incomplete';
+  };
+  /**
+   * Checks if a Kit can be reserved (based on status)
+   * @name Kit#canReserve
+   * @method
+   * @returns {boolean}
+   */
+  Kit.prototype.canReserve = function () {
+    return this.status != 'expired' && this.status != 'in_custody' && this.status != 'empty';
+  };
   /**
    * addItems; adds a bunch of Items to the transaction using a list of item ids
    * @name Kit#addItems

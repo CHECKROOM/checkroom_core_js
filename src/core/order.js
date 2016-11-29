@@ -212,6 +212,46 @@ define([
         return (this.status=="open");
     };
 
+    /**
+     * Checks if the order can be deleted (based on status)
+     * @method
+     * @name Order#canDelete
+     * @returns {boolean}
+     */
+    Order.prototype.canDelete = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be added to the checkout (based on status)
+     * @method
+     * @name Order#canAddItems
+     * @returns {boolean}
+     */
+    Order.prototype.canAddItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be removed from the checkout (based on status)
+     * @method
+     * @name Order#canRemoveItems
+     * @returns {boolean}
+     */
+    Order.prototype.canRemoveItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be swapped in the checkout (based on status)
+     * @method
+     * @name Order#canSwapItems
+     * @returns {boolean}
+     */
+    Order.prototype.canSwapItems = function() {
+        return (this.status=="creating");
+    };
+
     //
     // Base overrides
     //

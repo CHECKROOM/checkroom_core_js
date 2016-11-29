@@ -116,6 +116,36 @@ define([
     };
 
     /**
+     * Checks if items can be added to the reservation (based on status)
+     * @method
+     * @name Reservation#canAddItems
+     * @returns {boolean}
+     */
+    Reservation.prototype.canAddItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be removed from the reservation (based on status)
+     * @method
+     * @name Reservation#canRemoveItems
+     * @returns {boolean}
+     */
+    Reservation.prototype.canRemoveItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be swapped in the reservation (based on status)
+     * @method
+     * @name Reservation#canSwapItems
+     * @returns {boolean}
+     */
+    Reservation.prototype.canSwapItems = function() {
+        return (this.status=="creating") || (this.status=="open");
+    };
+
+    /**
      * Checks if the reservation can be turned into an order
      * @method
      * @name Reservation#canMakeOrder

@@ -83,7 +83,7 @@ define([], function () {
 
     
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
-        return this.hasPermission(action, "kits", data, location);
+        return this.hasPermission(action || "read", "kits", data, location);
     };
 
     
@@ -97,12 +97,12 @@ define([], function () {
 
     
     PermissionHandler.prototype.hasCheckoutPermission = function(action, data, location) {
-        return this.hasPermission(action, "orders", data, location);
+        return this.hasPermission(action || "read", "orders", data, location);
     };
     
 
     PermissionHandler.prototype.hasReservationPermission = function(action, data, location) {
-        return this.hasPermission(action, "reservations", data, location);
+        return this.hasPermission(action || "read", "reservations", data, location);
     };
 
     
@@ -221,6 +221,8 @@ define([], function () {
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
+                    case "addItems":
+                    case "removeItems":
                         return this._useKits && this._isRootOrAdmin;
                 }
                 break;
@@ -232,7 +234,6 @@ define([], function () {
 
                     // TODO: Checkin at location
                     // TODO: Add items to open check-out
-
                     case "read":
                     case "create":
                     case "update":
@@ -245,6 +246,9 @@ define([], function () {
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
+                    case "addItems":
+                    case "removeItems":
+                    case "swapItems":
                         return this._useOrders;
                     case "generateAgreement":
                         return this._useOrderAgreements;
@@ -269,6 +273,9 @@ define([], function () {
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
+                    case "addItems":
+                    case "removeItems":
+                    case "swapItems":
                         return this._useReservations;
                 }
                 break;

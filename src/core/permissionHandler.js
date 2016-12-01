@@ -331,6 +331,15 @@ define([], function () {
                     default:
                         return false;
                     case "read":
+                        return true;
+                    case "create":
+                    case "update":
+                    case "delete":
+                    case "archive":
+                    case "unarchive":
+                    case "activate":
+                    case "deactivate":
+                    case "clone":
                         return this._isRootOrAdmin;
                 }
                 break;

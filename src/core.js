@@ -22,11 +22,12 @@ define([
     'helper',
     'PermissionHandler',
     'Reservation',
+    'Template',
     'Transaction',
     'User',
     'WebHook',
     'common',
-    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, WebHook, common, OrderTransfer) {
 
     var core = {};
 
@@ -51,6 +52,7 @@ define([
     core.Order = Order;
     core.PermissionHandler = PermissionHandler;
     core.Reservation = Reservation;
+    core.Template = Template;
     core.Transaction = Transaction;
     core.User = User;
     core.WebHook = WebHook;

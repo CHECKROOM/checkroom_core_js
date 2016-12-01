@@ -10234,7 +10234,7 @@ PermissionHandler = function () {
     return this._useGeo;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
-    return this.hasPermission(action, 'kits', data, location);
+    return this.hasPermission(action || 'read', 'kits', data, location);
   };
   PermissionHandler.prototype.hasContactPermission = function (action, data, location) {
     return this.hasPermission(action, 'contacts', data, location);
@@ -10243,10 +10243,10 @@ PermissionHandler = function () {
     return !this._isSelfService;
   };
   PermissionHandler.prototype.hasCheckoutPermission = function (action, data, location) {
-    return this.hasPermission(action, 'orders', data, location);
+    return this.hasPermission(action || 'read', 'orders', data, location);
   };
   PermissionHandler.prototype.hasReservationPermission = function (action, data, location) {
-    return this.hasPermission(action, 'reservations', data, location);
+    return this.hasPermission(action || 'read', 'reservations', data, location);
   };
   PermissionHandler.prototype.hasCategoriesPermission = function (action, data, location) {
     return this.hasPermission(action, 'categories', data, location);
@@ -10343,6 +10343,8 @@ PermissionHandler = function () {
       case 'addComment':
       case 'updateComment':
       case 'removeComment':
+      case 'addItems':
+      case 'removeItems':
         return this._useKits && this._isRootOrAdmin;
       }
       break;
@@ -10365,6 +10367,9 @@ PermissionHandler = function () {
       case 'addComment':
       case 'updateComment':
       case 'removeComment':
+      case 'addItems':
+      case 'removeItems':
+      case 'swapItems':
         return this._useOrders;
       case 'generateAgreement':
         return this._useOrderAgreements;
@@ -10387,6 +10392,9 @@ PermissionHandler = function () {
       case 'addComment':
       case 'updateComment':
       case 'removeComment':
+      case 'addItems':
+      case 'removeItems':
+      case 'swapItems':
         return this._useReservations;
       }
       break;

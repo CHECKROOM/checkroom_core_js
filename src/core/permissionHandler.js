@@ -250,7 +250,7 @@ define([], function () {
                     case "removeItems":
                     case "swapItems":
                         return this._useOrders;
-                    case "generateAgreement":
+                    case "generateDocument":
                         return this._useOrderAgreements;
                 }
                 break;
@@ -277,6 +277,8 @@ define([], function () {
                     case "removeItems":
                     case "swapItems":
                         return this._useReservations;
+                    case "generateDocument":
+                        return this._useOrderAgreements;
                 }
                 break;
             case "customers":
@@ -302,6 +304,8 @@ define([], function () {
                     case "import":
                     case "export":
                         return this._isRootOrAdminOrUser;
+                    case "generateDocument":
+                        return this._useOrderAgreements;
                 }
                 break;
             case "categories":

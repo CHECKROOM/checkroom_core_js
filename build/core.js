@@ -5990,6 +5990,14 @@ Contact = function ($, Base, common, User) {
     return this.status == 'archived';
   };
   /**
+   * Checks if we can generate a document for this contact (based on status)
+   * @name Contact#canGenerateDocument
+   * @returns {boolean}
+   */
+  Contact.prototype.canGenerateDocument = function () {
+    return this.status == 'active';
+  };
+  /**
    * Archive a contact
    * @name Contact#archive
    * @param skipRead
@@ -6006,6 +6014,21 @@ Contact = function ($, Base, common, User) {
    */
   Contact.prototype.undoArchive = function (skipRead) {
     return this.ds.call(this.id, 'undoArchive', {}, skipRead);
+  };
+  /**
+   * Generates a PDF document for the reservation
+   * @method
+   * @name Contact#generateDocument
+   * @param {string} template id
+   * @param {bool} skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.generateDocument = function (template, skipRead) {
+    return this._doApiCall({
+      method: 'generateDocument',
+      params: { template: template },
+      skipRead: skipRead
+    });
   };
   //
   // Base overrides
@@ -9823,6 +9846,14 @@ Order = function ($, api, Transaction, Conflict, common) {
   Order.prototype.canSwapItems = function () {
     return this.status == 'creating';
   };
+  /**
+   * Checks if we can generate a document for this order (based on status)
+   * @name Order#canGenerateDocument
+   * @returns {boolean}
+   */
+  Order.prototype.canGenerateDocument = function () {
+    return this.status == 'open' || this.status == 'closed';
+  };
   //
   // Base overrides
   //
@@ -10126,15 +10157,17 @@ Order = function ($, api, Transaction, Conflict, common) {
     });
   };
   /**
-   * Generates a PDF agreement for the order
+   * Generates a PDF document for the order
    * @method
-   * @name Order#generateAgreement
-   * @param skipRead
+   * @name Order#generateDocument
+   * @param {string} template id
+   * @param {bool} skipRead
    * @returns {promise}
    */
-  Order.prototype.generateAgreement = function (skipRead) {
+  Order.prototype.generateDocument = function (template, skipRead) {
     return this._doApiCall({
-      method: 'generateAgreement',
+      method: 'generateDocument',
+      params: { template: template },
       skipRead: skipRead
     });
   };
@@ -10371,7 +10404,7 @@ PermissionHandler = function () {
       case 'removeItems':
       case 'swapItems':
         return this._useOrders;
-      case 'generateAgreement':
+      case 'generateDocument':
         return this._useOrderAgreements;
       }
       break;
@@ -10396,6 +10429,8 @@ PermissionHandler = function () {
       case 'removeItems':
       case 'swapItems':
         return this._useReservations;
+      case 'generateDocument':
+        return this._useOrderAgreements;
       }
       break;
     case 'customers':
@@ -10421,6 +10456,8 @@ PermissionHandler = function () {
       case 'import':
       case 'export':
         return this._isRootOrAdminOrUser;
+      case 'generateDocument':
+        return this._useOrderAgreements;
       }
       break;
     case 'categories':
@@ -10615,6 +10652,14 @@ Reservation = function ($, api, Transaction, Conflict) {
     } else {
       return false;
     }
+  };
+  /**
+   * Checks if we can generate a document for this reservation (based on status)
+   * @name Reservation#canGenerateDocument
+   * @returns {boolean}
+   */
+  Reservation.prototype.canGenerateDocument = function () {
+    return this.status == 'open' || this.status == 'closed';
   };
   //
   // Document overrides
@@ -10913,6 +10958,21 @@ Reservation = function ($, api, Transaction, Conflict) {
       skipRead: true
     });
   };
+  /**
+   * Generates a PDF document for the reservation
+   * @method
+   * @name Reservation#generateDocument
+   * @param {string} template id
+   * @param {bool} skipRead
+   * @returns {promise}
+   */
+  Reservation.prototype.generateDocument = function (template, skipRead) {
+    return this._doApiCall({
+      method: 'generateDocument',
+      params: { template: template },
+      skipRead: skipRead
+    });
+  };
   //
   // Implementation
   //
@@ -11103,11 +11163,11 @@ Template = function ($, common, api, Document) {
   };
   /**
    * Unarchives this template
-   * @name Template#unarchive
+   * @name Template#undoArchive
    * @returns {promise}
    */
-  Template.prototype.unarchive = function () {
-    return this.ds.call(this.id, 'unarchive');
+  Template.prototype.undoArchive = function () {
+    return this.ds.call(this.id, 'undoArchive');
   };
   /**
    * Activates this template
@@ -11160,11 +11220,11 @@ Template = function ($, common, api, Document) {
     return this.status != 'archived';
   };
   /**
-   * Checks if we can unarchive a template
-   * @name Template#canUnarchive
+   * Checks if we can undoArchive a template
+   * @name Template#canUndoArchive
    * @returns {boolean}
    */
-  Template.prototype.canUnarchive = function () {
+  Template.prototype.canUndoArchive = function () {
     return this.status == 'archived';
   };
   // toJson, fromJson

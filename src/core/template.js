@@ -175,11 +175,11 @@ define([
 
     /**
      * Unarchives this template
-     * @name Template#unarchive
+     * @name Template#undoArchive
      * @returns {promise}
      */
-    Template.prototype.unarchive = function() {
-        return this.ds.call(this.id, "unarchive");
+    Template.prototype.undoArchive = function() {
+        return this.ds.call(this.id, "undoArchive");
     };
 
     /**
@@ -239,11 +239,11 @@ define([
     };
 
     /**
-     * Checks if we can unarchive a template
-     * @name Template#canUnarchive
+     * Checks if we can undoArchive a template
+     * @name Template#canUndoArchive
      * @returns {boolean}
      */
-    Template.prototype.canUnarchive = function() {
+    Template.prototype.canUndoArchive = function() {
         return (this.status=="archived");
     };
 

@@ -111,6 +111,15 @@ define([
     };
 
     /**
+     * Checks if we can generate a document for this contact (based on status)
+     * @name Contact#canGenerateDocument
+     * @returns {boolean}
+     */
+    Contact.prototype.canGenerateDocument = function() {
+        return (this.status=="active");
+    };
+
+    /**
      * Archive a contact
      * @name Contact#archive
      * @param skipRead
@@ -128,6 +137,18 @@ define([
      */
     Contact.prototype.undoArchive = function(skipRead) {
         return this.ds.call(this.id, 'undoArchive', {}, skipRead);
+    };
+
+    /**
+     * Generates a PDF document for the reservation
+     * @method
+     * @name Contact#generateDocument
+     * @param {string} template id
+     * @param {bool} skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.generateDocument = function(template, skipRead) {
+        return this._doApiCall({method: "generateDocument", params: {template: template}, skipRead: skipRead});
     };
 
     //

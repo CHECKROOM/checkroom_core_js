@@ -167,6 +167,15 @@ define([
         }
     };
 
+    /**
+     * Checks if we can generate a document for this reservation (based on status)
+     * @name Reservation#canGenerateDocument
+     * @returns {boolean}
+     */
+    Reservation.prototype.canGenerateDocument = function() {
+        return (this.status=="open") || (this.status=="closed");
+    };
+
     //
     // Document overrides
     //
@@ -503,6 +512,19 @@ define([
     Reservation.prototype.switchToOrder = function() {
         return this._doApiCall({method: "switchToOrder", skipRead: true});
     };
+
+    /**
+     * Generates a PDF document for the reservation
+     * @method
+     * @name Reservation#generateDocument
+     * @param {string} template id
+     * @param {bool} skipRead
+     * @returns {promise}
+     */
+    Reservation.prototype.generateDocument = function(template, skipRead) {
+        return this._doApiCall({method: "generateDocument", params: {template: template}, skipRead: skipRead});
+    };
+
 
     //
     // Implementation

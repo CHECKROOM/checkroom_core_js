@@ -252,6 +252,15 @@ define([
         return (this.status=="creating");
     };
 
+    /**
+     * Checks if we can generate a document for this order (based on status)
+     * @name Order#canGenerateDocument
+     * @returns {boolean}
+     */
+    Order.prototype.canGenerateDocument = function() {
+        return (this.status=="open") || (this.status=="closed");
+    };
+
     //
     // Base overrides
     //
@@ -577,14 +586,15 @@ define([
     };
 
     /**
-     * Generates a PDF agreement for the order
+     * Generates a PDF document for the order
      * @method
-     * @name Order#generateAgreement
-     * @param skipRead
+     * @name Order#generateDocument
+     * @param {string} template id
+     * @param {bool} skipRead
      * @returns {promise}
      */
-    Order.prototype.generateAgreement = function(skipRead) {
-        return this._doApiCall({method: "generateAgreement", skipRead: skipRead});
+    Order.prototype.generateDocument = function(template, skipRead) {
+        return this._doApiCall({method: "generateDocument", params: {template: template}, skipRead: skipRead});
     };
 
     //

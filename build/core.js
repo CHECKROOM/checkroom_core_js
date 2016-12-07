@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common, api, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, WebHook, OrderTransfer, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common, api, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, WebHook, OrderTransfer, core;
 common_code = {
   /**
      * isCodeValid
@@ -2734,12 +2734,52 @@ common_clientStorage = function () {
     return true;
   };
 }();
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage) {
+common_document = {
+  /**
+   * Checks if a given object (document) contains given value
+   *
+   * @memberOf common
+   * @name  common#searchDocument
+   * @method
+   * 
+   * @param  doc
+   * @param  value
+   * @return Boolean       
+   */
+  containsValue: function (doc, value) {
+    doc = doc || {};
+    // Trim search
+    value = $.trim(value).toLowerCase();
+    // Name contains value?
+    if (doc.name && doc.name.toLowerCase().indexOf(value) != -1)
+      return true;
+    // Field contains value?
+    if (doc.fields) {
+      var findValue = Object.values(doc.fields).find(function (fieldValue) {
+        return fieldValue.toString().indexOf(value) != -1;
+      });
+      if (findValue) {
+        return true;
+      }
+    }
+    // Code contains value?
+    if (doc.codes) {
+      var findValue = doc.codes.find(function (code) {
+        return code.indexOf(value) != -1;
+      });
+      if (findValue) {
+        return true;
+      }
+    }
+    return false;
+  }
+};
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document) {
   /**
    * Return common object with different helper methods
    */
-  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage);
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document);
 api = function ($, jsonp, moment, common) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this

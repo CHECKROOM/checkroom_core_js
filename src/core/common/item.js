@@ -128,6 +128,19 @@ define(function () {
             return this.getItemsByStatus(items, function(item){
                 return item.status != "expired" && item.status != "in_custody";
             });
+        },
+         /**
+         * getItemIds
+         *
+         * @memberOf common
+         * @name  common#getItemIds
+         * @method
+         * 
+         * @param  items 
+         * @return {array}       
+         */
+        getItemIds: function(items){
+            return items.map(function(item){ return typeof(item) === "string"?item:item._id; });
         }
 	};
 });

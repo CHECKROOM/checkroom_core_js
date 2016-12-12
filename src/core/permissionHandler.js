@@ -223,6 +223,7 @@ define([], function () {
                     case "removeComment":
                     case "addItems":
                     case "removeItems":
+                    case "export":
                         return this._useKits && this._isRootOrAdmin;
                 }
                 break;
@@ -234,10 +235,24 @@ define([], function () {
 
                     // TODO: Checkin at location
                     // TODO: Add items to open check-out
-                    case "read":
+
+                    // CRUD
                     case "create":
+                    case "read":
                     case "update":
                     case "delete":
+                    // Order specific actions
+                    case "setCustomer":
+                    case "clearCustomer":
+                    case "setLocation":
+                    case "clearLocation":
+                    case "addItems":
+                    case "removeItems":
+                    case "swapItems":
+                    case "undoCheckout":
+                    case "checkin":
+                    case "checkout":
+                    // Generic actions
                     case "setField":
                     case "clearField":
                     case "setFlag":
@@ -246,9 +261,7 @@ define([], function () {
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
-                    case "addItems":
-                    case "removeItems":
-                    case "swapItems":
+                    case "export":
                         return this._useOrders;
                     case "generateDocument":
                         return this._useOrderAgreements;
@@ -261,10 +274,27 @@ define([], function () {
                     
                     // TODO: Add items to open reservation
 
-                    case "read":
+                    // CRUD
                     case "create":
+                    case "read":
                     case "update":
                     case "delete":
+                    // Reservation specific actions
+                    case "setFromToDate":
+                    case "setCustomer":
+                    case "clearCustomer":
+                    case "setLocation":
+                    case "clearLocation":
+                    case "addItems":
+                    case "removeItems":
+                    case "swapItems":
+                    case "reserve":
+                    case "undoReserve":
+                    case "cancel":
+                    case "undoCancel":
+                    case "switchToOrder":
+                    case "makeOrder":
+                    // Generic actions
                     case "setField":
                     case "clearField":
                     case "setFlag":
@@ -273,9 +303,7 @@ define([], function () {
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
-                    case "addItems":
-                    case "removeItems":
-                    case "swapItems":
+                    case "export":
                         return this._useReservations;
                     case "generateDocument":
                         return this._useOrderAgreements;

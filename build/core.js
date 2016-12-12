@@ -7,7 +7,7 @@ factory($, moment, jsonp, pubsub);
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
  * QR and barcode helpers
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common, api, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, WebHook, OrderTransfer, core;
+var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, api, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, WebHook, OrderTransfer, core;
 common_code = {
   /**
      * isCodeValid
@@ -2774,12 +2774,40 @@ common_document = {
     return false;
   }
 };
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document) {
+common_transaction = function (keyValues) {
+  return {
+    /**
+    * getTransactionSummary
+    * Return a friendly summary for a given transaction or custom name
+    *
+    * @memberOf common
+    * @name  common#getTransactionSummary
+    * @method
+    * 
+    * @param  {object} transaction 
+    * @param  {string} emptyText   
+    * @return {string}       
+    */
+    getTransactionSummary: function (transaction, emptyText) {
+      if (transaction) {
+        if (transaction.name) {
+          return transaction.name;
+        } else if (transaction.itemSummary) {
+          return transaction.itemSummary;
+        } else if (transaction.items && transaction.items.length > 0) {
+          return keyValues.getCategorySummary(transaction.items);
+        }
+      }
+      return emptyText || 'No items';
+    }
+  };
+}(common_keyValues);
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction) {
   /**
    * Return common object with different helper methods
    */
-  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document);
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction);
 api = function ($, jsonp, moment, common) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -8853,7 +8881,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     items: [],
     conflicts: [],
     by: null,
-    archived: null
+    archived: null,
+    itemSummary: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8905,6 +8934,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
     // an array of Conflict objects
     this.by = spec.by || DEFAULTS.by;
+    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -9145,6 +9175,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.items = data.items || DEFAULTS.items.slice();
       that.by = data.by || DEFAULTS.by;
       that.archived = data.archived || DEFAULTS.archived;
+      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -9388,8 +9419,10 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'removeItems',
       params: { items: items },
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -9408,8 +9441,10 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     return this._doApiCall({
       method: 'clearItems',
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -9852,9 +9887,9 @@ Order = function ($, api, Transaction, Conflict, common) {
    */
   Order.prototype.canCheckout = function () {
     var that = this;
-    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length && common.getItemsByStatus(this.items, function (item) {
+    return this.status == 'creating' && this.location != null && (this.contact != null && this.contact.status == 'active') && (this.due != null && this.due.isAfter(this._getDateHelper().getNow())) && (this.items && this.items.length > 0 && this.items.filter(function (item) {
       return that.id == that.helper.ensureId(item.order);
-    }).length == this.items.length;
+    }).length > 0);
   };
   /**
    * Checks if order can undo checkout
@@ -10070,7 +10105,7 @@ Order = function ($, api, Transaction, Conflict, common) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set order due date, status is ' + this.status));
     }
     // The to date must be:
-    // 1) at least 30 minutes into the feature
+    // 1) at least 30 minutes into the future
     // 2) at least 15 minutes after the from date (if set)
     var that = this;
     var roundedDueDate = this._getDateHelper().roundTimeTo(due);
@@ -11351,7 +11386,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     items: [],
     conflicts: [],
     by: null,
-    archived: null
+    archived: null,
+    itemSummary: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -11403,6 +11439,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
     // an array of Conflict objects
     this.by = spec.by || DEFAULTS.by;
+    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -11643,6 +11680,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.items = data.items || DEFAULTS.items.slice();
       that.by = data.by || DEFAULTS.by;
       that.archived = data.archived || DEFAULTS.archived;
+      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -11886,8 +11924,10 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'removeItems',
       params: { items: items },
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -11906,8 +11946,10 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     return this._doApiCall({
       method: 'clearItems',
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**

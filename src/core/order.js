@@ -190,16 +190,15 @@ define([
         var that = this;
         return (
             (this.status=="creating") &&
-            (this.location) &&
-            ((this.contact) &&
+            (this.location!=null) &&
+            ((this.contact!=null) &&
              (this.contact.status == "active")) &&
-            (this.due) &&
-            (this.due.isAfter(this._getDateHelper().getNow())) &&
-            (this.items) &&
-            (this.items.length) &&
-            (common.getItemsByStatus(this.items, function(item){
-                return that.id == that.helper.ensureId(item.order);
-            }).length == this.items.length));
+            ((this.due!=null) &&
+             (this.due.isAfter(this._getDateHelper().getNow()))) &&
+            ((this.items) &&
+             (this.items.length > 0) &&
+             (this.items.filter(function(item){ return that.id == that.helper.ensureId(item.order); }).length > 0))
+        );
     };
 
     /**
@@ -452,7 +451,7 @@ define([
         }
 
         // The to date must be:
-        // 1) at least 30 minutes into the feature
+        // 1) at least 30 minutes into the future
         // 2) at least 15 minutes after the from date (if set)
         var that = this;
         var roundedDueDate = this._getDateHelper().roundTimeTo(due);

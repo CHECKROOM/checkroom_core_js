@@ -25,7 +25,8 @@ define([
         items: [],
         conflicts: [],
         by: null,
-        archived: null
+        archived: null,
+        itemSummary: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -70,7 +71,8 @@ define([
         this.location = spec.location || DEFAULTS.location;               // a location id
         this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
         this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
-        this.by = spec.by || DEFAULTS.by;
+        this.by = spec.by || DEFAULTS.by;                           
+        this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
     };
 
     Transaction.prototype = new tmp();
@@ -355,6 +357,7 @@ define([
                 that.items = data.items || DEFAULTS.items.slice();
                 that.by = data.by || DEFAULTS.by;
                 that.archived = data.archived || DEFAULTS.archived;
+                that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
 
                 return that._getConflicts()
                     .then(function(conflicts) {
@@ -609,8 +612,10 @@ define([
             params: {items: items},
             skipRead: skipRead
         })
-            .then(function() {
-                return that._ensureTransactionDeleted();
+            .then(function(data) {
+                return that._ensureTransactionDeleted().then(function(){
+                    return (skipRead==true) ? data : that._fromJson(data);
+                });
             });
     };
 
@@ -632,8 +637,10 @@ define([
             method: 'clearItems',
             skipRead: skipRead
         })
-            .then(function() {
-                return that._ensureTransactionDeleted();
+            .then(function(data) {
+                return that._ensureTransactionDeleted().then(function(){
+                    return (skipRead==true) ? data : that._fromJson(data);
+                });
             });
     };
 

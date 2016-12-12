@@ -236,7 +236,7 @@ define([
      * Checks if the transaction is dirty and needs saving
      * @method
      * @name Transaction#isDirty
-     * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
+     * @returns {boolean}
      */
     Transaction.prototype.isDirty = function() {
         return (

@@ -23,7 +23,8 @@ define([
     'common/contact',
     'common/user',
     'common/template',
-    'common/clientStorage'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage) {
+    'common/clientStorage',
+    'common/document'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document) {
      /**
      * Return common object with different helper methods
      */
@@ -41,5 +42,6 @@ define([
         kit,
         contact,
         user,
-        template);
+        template,
+        _document);
 });

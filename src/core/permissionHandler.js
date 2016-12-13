@@ -295,6 +295,8 @@ define([], function () {
                     case "undoCancel":
                     case "switchToOrder":
                     case "makeOrder":
+                    case "reserveAgain":
+                    case "reserveRepeat":
                     // Generic actions
                     case "setField":
                     case "clearField":

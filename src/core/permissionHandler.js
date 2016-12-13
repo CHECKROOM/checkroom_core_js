@@ -223,6 +223,7 @@ define([], function () {
                     case "removeComment":
                     case "addItems":
                     case "removeItems":
+                    case "moveItem":
                     case "export":
                         return this._useKits && this._isRootOrAdmin;
                 }

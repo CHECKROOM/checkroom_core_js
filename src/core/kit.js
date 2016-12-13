@@ -191,6 +191,26 @@ define([
         });
     };
 
+    /**
+     * moveItem; moves an Item in a kit to another position
+     * @name Kit#moveItem
+     * @method
+     * @param item
+     * @param toPos
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.moveItem = function(item, toPos, skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot moveItem from document without id"));
+        }
+
+        return this._doApiCall({
+            method: 'moveItem',
+            params: {item: item, toPos: toPos},
+            skipRead: skipRead
+        });
+    };
 
     /**
      * Adds a QR code to the kit

@@ -168,6 +168,26 @@ define([
     };
 
     /**
+     * Checks if the reservation can be reserved again (based on status)
+     * @method
+     * @name Reservation#canReserveAgain
+     * @returns {boolean}
+     */
+    Reservation.prototype.canReserveAgain = function() {
+        return (this.status == "open") || (this.status == "closed");
+    };
+
+    /**
+     * Checks if the reservation can be into recurring reservations (based on status)
+     * @method
+     * @name Reservation#canReserveRepeat
+     * @returns {boolean}
+     */
+    Reservation.prototype.canReserveRepeat = function() {
+        return (this.status == "open") || (this.status == "closed");
+    };
+
+    /**
      * Checks if we can generate a document for this reservation (based on status)
      * @name Reservation#canGenerateDocument
      * @returns {boolean}
@@ -523,6 +543,35 @@ define([
      */
     Reservation.prototype.generateDocument = function(template, skipRead) {
         return this._doApiCall({method: "generateDocument", params: {template: template}, skipRead: skipRead});
+    };
+
+    /**
+     * Creates a new, incomplete reservation with the same info
+     * as the original reservation but other fromDate, toDate
+     * Important; the response will be another Reservation document!
+     * @method
+     * @name Reservation#reserveAgain
+     * @param fromDate
+     * @param toDate
+     * @param skipRead
+     * @returns {promise}
+     */
+    Reservation.prototype.reserveAgain = function(fromDate, toDate, skipRead) {
+        return this._doApiCall({method: "reserveAgain", params: {fromDate: fromDate, toDate: toDate}, skipRead: skipRead});
+    };
+
+    /**
+     * Creates a list of new reservations with `open` status
+     * as the original reservation but other fromDate, toDate
+     * Important; the response will be another Reservation document!
+     * @method
+     * @name Reservation#reserveRepeat
+     * @param period (days, weeks, weekdays, months)
+     * @param until
+     * @returns {promise}
+     */
+    Reservation.prototype.reserveRepeat = function(period, until) {
+        return this._doApiCall({method: "reserveRepeat", params: {period: period, until: until}, skipRead: false});
     };
 
 

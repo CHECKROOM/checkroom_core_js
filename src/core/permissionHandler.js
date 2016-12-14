@@ -226,6 +226,8 @@ define([], function () {
                     case "moveItem":
                     case "export":
                         return this._useKits && this._isRootOrAdmin;
+                    case "takeApart":
+                        return this.profile.canTakeApartKits;
                 }
                 break;
             case "orders":
@@ -266,6 +268,8 @@ define([], function () {
                         return this._useOrders;
                     case "generateDocument":
                         return this._useOrderAgreements;
+                    case "forceConflictResolving":
+                        return this.profile.forceConflictResolving;
                 }
                 break;
             case "reservations":

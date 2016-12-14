@@ -258,9 +258,16 @@ define([
                             itemName: item.name,
                             doc: item.order
                         }));
+                    } else if (item.status == "in_custody"){
+                        conflicts.push(new Conflict({
+                            kind: "custody",
+                            item: item._id,
+                            itemName: item.name,
+                            doc: item.order
+                        }));
                     } else if (item.status!="available") {
                         conflicts.push(new Conflict({
-                            kind: "status",
+                            kind: "order",
                             item: item._id,
                             itemName: item.name,
                             doc: item.order

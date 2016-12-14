@@ -655,7 +655,7 @@ define([
      */
     Transaction.prototype.swapItem = function(fromItem, toItem, skipRead) {
         if (!this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot clearItems from document without id"));
+            return $.Deferred().reject(new Error("Cannot swapItem from document without id"));
         }
 
         // swapItem cannot create or delete a transaction

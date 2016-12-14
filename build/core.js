@@ -11179,8 +11179,8 @@ Reservation = function ($, api, Transaction, Conflict) {
         customer: customer,
         location: location
       },
-      skipRead: false
-    });
+      skipRead: true
+    });  // response is a array of reservations
   };
   //
   // Implementation

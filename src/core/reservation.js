@@ -583,7 +583,7 @@ define([
             frequency: frequency,
             until: until,
             customer: customer,
-            location: location}, skipRead: false});
+            location: location}, skipRead: true}); // response is a array of reservations
     };
 
 

@@ -11141,15 +11141,19 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @name Reservation#reserveAgain
    * @param fromDate
    * @param toDate
+   * @param customer
+   * @param location
    * @param skipRead
    * @returns {promise}
    */
-  Reservation.prototype.reserveAgain = function (fromDate, toDate, skipRead) {
+  Reservation.prototype.reserveAgain = function (fromDate, toDate, customer, location, skipRead) {
     return this._doApiCall({
       method: 'reserveAgain',
       params: {
         fromDate: fromDate,
-        toDate: toDate
+        toDate: toDate,
+        location: location,
+        customer: customer
       },
       skipRead: skipRead
     });
@@ -11157,19 +11161,23 @@ Reservation = function ($, api, Transaction, Conflict) {
   /**
    * Creates a list of new reservations with `open` status
    * as the original reservation but other fromDate, toDate
-   * Important; the response will be another Reservation document!
+   * Important; the response will be a list of other Reservation documents
    * @method
    * @name Reservation#reserveRepeat
-   * @param period (days, weeks, weekdays, months)
+   * @param frequency (days, weeks, weekdays, months)
+   * @param customer
+   * @param location
    * @param until
    * @returns {promise}
    */
-  Reservation.prototype.reserveRepeat = function (period, until) {
+  Reservation.prototype.reserveRepeat = function (frequency, until, customer, location) {
     return this._doApiCall({
       method: 'reserveRepeat',
       params: {
-        period: period,
-        until: until
+        frequency: frequency,
+        until: until,
+        customer: customer,
+        location: location
       },
       skipRead: false
     });

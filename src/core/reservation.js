@@ -553,25 +553,37 @@ define([
      * @name Reservation#reserveAgain
      * @param fromDate
      * @param toDate
+     * @param customer
+     * @param location
      * @param skipRead
      * @returns {promise}
      */
-    Reservation.prototype.reserveAgain = function(fromDate, toDate, skipRead) {
-        return this._doApiCall({method: "reserveAgain", params: {fromDate: fromDate, toDate: toDate}, skipRead: skipRead});
+    Reservation.prototype.reserveAgain = function(fromDate, toDate, customer, location, skipRead) {
+        return this._doApiCall({method: "reserveAgain", params: {
+            fromDate: fromDate,
+            toDate: toDate,
+            location: location,
+            customer: customer}, skipRead: skipRead});
     };
 
     /**
      * Creates a list of new reservations with `open` status
      * as the original reservation but other fromDate, toDate
-     * Important; the response will be another Reservation document!
+     * Important; the response will be a list of other Reservation documents
      * @method
      * @name Reservation#reserveRepeat
-     * @param period (days, weeks, weekdays, months)
+     * @param frequency (days, weeks, weekdays, months)
+     * @param customer
+     * @param location
      * @param until
      * @returns {promise}
      */
-    Reservation.prototype.reserveRepeat = function(period, until) {
-        return this._doApiCall({method: "reserveRepeat", params: {period: period, until: until}, skipRead: false});
+    Reservation.prototype.reserveRepeat = function(frequency, until, customer, location) {
+        return this._doApiCall({method: "reserveRepeat", params: {
+            frequency: frequency,
+            until: until,
+            customer: customer,
+            location: location}, skipRead: false});
     };
 
 

@@ -302,8 +302,8 @@ define([
                                 });
                                 if (conflict) {
                                     var kind = conflict.kind || "";
-                                    kind = kind || (conflict.order) ? "order" : "";
-                                    kind = kind || (conflict.reservation) ? "reservation" : "";
+                                    kind = kind || (conflict.order ? "order" : "");
+                                    kind = kind || (conflict.reservation ? "reservation" : "");
 
                                     conflicts.push(new Conflict({
                                         kind: kind,

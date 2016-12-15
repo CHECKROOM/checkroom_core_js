@@ -268,6 +268,8 @@ define([], function () {
                         return this._useOrders;
                     case "generateDocument":
                         return this._useOrderAgreements;
+                    case "checkinAt":
+                        return this._useCheckinLocation;
                     case "forceConflictResolving":
                         return this.profile.forceConflictResolving;
                 }

@@ -8904,7 +8904,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     conflicts: [],
     by: null,
     archived: null,
-    itemSummary: null
+    itemSummary: null,
+    name: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8957,6 +8958,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // an array of Conflict objects
     this.by = spec.by || DEFAULTS.by;
     this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
+    this.name = spec.name || DEFAULTS.name;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -9198,6 +9200,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.by = data.by || DEFAULTS.by;
       that.archived = data.archived || DEFAULTS.archived;
       that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
+      that.name = data.name || DEFAULTS.name;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -11519,7 +11522,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     conflicts: [],
     by: null,
     archived: null,
-    itemSummary: null
+    itemSummary: null,
+    name: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -11572,6 +11576,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // an array of Conflict objects
     this.by = spec.by || DEFAULTS.by;
     this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
+    this.name = spec.name || DEFAULTS.name;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -11813,6 +11818,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.by = data.by || DEFAULTS.by;
       that.archived = data.archived || DEFAULTS.archived;
       that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
+      that.name = data.name || DEFAULTS.name;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });

@@ -26,7 +26,8 @@ define([
         conflicts: [],
         by: null,
         archived: null,
-        itemSummary: null
+        itemSummary: null,
+        name: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -73,6 +74,7 @@ define([
         this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
         this.by = spec.by || DEFAULTS.by;                           
         this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
+        this.name = spec.name || DEFAULTS.name;
     };
 
     Transaction.prototype = new tmp();
@@ -358,6 +360,7 @@ define([
                 that.by = data.by || DEFAULTS.by;
                 that.archived = data.archived || DEFAULTS.archived;
                 that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
+                that.name = data.name || DEFAULTS.name;
 
                 return that._getConflicts()
                     .then(function(conflicts) {

@@ -345,8 +345,29 @@ define([], function () {
                         return this._useOrderAgreements;
                 }
                 break;
-            case "categories":
             case "users":
+                switch (action) {
+                    default:
+                        return false;
+                    case "read":
+                        return true;
+                    case "create":
+                    case "update":
+                    case "delete":
+                    case "linkNewCustomer":
+                    case "linkCustomer":
+                    case "unLinkCustomer":
+                    case "inviteUser":
+                    case "archive":
+                    case "undoArchive":
+                    case "activate":
+                    case "deactivate":
+                        return this._isRootOrAdmin;
+                    case "changeAccountOwner":
+                        return this._isOwner;
+                }
+                break;
+            case "categories":
             case "locations":
                 switch (action) {
                     default:

@@ -149,7 +149,7 @@ define([
     };
 
     /**
-     * Gets an url for a user avatar
+     * Gets a url for a user avatar
      * 'XS': (64, 64),
      * 'S': (128, 128),
      * 'M': (256, 256),

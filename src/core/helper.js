@@ -67,6 +67,25 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 return url;
             },
+            getICalUrl: function(urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+                var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
+                    parts = [];
+
+                if (locationId) {
+                    parts.push("locations[]=" + locationId);
+                }
+                if (customerId) {
+                    parts.push("customer=" + customerId);
+                }
+                if (!showOrders) {
+                    parts.push("skipOpenOrders=true");
+                }
+                if (!showReservations) {
+                    parts.push("skipOpenReservations=true");
+                }
+
+                return (parts.length>0) ? url + "?" + parts.join("&") : url;
+            },
             /**
              * getNumItemsLeft
              *

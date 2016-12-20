@@ -5782,7 +5782,9 @@ user = function ($, Base, common) {
     picture: '',
     role: 'user',
     // user, admin
-    active: true
+    active: true,
+    isOwner: false,
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5808,27 +5810,14 @@ user = function ($, Base, common) {
     }, opt);
     Base.call(this, spec);
     this.helper = spec.helper;
-    /*
-            from API:
-    
-            login = StringField(primary_key=True, min_length=4)
-            role = StringField(required=True, choices=USER_ROLE)
-            group = ReferenceField(Group)
-            password = StringField(min_length=4)
-            name = StringField(min_length=4)
-            email = EmailField(required=True, unique=True)
-            lastLogin = DateTimeField()
-            profile = EmbeddedDocumentField(UserProfile)
-            active = BooleanField(default=True)
-            picture = ReferenceField(Attachment)
-            timezone = StringField(default="Etc/GMT")  # stored as
-            */
     this.name = spec.name || DEFAULTS.name;
     this.picture = spec.picture || DEFAULTS.picture;
     this.email = spec.email || DEFAULTS.email;
     this.role = spec.role || DEFAULTS.role;
     this.group = spec.group || DEFAULTS.group;
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
+    this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
+    this.archived = spec.archived || DEFAULTS.archived;
   };
   User.prototype = new tmp();
   User.prototype.constructor = User;
@@ -5942,6 +5931,100 @@ user = function ($, Base, common) {
       skipRead: skipRead
     });
   };
+  //
+  // Business logic
+  //
+  /**
+   * Checks if a user can be activated
+   * @returns {boolean}
+   */
+  User.prototype.canActivate = function () {
+    return !this.active && this.archived == null;
+  };
+  /**
+   * Checks if a user can be deactivated
+   * @returns {boolean}
+   */
+  User.prototype.canDeactivate = function () {
+    return this.active && this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be archived
+   * @returns {boolean}
+   */
+  User.prototype.canArchive = function () {
+    return this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be unarchived
+   * @returns {boolean}
+   */
+  User.prototype.canUndoArchive = function () {
+    return this.archived != null;
+  };
+  /**
+   * Checks if a user can be owner
+   * @returns {boolean}
+   */
+  User.prototype.canBeOwner = function () {
+    return this.archived == null && this.active && !this.isOwner && this.role == 'admin';
+  };
+  /**
+   * Activates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.activate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'activate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Deactivates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.deactivate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'deactivate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Archives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.archive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'archive',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unarchives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.undoArchive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'undoArchive',
+      skipRead: skipRead
+    });
+  };
   /**
    * Writes the user to a json object
    * @param options
@@ -5975,6 +6058,8 @@ user = function ($, Base, common) {
       that.email = data.email || DEFAULTS.email;
       that.role = data.role || DEFAULTS.role;
       that.active = data.active != null ? data.active : DEFAULTS.active;
+      that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
+      that.archived = data.archived || DEFAULTS.archived;
       $.publish('user.fromJson', data);
       return data;
     });
@@ -12343,7 +12428,9 @@ User = function ($, Base, common) {
     picture: '',
     role: 'user',
     // user, admin
-    active: true
+    active: true,
+    isOwner: false,
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -12369,27 +12456,14 @@ User = function ($, Base, common) {
     }, opt);
     Base.call(this, spec);
     this.helper = spec.helper;
-    /*
-            from API:
-    
-            login = StringField(primary_key=True, min_length=4)
-            role = StringField(required=True, choices=USER_ROLE)
-            group = ReferenceField(Group)
-            password = StringField(min_length=4)
-            name = StringField(min_length=4)
-            email = EmailField(required=True, unique=True)
-            lastLogin = DateTimeField()
-            profile = EmbeddedDocumentField(UserProfile)
-            active = BooleanField(default=True)
-            picture = ReferenceField(Attachment)
-            timezone = StringField(default="Etc/GMT")  # stored as
-            */
     this.name = spec.name || DEFAULTS.name;
     this.picture = spec.picture || DEFAULTS.picture;
     this.email = spec.email || DEFAULTS.email;
     this.role = spec.role || DEFAULTS.role;
     this.group = spec.group || DEFAULTS.group;
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
+    this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
+    this.archived = spec.archived || DEFAULTS.archived;
   };
   User.prototype = new tmp();
   User.prototype.constructor = User;
@@ -12503,6 +12577,100 @@ User = function ($, Base, common) {
       skipRead: skipRead
     });
   };
+  //
+  // Business logic
+  //
+  /**
+   * Checks if a user can be activated
+   * @returns {boolean}
+   */
+  User.prototype.canActivate = function () {
+    return !this.active && this.archived == null;
+  };
+  /**
+   * Checks if a user can be deactivated
+   * @returns {boolean}
+   */
+  User.prototype.canDeactivate = function () {
+    return this.active && this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be archived
+   * @returns {boolean}
+   */
+  User.prototype.canArchive = function () {
+    return this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be unarchived
+   * @returns {boolean}
+   */
+  User.prototype.canUndoArchive = function () {
+    return this.archived != null;
+  };
+  /**
+   * Checks if a user can be owner
+   * @returns {boolean}
+   */
+  User.prototype.canBeOwner = function () {
+    return this.archived == null && this.active && !this.isOwner && this.role == 'admin';
+  };
+  /**
+   * Activates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.activate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'activate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Deactivates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.deactivate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'deactivate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Archives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.archive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'archive',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unarchives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.undoArchive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'undoArchive',
+      skipRead: skipRead
+    });
+  };
   /**
    * Writes the user to a json object
    * @param options
@@ -12536,6 +12704,8 @@ User = function ($, Base, common) {
       that.email = data.email || DEFAULTS.email;
       that.role = data.role || DEFAULTS.role;
       that.active = data.active != null ? data.active : DEFAULTS.active;
+      that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
+      that.archived = data.archived || DEFAULTS.archived;
       $.publish('user.fromJson', data);
       return data;
     });

@@ -38,7 +38,7 @@ define([
         Base.call(this, spec);
 
         this.name = spec.name || DEFAULTS.name;
-        this.company = spec.company || DEFAULTS.company;
+        this.email = spec.email || DEFAULTS.email;
         this.status = spec.status || DEFAULTS.status;
         this.user = spec.user || DEFAULTS.user;
         this.kind = spec.kind || DEFAULTS.kind;

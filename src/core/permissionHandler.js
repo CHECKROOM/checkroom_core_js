@@ -190,6 +190,8 @@ define([], function () {
                     case "import":
                     case "export":
                     case "updateGeo":
+                    case "expire":
+                    case "undoExpire":
                         return this._isRootOrAdmin;
                     // Modules
                     case "reserve":
@@ -225,8 +227,6 @@ define([], function () {
                     case "removeItems":
                     case "moveItem":
                     case "export":
-                    case "expire":
-                    case "undoExpire":
                         return this._useKits && this._isRootOrAdmin;
                     case "takeApart":
                         return this.profile.canTakeApartKits;

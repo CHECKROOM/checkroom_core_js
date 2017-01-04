@@ -19,8 +19,8 @@ define([
         from: null,
         to: null,
         due: null,
-        contact: "",
-        location: "",
+        contact: null,
+        location: null,
         number: "",
         items: [],
         conflicts: [],
@@ -226,7 +226,7 @@ define([
         return (
             (Base.prototype.isEmpty.call(this)) &&
             (this.status==DEFAULTS.status) &&
-            (this.from==DEFAULTS.from) &&
+            (this.crtype == "cheqroom.types.order"?true:this.from==DEFAULTS.from) &&
             (this.to==DEFAULTS.to) &&
             (this.due==DEFAULTS.due) &&
             (this.number==DEFAULTS.number) &&

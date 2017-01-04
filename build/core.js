@@ -8998,8 +8998,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     from: null,
     to: null,
     due: null,
-    contact: '',
-    location: '',
+    contact: null,
+    location: null,
     number: '',
     items: [],
     conflicts: [],
@@ -9193,7 +9193,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && this.from == DEFAULTS.from && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
+    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && (this.crtype == 'cheqroom.types.order' ? true : this.from == DEFAULTS.from) && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
 ;
   };
   /**
@@ -10090,7 +10090,7 @@ Order = function ($, api, Transaction, Conflict, common) {
       // Check if all the items are:
       // - at the right location
       // - not expired
-      var locId = this._getId(this.location);
+      var locId = this.helper.ensureId(this.location || '');
       $.each(this.items, function (i, item) {
         if (item.status == 'expired') {
           conflicts.push(new Conflict({
@@ -11637,8 +11637,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     from: null,
     to: null,
     due: null,
-    contact: '',
-    location: '',
+    contact: null,
+    location: null,
     number: '',
     items: [],
     conflicts: [],
@@ -11832,7 +11832,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && this.from == DEFAULTS.from && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
+    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && (this.crtype == 'cheqroom.types.order' ? true : this.from == DEFAULTS.from) && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
 ;
   };
   /**

@@ -284,7 +284,7 @@ define([
             // Check if all the items are:
             // - at the right location
             // - not expired
-            var locId = this._getId(this.location);
+            var locId = this.helper.ensureId(this.location || "");
 
             $.each(this.items, function(i, item) {
                 if (item.status == "expired") {

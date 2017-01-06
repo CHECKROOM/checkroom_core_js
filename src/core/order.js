@@ -351,9 +351,10 @@ define([
      * @private
      */
     Order.prototype._getServerConflicts = function(items, fromDate, dueDate, orderId, reservationId) {
-        var kind = "",
+        var conflicts = [],
+            kind = "",
             transItem = null,
-            itemIds = $.map(items, function(item) { return item._id; });
+            itemIds = common.getItemIds(items);
 
         // Get the availabilities for these items
         return this.dsItems.call(null, "getAvailabilities", {

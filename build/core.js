@@ -11129,7 +11129,14 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this._checkFromToDate(roundedFromDate, roundedToDate).then(function () {
       that.from = roundedFromDate;
       that.to = roundedToDate;
-      return that._handleTransaction(skipRead);
+      return that._doApiCall({
+        method: 'setFromToDate',
+        params: {
+          fromDate: roundedFromDate,
+          toDate: roundedToDate
+        },
+        skipRead: skipRead
+      });
     });
   };
   /**

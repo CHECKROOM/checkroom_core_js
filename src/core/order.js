@@ -28,7 +28,7 @@ define([
         }, opt);
         Transaction.call(this, spec);
 
-        this.dsReservations = spec.dsReservations;       
+        this.dsReservations = spec.dsReservations;
     };
 
     Order.prototype = new tmp();
@@ -192,12 +192,12 @@ define([
             (this.status=="creating") &&
             (this.location!=null) &&
             ((this.contact!=null) &&
-             (this.contact.status == "active")) &&
+            (this.contact.status == "active")) &&
             ((this.due!=null) &&
-             (this.due.isAfter(this._getDateHelper().getNow()))) &&
+            (this.due.isAfter(this._getDateHelper().getNow()))) &&
             ((this.items) &&
-             (this.items.length > 0) &&
-             (this.items.filter(function(item){ return that.id == that.helper.ensureId(item.order); }).length > 0))
+            (this.items.length > 0) &&
+            (this.items.filter(function(item){ return that.id == that.helper.ensureId(item.order); }).length > 0))
         );
     };
 
@@ -267,6 +267,42 @@ define([
     //
     // Transaction overrides
     //
+    Order.prototype._getConflictsForExtend = function() {
+        var conflicts = [];
+
+        // Only orders which are incomplete,
+        // but have items and / or due date can have conflicts
+        if (this.status=="open") {
+
+            // Only check for new conflicts on the items
+            // that are still checked out under this order
+            var items = [],
+                that = this;
+            $.each(this.items, function(i, item) {
+                if( (item.status == "checkedout") &&
+                    (item.order == that.id)) {
+                    items.push(item);
+                }
+            });
+
+            // If we have a due date,
+            // check if it conflicts with any reservations
+            if (this.due) {
+                return this._getServerConflicts(
+                    this.items,
+                    this.from,
+                    this.due,
+                    this.id,  // orderId
+                    this.helper.ensureId(this.reservation))  // reservationId
+                    .then(function(serverConflicts) {
+                        return conflicts.concat(serverConflicts);
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
+
     /**
      * Gets a list of Conflict objects
      * used during Transaction._fromJson
@@ -281,87 +317,122 @@ define([
         if( (this.status=="creating") &&
             (this.items.length>0)) {
 
-            // Check if all the items are:
-            // - at the right location
-            // - not expired
-            var locId = this.helper.ensureId(this.location || "");
-
-            $.each(this.items, function(i, item) {
-                if (item.status == "expired") {
-                    conflicts.push(new Conflict({
-                        kind: "expired",
-                        item: item._id,
-                        itemName: item.name,
-                        locationCurrent: item.location,
-                        locationDesired: locId
-                    }));
-                // If order location is defined, check if item
-                // is at the right location
-                } else if (locId && item.location != locId) {
-                    conflicts.push(new Conflict({
-                        kind: "location",
-                        item: item._id,
-                        itemName: item.name,
-                        locationCurrent: item.location,
-                        locationDesired: locId
-                    }));
-                }
-            });
+            // Get some conflicts we can already calculate on the client side
+            conflicts = this._getClientConflicts();
 
             // If we have a due date,
             // check if it conflicts with any reservations
             if (this.due) {
-                var that = this;
-                var kind = "";
-                var transItem = null;
-
-                // Get the availabilities for these items
-                return this.dsItems.call(null, "getAvailabilities", {
-                    items: $.map(this.items, function(item) { return item._id; }),
-                    fromDate: this.from,
-                    toDate: this.due})
-                    .then(function(data) {
-
-                        // Run over unavailabilties for these items
-                        $.each(data, function(i, av) {
-                            // Lookup the more complete item object via transaction.items
-                            // It has useful info like item.name we can use in the conflict message
-                            transItem = $.grep(that.items, function(item) { return item._id == av.item});
-
-                            // $.grep returns an array with 1 item, we need reference to the item for transItem
-                            if(transItem && transItem.length > 0){
-                                transItem = transItem[0];
-                            }
-
-                            if( (transItem!=null) &&
-                                (transItem.status!="expired")) {
-
-                                // Order cannot conflict with itself 
-                                // or with the Reservation from which it was created
-                                if(av.order != that.id && 
-                                   av.reservation != that.helper.ensureId(that.reservation)) {
-                                    kind = "";
-                                    kind = kind || ((av.order) ? "order" : "");
-                                    kind = kind || ((av.reservation) ? "reservation" : "");
-
-                                    conflicts.push(new Conflict({
-                                        kind: kind,
-                                        item: transItem._id,
-                                        itemName: transItem.name,
-                                        fromDate: av.fromDate,
-                                        toDate: av.toDate,
-                                        doc: av.order || av.reservation
-                                    }));
-                                }
-                            }
-                        });
-
-                        return conflicts;
+                return this._getServerConflicts(
+                    this.items,
+                    this.from,
+                    this.due,
+                    this.id,  // orderId
+                    this.helper.ensureId(this.reservation))  // reservationId
+                    .then(function(serverConflicts) {
+                        return conflicts.concat(serverConflicts);
                     });
             }
         }
 
         return $.Deferred().resolve(conflicts);
+    };
+
+    /**
+     * Get server side conflicts for items between two dates
+     * Also pass extra info like own order and reservation
+     * so we can avoid listing conflicts with ourselves
+     * @param items array of item objects (not just the ids)
+     * @param fromDate
+     * @param dueDate
+     * @param orderId
+     * @param reservationId
+     * @returns {*}
+     * @private
+     */
+    Order.prototype._getServerConflicts = function(items, fromDate, dueDate, orderId, reservationId) {
+        var kind = "",
+            transItem = null,
+            itemIds = $.map(items, function(item) { return item._id; });
+
+        // Get the availabilities for these items
+        return this.dsItems.call(null, "getAvailabilities", {
+            items: itemIds,
+            fromDate: fromDate,
+            toDate: dueDate})
+            .then(function(data) {
+
+                // Run over unavailabilties for these items
+                $.each(data, function(i, av) {
+
+                    // Find back the more complete item object via the `items` param
+                    // It has useful info like item.name we can use in the conflict message
+                    // $.grep returns an array with 1 item,
+                    // we need reference to the 1st item for transItem
+                    transItem = $.grep(items, function(item) { return item._id == av.item});
+                    if( (transItem) &&
+                        (transItem.length > 0)) {
+                        transItem = transItem[0];
+                    }
+
+                    if( (transItem!=null) &&
+                        (transItem.status!="expired")) {
+
+                        // Order cannot conflict with itself
+                        // or with the Reservation from which it was created
+                        if( (av.order != orderId) &&
+                            (av.reservation != reservationId)) {
+                            kind = "";
+                            kind = kind || ((av.order) ? "order" : "");
+                            kind = kind || ((av.reservation) ? "reservation" : "");
+
+                            conflicts.push(new Conflict({
+                                kind: kind,
+                                item: transItem._id,
+                                itemName: transItem.name,
+                                fromDate: av.fromDate,
+                                toDate: av.toDate,
+                                doc: av.order || av.reservation
+                            }));
+                        }
+                    }
+                });
+
+                return conflicts;
+            });
+    };
+
+    Order.prototype._getClientConflicts = function() {
+        // Some conflicts can be checked already on the client
+        // We can check if all the items are:
+        // - at the right location
+        // - not expired
+        var conflicts = [],
+            locId = this.helper.ensureId(this.location || "");
+
+        $.each(this.items, function(i, item) {
+            if (item.status == "expired") {
+                conflicts.push(new Conflict({
+                    kind: "expired",
+                    item: item._id,
+                    itemName: item.name,
+                    locationCurrent: item.location,
+                    locationDesired: locId
+                }));
+                // If order location is defined, check if item
+                // is at the right location
+            } else if (locId && item.location != locId) {
+                conflicts.push(new Conflict({
+                    kind: "location",
+                    item: item._id,
+                    itemName: item.name,
+                    locationCurrent: item.location,
+                    locationDesired: locId
+                }));
+            }
+        });
+
+        return conflicts;
     };
 
     /**
@@ -480,7 +551,7 @@ define([
                     }else{
                         return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
                     }
-                }                
+                }
             });
     };
 
@@ -562,13 +633,13 @@ define([
 
     /**
      * Checks of order due date can be extended to given date
-     * @param  {moment} due      
-     * @param  {bool} skipRead 
-     * @return {promise}          
+     * @param  {moment} due
+     * @param  {bool} skipRead
+     * @return {promise}
      */
     Order.prototype.canExtend = function(due){
         //return this._doApiCall({ method: "canExtend", params: { due: due }, skipRead: true });
-        
+
         // TODO CHANGE THIS
         // Currently always allow order to be extended
         return $.Deferred().resolve({ result: true });
@@ -576,9 +647,9 @@ define([
 
     /**
      * Extends order due date
-     * @param  {moment} due      
-     * @param  {bool} skipRead 
-     * @return {promise}          
+     * @param  {moment} due
+     * @param  {bool} skipRead
+     * @return {promise}
      */
     Order.prototype.extend = function(due, skipRead){
         return this._doApiCall({ method: "extend", params: { due: due }, skipRead: skipRead });
@@ -628,5 +699,5 @@ define([
     };
 
     return Order;
-    
+
 });

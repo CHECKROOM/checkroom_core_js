@@ -31,6 +31,7 @@ define([], function () {
         this._usePublicSelfService =  (limits.allowSelfService) &&      (profile.usePublicSelfService);
         this._useOrderTransfers =     (limits.allowOrderTransfers) &&   (profile.useOrderTransfers);
         this._useSendMessage =        (limits.allowSendMessage) &&      (profile.useSendMessage);
+        this._useUserSync =           (limits.allowUserSync) &&         (profile.useUserSync);
         this._useFlags =              (profile.useCustom);
         this._useGeo =                (profile.useGeo);
 
@@ -46,7 +47,9 @@ define([], function () {
         return  this.hasPermission("create", "locations") ||
                 this.hasPermission("create", "categories") ||
                 this.hasPermission("create", "webhooks") ||
-                this.hasPermission("create", "users");
+                this.hasPermission("create", "users") ||
+                this.hasPermission("create", "templates") ||
+                this.hasPermission("create", "syncs");
     };
 
     PermissionHandler.prototype.hasDashboardPermission = function(action, data, location) {
@@ -148,15 +151,17 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasAccountTemplatePermission = function(action, data, location) {
-        return this.hasPermission(action, "template", data, location);
+        return this.hasPermission(action, "templates", data, location);
     };
     
+    PermissionHandler.prototype.hasAccountUserSyncPermission = function(action, data, location) {
+        return this.hasPermission(action, "syncs", data, location);
+    };
 
     PermissionHandler.prototype.hasAssetTagsPermission = function(action, data, location) {
         //return this.hasPermission(action, "asset-tags", data, location);
         return this.hasAnyAdminPermission();
     };
-
     
     PermissionHandler.prototype.hasPermission = function(action, collection, data, location) {
         if( (this._isSelfService) && 
@@ -190,8 +195,6 @@ define([], function () {
                     case "import":
                     case "export":
                     case "updateGeo":
-                    case "expire":
-                    case "undoExpire":
                         return this._isRootOrAdmin;
                     // Modules
                     case "reserve":
@@ -382,6 +385,18 @@ define([], function () {
                         return this._isRootOrAdmin;
                 }
                 break;
+            case "syncs":
+                switch (action) {
+                    default:
+                        return false;
+                    case "read":
+                    case "create":
+                    case "update":
+                    case "delete":
+                    case "clone":
+                        return this._useUserSync && this._isRootOrAdmin;
+                }
+                break;
             case "webhooks":
                 switch (action) {
                     default:
@@ -397,7 +412,7 @@ define([], function () {
             case "subscription":
             case "invoices":
             case "billing":
-            case "template":
+            case "templates":
                 switch (action) {
                     default:
                         return false;

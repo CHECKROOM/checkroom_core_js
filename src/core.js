@@ -25,9 +25,10 @@ define([
     'Template',
     'Transaction',
     'User',
+    'UserSync',
     'WebHook',
     'common',
-    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, WebHook, common, OrderTransfer) {
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer) {
 
     var core = {};
 
@@ -55,6 +56,7 @@ define([
     core.Template = Template;
     core.Transaction = Transaction;
     core.User = User;
+    core.UserSync = UserSync;
     core.WebHook = WebHook;
     core.OrderTransfer = OrderTransfer;
     core.Helper = Helper;

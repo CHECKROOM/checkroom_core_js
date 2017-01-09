@@ -10139,9 +10139,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @private
    */
   Order.prototype._getServerConflicts = function (items, fromDate, dueDate, orderId, reservationId) {
-    var kind = '', transItem = null, itemIds = $.map(items, function (item) {
-        return item._id;
-      });
+    var conflicts = [], kind = '', transItem = null, itemIds = common.getItemIds(items);
     // Get the availabilities for these items
     return this.dsItems.call(null, 'getAvailabilities', {
       items: itemIds,
@@ -12786,7 +12784,7 @@ User = function ($, Base, common) {
 }(jquery, base, common);
 UserSync = function ($, Base, common) {
   var DEFAULTS = {
-    kind: 'LDAP',
+    kind: 'ldap',
     name: '',
     enabled: false,
     host: 'ldap://yourdomain.com',
@@ -12938,6 +12936,23 @@ UserSync = function ($, Base, common) {
    */
   UserSync.prototype.clone = function () {
     return this.ds.call(this.id, 'clone');
+  };
+  /**
+   * Tests the specified connection
+   * @name UserSync#testConnection
+   * @returns {promise}
+   */
+  UserSync.prototype.testConnection = function () {
+    return this.ds.call(this.id, 'testConnection');
+  };
+  /**
+   * Tests the specified sync
+   * @name UserSync#syncUsers
+   * @param wetRun
+   * @returns {promise}
+   */
+  UserSync.prototype.syncUsers = function (wetRun) {
+    return this.ds.call(this.id, 'testSyncUsers', { wetRun: wetRun });
   };
   /**
    * Writes the usersync to a json object

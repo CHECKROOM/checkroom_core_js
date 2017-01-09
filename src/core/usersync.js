@@ -216,7 +216,26 @@ define([
     UserSync.prototype.clone = function() {
         return this.ds.call(this.id, "clone");
     };
-    
+
+    /**
+     * Tests the specified connection
+     * @name UserSync#testConnection
+     * @returns {promise}
+     */
+    UserSync.prototype.testConnection = function() {
+        return this.ds.call(this.id, "testConnection");
+    };
+
+    /**
+     * Tests the specified sync
+     * @name UserSync#syncUsers
+     * @param wetRun
+     * @returns {promise}
+     */
+    UserSync.prototype.syncUsers = function(wetRun) {
+        return this.ds.call(this.id, "testSyncUsers", {wetRun: wetRun});
+    };
+
     /**
      * Writes the usersync to a json object
      * @param options

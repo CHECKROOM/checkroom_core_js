@@ -244,6 +244,69 @@ define([
         return this._doApiCall({method: 'duplicate', params: {times: times, location: location}, skipRead: skipRead || true });
     };
 
+    /**
+     * Checks if custody can be taken for a kit (based on status)
+     * @name Kit#canTakeCustody
+     * @returns {boolean}
+     */
+    Kit.prototype.canTakeCustody = function() {
+        return (this.status=="available");
+    };
+
+    /**
+     * Checks if custody can be released for a kit (based on status)
+     * @name Kit#canReleaseCustody
+     * @returns {boolean}
+     */
+    Kit.prototype.canReleaseCustody = function() {
+        return (this.status=="in_custody");
+    };
+
+    /**
+     * Checks if custody can be transferred for a kit (based on status)
+     * @name Kit#canTransferCustody
+     * @returns {boolean}
+     */
+    Kit.prototype.canTransferCustody = function() {
+        return (this.status=="in_custody");
+    };
+
+    /**
+     * Takes custody of a kit (and all items in it)
+     * Puts it in the *in_custody* status
+     * @name Kit#takeCustody
+     * @param customerId (when null, we'll take the customer of the user making the API call)
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.takeCustody = function(customerId, skipRead) {
+        return this._doApiCall({method: 'takeCustody', params: {customer: customerId}, skipRead: skipRead});
+    };
+
+    /**
+     * Releases custody of a kit (and all items in it) at a certain location
+     * Puts it in the *available* status again
+     * @name Kit#releaseCustody
+     * @param locationId
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.releaseCustody = function(locationId, skipRead) {
+        return this._doApiCall({method: 'releaseCustody', params: {location: locationId}, skipRead: skipRead});
+    };
+
+    /**
+     * Transfers custody of a kit (and all items in it)
+     * Keeps it in the *in_custody* status
+     * @name Kit#transferCustody
+     * @param customerId (when null, we'll take the customer of the user making the API call)
+     * @param skipRead
+     * @returns {promise}
+     */
+    Kit.prototype.transferCustody = function(customerId, skipRead) {
+        return this._doApiCall({method: 'transferCustody', params: {customer: customerId}, skipRead: skipRead});
+    };
+
     //
     // Implementation stuff
     //

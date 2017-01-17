@@ -4,10 +4,8 @@ define(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);
 } else {
 factory($, moment, jsonp, pubsub);
 }
-}(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
- * QR and barcode helpers
- */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, api, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, core;
+}(function (jquery, moment, jquery_jsonp, jquery_pubsub) {var settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, api, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, helper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, core;
+settings = { amazonBucket: 'app' };
 common_code = {
   /**
      * isCodeValid
@@ -53,7 +51,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^[0-9\-]{4,}$/i) != null;
+    return barCode && barCode.match(/^[A-Z0-9]{4,13}$/i) != null;
   },
   /**
    * isValidQRCode
@@ -154,6 +152,36 @@ common_code = {
     } else {
       return '';
     }
+  },
+  /**
+   * getQRCodeUrl 
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrlQR
+   * @method
+   *
+   * @param  {string} urlApi 
+   * @param  {string} code 
+   * @param  {number} size 
+   * @return {string}      
+   */
+  getQRCodeUrl: function (urlApi, code, size) {
+    return urlApi + '/qrcode?code=' + code + '&size=' + size;
+  },
+  /**
+   * getBarcodeUrl 
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrlQR
+   * @method
+   *
+   * @param  {string} urlApi 
+   * @param  {string} code 
+   * @param  {number} size 
+   * @return {string}      
+   */
+  getBarcodeUrl: function (urlApi, code, width, height) {
+    return urlApi + '/barcode?code=' + code + '&width=' + width + (height ? '&height=' + height : '');
   }
 };
 common_order = function (moment) {
@@ -4500,7 +4528,8 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     flag: null,
     fields: {},
     comments: [],
-    attachments: []
+    attachments: [],
+    barcodes: []
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -4538,7 +4567,9 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
     // attachments array
-    this.cover = spec.cover || DEFAULTS.cover;  // cover attachment id, default null
+    this.cover = spec.cover || DEFAULTS.cover;
+    // cover attachment id, default null
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -4669,6 +4700,34 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     return this._doApiCall({
       method: 'clearField',
       params: { field: field },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Adds a barcode
+   * @name Base#addBarcode
+   * @param code
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.addBarcode = function (code, skipRead) {
+    return this._doApiCall({
+      method: 'addBarcode',
+      params: { barcode: code },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Removes a barcode
+   * @name Item#removeBarcode
+   * @param code
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.removeBarcode = function (code, skipRead) {
+    return this._doApiCall({
+      method: 'removeBarcode',
+      params: { barcode: code },
       skipRead: skipRead
     });
   };
@@ -4908,6 +4967,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.flag = data.flag || DEFAULTS.flag;
       that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
+      that.barcodes = data.barcodes || DEFAULTS.barcodes;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -5327,7 +5387,8 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     flag: null,
     fields: {},
     comments: [],
-    attachments: []
+    attachments: [],
+    barcodes: []
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5365,7 +5426,9 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
     // attachments array
-    this.cover = spec.cover || DEFAULTS.cover;  // cover attachment id, default null
+    this.cover = spec.cover || DEFAULTS.cover;
+    // cover attachment id, default null
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -5496,6 +5559,34 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     return this._doApiCall({
       method: 'clearField',
       params: { field: field },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Adds a barcode
+   * @name Base#addBarcode
+   * @param code
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.addBarcode = function (code, skipRead) {
+    return this._doApiCall({
+      method: 'addBarcode',
+      params: { barcode: code },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Removes a barcode
+   * @name Item#removeBarcode
+   * @param code
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.removeBarcode = function (code, skipRead) {
+    return this._doApiCall({
+      method: 'removeBarcode',
+      params: { barcode: code },
       skipRead: skipRead
     });
   };
@@ -5735,6 +5826,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.flag = data.flag || DEFAULTS.flag;
       that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
+      that.barcodes = data.barcodes || DEFAULTS.barcodes;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -8763,7 +8855,6 @@ dateHelper = function ($, moment) {
   };
   return DateHelper;
 }(jquery, moment);
-settings = { amazonBucket: 'app' };
 helper = function ($, defaultSettings, common) {
   /**
    * Allows you to call helpers based on the settings file 
@@ -8840,6 +8931,34 @@ helper = function ($, defaultSettings, common) {
           parts.push('skipOpenReservations=true');
         }
         return parts.length > 0 ? url + '?' + parts.join('&') : url;
+      },
+      /**
+       * getQRCodeUrl 
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getQRCodeUrl
+       * 
+       * @param  {string} code 
+       * @param  {number} size 
+       * @return {string}      
+       */
+      getQRCodeUrl: function (code, size) {
+        return common.getQRCodeUrl(settings.urlApi, code, size);
+      },
+      /**
+       * getBarcodeUrl 
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getBarcodeUrl
+       * 
+       * @param  {string} code 
+       * @param  {number} size 
+       * @return {string}      
+       */
+      getBarcodeUrl: function (code, width, height) {
+        return common.getBarcodeUrl(settings.urlApi, code, width, height);
       },
       /**
        * getNumItemsLeft

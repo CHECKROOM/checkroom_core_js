@@ -86,6 +86,36 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
 
                 return (parts.length>0) ? url + "?" + parts.join("&") : url;
             },
+
+            /**
+             * getQRCodeUrl 
+             *
+             * @memberOf helper
+             * @method
+             * @name  helper#getQRCodeUrl
+             * 
+             * @param  {string} code 
+             * @param  {number} size 
+             * @return {string}      
+             */
+            getQRCodeUrl: function(code, size){
+                return common.getQRCodeUrl(settings.urlApi, code, size);
+            },
+            /**
+             * getBarcodeUrl 
+             *
+             * @memberOf helper
+             * @method
+             * @name  helper#getBarcodeUrl
+             * 
+             * @param  {string} code 
+             * @param  {number} size 
+             * @return {string}      
+             */
+            getBarcodeUrl: function(code, width, height){
+                return common.getBarcodeUrl(settings.urlApi, code, width, height);
+            },
+
             /**
              * getNumItemsLeft
              *

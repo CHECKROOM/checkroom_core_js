@@ -3423,6 +3423,19 @@ api = function ($, jsonp, moment, common) {
     return this._ajaxGet(cmd, url);
   };
   /**
+   * Deletes documents by their primary key
+   * @method
+   * @name ApiDataSource#deleteMultiple
+   * @param pks
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.deleteMultiple = function (pks) {
+    system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
+    var cmd = 'deleteMultiple';
+    var url = this.getBaseUrl() + pks.join(',') + '/delete';
+    return this._ajaxGet(cmd, url);
+  };
+  /**
    * Updates a document by its primary key and a params objects
    * @method
    * @name ApiDataSource#update
@@ -3560,6 +3573,30 @@ api = function ($, jsonp, moment, common) {
     system.log('ApiDataSource: ' + this.collection + ': call ' + method);
     var cmd = 'call.' + method;
     var url = pk != null && pk.length > 0 ? this.getBaseUrl() + pk + '/call/' + method : this.getBaseUrl() + 'call/' + method;
+    var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
+    var getUrl = url + '?' + this.getParams(p);
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p, timeOut);
+    } else {
+      return this._ajaxGet(cmd, getUrl, timeOut);
+    }
+  };
+  /**
+   * Calls a certain method on one or more objects in a collection
+   * @method
+   * @name ApiDataSource#callMultiple
+   * @param pks
+   * @param method
+   * @param params
+   * @param fields
+   * @param timeOut
+   * @param usePost
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.callMultiple = function (pks, method, params, fields, timeOut, usePost) {
+    system.log('ApiDataSource: ' + this.collection + ': call ' + method);
+    var cmd = 'call.' + method;
+    var url = this.getBaseUrl() + pks.join(',') + '/call/' + method;
     var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
     var getUrl = url + '?' + this.getParams(p);
     if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
@@ -10807,6 +10844,8 @@ PermissionHandler = function () {
       case 'update':
       case 'delete':
       case 'clone':
+      case 'testConnection':
+      case 'syncUsers':
         return this._useUserSync && this._isRootOrAdmin;
       }
       break;
@@ -12952,7 +12991,7 @@ UserSync = function ($, Base, common) {
    * @returns {promise}
    */
   UserSync.prototype.syncUsers = function (wetRun) {
-    return this.ds.call(this.id, 'testSyncUsers', { wetRun: wetRun });
+    return this.ds.call(this.id, 'syncUsers', { wetRun: wetRun });
   };
   /**
    * Writes the usersync to a json object

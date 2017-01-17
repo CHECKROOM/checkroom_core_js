@@ -233,7 +233,7 @@ define([
      * @returns {promise}
      */
     UserSync.prototype.syncUsers = function(wetRun) {
-        return this.ds.call(this.id, "testSyncUsers", {wetRun: wetRun});
+        return this.ds.call(this.id, "syncUsers", {wetRun: wetRun});
     };
 
     /**

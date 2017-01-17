@@ -394,6 +394,8 @@ define([], function () {
                     case "update":
                     case "delete":
                     case "clone":
+                    case "testConnection":
+                    case "syncUsers":
                         return this._useUserSync && this._isRootOrAdmin;
                 }
                 break;

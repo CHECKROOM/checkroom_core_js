@@ -22,7 +22,8 @@ define([
         flag: null,
         fields: {},
         comments: [],
-        attachments: []
+        attachments: [],
+        barcodes: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -56,6 +57,7 @@ define([
         this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
         this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
+        this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();             // barcodes array
     };
 
     Base.prototype = new tmp();
@@ -194,6 +196,36 @@ define([
         return this._doApiCall({
             method: 'clearField',
             params: {field: field},
+            skipRead: skipRead
+        });
+    };
+
+       /**
+     * Adds a barcode
+     * @name Base#addBarcode
+     * @param code
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.addBarcode = function(code, skipRead) {
+        return this._doApiCall({
+            method: 'addBarcode', 
+            params: {barcode: code}, 
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Removes a barcode
+     * @name Item#removeBarcode
+     * @param code
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.removeBarcode = function(code, skipRead) {
+        return this._doApiCall({
+            method: 'removeBarcode', 
+            params: {barcode: code}, 
             skipRead: skipRead
         });
     };
@@ -464,6 +496,7 @@ define([
                 that.flag = data.flag || DEFAULTS.flag;
                 that.fields = (data.fields!=null) ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
                 that.modified = data.modified || DEFAULTS.modified;
+                that.barcodes = data.barcodes || DEFAULTS.barcodes;
 
                 return that._fromCommentsJson(data, options)
                     .then(function() {

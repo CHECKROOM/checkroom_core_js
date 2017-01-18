@@ -10722,6 +10722,22 @@ PermissionHandler = function () {
     this._useUserSync = limits.allowUserSync && profile.useUserSync;
     this._useFlags = profile.useCustom;
     this._useGeo = profile.useGeo;
+    this._canSetFlag = false;
+    this._canClearFlag = false;
+    switch (user.role) {
+    case 'selfservice':
+      this._canSetFlag = profile.selfServiceCanSetFlag;
+      this._canClearFlag = profile.selfServiceCanClearFlag;
+      break;
+    case 'user':
+      this._canSetFlag = profile.userCanSetFlag;
+      this._canClearFlag = profile.userCanClearFlag;
+      break;
+    default:
+      this._canSetFlag = true;
+      this._canClearFlag = true;
+      break;
+    }
     if (this._isSelfService) {
       // Override some permissions for selfservice users
       this._useOrders = this._useOrders && this._useSelfService && profile.selfServiceCanOrder;
@@ -10826,8 +10842,6 @@ PermissionHandler = function () {
       case 'delete':
       case 'expire':
       case 'undoExpire':
-      case 'setFlag':
-      case 'clearFlag':
       case 'setField':
       case 'clearField':
       case 'addAttachment':
@@ -10838,6 +10852,11 @@ PermissionHandler = function () {
       case 'export':
       case 'updateGeo':
         return this._isRootOrAdmin;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
       // Modules
       case 'reserve':
         return this._useReservations;
@@ -10862,8 +10881,6 @@ PermissionHandler = function () {
       case 'delete':
       case 'setField':
       case 'clearField':
-      case 'setFlag':
-      case 'clearFlag':
       case 'addAttachment':
       case 'addComment':
       case 'updateComment':
@@ -10873,8 +10890,20 @@ PermissionHandler = function () {
       case 'moveItem':
       case 'export':
         return this._useKits && this._isRootOrAdmin;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
       case 'takeApart':
         return this.profile.canTakeApartKits;
+      // Modules
+      case 'takeCustody':
+      case 'releaseCustody':
+        return this._useCustody;
+      case 'transferCustody':
+        return this._useCustody && this._isRootOrAdmin;
       }
       break;
     case 'orders':
@@ -10903,14 +10932,18 @@ PermissionHandler = function () {
       // Generic actions
       case 'setField':
       case 'clearField':
-      case 'setFlag':
-      case 'clearFlag':
       case 'addAttachment':
       case 'addComment':
       case 'updateComment':
       case 'removeComment':
       case 'export':
         return this._useOrders;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
       case 'generateDocument':
         return this._useOrderAgreements;
       case 'checkinAt':
@@ -10949,14 +10982,18 @@ PermissionHandler = function () {
       // Generic actions
       case 'setField':
       case 'clearField':
-      case 'setFlag':
-      case 'clearFlag':
       case 'addAttachment':
       case 'addComment':
       case 'updateComment':
       case 'removeComment':
       case 'export':
         return this._useReservations;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
       case 'generateDocument':
         return this._useOrderAgreements;
       }
@@ -10975,8 +11012,6 @@ PermissionHandler = function () {
       case 'undoArchive':
       case 'setField':
       case 'clearField':
-      case 'setFlag':
-      case 'clearFlag':
       case 'addAttachment':
       case 'addComment':
       case 'updateComment':
@@ -10984,6 +11019,12 @@ PermissionHandler = function () {
       case 'import':
       case 'export':
         return this._isRootOrAdminOrUser;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
       case 'generateDocument':
         return this._useOrderAgreements;
       }

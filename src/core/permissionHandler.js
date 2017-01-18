@@ -211,6 +211,8 @@ define([], function () {
                     case "import":
                     case "export":
                     case "updateGeo":
+                    case "changeLocation":
+                    case "changeCategory":
                         return this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":

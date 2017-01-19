@@ -138,7 +138,8 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canCheckout = function() {
-        return (this.status=="available") || (this.status=="incomplete");
+        var items = this.items || [];
+        return common.getAvailableItems(items).length > 0;
     };
 
     /**
@@ -148,7 +149,8 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReserve = function() {
-        return (this.status!="expired") && (this.status!="in_custody") && (this.status!="empty");
+        var items = this.items || [];
+        return common.getActiveItems(items).length > 0;
     };
 
     /**

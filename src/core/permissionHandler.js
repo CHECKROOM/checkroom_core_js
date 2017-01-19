@@ -261,10 +261,16 @@ define([], function () {
                     case "takeApart":
                         return this.profile.canTakeApartKits;
                     // Modules
+                    // Modules
+                    case "reserve":
+                        return this._useReservations;
+                    case "checkout":
+                        return this._useOrders;
                     case "takeCustody":
                     case "releaseCustody":
                         return this._useCustody;
                     case "transferCustody":
+                    case "giveCustody":
                         return this._useCustody && this._isRootOrAdmin;
                 }
                 break;

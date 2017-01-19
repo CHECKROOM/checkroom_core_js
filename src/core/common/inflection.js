@@ -325,38 +325,66 @@ define(function () {
 			}
 			return joined;
 		};
+	}
+
+	if(!Array.prototype.joinAdvanced){
+		/**
+		 * Special join method
+         * ['a','a','a'].specialJoin(',', 'and') -> 'a, a and a'
+         * http://stackoverflow.com/questions/15069587/is-there-a-way-to-join-the-elements-in-an-js-array-but-let-the-last-separator-b
+		 * 
+		 * @param  {string} sep     
+		 * @param  {string} sepLast
+		 */
+		Array.prototype.joinAdvanced =  function(sep, sepLast){
+	        var arr = this.slice(0);
+
+	        var outStr = "";
+	        if (arr.length === 1) {
+	            outStr = arr[0];
+	        } else if (arr.length === 2) {
+	            //joins all with "and" but no commas
+	            //example: "bob and sam"
+	            outStr = arr.join(sepLast);
+	        } else if (arr.length > 2) {
+	            //joins all with commas, but last one gets ", and" (oxford comma!)
+	            //example: "bob, joe, and sam"
+	            outStr = arr.slice(0, -1).join(sep) + sepLast + arr.slice(-1);
+	        }
+	        return outStr;
+	    }
+	}
 
 		
-		if (!Array.prototype.find) {
-		  /**
-		   * Returns a value in the array, if an element in the array 
-		   * satisfies the provided testing function. 
-		   * Otherwise undefined is returned.
-		   * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-		   * 
-		   * @param  {function} function to contains check to find item 
-		   * @return {object}           
-		   */
-		  Array.prototype.find = function(predicate) {
-		    if (this === null) {
-		      throw new TypeError('Array.prototype.find called on null or undefined');
-		    }
-		    if (typeof predicate !== 'function') {
-		      throw new TypeError('predicate must be a function');
-		    }
-		    var list = Object(this);
-		    var length = list.length >>> 0;
-		    var thisArg = arguments[1];
-		    var value;
+	if (!Array.prototype.find) {
+	  /**
+	   * Returns a value in the array, if an element in the array 
+	   * satisfies the provided testing function. 
+	   * Otherwise undefined is returned.
+	   * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
+	   * 
+	   * @param  {function} function to contains check to find item 
+	   * @return {object}           
+	   */
+	  Array.prototype.find = function(predicate) {
+	    if (this === null) {
+	      throw new TypeError('Array.prototype.find called on null or undefined');
+	    }
+	    if (typeof predicate !== 'function') {
+	      throw new TypeError('predicate must be a function');
+	    }
+	    var list = Object(this);
+	    var length = list.length >>> 0;
+	    var thisArg = arguments[1];
+	    var value;
 
-		    for (var i = 0; i < length; i++) {
-		      value = list[i];
-		      if (predicate.call(thisArg, value, i, list)) {
-		        return value;
-		      }
-		    }
-		    return undefined;
-		  };
-		}
+	    for (var i = 0; i < length; i++) {
+	      value = list[i];
+	      if (predicate.call(thisArg, value, i, list)) {
+	        return value;
+	      }
+	    }
+	    return undefined;
+	  };
 	}
 });

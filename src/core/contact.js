@@ -152,7 +152,7 @@ define([
      * @returns {promise}
      */
     Contact.prototype.archive = function(skipRead) {
-        return this.ds.call(this.id, 'archive', {}, skipRead);
+        return this._doApiCall({method: "archive", params: {}, skipRead: skipRead});
     };
 
     /**
@@ -162,7 +162,7 @@ define([
      * @returns {promise}
      */
     Contact.prototype.undoArchive = function(skipRead) {
-        return this.ds.call(this.id, 'undoArchive', {}, skipRead);
+        return this._doApiCall({method: "undoArchive", params: {}, skipRead: skipRead});
     };
 
     /**

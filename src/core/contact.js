@@ -8,7 +8,8 @@ define([
     'jquery',
     'base',
     'common',
-    'user'], /** @lends Contact */ function ($, Base, common, User) {
+    'user',
+    'helper'], /** @lends Contact */ function ($, Base, common, User, Helper) {
 
     var DEFAULTS = {
         name: "",
@@ -36,6 +37,8 @@ define([
             crtype: 'cheqroom.types.customer'
         }, opt);
         Base.call(this, spec);
+
+        this.helper = spec.helper || new Helper();
 
         this.name = spec.name || DEFAULTS.name;
         this.email = spec.email || DEFAULTS.email;
@@ -71,6 +74,29 @@ define([
         return common.isValidEmail(this.email);
     };
 
+    /**
+     * If the contact is linked to a user,
+     * return its user id
+     * Remark: needs field user
+     * @name Contact#getUserId
+     * @method
+     * @return {string}
+     */
+    Contact.prototype.getUserId = function() {
+        return this.helper.ensureId(this.user);
+    };
+
+    /**
+     * Checks if the user is a synced user
+     * Remark: needs field user
+     * @name Contact#getUserSync
+     * @method
+     * @return {string}
+     */
+    Contact.prototype.getUserSync = function() {
+        return ((this.user!=null) && (this.user.sync!=null)) ? this.user.sync : "";
+    };
+
     //
     // Business logic
     //
@@ -98,7 +124,7 @@ define([
      * @returns {boolean}
      */
     Contact.prototype.canArchive = function() {
-        return (this.status=="active");
+        return (this.status=="active") && (!this.getUserSync());
     };
 
     /**
@@ -107,7 +133,7 @@ define([
      * @returns {boolean}
      */
     Contact.prototype.canUndoArchive = function() {
-        return (this.status=="archived");
+        return (this.status=="archived") && (!this.getUserSync());
     };
 
     /**

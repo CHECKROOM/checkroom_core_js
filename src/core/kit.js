@@ -121,7 +121,7 @@ define([
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
-            isDirty = (this.name!=this.raw.name);
+            isDirty = this._isDirtyStringProperty("name");
         }
         return isDirty;
     };

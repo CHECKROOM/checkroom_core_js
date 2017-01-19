@@ -187,10 +187,7 @@ define([
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
-            isDirty = (
-                (this.name!=this.raw.name)||
-                (this.email!=this.raw.email)
-            );
+            isDirty = this._isDirtyStringProperty("name") || this._isDirtyStringProperty("email");
         }
         return isDirty;
     };

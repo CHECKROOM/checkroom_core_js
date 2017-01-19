@@ -200,7 +200,7 @@ define([
         });
     };
 
-       /**
+    /**
      * Adds a barcode
      * @name Base#addBarcode
      * @param code

@@ -3972,6 +3972,23 @@ document = function ($, common, api) {
   /**
    * Helper for checking if a simple object property is dirty
    * compared to the original raw result
+   * Because we know that the API doesn't return empty string properties,
+   * we do a special, extra check on that.
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyStringProperty = function (prop) {
+    if (this.raw) {
+      var same = this[prop] == this.raw[prop] || this[prop] == '' && this.raw[prop] == null;
+      return !same;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
    * @param prop
    * @returns {boolean}
    * @private
@@ -6356,7 +6373,7 @@ Contact = function ($, Base, common, User) {
   Contact.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name || this.email != this.raw.email;
+      isDirty = this._isDirtyStringProperty('name') || this._isDirtyStringProperty('email');
     }
     return isDirty;
   };
@@ -6993,6 +7010,23 @@ Document = function ($, common, api) {
   /**
    * Helper for checking if a simple object property is dirty
    * compared to the original raw result
+   * Because we know that the API doesn't return empty string properties,
+   * we do a special, extra check on that.
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyStringProperty = function (prop) {
+    if (this.raw) {
+      var same = this[prop] == this.raw[prop] || this[prop] == '' && this.raw[prop] == null;
+      return !same;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
    * @param prop
    * @returns {boolean}
    * @private
@@ -7443,7 +7477,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -7531,19 +7565,14 @@ Item = function ($, Base) {
     return params;
   };
   // Deprecated
-  Item.prototype._getKeyValue = function (kv, options) {
-    // Flag is a special keyvalue, we won't read it into keyValues
-    // but set it via _fromJsonFlag
-    return kv.key == FLAG ? null : Base.prototype._getKeyValue(kv, options);
-  };
   Item.prototype._isDirtyName = function () {
-    return this._isDirtyProperty('name');
+    return this._isDirtyStringProperty('name');
   };
   Item.prototype._isDirtyBrand = function () {
-    return this._isDirtyProperty('brand');
+    return this._isDirtyStringProperty('brand');
   };
   Item.prototype._isDirtyModel = function () {
-    return this._isDirtyProperty('model');
+    return this._isDirtyStringProperty('model');
   };
   Item.prototype._isDirtyWarrantyDate = function () {
     return this._isDirtyMomentProperty('warrantyDate');
@@ -7585,6 +7614,9 @@ Item = function ($, Base) {
       return false;
     }
   };
+  Item.prototype._isDirtyFlag = function () {
+    return this._isDirtyStringProperty('flag');
+  };
   //
   // Business logic
   //
@@ -7617,7 +7649,7 @@ Item = function ($, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdBasic = $.Deferred();
+    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdFlags = $.Deferred(), dfdBasic = $.Deferred();
     if (this._isDirtyCategory()) {
       this.canChangeCategory(this.category).done(function (data) {
         if (data.result) {
@@ -7645,12 +7677,21 @@ Item = function ($, Base) {
       } else {
         dfdFields.resolve();
       }
+      if (that._isDirtyFlag()) {
+        if (that.flag == '' || that.flag == null) {
+          dfdFlags = that.setFlag(that.flag);
+        } else {
+          dfdFlags = that.clearFlag(that.flag);
+        }
+      } else {
+        dfdFlags.resolve();
+      }
       if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice()) {
         dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice);
       } else {
         dfdBasic.resolve();
       }
-      return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
+      return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
     });
   };
   /**
@@ -7923,7 +7964,9 @@ Item = function ($, Base) {
         pks: [this.id],
         category: category
       },
-      skipRead: true  // the response is a hash with results and conflicts
+      skipRead: true,
+      // the response is a hash with results and conflicts
+      _fields: '*'
     });
   };
   /**
@@ -8119,7 +8162,7 @@ Kit = function ($, Base, common) {
   Kit.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name;
+      isDirty = this._isDirtyStringProperty('name');
     }
     return isDirty;
   };
@@ -10851,6 +10894,8 @@ PermissionHandler = function () {
       case 'import':
       case 'export':
       case 'updateGeo':
+      case 'changeLocation':
+      case 'changeCategory':
         return this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':

@@ -149,7 +149,8 @@ define([
             this._isDirtyPurchasePrice() ||
             this._isDirtyCategory() ||
             this._isDirtyLocation() ||
-            this._isDirtyGeo()
+            this._isDirtyGeo() || 
+            this._isDirtyFlag()
         );
     };
 
@@ -255,22 +256,16 @@ define([
     };
 
     // Deprecated
-    Item.prototype._getKeyValue = function(kv, options) {
-        // Flag is a special keyvalue, we won't read it into keyValues
-        // but set it via _fromJsonFlag
-        return (kv.key == FLAG) ? null : Base.prototype._getKeyValue(kv, options);
-    };
-
     Item.prototype._isDirtyName = function() {
-        return this._isDirtyProperty("name");
+        return this._isDirtyStringProperty("name");
     };
 
     Item.prototype._isDirtyBrand = function() {
-        return this._isDirtyProperty("brand");
+        return this._isDirtyStringProperty("brand");
     };
 
     Item.prototype._isDirtyModel = function() {
-        return this._isDirtyProperty("model");
+        return this._isDirtyStringProperty("model");
     };
 
     Item.prototype._isDirtyWarrantyDate = function() {
@@ -322,6 +317,10 @@ define([
         }
     };
 
+    Item.prototype._isDirtyFlag = function() {
+        return this._isDirtyStringProperty("flag");
+    };
+
     //
     // Business logic
     //
@@ -358,6 +357,7 @@ define([
             dfdCategory = $.Deferred(),
             dfdLocation = $.Deferred(),
             dfdFields = $.Deferred(),
+            dfdFlags = $.Deferred(),
             dfdBasic = $.Deferred();
 
         if (this._isDirtyCategory()) {
@@ -393,6 +393,16 @@ define([
                     dfdFields.resolve();
                 }
 
+                if (that._isDirtyFlag()) {
+                    if ((that.flag=="") || (that.flag==null)) {
+                        dfdFlags = that.setFlag(that.flag);
+                    } else {
+                        dfdFlags = that.clearFlag(that.flag);
+                    }
+                } else {
+                    dfdFlags.resolve();
+                }
+
                 if( (that._isDirtyName()) ||
                     (that._isDirtyBrand()) ||
                     (that._isDirtyModel()) ||
@@ -404,7 +414,7 @@ define([
                     dfdBasic.resolve();
                 }
 
-                return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
+                return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
             });
     };
 
@@ -677,7 +687,8 @@ define([
             collectionCall: true,  // it's a collection call, not an Item call
             method: 'canChangeCategory',
             params: {pks:[this.id], category: category},
-            skipRead: true  // the response is a hash with results and conflicts
+            skipRead: true,  // the response is a hash with results and conflicts
+            _fields: "*"
         });
     };
 

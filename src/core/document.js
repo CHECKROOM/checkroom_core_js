@@ -279,6 +279,24 @@ define([
     /**
      * Helper for checking if a simple object property is dirty
      * compared to the original raw result
+     * Because we know that the API doesn't return empty string properties,
+     * we do a special, extra check on that.
+     * @param prop
+     * @returns {boolean}
+     * @private
+     */
+    Document.prototype._isDirtyStringProperty = function(prop) {
+        if (this.raw) {
+            var same = (this[prop]==this.raw[prop]) || ((this[prop]=="") && (this.raw[prop]==null));
+            return !same;
+        } else {
+            return false;
+        }
+    };
+
+    /**
+     * Helper for checking if a simple object property is dirty
+     * compared to the original raw result
      * @param prop
      * @returns {boolean}
      * @private

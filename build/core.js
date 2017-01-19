@@ -7264,6 +7264,42 @@ Group = function ($, common, api, Document) {
       }
     });
   };
+  /**
+   * Buys a single product from our in-app store
+   * @param productId
+   * @param quantity
+   * @param shipping
+   * @returns {promise}
+   */
+  Group.prototype.buyProduct = function (productId, quantity, shipping) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'buyProduct',
+      skipRead: true,
+      params: {
+        productId: productId,
+        quantity: quantity,
+        shipping: shipping
+      }
+    });
+  };
+  /**
+   * Buys multiple products from our in-app store
+   * @param listOfProductQtyTuples
+   * @param shipping
+   * @returns {promise}
+   */
+  Group.prototype.buyProduct = function (listOfProductQtyTuples, shipping) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'buyProducts',
+      skipRead: true,
+      params: {
+        products: listOfProductQtyTuples,
+        shipping: shipping
+      }
+    });
+  };
   // Helpers
   // ----
   /**
@@ -9895,8 +9931,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.archive = function (skipRead) {
-    if (this.status != 'closed') {
-      return $.Deferred().reject(new Error('Cannot archive document that isn\'t closed'));
+    if (!this.canArchive()) {
+      return $.Deferred().reject(new Error('Cannot archive document'));
     }
     return this._doApiCall({
       method: 'archive',
@@ -9911,14 +9947,30 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.undoArchive = function (skipRead) {
-    if (this.status == 'archived') {
-      return $.Deferred().reject(new Error('Cannot unarchive document that isn\'t archived'));
+    if (!this.canUndoArchive()) {
+      return $.Deferred().reject(new Error('Cannot unarchive document'));
     }
     return this._doApiCall({
       method: 'undoArchive',
       params: {},
       skipRead: skipRead
     });
+  };
+  /**
+   * Checks if we can archive a transaction (based on status)
+   * @name Transaction#canArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canArchive = function () {
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+  };
+  /**
+   * Checks if we can unarchive a transaction (based on status)
+   * @name Transaction#canUndoArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canUndoArchive = function () {
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
   };
   //
   // Implementation stuff
@@ -10982,6 +11034,8 @@ PermissionHandler = function () {
       case 'updateComment':
       case 'removeComment':
       case 'export':
+      case 'archive':
+      case 'undoArchive':
         return this._useOrders;
       // Permissions for flags
       case 'setFlag':
@@ -11032,6 +11086,8 @@ PermissionHandler = function () {
       case 'updateComment':
       case 'removeComment':
       case 'export':
+      case 'archive':
+      case 'undoArchive':
         return this._useReservations;
       // Permissions for flags
       case 'setFlag':
@@ -12649,8 +12705,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.archive = function (skipRead) {
-    if (this.status != 'closed') {
-      return $.Deferred().reject(new Error('Cannot archive document that isn\'t closed'));
+    if (!this.canArchive()) {
+      return $.Deferred().reject(new Error('Cannot archive document'));
     }
     return this._doApiCall({
       method: 'archive',
@@ -12665,14 +12721,30 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.undoArchive = function (skipRead) {
-    if (this.status == 'archived') {
-      return $.Deferred().reject(new Error('Cannot unarchive document that isn\'t archived'));
+    if (!this.canUndoArchive()) {
+      return $.Deferred().reject(new Error('Cannot unarchive document'));
     }
     return this._doApiCall({
       method: 'undoArchive',
       params: {},
       skipRead: skipRead
     });
+  };
+  /**
+   * Checks if we can archive a transaction (based on status)
+   * @name Transaction#canArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canArchive = function () {
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+  };
+  /**
+   * Checks if we can unarchive a transaction (based on status)
+   * @name Transaction#canUndoArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canUndoArchive = function () {
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
   };
   //
   // Implementation stuff

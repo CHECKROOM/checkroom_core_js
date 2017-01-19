@@ -72,7 +72,7 @@ define([
         this.location = spec.location || DEFAULTS.location;               // a location id
         this.items = spec.items || DEFAULTS.items.slice();                // an array of item ids
         this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();    // an array of Conflict objects
-        this.by = spec.by || DEFAULTS.by;                           
+        this.by = spec.by || DEFAULTS.by;
         this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
         this.name = spec.name || DEFAULTS.name;
     };
@@ -244,7 +244,7 @@ define([
      */
     Transaction.prototype.isDirty = function() {
         return (
-            Base.prototype.isDirty.call(this) || 
+            Base.prototype.isDirty.call(this) ||
             this._isDirtyBasic() ||
             this._isDirtyDates() ||
             this._isDirtyLocation() ||
@@ -394,7 +394,7 @@ define([
 
     // Setters
     // ----
-    
+
     // From date setters
 
     /**
@@ -669,7 +669,7 @@ define([
         });
     };
 
-     /**
+    /**
      * hasItems; Gets a list of items that are already part of the transaction
      * @name Transaction#hasItems
      * @method
@@ -702,8 +702,8 @@ define([
      * @returns {promise}
      */
     Transaction.prototype.archive = function(skipRead) {
-        if (this.status != "closed") {
-            return $.Deferred().reject(new Error("Cannot archive document that isn't closed"));
+        if (!this.canArchive()) {
+            return $.Deferred().reject(new Error("Cannot archive document"));
         }
 
         return this._doApiCall({
@@ -720,8 +720,8 @@ define([
      * @returns {promise}
      */
     Transaction.prototype.undoArchive = function(skipRead) {
-        if (this.status == "archived") {
-            return $.Deferred().reject(new Error("Cannot unarchive document that isn't archived"));
+        if (!this.canUndoArchive()) {
+            return $.Deferred().reject(new Error("Cannot unarchive document"));
         }
 
         return this._doApiCall({
@@ -729,6 +729,28 @@ define([
             params: {},
             skipRead: skipRead
         });
+    };
+
+    /**
+     * Checks if we can archive a transaction (based on status)
+     * @name Transaction#canArchive
+     * @returns {boolean}
+     */
+    Transaction.prototype.canArchive = function() {
+        return (
+        (this.archived==null) &&
+        ((this.status == "cancelled") || (this.status == "closed")));
+    };
+
+    /**
+     * Checks if we can unarchive a transaction (based on status)
+     * @name Transaction#canUndoArchive
+     * @returns {boolean}
+     */
+    Transaction.prototype.canUndoArchive = function() {
+        return (
+        (this.archived!=null) &&
+        ((this.status == "cancelled") || (this.status == "closed")));
     };
 
     //
@@ -825,7 +847,7 @@ define([
     Transaction.prototype._checkDateBetweenMinMax = function(date, minDate, maxDate) {
         minDate = minDate || this.getMinDate();
         maxDate = maxDate || this.getMaxDate();
-        if( (date<minDate) || 
+        if( (date<minDate) ||
             (date>maxDate)) {
             var msg = "date " + date.toJSONDate() + " is outside of min max range " + minDate.toJSONDate() +"->" + maxDate.toJSONDate();
             return $.Deferred().reject(new api.ApiUnprocessableEntity(msg));

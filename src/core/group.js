@@ -206,6 +206,45 @@ define([
         });
     };
 
+    /**
+     * Buys a single product from our in-app store
+     * @param productId
+     * @param quantity
+     * @param shipping
+     * @returns {promise}
+     */
+    Group.prototype.buyProduct = function(productId, quantity, shipping) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "buyProduct",
+            skipRead: true,
+            params: {
+                productId: productId,
+                quantity: quantity,
+                shipping: shipping
+            }
+        });
+    };
+
+    /**
+     * Buys multiple products from our in-app store
+     * @param listOfProductQtyTuples
+     * @param shipping
+     * @returns {promise}
+     */
+    Group.prototype.buyProduct = function(listOfProductQtyTuples, shipping) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "buyProducts",
+            skipRead: true,
+            params: {
+                products: listOfProductQtyTuples,
+                shipping: shipping
+            }
+        });
+    };
+
+
     // Helpers
     // ----
 

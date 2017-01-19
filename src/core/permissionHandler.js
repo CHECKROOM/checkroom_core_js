@@ -301,6 +301,8 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
+                    case "archive":
+                    case "undoArchive":
                         return this._useOrders;
                     // Permissions for flags
                     case "setFlag":
@@ -353,6 +355,8 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
+                    case "archive":
+                    case "undoArchive":
                         return this._useReservations;
                     // Permissions for flags
                     case "setFlag":

@@ -6,12 +6,11 @@
  */
 define([
     "jquery",
-    "jstz",  // TODO: Via grunt?
-    "moment",
+    "jstz", 
     "api",
     "settings",
     "common/validation",
-    "common/utils"], function ($, moment, api, settings, validation, utils) {
+    "common/utils"], function ($, jstz, api, settings, validation, utils) {
 
     var DEFAULT_PLAN = "1215_cr_90";
     var DEFAULT_PERIOD = "yearly";

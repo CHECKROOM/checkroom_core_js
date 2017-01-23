@@ -81,9 +81,7 @@ define([
 
     User.prototype.isValidPassword = function() {
         this.password = $.trim(this.password);
-        var length = this.password.length;
-        var hasDigit = this.password.match(/[0-9]/);
-        return (length>=4) && (hasDigit);
+        return common.isValidPassword(this.password);
     };
 
     /**

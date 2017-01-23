@@ -8,11 +8,14 @@ requirejs.config({
         'jquery-jsonp': '../lib/jquery-jsonp/src/jquery.jsonp',
         'jquery-pubsub': '../lib/jquery-tiny-pubsub/src/tiny-pubsub',
         'moment': '../lib/moment/moment',
-        'cheqroom-core': '../../../build/core'
+        'jstz': '../lib/jstz/jstz.min',
+        'cheqroom-core': '../../../build/core',
+        'cheqroom-signup': '../../../build/signup'
     },
     shim: {
         'jquery-jsonp': ['jquery'],
-        'jquery-pubsub': ['jquery']
+        'jquery-pubsub': ['jquery'],
+        'jstz': {exports: 'jstz'}
     }
 });
 
@@ -33,7 +36,8 @@ require([
     'reservationTest',
     'userTest',
     'availabilityTest',
-    'webHookTest'
+    'webHookTest',
+    'signupTest'
     ], function(
         orderTransferTest,
         commonTest,
@@ -49,7 +53,8 @@ require([
         reservationTest,
         userTest,
         availabilityTest,
-        webHookTest) {
+        webHookTest,
+        signupTest) {
 
         //orderTransferTest.run();
         //commonTest.run();
@@ -59,13 +64,14 @@ require([
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();
-        itemTest.run();
+        //itemTest.run();
         //keyValueTest.run();
         //orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();
         //webHookTest.run();
+        signupTest.run();
 
         // start QUnit.
         QUnit.start();

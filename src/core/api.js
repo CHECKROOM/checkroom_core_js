@@ -7,8 +7,7 @@
 define([
     'jquery',
     'jquery-jsonp',
-    'moment',
-    'common'], function ($, jsonp, moment, common) {
+    'moment'], function ($, jsonp, moment) {
     var MAX_QUERYSTRING_LENGTH = 2048;
 
     //TODO change this

@@ -79,7 +79,7 @@ module.exports = function(grunt){
                             'filePath': outputFile,
                             wrap: {
                                 "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz', 'jquery-jsonp', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jstz, jsonp, pubsub);\n}\n}(function (jquery, moment, jstz, jquery_jsonp, jquery_pubsub) {",
-                                "end": '\nreturn core;\n}))'
+                                "end": '\nreturn signup;\n}))'
                             },
                         }));
                     }

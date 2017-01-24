@@ -16,6 +16,18 @@ define(function () {
             return re.test(email);
         },
         /**
+         * isFreeEmail
+         * @memberOf common
+         * @name common#isFreeEmail
+         * @method
+         * @param email
+         * @returns {boolean}
+         */
+        isFreeEmail: function(email) {
+            var re = /^([\w-.]+@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)([\w-]+.)+[\w-]{2,4})?$/i;
+            return !re.test(email);
+        },
+        /**
          * isValidPhone
          * @memberOf common
          * @name  common#isValidPhone

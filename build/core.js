@@ -3107,6 +3107,18 @@ common_validation = {
     return re.test(email);
   },
   /**
+   * isFreeEmail
+   * @memberOf common
+   * @name common#isFreeEmail
+   * @method
+   * @param email
+   * @returns {boolean}
+   */
+  isFreeEmail: function (email) {
+    var re = /^([\w-.]+@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)([\w-]+.)+[\w-]{2,4})?$/i;
+    return !re.test(email);
+  },
+  /**
    * isValidPhone
    * @memberOf common
    * @name  common#isValidPhone
@@ -3258,14 +3270,15 @@ common_utils = function ($) {
    * @name  utils#getUrlParam
    * @method
    * @param  {string} name
+   * @param {string} default
    * @return {string}
    */
-  utils.getUrlParam = function (name) {
+  utils.getUrlParam = function (name, def) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     var regexS = '[\\?&]' + name + '=([^&#]*)';
     var regex = new RegExp(regexS);
     var results = regex.exec(window.location.href);
-    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
+    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : def;
   };
   /**
    * getParsedLines

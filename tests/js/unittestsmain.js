@@ -56,8 +56,9 @@ require([
         webHookTest,
         signupTest) {
 
+        commonTest.run();
+
         //orderTransferTest.run();
-        //commonTest.run();
         //helperTest.run();
         //simpleTest.run();
         //dateHelperTest.run();

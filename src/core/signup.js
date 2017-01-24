@@ -9,8 +9,9 @@ define([
     "jstz", 
     "api",
     "settings",
+    "common/inflection",
     "common/validation",
-    "common/utils"], function ($, jstz, api, settings, validation, utils) {
+    "common/utils"], function ($, jstz, api, settings, inflection, validation, utils) {
 
     var DEFAULT_PLAN = "1215_cr_90";
     var DEFAULT_PERIOD = "yearly";
@@ -25,7 +26,7 @@ define([
 
         this.firstName = opt.firstName || "";  // between 2 and 25 chars
         this.lastName = opt.lastName || "";  // between 2 and 25 chars
-        this.company = opt.lastName || "";  // between 3 and 50 chars
+        this.company = opt.company || "";  // between 3 and 50 chars
         this.timezone = opt.timezone || jstz.determine().name();
         this.email = opt.email || "";
         this.login = opt.login || "";
@@ -130,7 +131,7 @@ define([
     Signup.prototype.getFullName = function() {
         var firstName = $.trim(this.firstName);
         var lastName = $.trim(this.lastName);
-        return firstName + " " + lastName;
+        return $.trim(firstName + " " + lastName);
     };
 
     Signup.prototype.createAccount = function() {

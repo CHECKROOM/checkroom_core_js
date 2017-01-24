@@ -58,6 +58,26 @@ define([
     // Helpers
     //
     /**
+     * Gets a moment duration object
+     * @method
+     * @name Reservation#getDuration
+     * @returns {duration}
+     */
+    Reservation.prototype.getDuration = function() {
+        return common.getReservationDuration(this.raw);
+    };
+
+    /**
+     * Gets a friendly order duration or empty string
+     * @method
+     * @name Reservation#getFriendlyDuration
+     * @returns {string}
+     */
+    Reservation.prototype.getFriendlyDuration = function() {
+        return common.getFriendlyReservationDuration(this.raw, this._getDateHelper());
+    };
+
+    /**
      * Checks if the reservation can be booked
      * @method
      * @name Reservation#canReserve

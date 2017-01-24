@@ -3743,34 +3743,104 @@ common_document = {
     return false;
   }
 };
-common_transaction = function (keyValues) {
-  return {
-    /**
-    * getTransactionSummary
-    * Return a friendly summary for a given transaction or custom name
-    *
-    * @memberOf common
-    * @name  common#getTransactionSummary
-    * @method
-    * 
-    * @param  {object} transaction 
-    * @param  {string} emptyText   
-    * @return {string}       
-    */
-    getTransactionSummary: function (transaction, emptyText) {
-      if (transaction) {
-        if (transaction.name) {
-          return transaction.name;
-        } else if (transaction.itemSummary) {
-          return transaction.itemSummary;
-        } else if (transaction.items && transaction.items.length > 0) {
-          return keyValues.getCategorySummary(transaction.items);
-        }
+common_transaction = function (moment, keyValues) {
+  var that = {};
+  /**
+  * getTransactionSummary
+  * Return a friendly summary for a given transaction or custom name
+  *
+  * @memberOf common
+  * @name  common#getTransactionSummary
+  * @method
+  *
+  * @param  {object} transaction
+  * @param  {string} emptyText
+  * @return {string}
+  */
+  that.getTransactionSummary = function (transaction, emptyText) {
+    if (transaction) {
+      if (transaction.name) {
+        return transaction.name;
+      } else if (transaction.itemSummary) {
+        return transaction.itemSummary;
+      } else if (transaction.items && transaction.items.length > 0) {
+        return keyValues.getCategorySummary(transaction.items);
       }
-      return emptyText || 'No items';
+    }
+    return emptyText || 'No items';
+  };
+  /**
+     * getOrderDuration
+  * Gets a moment duration object
+     *
+  * @memberOf common
+  * @name common#getOrderDuration
+     * @method
+  *
+     * @returns {duration}
+     */
+  that.getOrderDuration = function (transaction) {
+    if (transaction.started != null) {
+      var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+      if (to) {
+        return moment.duration(to - transaction.started);
+      }
+    }
+    return null;
+  };
+  /**
+  * getFriendlyOrderDuration
+  * Gets a friendly duration for a given order
+  *
+  * @memberOf common
+  * @name common#getFriendlyOrderDuration
+  * @method
+  *
+  * @param transaction
+  * @param dateHelper
+  * @returns {string}
+  */
+  that.getFriendlyOrderDuration = function (transaction, dateHelper) {
+    var duration = that.getOrderDuration(transaction);
+    return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
+  };
+  /**
+  * getReservationDuration
+  * Return a Moment duration for a given reservation
+  *
+  * @memberOf common
+  * @name common#getReservationDuration
+  * @method
+  *
+  * @param transaction
+  * @returns {duration}
+  */
+  that.getReservationDuration = function (transaction) {
+    if (transaction) {
+      if (transaction.fromDate != null && transaction.toDate != null) {
+        return moment.duration(transaction.toDate - transaction.fromDate);
+      }
+      return null;
     }
   };
-}(common_keyValues);
+  /**
+  * getFriendlyReservationDuration
+  * Gets a friendly duration for a given reservation
+  *
+  * @memberOf common
+  * @name common#getFriendlyReservationDuration
+  * @method
+  *
+  * @param transaction
+  * @param dateHelper
+  * @returns {string}
+  */
+  that.getFriendlyReservationDuration = function (transaction, dateHelper) {
+    var duration = that.getReservationDuration(transaction);
+    return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
+  };
+  return that;
+}(moment, common_keyValues);
 common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction) {
   /**
    * Return common object with different helper methods
@@ -10364,29 +10434,22 @@ Order = function ($, api, Transaction, Conflict, common) {
   // Helpers
   //
   /**
+   * Gets a moment duration object
+   * @method
+   * @name Order#getDuration
+   * @returns {duration}
+   */
+  Order.prototype.getDuration = function () {
+    return common.getOrderDuration(this.raw);
+  };
+  /**
    * Gets a friendly order duration or empty string
    * @method
    * @name Order#getFriendlyDuration
    * @returns {string}
    */
   Order.prototype.getFriendlyDuration = function () {
-    var duration = this.getDuration();
-    return duration != null ? this._getDateHelper().getFriendlyDuration(duration) : '';
-  };
-  /**
-   * Gets a moment duration object
-   * @method
-   * @name Order#getDuration
-   * @returns {*}
-   */
-  Order.prototype.getDuration = function () {
-    if (this.from != null) {
-      var to = this.status == 'closed' ? this.to : this.due;
-      if (to) {
-        return moment.duration(to - this.from);
-      }
-    }
-    return null;
+    return common.getFriendlyOrderDuration(this.raw, this._getDateHelper());
   };
   /**
    * Checks if a PDF document can be generated
@@ -11351,6 +11414,24 @@ Reservation = function ($, api, Transaction, Conflict) {
   //
   // Helpers
   //
+  /**
+   * Gets a moment duration object
+   * @method
+   * @name Reservation#getDuration
+   * @returns {duration}
+   */
+  Reservation.prototype.getDuration = function () {
+    return common.getReservationDuration(this.raw);
+  };
+  /**
+   * Gets a friendly order duration or empty string
+   * @method
+   * @name Reservation#getFriendlyDuration
+   * @returns {string}
+   */
+  Reservation.prototype.getFriendlyDuration = function () {
+    return common.getFriendlyReservationDuration(this.raw, this._getDateHelper());
+  };
   /**
    * Checks if the reservation can be booked
    * @method

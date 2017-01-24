@@ -134,30 +134,23 @@ define([
     // Helpers
     //
     /**
+     * Gets a moment duration object
+     * @method
+     * @name Order#getDuration
+     * @returns {duration}
+     */
+    Order.prototype.getDuration = function() {
+        return common.getOrderDuration(this.raw);
+    };
+
+    /**
      * Gets a friendly order duration or empty string
      * @method
      * @name Order#getFriendlyDuration
      * @returns {string}
      */
     Order.prototype.getFriendlyDuration = function() {
-        var duration = this.getDuration();
-        return (duration!=null) ? this._getDateHelper().getFriendlyDuration(duration) : "";
-    };
-
-    /**
-     * Gets a moment duration object
-     * @method
-     * @name Order#getDuration
-     * @returns {*}
-     */
-    Order.prototype.getDuration = function() {
-        if (this.from!=null) {
-            var to = (this.status=="closed") ? this.to : this.due;
-            if (to) {
-                return moment.duration(to - this.from);
-            }
-        }
-        return null;
+        return common.getFriendlyOrderDuration(this.raw, this._getDateHelper());
     };
 
     /**

@@ -19,6 +19,7 @@ define([
     var DEFAULT_KIND = "trial";
 
     var Signup = function(opt) {
+        opt = opt || {};
         this.ds = opt.ds || new api.ApiAnonymous({
                 urlApi: settings.urlApi,
                 ajax: new api.ApiAjax({useJsonp: settings.useJsonp})
@@ -80,8 +81,14 @@ define([
             });
     };
 
-    Signup.prototype.emailIsValid = function() {
-        return validation.isValidEmail(this.email);
+    Signup.prototype.emailIsValid = function(denyFreeEmail) {
+        var email = $.trim(this.email);
+        var isValid = validation.isValidEmail(email);
+        if( (isValid) &&
+            (denyFreeEmail==true)) {
+            return !validation.isFreeEmail(email);
+        }
+        return isValid;
     };
 
     Signup.prototype.emailExists = function() {
@@ -134,6 +141,12 @@ define([
         return $.trim(firstName + " " + lastName);
     };
 
+    Signup.prototype.setFullName = function(name) {
+        var parts = Signup.splitFirstLastName($.trim(name));
+        this.firstName = parts.firstName;
+        this.lastName = parts.lastName;
+    };
+
     Signup.prototype.createAccount = function() {
         var that = this,
             beforeCreate = this.onBeforeCreateAccount || $.Deferred().resolve(),
@@ -180,6 +193,14 @@ define([
 
     // Static constructor
     // ----
+    Signup.splitFirstLastName = function(name) {
+        var parts = name.split(" ");
+        return {
+            firstName: $.trim(parts.shift()),
+            lastName: $.trim(parts.join(" "))
+        };
+    };
+
     /**
      * Constructor function that creates a Signup object from the params on the querystring
      * @returns {Signup}
@@ -199,9 +220,9 @@ define([
         if( (firstName.length==0) &&
             (lastName.length==0) &&
             (name.length>0)) {
-            var parts = name.split(" ");
-            firstName = parts.shift();
-            lastName = parts.join(" ");
+            var parts = Signup.splitFirstLastName(name);
+            firstName = parts.firstName;
+            lastName = parts.lastName;
         }
 
         if( (login.length==0) &&

@@ -3550,28 +3550,57 @@ common_kit = function ($, itemHelpers) {
   };
 }(jquery, common_item);
 common_contact = function (imageHelper) {
-  return {
-    /**
-     * getContactImageUrl 
-     *
-     * @memberOf common
-     * @name  common#getContactImageUrl
-     * @method
-     * 
-     * @param  cr.Contact or contact object
-     * @return {string} image path or base64 image        
-     */
-    getContactImageUrl: function (ds, contact, size, bustCache) {
-      // Show maintenance avatar?
-      if (contact.kind == 'maintenance')
-        return imageHelper.getMaintenanceAvatar(size);
-      // Show profile picture of user?
-      if (contact.user && contact.user.picture)
-        return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
-      // Show avatar initials
-      return imageHelper.getAvatarInitial(contact.name, size);
+  var that = {};
+  that.contactGetUserId = function (contact) {
+    if (contact.user) {
+      if (typeof contact.user === 'string') {
+        return contact.user;
+      } else if (contact.user.hasOwnProperty('_id')) {
+        return contact._id;
+      }
     }
   };
+  that.contactGetUserSync = function (contact) {
+    if (contact.user && contact.user.sync) {
+      return contact.user.sync;
+    }
+  };
+  that.contactCanReserve = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanCheckout = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanGenerateDocument = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanArchive = function (contact) {
+    return contact.status == 'active' && !that.contactGetUserSync(contact);
+  };
+  that.contactCanUndoArchive = function (contact) {
+    return contact.status == 'archived' && !that.contactGetUserSync(contact);
+  };
+  /**
+  * getContactImageUrl
+  *
+  * @memberOf common
+  * @name  common#getContactImageUrl
+  * @method
+  *
+  * @param  cr.Contact or contact object
+  * @return {string} image path or base64 image
+  */
+  that.getContactImageUrl = function (ds, contact, size, bustCache) {
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
+    // Show avatar initials
+    return imageHelper.getAvatarInitial(contact.name, size);
+  };
+  return that;
 }(common_image);
 common_user = function (imageHelper) {
   return {
@@ -6724,7 +6753,7 @@ Contact = function ($, Base, common, User, Helper) {
    * @returns {boolean}
    */
   Contact.prototype.canReserve = function () {
-    return this.status == 'active';
+    return common.contactCanReserve(this);
   };
   /**
    * Checks if a contact can be used in a checkout (based on status)
@@ -6732,23 +6761,7 @@ Contact = function ($, Base, common, User, Helper) {
    * @returns {boolean}
    */
   Contact.prototype.canCheckout = function () {
-    return this.status == 'active';
-  };
-  /**
-   * Checks if a contact can be archived (based on status)
-   * @name Contact#canArchive
-   * @returns {boolean}
-   */
-  Contact.prototype.canArchive = function () {
-    return this.status == 'active' && !this.getUserSync();
-  };
-  /**
-   * Checks if a contact can be unarchived (based on status)
-   * @name Contact#canUndoArchive
-   * @returns {boolean}
-   */
-  Contact.prototype.canUndoArchive = function () {
-    return this.status == 'archived' && !this.getUserSync();
+    return common.contactCanCheckout(this);
   };
   /**
    * Checks if we can generate a document for this contact (based on status)
@@ -6756,7 +6769,23 @@ Contact = function ($, Base, common, User, Helper) {
    * @returns {boolean}
    */
   Contact.prototype.canGenerateDocument = function () {
-    return this.status == 'active';
+    return common.contactCanGenerateDocument(this);
+  };
+  /**
+   * Checks if a contact can be archived (based on status)
+   * @name Contact#canArchive
+   * @returns {boolean}
+   */
+  Contact.prototype.canArchive = function () {
+    return common.contactCanArchive(this);
+  };
+  /**
+   * Checks if a contact can be unarchived (based on status)
+   * @name Contact#canUndoArchive
+   * @returns {boolean}
+   */
+  Contact.prototype.canUndoArchive = function () {
+    return common.contactCanUndoArchive(this);
   };
   /**
    * Archive a contact
@@ -7574,6 +7603,7 @@ Group = function ($, common, api, Document) {
     var spec = $.extend({}, opt);
     Document.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
+    //this.autoUpdateGeo = spec.
     this.itemFlags = spec.itemFlags || DEFAULTS.itemFlags.slice();
     this.kitFlags = spec.kitFlags || DEFAULTS.kitFlags.slice();
     this.customerFlags = spec.customerFlags || DEFAULTS.customerFlags.slice();

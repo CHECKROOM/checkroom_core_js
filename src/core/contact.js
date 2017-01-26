@@ -106,7 +106,7 @@ define([
      * @returns {boolean}
      */
     Contact.prototype.canReserve = function() {
-        return (this.status=="active");
+        return common.contactCanReserve(this);
     };
 
     /**
@@ -115,25 +115,7 @@ define([
      * @returns {boolean}
      */
     Contact.prototype.canCheckout = function() {
-        return (this.status=="active");
-    };
-
-    /**
-     * Checks if a contact can be archived (based on status)
-     * @name Contact#canArchive
-     * @returns {boolean}
-     */
-    Contact.prototype.canArchive = function() {
-        return (this.status=="active") && (!this.getUserSync());
-    };
-
-    /**
-     * Checks if a contact can be unarchived (based on status)
-     * @name Contact#canUndoArchive
-     * @returns {boolean}
-     */
-    Contact.prototype.canUndoArchive = function() {
-        return (this.status=="archived") && (!this.getUserSync());
+        return common.contactCanCheckout(this);
     };
 
     /**
@@ -142,7 +124,25 @@ define([
      * @returns {boolean}
      */
     Contact.prototype.canGenerateDocument = function() {
-        return (this.status=="active");
+        return common.contactCanGenerateDocument(this);
+    };
+
+    /**
+     * Checks if a contact can be archived (based on status)
+     * @name Contact#canArchive
+     * @returns {boolean}
+     */
+    Contact.prototype.canArchive = function() {
+        return common.contactCanArchive(this);
+    };
+
+    /**
+     * Checks if a contact can be unarchived (based on status)
+     * @name Contact#canUndoArchive
+     * @returns {boolean}
+     */
+    Contact.prototype.canUndoArchive = function() {
+        return common.contactCanUndoArchive(this);
     };
 
     /**
@@ -199,9 +199,9 @@ define([
      */
     Contact.prototype.isEmpty = function() {
         return (
-            (Base.prototype.isEmpty.call(this)) &&
-                (this.name==DEFAULTS.name) &&
-                (this.email==DEFAULTS.email));
+        (Base.prototype.isEmpty.call(this)) &&
+        (this.name==DEFAULTS.name) &&
+        (this.email==DEFAULTS.email));
     };
 
     /**
@@ -238,7 +238,7 @@ define([
                 that.status = data.status || DEFAULTS.status;
                 that.user = data.user || DEFAULTS.user;
                 that.kind = data.kind || DEFAULTS.kind;
-                
+
                 $.publish('contact.fromJson', data);
                 return data;
             });

@@ -5,7 +5,8 @@
  */
 define([
     'jquery',
-    'base'], /** @lends Base */ function ($, Base) {
+    'common',
+    'base'], /** @lends Base */ function ($, common, Base) {
 
     var FLAG = "cheqroom.prop.Custom",
         DEFAULT_LAT = 0.0,
@@ -520,7 +521,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canReserve = function() {
-        return (this.status!="expired") && (this.status!="in_custody");
+        return common.itemCanReserve(this);
     };
 
     /**
@@ -529,7 +530,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canCheckout = function() {
-        return (this.status=="available");
+        return common.itemCanCheckout(this);
     };
 
     /**
@@ -538,7 +539,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canGoToCheckout = function() {
-        return (this.status=="checkedout") || (this.status=="await_checkout");
+        return common.itemCanGoToCheckout(this);
     };
 
     /**
@@ -547,7 +548,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canCheckin = function() {
-        return (this.status=="checkedout");
+        return common.itemCanCheckin(this);
     };
 
     /**
@@ -556,7 +557,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canExpire = function() {
-        return (this.status=="available");
+        return common.itemCanExpire(this);
     };
 
     /**
@@ -565,7 +566,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canUndoExpire = function() {
-        return (this.status=="expired");
+        return common.itemCanUndoExpire(this);
     };
 
     /**
@@ -718,7 +719,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canTakeCustody = function() {
-        return (this.status=="available");
+        return common.itemCanTakeCustody(this);
     };
 
     /**
@@ -727,7 +728,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canReleaseCustody = function() {
-        return (this.status=="in_custody");
+        return common.itemCanReleaseCustody(this);
     };
 
     /**
@@ -736,7 +737,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canTransferCustody = function() {
-        return (this.status=="in_custody");
+        return common.itemCanTransferCustody(this);
     };
 
     /**

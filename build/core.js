@@ -1300,18 +1300,46 @@ common_reservation = {
     }
   }
 };
-common_item = {
+common_item = function () {
+  var that = {};
+  that.itemCanTakeCustody = function (item) {
+    return item.status == 'available';
+  };
+  that.itemCanReleaseCustody = function (item) {
+    return item.status == 'in_custody';
+  };
+  that.itemCanTransferCustody = function (item) {
+    return item.status == 'in_custody';
+  };
+  that.itemCanReserve = function (item) {
+    return item.status != 'expired' && item.status != 'in_custody';
+  };
+  that.itemCanCheckout = function (item) {
+    return item.status == 'available';
+  };
+  that.itemCanGoToCheckout = function (item) {
+    return item.status == 'checkedout' || item.status == 'await_checkout';
+  };
+  that.itemCanCheckin = function (item) {
+    return item.status == 'checkedout';
+  };
+  that.itemCanExpire = function (item) {
+    return item.status == 'available';
+  };
+  that.itemCanUndoExpire = function (item) {
+    return item.status == 'expired';
+  };
   /**
-   * getFriendlyItemStatus 
-   *
-   * @memberOf common
-   * @name  common#getFriendlyItemStatus
-   * @method
-   * 
-   * @param  status
-   * @return {string}        
-   */
-  getFriendlyItemStatus: function (status) {
+  * getFriendlyItemStatus
+  *
+  * @memberOf common
+  * @name  common#getFriendlyItemStatus
+  * @method
+  *
+  * @param  status
+  * @return {string}
+  */
+  that.getFriendlyItemStatus = function (status) {
     // ITEM_STATUS = ('available', 'checkedout', 'await_checkout', 'in_transit', 'maintenance', 'repair', 'inspection', 'expired')
     switch (status) {
     case 'available':
@@ -1335,7 +1363,7 @@ common_item = {
     default:
       return 'Unknown';
     }
-  },
+  };
   /**
   * getItemStatusCss
   *
@@ -1346,7 +1374,7 @@ common_item = {
   * @param  status 
   * @return {string}       
   */
-  getItemStatusCss: function (status) {
+  that.getItemStatusCss = function (status) {
     switch (status) {
     case 'available':
       return 'label-available';
@@ -1369,7 +1397,7 @@ common_item = {
     default:
       return '';
     }
-  },
+  };
   /**
   * getItemStatusIcon
   *
@@ -1380,7 +1408,7 @@ common_item = {
   * @param  status
   * @return {string}       
   */
-  getItemStatusIcon: function (status) {
+  that.getItemStatusIcon = function (status) {
     switch (status) {
     case 'available':
       return 'fa fa-check-circle';
@@ -1403,7 +1431,7 @@ common_item = {
     default:
       return '';
     }
-  },
+  };
   /**
   * getItemsByStatus
   *
@@ -1415,7 +1443,7 @@ common_item = {
   * @param  {string|function} comparator 
   * @return {Array}           
   */
-  getItemsByStatus: function (items, comparator) {
+  that.getItemsByStatus = function (items, comparator) {
     if (!items)
       return [];
     return items.filter(function (item) {
@@ -1427,51 +1455,52 @@ common_item = {
         return comparator(item);
       }
     });
-  },
+  };
   /**
-     * getAvailableItems
-     * 
-     * @memberOf common
+  * getAvailableItems
+  * 
+  * @memberOf common
   * @name  common#getAvailableItems
   * @method
-     * 
-     * @param  {Array} items 
-     * @return {Array}       
-     */
-  getAvailableItems: function (items) {
+  * 
+  * @param  {Array} items 
+  * @return {Array}       
+  */
+  that.getAvailableItems = function (items) {
     return this.getItemsByStatus(items, 'available');
-  },
+  };
   /**
-     * getActiveItems
-     * 
-     * @memberOf common
+  * getActiveItems
+  * 
+  * @memberOf common
   * @name  common#getActiveItems
   * @method
-     * 
-     * @param  {Array} items 
-     * @return {Array}       
-     */
-  getActiveItems: function (items) {
+  * 
+  * @param  {Array} items 
+  * @return {Array}       
+  */
+  that.getActiveItems = function (items) {
     return this.getItemsByStatus(items, function (item) {
       return item.status != 'expired' && item.status != 'in_custody';
     });
-  },
+  };
   /**
-   * getItemIds
-   *
-   * @memberOf common
-   * @name  common#getItemIds
-   * @method
-   * 
-   * @param  items 
-   * @return {array}       
-   */
-  getItemIds: function (items) {
+  * getItemIds
+  *
+  * @memberOf common
+  * @name  common#getItemIds
+  * @method
+  * 
+  * @param  items 
+  * @return {array}       
+  */
+  that.getItemIds = function (items) {
     return items.map(function (item) {
       return typeof item === 'string' ? item : item._id;
     });
-  }
-};
+  };
+  return that;
+}();
 common_conflicts = {
   /**
    * getFriendlyConflictKind
@@ -7603,7 +7632,6 @@ Group = function ($, common, api, Document) {
     var spec = $.extend({}, opt);
     Document.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
-    //this.autoUpdateGeo = spec.
     this.itemFlags = spec.itemFlags || DEFAULTS.itemFlags.slice();
     this.kitFlags = spec.kitFlags || DEFAULTS.kitFlags.slice();
     this.customerFlags = spec.customerFlags || DEFAULTS.customerFlags.slice();
@@ -7886,7 +7914,7 @@ Group = function ($, common, api, Document) {
   };
   return Group;
 }(jquery, common, api, document);
-Item = function ($, Base) {
+Item = function ($, common, Base) {
   var FLAG = 'cheqroom.prop.Custom', DEFAULT_LAT = 0, DEFAULT_LONG = 0, DEFAULTS = {
       name: '',
       status: '',
@@ -8306,7 +8334,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canReserve = function () {
-    return this.status != 'expired' && this.status != 'in_custody';
+    return common.itemCanReserve(this);
   };
   /**
    * Checks if an item can be checked out (based on status)
@@ -8314,7 +8342,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canCheckout = function () {
-    return this.status == 'available';
+    return common.itemCanCheckout(this);
   };
   /**
    * Checks if we can go to the checkout of an item (based on status)
@@ -8322,7 +8350,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canGoToCheckout = function () {
-    return this.status == 'checkedout' || this.status == 'await_checkout';
+    return common.itemCanGoToCheckout(this);
   };
   /**
    * Checks if an item can be checked in (based on status)
@@ -8330,7 +8358,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canCheckin = function () {
-    return this.status == 'checkedout';
+    return common.itemCanCheckin(this);
   };
   /**
    * Checks if an item can be expired (based on status)
@@ -8338,7 +8366,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canExpire = function () {
-    return this.status == 'available';
+    return common.itemCanExpire(this);
   };
   /**
    * Checks if an aitem can be made available again (based on status)
@@ -8346,7 +8374,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canUndoExpire = function () {
-    return this.status == 'expired';
+    return common.itemCanUndoExpire(this);
   };
   /**
    * Expires an item, puts it in the *expired* status
@@ -8518,7 +8546,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canTakeCustody = function () {
-    return this.status == 'available';
+    return common.itemCanTakeCustody(this);
   };
   /**
    * Checks if custody can be released for an item (based on status)
@@ -8526,7 +8554,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canReleaseCustody = function () {
-    return this.status == 'in_custody';
+    return common.itemCanReleaseCustody(this);
   };
   /**
    * Checks if custody can be transferred for an item (based on status)
@@ -8534,7 +8562,7 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.canTransferCustody = function () {
-    return this.status == 'in_custody';
+    return common.itemCanTransferCustody(this);
   };
   /**
    * Takes custody of an item
@@ -8582,7 +8610,7 @@ Item = function ($, Base) {
     });
   };
   return Item;
-}(jquery, base);
+}(jquery, common, base);
 Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',

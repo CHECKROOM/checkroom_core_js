@@ -561,12 +561,22 @@ define([
     };
 
     /**
-     * Checks if an aitem can be made available again (based on status)
+     * Checks if an item can be made available again (based on status)
      * @name Item#canUndoExpire
      * @returns {boolean}
      */
     Item.prototype.canUndoExpire = function() {
         return common.itemCanUndoExpire(this);
+    };
+
+    /**
+     * Checks if an item can be deleted
+     * @name Item#canDelete
+     * @returns {boolean}
+     */
+    Item.prototype.canDelete = function() {
+        var can = Base.prototype.canDelete.call(this);
+        return can && common.itemCanDelete(this);
     };
 
     /**

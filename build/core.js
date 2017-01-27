@@ -1329,6 +1329,9 @@ common_item = function () {
   that.itemCanUndoExpire = function (item) {
     return item.status == 'expired';
   };
+  that.itemCanDelete = function (item) {
+    return item.status == 'available' || item.status == 'expired';
+  };
   /**
   * getFriendlyItemStatus
   *
@@ -8369,12 +8372,21 @@ Item = function ($, common, Base) {
     return common.itemCanExpire(this);
   };
   /**
-   * Checks if an aitem can be made available again (based on status)
+   * Checks if an item can be made available again (based on status)
    * @name Item#canUndoExpire
    * @returns {boolean}
    */
   Item.prototype.canUndoExpire = function () {
     return common.itemCanUndoExpire(this);
+  };
+  /**
+   * Checks if an item can be deleted
+   * @name Item#canDelete
+   * @returns {boolean}
+   */
+  Item.prototype.canDelete = function () {
+    var can = Base.prototype.canDelete.call(this);
+    return can && common.itemCanDelete(this);
   };
   /**
    * Expires an item, puts it in the *expired* status

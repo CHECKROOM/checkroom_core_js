@@ -39,6 +39,11 @@ define(function () {
 	that.itemCanUndoExpire = function(item) {
 		return (item.status=="expired");
 	};
+
+	that.itemCanDelete = function(item) {
+		return ((item.status=="available") || (item.status=="expired"));
+	};
+
 	
 	/**
 	 * getFriendlyItemStatus

@@ -146,6 +146,16 @@ define([
     };
 
     /**
+     * Checks if a contact can be deleted (based on status and link to user)
+     * @name Contact#canDelete
+     * @returns {boolean}
+     */
+    Contact.prototype.canDelete = function() {
+        var can = Base.prototype.canDelete.call(this);
+        return can && common.contactCanDelete(this);
+    };
+
+    /**
      * Archive a contact
      * @name Contact#archive
      * @param skipRead

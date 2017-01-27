@@ -41,6 +41,10 @@ define(['common/image'], function (imageHelper) {
 		return (contact.status=="archived") && (!that.contactGetUserSync(contact));
 	};
 
+	that.contactCanDelete = function(contact) {
+		return (!that.contactGetUserId(contact));
+	};
+
 
 	/**
 	 * getContactImageUrl

@@ -3612,6 +3612,9 @@ common_contact = function (imageHelper) {
   that.contactCanUndoArchive = function (contact) {
     return contact.status == 'archived' && !that.contactGetUserSync(contact);
   };
+  that.contactCanDelete = function (contact) {
+    return !that.contactGetUserId(contact);
+  };
   /**
   * getContactImageUrl
   *
@@ -6818,6 +6821,15 @@ Contact = function ($, Base, common, User, Helper) {
    */
   Contact.prototype.canUndoArchive = function () {
     return common.contactCanUndoArchive(this);
+  };
+  /**
+   * Checks if a contact can be deleted (based on status and link to user)
+   * @name Contact#canDelete
+   * @returns {boolean}
+   */
+  Contact.prototype.canDelete = function () {
+    var can = Base.prototype.canDelete.call(this);
+    return can && common.contactCanDelete(this);
   };
   /**
    * Archive a contact

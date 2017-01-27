@@ -12289,7 +12289,6 @@ Template = function ($, common, api, Document) {
     data.name = this.name;
     data.subject = this.subject;
     data.body = this.body;
-    data.format = this.format;
     data.dialect = this.dialect;
     data.kind = this.kind;
     data.askSignature = this.askSignature;
@@ -12297,6 +12296,7 @@ Template = function ($, common, api, Document) {
     data.height = this.height;
     data.unit = this.unit;
     // don't write out fields for:
+    // - format
     // - status
     // - system
     // - created, modified

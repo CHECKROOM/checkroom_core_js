@@ -138,8 +138,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canCheckout = function() {
-        var items = this.items || [];
-        return common.getAvailableItems(items).length > 0;
+        return common.kitCanCheckout(this);
     };
 
     /**
@@ -149,8 +148,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReserve = function() {
-        var items = this.items || [];
-        return common.getActiveItems(items).length > 0;
+        return common.kitCanReserve(this);
     };
 
     /**
@@ -252,7 +250,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canTakeCustody = function() {
-        return (this.status=="available");
+        return common.kitCanTakeCustody(this);
     };
 
     /**
@@ -261,7 +259,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReleaseCustody = function() {
-        return (this.status=="in_custody");
+        return common.kitCanReleaseCustody(this);
     };
 
     /**
@@ -270,7 +268,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canTransferCustody = function() {
-        return (this.status=="in_custody");
+        return common.kitCanTransferCustody(this);
     };
 
     /**

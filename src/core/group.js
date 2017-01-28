@@ -70,6 +70,18 @@ define([
 
     // Business logic
     // ----
+    /**
+     * Sets the name for a group
+     * @param name
+     * @returns {promise}
+     */
+    Group.prototype.updateName = function(name) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "updateName",
+            location: name
+        });
+    };
 
     /**
      * Gets the stats (for a specific location)
@@ -310,6 +322,19 @@ define([
             default:
                 return [];
         }
+    };
+
+    //
+    // Specific validators
+    /**
+     * Checks if name is valid
+     * @name Group#isValidName
+     * @method
+     * @return {Boolean}
+     */
+    Group.prototype.isValidName = function() {
+        this.name = $.trim(this.name);
+        return (this.name.length>=3);
     };
 
     // toJson, fromJson

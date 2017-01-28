@@ -3481,105 +3481,160 @@ common_slimdown = function () {
   window.Slimdown = Slimdown;
 }();
 common_kit = function ($, itemHelpers) {
-  return {
-    /**
-     * getKitStatus 
-     * Available 		=> if all items in the kit are available
-        * Checking out 	=> if all item in the kit is checking out
-        * Checked out 		=> if all item in the kit is checked out 
-        * Expired			=> if all item in the kit is expired
-           * Unknown          => if not all items in the kit have the same status
-           * 
-     * @memberOf common
-     * @name  common#getKitStatus
-     * @method
-     * 
-     * @param  status
-     * @return {string}        
-     */
-    getKitStatus: function (items) {
-      var statuses = {};
-      var itemStatuses = [];
-      var orders = {};
-      var itemOrders = [];
-      // Make dictionary of different item statuses
-      $.each(items, function (i, item) {
-        // Unique item statuses
-        if (!statuses[item.status]) {
-          statuses[item.status] = true;
-          itemStatuses.push(item.status);
-        }
-        // Unique item orders
-        if (!orders[item.order]) {
-          orders[item.order] = true;
-          itemOrders.push(item.order);
-        }
-      });
-      if (itemStatuses.length == 1 && itemOrders.length <= 1) {
-        // All items in the kit have the same status and are in the same order
-        return itemStatuses[0];
-      } else {
-        // Kit has items with different statuses
-        return 'incomplete';
+  var that = {};
+  /**
+   * Checks if a kit can be checked out (any items available)
+   * @memberOf common
+   * @name common#kitCanCheckout
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanCheckout = function (kit) {
+    return common.getAvailableItems(kit.items || []).length > 0;
+  };
+  /**
+   * Checks if a kit can be reserved (any items active)
+   * @memberOf common
+   * @name common#kitCanReserve
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanReserve = function (kit) {
+    return common.getActiveItems(kit.items || []).length > 0;
+  };
+  /**
+   * Checks if custody can be taken for a kit (based on status)
+   * @memberOf common
+   * @name common#kitCanTakeCustody
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanTakeCustody = function (kit) {
+    return kit.status == 'available';
+  };
+  /**
+   * Checks if custody can be released for a kit (based on status)
+   * @memberOf common
+   * @name common#kitCanReleaseCustody
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanReleaseCustody = function (kit) {
+    return kit.status == 'in_custody';
+  };
+  /**
+   * Checks if custody can be transferred for a kit (based on status)
+   * @memberOf common
+   * @name common#kitCanTransferCustody
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanTransferCustody = function (kit) {
+    return kit.status == 'in_custody';
+  };
+  /**
+   * getKitStatus
+   * Available 		=> if all items in the kit are available
+   * Checking out 	=> if all item in the kit is checking out
+   * Checked out 		=> if all item in the kit is checked out
+   * Expired			=> if all item in the kit is expired
+   * Unknown          => if not all items in the kit have the same status
+   *
+   * @memberOf common
+   * @name  common#getKitStatus
+   * @method
+   *
+   * @param  status
+   * @return {string}
+   */
+  that.getKitStatus = function (items) {
+    var statuses = {};
+    var itemStatuses = [];
+    var orders = {};
+    var itemOrders = [];
+    // Make dictionary of different item statuses
+    $.each(items, function (i, item) {
+      // Unique item statuses
+      if (!statuses[item.status]) {
+        statuses[item.status] = true;
+        itemStatuses.push(item.status);
       }
-    },
-    /**
-     * getFriendlyKitStatus 
-     *
-     * @memberOf common
-     * @name  common#getFriendlyKitStatus
-     * @method
-     * 
-     * @param  status
-     * @return {string}        
-     */
-    getFriendlyKitStatus: function (status) {
-      if (status == 'incomplete') {
-        return 'Incomplete';
+      // Unique item orders
+      if (!orders[item.order]) {
+        orders[item.order] = true;
+        itemOrders.push(item.order);
       }
-      return itemHelpers.getFriendlyItemStatus(status);
-    },
-    /**
-     * getKitStatusCss
-     *
-     * @memberOf common
-     * @name  common#getKitStatusCss
-     * @method
-     * 
-     * @param  status 
-     * @return {string}       
-     */
-    getKitStatusCss: function (status) {
-      if (status == 'incomplete') {
-        return 'label-incomplete';
-      }
-      return itemHelpers.getItemStatusCss(status);
-    },
-    /**
-     * getKitIds
-     *
-     * @memberOf common
-     * @name  common#getKitIds
-     * @method
-     * 
-     * @param  items 
-     * @return {array}       
-     */
-    getKitIds: function (items) {
-      var kitDictionary = {};
-      var ids = [];
-      $.each(items, function (i, item) {
-        if (item.kit) {
-          var kitId = typeof item.kit == 'string' ? item.kit : item.kit._id;
-          if (!kitDictionary[kitId]) {
-            kitDictionary[kitId] = true;
-            ids.push(kitId);
-          }
-        }
-      });
-      return ids;
+    });
+    if (itemStatuses.length == 1 && itemOrders.length <= 1) {
+      // All items in the kit have the same status and are in the same order
+      return itemStatuses[0];
+    } else {
+      // Kit has items with different statuses
+      return 'incomplete';
     }
   };
+  /**
+   * getFriendlyKitStatus
+   *
+   * @memberOf common
+   * @name  common#getFriendlyKitStatus
+   * @method
+   *
+   * @param  status
+   * @return {string}
+   */
+  that.getFriendlyKitStatus = function (status) {
+    if (status == 'incomplete') {
+      return 'Incomplete';
+    }
+    return itemHelpers.getFriendlyItemStatus(status);
+  };
+  /**
+   * getKitStatusCss
+   *
+   * @memberOf common
+   * @name  common#getKitStatusCss
+   * @method
+   *
+   * @param  status
+   * @return {string}
+   */
+  that.getKitStatusCss = function (status) {
+    if (status == 'incomplete') {
+      return 'label-incomplete';
+    }
+    return itemHelpers.getItemStatusCss(status);
+  };
+  /**
+   * getKitIds
+   *
+   * @memberOf common
+   * @name  common#getKitIds
+   * @method
+   *
+   * @param  items
+   * @return {array}
+   */
+  that.getKitIds = function (items) {
+    var kitDictionary = {};
+    var ids = [];
+    $.each(items, function (i, item) {
+      if (item.kit) {
+        var kitId = typeof item.kit == 'string' ? item.kit : item.kit._id;
+        if (!kitDictionary[kitId]) {
+          kitDictionary[kitId] = true;
+          ids.push(kitId);
+        }
+      }
+    });
+    return ids;
+  };
+  return that;
 }(jquery, common_item);
 common_contact = function (imageHelper) {
   var that = {};
@@ -7663,6 +7718,18 @@ Group = function ($, common, api, Document) {
   // Business logic
   // ----
   /**
+   * Sets the name for a group
+   * @param name
+   * @returns {promise}
+   */
+  Group.prototype.updateName = function (name) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'updateName',
+      location: name
+    });
+  };
+  /**
    * Gets the stats (for a specific location)
    * @param locationId
    * @returns {promise}
@@ -7888,6 +7955,18 @@ Group = function ($, common, api, Document) {
     default:
       return [];
     }
+  };
+  //
+  // Specific validators
+  /**
+   * Checks if name is valid
+   * @name Group#isValidName
+   * @method
+   * @return {Boolean}
+   */
+  Group.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    return this.name.length >= 3;
   };
   // toJson, fromJson
   // ----
@@ -8750,8 +8829,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canCheckout = function () {
-    var items = this.items || [];
-    return common.getAvailableItems(items).length > 0;
+    return common.kitCanCheckout(this);
   };
   /**
    * Checks if a Kit can be reserved (based on status)
@@ -8760,8 +8838,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canReserve = function () {
-    var items = this.items || [];
-    return common.getActiveItems(items).length > 0;
+    return common.kitCanReserve(this);
   };
   /**
    * addItems; adds a bunch of Items to the transaction using a list of item ids
@@ -8871,7 +8948,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canTakeCustody = function () {
-    return this.status == 'available';
+    return common.kitCanTakeCustody(this);
   };
   /**
    * Checks if custody can be released for a kit (based on status)
@@ -8879,7 +8956,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canReleaseCustody = function () {
-    return this.status == 'in_custody';
+    return common.kitCanReleaseCustody(this);
   };
   /**
    * Checks if custody can be transferred for a kit (based on status)
@@ -8887,7 +8964,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canTransferCustody = function () {
-    return this.status == 'in_custody';
+    return common.kitCanTransferCustody(this);
   };
   /**
    * Takes custody of a kit (and all items in it)

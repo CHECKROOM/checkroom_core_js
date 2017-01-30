@@ -85,6 +85,8 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         spec = spec || {};
         this.roundType = spec.roundType || "nearest";
         this.roundMinutes = spec.roundMinutes || INCREMENT;
+        this.timeFormat24 = (spec.timeFormat24) ? spec.timeFormat24 : false;
+        this._momentFormat = (this.timeFormat24) ? "MMM D [at] H:mm" : "MMM D [at] h:mm a";
     };
 
     /**
@@ -126,8 +128,11 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
          - when the date is >7d away:
          - 07/25/2015
          */
+        if (!moment.isMoment(date)) {
+            date = moment(date);
+        }
         now = now || this.getNow();
-        format = format || "MMM D [at] h:mm a";
+        format = format || this._momentFormat;
         var diff = now.diff(date, 'days');
         var str = (Math.abs(diff) < 7) ? date.calendar() : date.format(format);
         return str

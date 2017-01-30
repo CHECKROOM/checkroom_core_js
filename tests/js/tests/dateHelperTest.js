@@ -6,6 +6,22 @@ define(['settings', 'cheqroom-core'], function(settings, cr) {
 
         var run = function() {
 
+            test('getDateRanges hours avg', function() {
+                // Fri Dec 13 2013 11:55:30 GMT+0100 (CET)
+                var d1 = new Date(2013, 11, 13, 15, 55, 30, 111);
+
+                var helper24 = new cr.DateHelper({timeFormat24: true});
+                var parts24 = helper24.getFriendlyDateParts(d1);
+
+                var helper12 = new cr.DateHelper({timeFormat24: false});
+                var parts12 = helper12.getFriendlyDateParts(d1);
+
+                equal(parts24[0], "Dec 13");
+                equal(parts12[0], "Dec 13");
+                equal(parts24[1], "15:55");
+                equal(parts12[1], "3:55 pm");
+            });
+
             test('getDateRanges day avg', function() {
                 // Fri Dec 13 2013 11:55:30 GMT+0100 (CET)
                 var d1 = new Date(2013, 11, 13, 11, 55, 30, 111);

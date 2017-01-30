@@ -41,6 +41,21 @@ define(function () {
                 default: return 'Unknown';
             }
         },
+         /**
+         * isReservationOverdue
+         *
+         * @memberOf common
+         * @name  common#isReservationOverdue
+         * @method
+         * 
+         * @param  {object}  reservation 
+         * @param  {moment}  now   
+         * @return {Boolean}       
+         */
+        isReservationOverdue: function(reservation, now) {
+            now = now || moment();
+            return (reservation.status=="open") && (now.isAfter(reservation.fromDate));
+        },
         /**
          * isReservationArchived
          *

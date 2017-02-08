@@ -18,7 +18,7 @@ define([
     var DEFAULT_SOURCE = "attempt";
     var DEFAULT_KIND = "trial";
 
-    var Signup = function(opt) {
+    var Signup = function(opt, settings) {
         opt = opt || {};
         this.ds = opt.ds || new api.ApiAnonymous({
                 urlApi: settings.urlApi,
@@ -33,7 +33,7 @@ define([
         this.login = opt.login || "";
         this.password = opt.password || "";
         this.plan = opt.plan || DEFAULT_PLAN;
-        this.period = opt.plan || DEFAULT_PERIOD;
+        this.period = opt.period || DEFAULT_PERIOD;
         this.source = opt.source || "";
         this.phone = opt.phone || "";
         this.industry = opt.industry || "";
@@ -149,8 +149,8 @@ define([
 
     Signup.prototype.createAccount = function() {
         var that = this,
-            beforeCreate = this.onBeforeCreateAccount || $.Deferred().resolve(),
-            afterCreate = this.onCreatedAccount || $.Deferred().resolve();
+            beforeCreate = this.onBeforeCreateAccount,
+            afterCreate = this.onCreatedAccount;
 
         return beforeCreate()
             .then(function() {
@@ -167,10 +167,10 @@ define([
             })
     };
 
-    Signup.prototype.activateAccount = function() {
+    Signup.prototype.activateAccount = function(storeInLocalStorage) {
         var that = this,
-            beforeActivate = this.onBeforeActivateAccount || $.Deferred().resolve(),
-            afterActivate = this.onActivatedAccount || $.Deferred().resolve();
+            beforeActivate = this.onBeforeActivateAccount,
+            afterActivate = this.onActivatedAccount;
 
         return beforeActivate()
             .then(function() {
@@ -178,18 +178,61 @@ define([
                     groupId: that.getGroupId(),
                     name: that.getFullName(),
                     login: $.trim(that.login),
+                    email: $.trim(that.email),
                     password: $.trim(that.password),
                     timezone: $.trim(that.timezone),
                     load_sample: false,
                     owner_customer: true,
                     maintenance_customer: true
                 })
-                    .then(function(data) {
+                    .then(function(user) {
+                        if(storeInLocalStorage){
+                            // Already store the login token in localStorage
+                            var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
+                            tmpUser.toStorage();
+                        }
+
                         return afterActivate(data);
                     });
             });
 
     };
+
+    Signup.prototype.storeLead = function(tags){
+        return this.ds.call("storeLead", {
+            firstName: $.trim(this.firstName),
+            lastName: $.trim(this.lastName),
+            email: $.trim(this.email),
+            company: $.trim(this.company),
+            tags: tags || []
+        });
+    };
+
+    Signup.prototype.onBeforeCreateAccount = function(){
+        if(this.onBeforeCreateAccount) return this.onBeforeCreateAccount();
+
+        return $.Deferred().resolve();
+    };
+
+    Signup.prototype.onBeforeActivateAccount = function(){
+        if(this.onBeforeActivateAccount) return this.onBeforeActivateAccount();
+
+        return $.Deferred().resolve();
+    };
+
+
+    Signup.prototype.onActivatedAccount = function(){
+        if(this.onActivatedAccount) return this.onActivatedAccount();
+
+        return $.Deferred().resolve();
+    };
+
+    Signup.prototype.onCreatedAccount = function(){
+        if(this.onCreatedAccount) return this.onCreatedAccount();
+
+        return $.Deferred().resolve();
+    };
+
 
     // Static constructor
     // ----
@@ -205,7 +248,7 @@ define([
      * Constructor function that creates a Signup object from the params on the querystring
      * @returns {Signup}
      */
-    Signup.fromQueryString = function() {
+    Signup.fromQueryString = function(opt, settings) {
         var name = utils.getUrlParam("name", "").capitalize(),
             email = utils.getUrlParam("email", ""),
             company = utils.getUrlParam("company", ""),
@@ -215,7 +258,7 @@ define([
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
             plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
-            timezone = utils.getUrlParam("period", jstz.determine().name());
+            timezone = utils.getUrlParam("timezone", jstz.determine().name());
 
         if( (firstName.length==0) &&
             (lastName.length==0) &&
@@ -231,7 +274,7 @@ define([
             login = utils.getLoginName(firstName, lastName);
         }
 
-        return new Signup({
+        return new Signup($.extend({
             name: name,
             email: email,
             company: company,
@@ -242,7 +285,7 @@ define([
             source: source,
             plan: plan,
             period: period
-        });
+        }, opt), settings);
     };
 
     return Signup;

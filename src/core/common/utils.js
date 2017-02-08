@@ -136,6 +136,9 @@ define(['jquery'], function ($) {
         return (results) ? decodeURIComponent(results[1].replace(/\+/g, " ")) : def;
     };
 
+    // jQuery extension method
+    $.urlParam = utils.getUrlParam;
+
     /**
      * getParsedLines
      * @memberOf utils

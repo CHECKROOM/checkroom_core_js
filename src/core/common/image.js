@@ -189,7 +189,7 @@ define(['jquery'], function ($) {
             if( (size) &&
                 (size.length>0)) {
                 var parts = url.split('.');
-                var ext = parts.pop();  // pop off the extension, we'll change it
+                var ext = attachmentId.indexOf('.') != -1?parts.pop():'';  // pop off the extension, we'll change it
                 url = parts.join('.') + "-" + size + ".jpg";  // resized images are always jpg
             }
             return url;          

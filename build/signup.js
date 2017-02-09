@@ -2392,7 +2392,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
         return resp.result;
       });
     } else {
-      return $.Deferred().resolve(true);
+      return $.Deferred().resolve(false);
     }
   };
   Signup.prototype.loginIsValid = function () {
@@ -2416,7 +2416,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
   };
   Signup.prototype.inviteIsValid = function () {
     if ($.trim(this.inviteToken) != '') {
-      return ds.call('checkInvite', { code: page._code }).then(function (resp) {
+      return this.ds.call('checkInvite', { code: this.inviteToken }).then(function (resp) {
         return resp.result;
       });
     } else {

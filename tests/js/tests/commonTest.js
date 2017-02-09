@@ -11,6 +11,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                 ok(common.isFreeEmail("vincent@hotmail.com"));
                 ok(common.isFreeEmail("vincent@yahoo.com"));
                 ok(!common.isFreeEmail("vincent@cheqroom.com"));
+                ok(!common.isFreeEmail("vincent+nospam@cheqroom.com"));
             });
 
             test('joinOther', function() {

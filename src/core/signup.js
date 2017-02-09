@@ -38,10 +38,14 @@ define([
         this.phone = opt.phone || "";
         this.industry = opt.industry || "";
 
+        this.inviteToken = opt.inviteToken || "";
+
         this.onBeforeCreateAccount = opt.onBeforeCreateAccount;
         this.onCreatedAccount = opt.onCreatedAccount;
         this.onBeforeActivateAccount = opt.onBeforeActivateAccount;
         this.onActivatedAccount = opt.onActivatedAccount;
+        this.onBeforeActivateInvite = opt.onBeforeActivateInvite;
+        this.onActivatedInvite = opt.onActivatedInvite;
     };
 
     // Implementation
@@ -128,6 +132,16 @@ define([
         return validation.isValidPhone($.trim(this.phone));
     };
 
+    Signup.prototype.inviteIsValid = function(){
+        if($.trim(this.inviteToken) != ""){
+            return ds.call('checkInvite', { code: page._code }).then(function(resp){
+                return resp.result;
+            });
+        }else{
+            return $.Deferred().resolve(false);
+        }
+    }
+
     // Business logic
     // ----
     Signup.prototype.getGroupId = function() {
@@ -192,11 +206,36 @@ define([
                             tmpUser.toStorage();
                         }
 
-                        return afterActivate(data);
+                        return afterActivate(user);
                     });
             });
 
     };
+
+    Signup.prototype.activateInvite = function(storeInLocalStorage){
+        var that = this,
+            beforeActivate = this.onBeforeActivateInvite,
+            afterActivate = this.onActivatedInvite;
+
+        return beforeActivate()
+            .then(function(){
+                return  that.ds.longCall('activateInvite', {
+                    name: that.getFullName(),
+                    code: that.inviteToken,
+                    login: $.trim(that.login),
+                    password: $.trim(that.password),
+                    timezone: $.trim(that.timezone)
+                }).then(function(user){
+                    if(storeInLocalStorage){
+                        // Already store the login token in localStorage
+                        var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
+                        tmpUser.toStorage();
+                    }
+
+                    return afterActivate(user);
+                })
+            })
+    }
 
     Signup.prototype.storeLead = function(tags){
         return this.ds.call("storeLead", {
@@ -214,6 +253,12 @@ define([
         return $.Deferred().resolve();
     };
 
+    Signup.prototype.onCreatedAccount = function(){
+        if(this.onCreatedAccount) return this.onCreatedAccount();
+
+        return $.Deferred().resolve();
+    };
+
     Signup.prototype.onBeforeActivateAccount = function(){
         if(this.onBeforeActivateAccount) return this.onBeforeActivateAccount();
 
@@ -227,8 +272,15 @@ define([
         return $.Deferred().resolve();
     };
 
-    Signup.prototype.onCreatedAccount = function(){
-        if(this.onCreatedAccount) return this.onCreatedAccount();
+    Signup.prototype.onBeforeActivateInvite = function(){
+        if(this.onBeforeActivateInvite) return this.onBeforeActivateInvite();
+
+        return $.Deferred().resolve();
+    };
+
+
+    Signup.prototype.onActivatedInvite = function(){
+        if(this.onActivatedInvite) return this.onActivatedInvite();
 
         return $.Deferred().resolve();
     };
@@ -258,7 +310,8 @@ define([
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
             plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
-            timezone = utils.getUrlParam("timezone", jstz.determine().name());
+            timezone = utils.getUrlParam("timezone", jstz.determine().name()),
+            inviteToken = utils.getUrlParam("code", "");
 
         if( (firstName.length==0) &&
             (lastName.length==0) &&
@@ -284,7 +337,8 @@ define([
             login: login,
             source: source,
             plan: plan,
-            period: period
+            period: period,
+            inviteToken: inviteToken
         }, opt), settings);
     };
 

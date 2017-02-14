@@ -14,10 +14,8 @@ define([
         id: "",
         status: "inactive",
         name: "",
-        subject: "",
         body: "",
         format: "",
-        dialect: "",
         kind: "",
         width: 0.0,
         height: 0.0,
@@ -41,10 +39,8 @@ define([
      * @class
      * @property {string} name          the name
      * @property {string} status        the status
-     * @property {string} subject       the subject (only for format `email`)
-     * @property {string} body          the body (in html, text, ... depending on the `dialect`)
-     * @property {string} format        the format (pdf, label, email)
-     * @property {string} dialect       the dialect (text, html, dymo)
+     * @property {string} body          the body (in html, xml, text, ... depending on the `format`)
+     * @property {string} format        the format (pdf, label, dymo)
      * @property {string} kind          the kind of pdf (order, reservation, customer)
      * @property {boolean} askSignature should we ask for a signature when generating a pdf
      * @property {float} width          the width of the template
@@ -64,10 +60,8 @@ define([
 
         this.name = spec.name || DEFAULTS.name;
         this.status = spec.status || DEFAULTS.status;
-        this.subject = spec.subject || DEFAULTS.subject;
         this.body = spec.body || DEFAULTS.body;
         this.format = spec.format || DEFAULTS.format;
-        this.dialect = spec.dialect || DEFAULTS.dialect;
         this.kind = spec.kind || DEFAULTS.kind;
         this.askSignature = (spec.askSignature!=null) ? (spec.askSignature==true) : DEFAULTS.askSignature;
         this.width = spec.width || DEFAULTS.width;
@@ -139,10 +133,8 @@ define([
             (this.raw)) {
             isDirty = (
                 (this.name!=this.raw.name)||
-                (this.subject!=this.raw.subject)||
                 (this.body!=this.raw.body)||
                 (this.format!=this.raw.format)||
-                (this.dialect!=this.raw.dialect)||
                 (this.kind!=this.raw.kind)||
                 (this.askSignature!=this.raw.askSignature)||
                 (this.width!=this.raw.width)||
@@ -259,9 +251,7 @@ define([
     Template.prototype._toJson = function(options) {
         var data = Document.prototype._toJson.call(this, options);
         data.name = this.name;
-        data.subject = this.subject;
         data.body = this.body;
-        data.dialect = this.dialect;
         data.kind = this.kind;
         data.askSignature = this.askSignature;
         data.width = this.width;
@@ -288,10 +278,8 @@ define([
         return Document.prototype._fromJson.call(this, data, options)
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
-                that.subject = data.subject || DEFAULTS.subject;
                 that.body = data.body || DEFAULTS.body;
                 that.format = data.format || DEFAULTS.format;
-                that.dialect = data.dialect || DEFAULTS.dialect;
                 that.kind = data.kind || DEFAULTS.kind;
                 that.askSignature = (data.askSignature!=null) ? (data.askSignature==true) : DEFAULTS.askSignature;
                 that.width = data.width || DEFAULTS.width;

@@ -2345,12 +2345,31 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
     this.phone = opt.phone || '';
     this.industry = opt.industry || '';
     this.inviteToken = opt.inviteToken || '';
-    this.onBeforeCreateAccount = opt.onBeforeCreateAccount;
-    this.onCreatedAccount = opt.onCreatedAccount;
-    this.onBeforeActivateAccount = opt.onBeforeActivateAccount;
-    this.onActivatedAccount = opt.onActivatedAccount;
-    this.onBeforeActivateInvite = opt.onBeforeActivateInvite;
-    this.onActivatedInvite = opt.onActivatedInvite;
+    this.selfserviceToken = opt.selfserviceToken || '';
+    this.onBeforeCreateAccount = opt.onBeforeCreateAccount || function () {
+      return $.Deferred().resolve();
+    };
+    this.onCreatedAccount = opt.onCreatedAccount || function () {
+      return $.Deferred().resolve();
+    };
+    this.onBeforeActivateAccount = opt.onBeforeActivateAccount || function () {
+      return $.Deferred().resolve();
+    };
+    this.onActivatedAccount = opt.onActivatedAccount || function () {
+      return $.Deferred().resolve();
+    };
+    this.onBeforeActivateInvite = opt.onBeforeActivateInvite || function () {
+      return $.Deferred().resolve();
+    };
+    this.onActivatedInvite = opt.onActivatedInvite || function () {
+      return $.Deferred().resolve();
+    };
+    this.onBeforeActivateSelfService = opt.onBeforeActivateSelfService || function () {
+      return $.Deferred().resolve();
+    };
+    this.onActivatedSelfService = opt.onActivatedSelfService || function () {
+      return $.Deferred().resolve();
+    };
   };
   // Implementation
   // ---
@@ -2501,6 +2520,30 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
       });
     });
   };
+  Signup.prototype.activateSelfService = function (storeInLocalStorage) {
+    var that = this, beforeActivate = this.onBeforeActivateSelfService, afterActivate = this.onActivatedSelfService;
+    return beforeActivate().then(function () {
+      return that.ds.longCall('createSelfServiceUser', {
+        name: that.getFullName(),
+        login: $.trim(that.login),
+        password: $.trim(that.password),
+        timezone: $.trim(that.timezone),
+        email: $.trim(that.email),
+        phone: $.trim(that.phone),
+        key: that.selfserviceToken
+      }).then(function (user) {
+        if (storeInLocalStorage) {
+          // Already store the login token in localStorage
+          var tmpUser = new api.ApiUser({
+            userId: that.login,
+            userToken: user.data.token
+          });
+          tmpUser.toStorage();
+        }
+        return afterActivate(user);
+      });
+    });
+  };
   Signup.prototype.storeLead = function (tags) {
     return this.ds.call('storeLead', {
       firstName: $.trim(this.firstName),
@@ -2509,36 +2552,6 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
       company: $.trim(this.company),
       tags: tags || []
     });
-  };
-  Signup.prototype.onBeforeCreateAccount = function () {
-    if (this.onBeforeCreateAccount)
-      return this.onBeforeCreateAccount();
-    return $.Deferred().resolve();
-  };
-  Signup.prototype.onCreatedAccount = function () {
-    if (this.onCreatedAccount)
-      return this.onCreatedAccount();
-    return $.Deferred().resolve();
-  };
-  Signup.prototype.onBeforeActivateAccount = function () {
-    if (this.onBeforeActivateAccount)
-      return this.onBeforeActivateAccount();
-    return $.Deferred().resolve();
-  };
-  Signup.prototype.onActivatedAccount = function () {
-    if (this.onActivatedAccount)
-      return this.onActivatedAccount();
-    return $.Deferred().resolve();
-  };
-  Signup.prototype.onBeforeActivateInvite = function () {
-    if (this.onBeforeActivateInvite)
-      return this.onBeforeActivateInvite();
-    return $.Deferred().resolve();
-  };
-  Signup.prototype.onActivatedInvite = function () {
-    if (this.onActivatedInvite)
-      return this.onActivatedInvite();
-    return $.Deferred().resolve();
   };
   // Static constructor
   // ----
@@ -2554,7 +2567,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), plan = utils.getUrlParam('plan', DEFAULT_PLAN), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', '');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), plan = utils.getUrlParam('plan', DEFAULT_PLAN), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
@@ -2574,7 +2587,8 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
       source: source,
       plan: plan,
       period: period,
-      inviteToken: inviteToken
+      inviteToken: inviteToken,
+      selfserviceToken: selfserviceToken
     }, opt), settings);
   };
   return Signup;

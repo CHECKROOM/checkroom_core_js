@@ -49,6 +49,8 @@ define([
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
         this.isOwner = (spec.isOwner!=null) ? spec.isOwner : DEFAULTS.isOwner;
         this.archived = spec.archived || DEFAULTS.archived;
+
+        this.dsAnonymous = spec.dsAnonymous;
     };
 
     User.prototype = new tmp();
@@ -76,6 +78,22 @@ define([
                 return true;
             default:
                 return false;
+        }
+    };
+
+    User.prototype.emailExists = function() {
+        if (this.isValidEmail()) {
+            // Don't check for emailExists for exisiting user
+            if(this.id != null && this.email == this.raw.email){
+                return $.Deferred().resolve(false);
+            }
+
+            return this.dsAnonymous.call('emailExists', {email: this.email})
+                .then(function(resp) {
+                    return resp.result;
+                });
+        } else {
+            return $.Deferred().resolve(false);
         }
     };
 
@@ -298,7 +316,6 @@ define([
         data.email = this.email || DEFAULTS.email;
         data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
-        data.active = this.active || DEFAULTS.active;
         return data;
     };
 

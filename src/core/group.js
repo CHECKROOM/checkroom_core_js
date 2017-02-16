@@ -244,7 +244,7 @@ define([
      * @param shipping
      * @returns {promise}
      */
-    Group.prototype.buyProduct = function(listOfProductQtyTuples, shipping) {
+    Group.prototype.buyProducts = function(listOfProductQtyTuples, shipping) {
         return this._doApiCall({
             pk: this.id,
             method: "buyProducts",

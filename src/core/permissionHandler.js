@@ -466,6 +466,15 @@ define([], function () {
                 }
                 break;
             case "account":
+                switch (action) {
+                    default:
+                        return this._isRootOrAdmin;
+                    case "reset":
+                    case "cancelPlan":
+                    case "changePlan":
+                        return this._isOwner;
+                }
+                break;
             case "subscription":
             case "invoices":
             case "billing":

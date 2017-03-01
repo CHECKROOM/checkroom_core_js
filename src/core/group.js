@@ -22,7 +22,8 @@ define([
         kitFields: [],
         customerFields: [],
         orderFields: [],
-        reservationFields: []
+        reservationFields: [],
+        cancelled: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -375,6 +376,8 @@ define([
                 that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
                 that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
                 that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
+                that.cancelled = data.cancelled || DEFAULTS.cancelled;
+                
                 return data;
             });
     };

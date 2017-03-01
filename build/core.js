@@ -128,7 +128,7 @@ api = function ($, jsonp, moment) {
     // ajax call was aborted
     if (t == 'abort')
       return;
-    var msg = null;
+    var msg = '';
     if (m === 'timeout') {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
@@ -506,9 +506,6 @@ api = function ($, jsonp, moment) {
     this.user = spec.user;
     this.ajax = spec.ajax;
     this.version = spec.version;
-    // Make the baseurl only once, we assume the collection and user never changes
-    var tokenType = this.user.tokenType != null && this.user.tokenType.length > 0 ? this.user.tokenType : 'null';
-    this._baseUrl = this.urlApi + '/' + this.user.userId + '/' + this.user.userToken + '/' + tokenType + '/' + this.collection + '/';
   };
   /**
    * Checks if a certain document exists
@@ -829,7 +826,10 @@ api = function ($, jsonp, moment) {
    * @returns {string}
    */
   api.ApiDataSource.prototype.getBaseUrl = function () {
-    return this._baseUrl;
+    var tokenType = this.user.tokenType != null && this.user.tokenType.length > 0 ? this.user.tokenType : 'null';
+    //Don't use cached version of this because when user session gets expired
+    //a new token is generated
+    return this.urlApi + '/' + this.user.userId + '/' + this.user.userToken + '/' + tokenType + '/' + this.collection + '/';
   };
   /**
    * Prepare some parameters so we can use them during a request
@@ -7708,7 +7708,8 @@ Group = function ($, common, api, Document) {
     kitFields: [],
     customerFields: [],
     orderFields: [],
-    reservationFields: []
+    reservationFields: [],
+    cancelled: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8038,6 +8039,7 @@ Group = function ($, common, api, Document) {
       that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
       that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
+      that.cancelled = data.cancelled || DEFAULTS.cancelled;
       return data;
     });
   };

@@ -29,6 +29,7 @@ define([
         Transaction.call(this, spec);
 
         this.conflicts = [];
+        this.order = null;
     };
 
     Reservation.prototype = new tmp();
@@ -188,6 +189,16 @@ define([
     };
 
     /**
+     * Checks if the reservation has an order linked to it
+     * @method
+     * @name Reservation#canGoToOrder
+     * @returns {boolean}
+     */
+    Reservation.prototype.canGoToOrder = function(){
+        return this.order != null;
+    }
+
+    /**
      * Checks if the reservation can be reserved again (based on status)
      * @method
      * @name Reservation#canReserveAgain
@@ -234,6 +245,7 @@ define([
         that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
         that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
         that.due = null;
+        that.order = data.order || null;
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {

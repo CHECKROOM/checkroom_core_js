@@ -174,6 +174,25 @@ define([
     };
 
     /**
+     * Checks if due date is valid for an creating order
+     * oterwise return true
+     *
+     * @name Order#isValidDueDate
+     * @return {Boolean} 
+     */
+    Order.prototype.isValidDueDate = function(){
+        var due = this.due,
+            now = this.getNow(),
+            status = this.status;
+
+        if(status == "creating"){
+            return due!=null && due.isAfter(now);
+        }
+
+        return true;
+    }
+
+    /**
      * Checks if order can be checked out
      * @method
      * @name Order#canCheckout
@@ -186,8 +205,7 @@ define([
             (this.location!=null) &&
             ((this.contact!=null) &&
             (this.contact.status == "active")) &&
-            ((this.due!=null) &&
-            (this.due.isAfter(this._getDateHelper().getNow()))) &&
+            (this.isValidDueDate()) &&
             ((this.items) &&
             (this.items.length > 0) &&
             (this.items.filter(function(item){ return that.id == that.helper.ensureId(item.order); }).length > 0))

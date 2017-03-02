@@ -79,6 +79,42 @@ define([
     };
 
     /**
+     * Checks if from date is valid for open/creating reservation
+     * otherwise return always true
+     * 
+     * @return {Boolean}
+     */
+    Reservation.prototype.isValidFromDate = function(){
+        var from = this.from,
+            status = this.status,
+            now = this.getNow();
+
+        if((status == "creating" || status == "open")){
+            return from != null && from.isAfter(now);             
+        }
+
+        return true;
+    };
+
+    /**
+     * Checks if to date is valid for open/creating reservation
+     * otherwise return always true
+     * 
+     * @return {Boolean}
+     */
+    Reservation.prototype.isValidToDate = function(){
+        var from = this.from,
+            to = this.to,
+            status = this.status;
+
+        if((status == "creating" || status == "open")){
+            return to != null && to.isAfter(from); 
+        }
+
+        return true;
+    }
+
+    /**
      * Checks if the reservation can be booked
      * @method
      * @name Reservation#canReserve
@@ -90,8 +126,8 @@ define([
                 (this.location) &&
                 ((this.contact) &&
                  (this.contact.status == "active")) &&
-                (this.from) &&
-                (this.to) &&
+                (this.isValidFromDate()) &&
+                (this.isValidToDate()) &&
                 (this.items) &&
                 (this.items.length));
     };

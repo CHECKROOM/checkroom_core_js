@@ -10697,6 +10697,20 @@ Order = function ($, api, Transaction, Conflict, common) {
     return this.status == 'open';
   };
   /**
+   * Checks if due date is valid for an creating order
+   * oterwise return true
+   *
+   * @name Order#isValidDueDate
+   * @return {Boolean} 
+   */
+  Order.prototype.isValidDueDate = function () {
+    var due = this.due, now = this.getNow(), status = this.status;
+    if (status == 'creating') {
+      return due != null && due.isAfter(now);
+    }
+    return true;
+  };
+  /**
    * Checks if order can be checked out
    * @method
    * @name Order#canCheckout
@@ -10704,7 +10718,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    */
   Order.prototype.canCheckout = function () {
     var that = this;
-    return this.status == 'creating' && this.location != null && (this.contact != null && this.contact.status == 'active') && (this.due != null && this.due.isAfter(this._getDateHelper().getNow())) && (this.items && this.items.length > 0 && this.items.filter(function (item) {
+    return this.status == 'creating' && this.location != null && (this.contact != null && this.contact.status == 'active') && this.isValidDueDate() && (this.items && this.items.length > 0 && this.items.filter(function (item) {
       return that.id == that.helper.ensureId(item.order);
     }).length > 0);
   };
@@ -11676,13 +11690,39 @@ Reservation = function ($, api, Transaction, Conflict) {
     return common.getFriendlyReservationDuration(this.raw, this._getDateHelper());
   };
   /**
+   * Checks if from date is valid for open/creating reservation
+   * otherwise return always true
+   * 
+   * @return {Boolean}
+   */
+  Reservation.prototype.isValidFromDate = function () {
+    var from = this.from, status = this.status, now = this.getNow();
+    if (status == 'creating' || status == 'open') {
+      return from != null && from.isAfter(now);
+    }
+    return true;
+  };
+  /**
+   * Checks if to date is valid for open/creating reservation
+   * otherwise return always true
+   * 
+   * @return {Boolean}
+   */
+  Reservation.prototype.isValidToDate = function () {
+    var from = this.from, to = this.to, status = this.status;
+    if (status == 'creating' || status == 'open') {
+      return to != null && to.isAfter(from);
+    }
+    return true;
+  };
+  /**
    * Checks if the reservation can be booked
    * @method
    * @name Reservation#canReserve
    * @returns {boolean}
    */
   Reservation.prototype.canReserve = function () {
-    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.from && this.to && this.items && this.items.length;
+    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.isValidFromDate() && this.isValidToDate() && this.items && this.items.length;
   };
   /**
    * Checks if the reservation can be undone (based on status)

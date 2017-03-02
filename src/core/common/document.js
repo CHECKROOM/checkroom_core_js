@@ -42,6 +42,17 @@ define(function () {
             }
 
             return false;
-        }
+        },
+		/**
+		* getDocumentIds
+		* @memberOf common
+		* @name  common#getDocumentIds
+		* @method
+		* @param  docs
+		* @return {array}
+		 */
+		getDocumentIds: function(docs) {
+			return docs.map(function(doc){ return typeof(doc) === "string" ? doc : doc._id; });
+		}
 	};
 });

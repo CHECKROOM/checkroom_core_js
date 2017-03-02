@@ -214,6 +214,9 @@ define([], function () {
                     case "changeLocation":
                     case "changeCategory":
                         return this._isRootOrAdmin;
+                    // Permissings for asset labels
+                    case "printLabel":
+                        return this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;
@@ -252,6 +255,9 @@ define([], function () {
                     case "moveItem":
                     case "export":
                         return this._useKits && this._isRootOrAdmin;
+                    // Permissings for asset labels
+                    case "printLabel":
+                        return this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;

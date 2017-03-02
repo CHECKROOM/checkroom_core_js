@@ -3890,6 +3890,19 @@ common_document = {
       }
     }
     return false;
+  },
+  /**
+  * getDocumentIds
+  * @memberOf common
+  * @name  common#getDocumentIds
+  * @method
+  * @param  docs
+  * @return {array}
+   */
+  getDocumentIds: function (docs) {
+    return docs.map(function (doc) {
+      return typeof doc === 'string' ? doc : doc._id;
+    });
   }
 };
 common_transaction = function (moment, keyValues) {
@@ -11307,6 +11320,9 @@ PermissionHandler = function () {
       case 'changeLocation':
       case 'changeCategory':
         return this._isRootOrAdmin;
+      // Permissings for asset labels
+      case 'printLabel':
+        return this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && this._canSetFlag;
@@ -11345,6 +11361,9 @@ PermissionHandler = function () {
       case 'moveItem':
       case 'export':
         return this._useKits && this._isRootOrAdmin;
+      // Permissings for asset labels
+      case 'printLabel':
+        return this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && this._canSetFlag;

@@ -642,9 +642,11 @@ define([
      * @param pk
      * @param params
      * @param fields
+     * @param timeOut
+     * @param usePost
      * @returns {promise}
      */
-    api.ApiDataSource.prototype.update = function(pk, params, fields) {
+    api.ApiDataSource.prototype.update = function(pk, params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
         var cmd = "update";
         var url = this.getBaseUrl() + pk + '/update';
@@ -653,8 +655,14 @@ define([
             (fields.length>0)) {
             p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
         }
-        url += '?' + this.getParams(p);
-        return this._ajaxGet(cmd, url);
+        var geturl = url + '?' + this.getParams(p);
+
+        if( (usePost) || 
+            (geturl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p, timeOut);
+        } else {
+            return this._ajaxGet(cmd, geturl, timeOut);
+        }
     };
 
     /**
@@ -663,9 +671,11 @@ define([
      * @name ApiDataSource#create
      * @param params
      * @param fields
+     * @param timeOut
+     * @param usePost
      * @returns {promise}
      */
-    api.ApiDataSource.prototype.create = function(params, fields) {
+    api.ApiDataSource.prototype.create = function(params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': create');
         var cmd = "create";
         var url = this.getBaseUrl() + 'create';
@@ -675,8 +685,14 @@ define([
             p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
         }
 
-        url += '?' + this.getParams(p);
-        return this._ajaxGet(cmd, url);
+        var geturl = url + '?' + this.getParams(p);
+
+        if( (usePost) || 
+            (geturl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p, timeOut);
+        } else {
+            return this._ajaxGet(cmd, geturl, timeOut);
+        }
     };
 
     /**
@@ -793,7 +809,8 @@ define([
         var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
         var getUrl = url + '?' + this.getParams(p);
 
-        if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+        if( (usePost) ||
+            (getUrl.length >= MAX_QUERYSTRING_LENGTH)) {
             return this._ajaxPost(cmd, url, p, timeOut);
         } else {
             return this._ajaxGet(cmd, getUrl, timeOut);

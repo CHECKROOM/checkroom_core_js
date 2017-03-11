@@ -494,7 +494,7 @@ define([], function () {
                     case "update":
                     case "delete":
                     case "archive":
-                    case "unarchive":
+                    case "undoArchive":
                     case "activate":
                     case "deactivate":
                     case "clone":

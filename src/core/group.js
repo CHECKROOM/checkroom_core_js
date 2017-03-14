@@ -257,6 +257,35 @@ define([
         });
     };
 
+    /**
+     * Add tags
+     * @param {Array} tags 
+     */
+    Group.prototype.addTags = function(tags){
+        return this._doApiCall({
+            pk: this.id,
+            method: 'addTags',
+            skipRead: true,
+            params:{
+                tags: tags
+            }
+        })
+    };
+
+    /**
+     * Remove tags
+     * @param {Array} tags 
+     */
+    Group.prototype.removeTags = function(tags){
+        return this._doApiCall({
+            pk: this.id,
+            method: 'removeTags',
+            skipRead: true,
+            params:{
+                tags: tags
+            }
+        })
+    };
 
     // Helpers
     // ----

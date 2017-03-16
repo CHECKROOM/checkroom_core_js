@@ -278,6 +278,7 @@ define([
         return Document.prototype._fromJson.call(this, data, options)
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
+                that.status = data.status || DEFAULTS.status;
                 that.body = data.body || DEFAULTS.body;
                 that.format = data.format || DEFAULTS.format;
                 that.kind = data.kind || DEFAULTS.kind;

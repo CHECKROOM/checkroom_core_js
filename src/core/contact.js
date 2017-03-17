@@ -180,11 +180,12 @@ define([
      * @method
      * @name Contact#generateDocument
      * @param {string} template id
+     * @param {string} signature (base64)
      * @param {bool} skipRead
      * @returns {promise}
      */
-    Contact.prototype.generateDocument = function(template, skipRead) {
-        return this._doApiCall({method: "generateDocument", params: {template: template}, skipRead: skipRead});
+    Contact.prototype.generateDocument = function(template, signature, skipRead) {
+        return this._doApiCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
     };
 
     //

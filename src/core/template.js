@@ -123,6 +123,16 @@ define([
     };
 
     /**
+     * Checks if the object is archived
+     * @name Template#isArchived
+     * @method
+     * @returns {boolean}
+     */
+    Template.prototype.isArchived = function() {
+        return (this.status == "archived");
+    };
+
+    /**
      * Checks if the template is dirty and needs saving
      * @returns {boolean}
      * @override
@@ -159,37 +169,41 @@ define([
     /**
      * Archives this template
      * @name Template#archive
+     * @param skipRead
      * @returns {promise}
      */
-    Template.prototype.archive = function() {
-        return this.ds.call(this.id, "archive");
+    Template.prototype.archive = function(skipRead) {
+        return this._doApiCall({method: "archive", skipRead: skipRead});
     };
 
     /**
      * Unarchives this template
      * @name Template#undoArchive
+     * @param skipRead
      * @returns {promise}
      */
-    Template.prototype.undoArchive = function() {
-        return this.ds.call(this.id, "undoArchive");
+    Template.prototype.undoArchive = function(skipRead) {
+        return this._doApiCall({method: "undoArchive", skipRead: skipRead});
     };
 
     /**
      * Activates this template
      * @name Template#activate
+     * @param skipRead
      * @returns {promise}
      */
-    Template.prototype.activate = function() {
-        return this.ds.call(this.id, "activate");
+    Template.prototype.activate = function(skipRead) {
+        return this._doApiCall({method: "activate", skipRead: skipRead});
     };
 
     /**
      * Deactivates this template
      * @name Template#deactivate
+     * @param skipRead
      * @returns {promise}
      */
-    Template.prototype.deactivate = function() {
-        return this.ds.call(this.id, "deactivate");
+    Template.prototype.deactivate = function(skipRead) {
+        return this._doApiCall({method: "deactivate", skipRead: skipRead});
     };
 
     /**

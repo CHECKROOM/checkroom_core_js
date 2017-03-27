@@ -479,7 +479,7 @@ define([
         // BUGFFIX model name clash issue
         // model == Item property
         // model == database model
-        if(!data.model || $.trim(data.model) == ""){
+        if (data.model != null) {
             data.brandModel = data.model;
             delete data.model;
         }

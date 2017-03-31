@@ -16,9 +16,9 @@ define(['moment'], function (moment) {
 		getFriendlyOrderStatus: function(status) {
 	        // ORDER_STATUS = ('creating', 'open', 'closed')
 	        switch(status) {
-	            case 'creating': return 'Incomplete';
+	            case 'creating': return 'Draft';
 	            case 'open': return 'Open';
-	            case 'closed': return 'Closed';
+	            case 'closed': return 'Completed';
 	            default: return 'Unknown';
 	        }
 	    },

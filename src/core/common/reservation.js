@@ -34,9 +34,9 @@ define(function () {
          */
         getFriendlyReservationStatus: function(status) {
             switch(status) {
-                case 'creating': return 'Incomplete';
-                case 'open': return 'Open';
-                case 'closed': return 'Closed';
+                case 'creating': return 'Draft';
+                case 'open': return 'Booked';
+                case 'closed': return 'Completed';
                 case 'cancelled': return 'Cancelled';
                 default: return 'Unknown';
             }

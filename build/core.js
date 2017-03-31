@@ -1108,11 +1108,11 @@ common_order = function (moment) {
       // ORDER_STATUS = ('creating', 'open', 'closed')
       switch (status) {
       case 'creating':
-        return 'Incomplete';
+        return 'Draft';
       case 'open':
         return 'Open';
       case 'closed':
-        return 'Closed';
+        return 'Completed';
       default:
         return 'Unknown';
       }
@@ -1270,11 +1270,11 @@ common_reservation = {
   getFriendlyReservationStatus: function (status) {
     switch (status) {
     case 'creating':
-      return 'Incomplete';
+      return 'Draft';
     case 'open':
-      return 'Open';
+      return 'Booked';
     case 'closed':
-      return 'Closed';
+      return 'Completed';
     case 'cancelled':
       return 'Cancelled';
     default:

@@ -12088,7 +12088,7 @@ Reservation = function ($, api, Transaction, Conflict) {
       that.from = roundedFromDate;
       return that._doApiCall({
         method: 'setFromDate',
-        params: { from: roundedFromDate },
+        params: { fromDate: roundedFromDate },
         skipRead: skipRead
       });
     });
@@ -12141,7 +12141,7 @@ Reservation = function ($, api, Transaction, Conflict) {
       that.to = roundedToDate;
       return that._doApiCall({
         method: 'setToDate',
-        params: { to: roundedToDate },
+        params: { toDate: roundedToDate },
         skipRead: skipRead
       });
     });

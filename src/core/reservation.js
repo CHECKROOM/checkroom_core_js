@@ -453,7 +453,7 @@ define([
 
                 that.from = roundedFromDate;
 
-                return that._doApiCall({method: "setFromDate", params: {from: roundedFromDate}, skipRead: skipRead});
+                return that._doApiCall({method: "setFromDate", params: {fromDate: roundedFromDate}, skipRead: skipRead});
             });
     };
 
@@ -508,7 +508,7 @@ define([
 
                 that.to = roundedToDate;
 
-                return that._doApiCall({method: "setToDate", params: {to: roundedToDate}, skipRead: skipRead});
+                return that._doApiCall({method: "setToDate", params: {toDate: roundedToDate}, skipRead: skipRead});
             });
     };
 

@@ -71,8 +71,8 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasDashboardPermission = function(action, data, location) {
-        // Root, admin, user can see the dashboard tab
-        return this._isRootOrAdminOrUser;
+        // Everyone can see the calendar tab
+        return true;
     };
 
 
@@ -386,7 +386,6 @@ define([], function () {
                     default:
                         return false;
                     case "read":
-                        return true;
                     case "create":
                     case "update":
                     case "delete":

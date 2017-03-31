@@ -453,7 +453,7 @@ define([
 
                 that.from = roundedFromDate;
 
-                return that._handleTransaction(skipRead);
+                return that._doApiCall({method: "setFromDate", params: {from: roundedFromDate}, skipRead: skipRead});
             });
     };
 
@@ -470,8 +470,7 @@ define([
         }
 
         this.from = null;
-
-        return this._handleTransaction(skipRead);
+        return this._doApiCall({method: "clearFromDate", skipRead: skipRead});           
     };
 
     /**
@@ -509,7 +508,7 @@ define([
 
                 that.to = roundedToDate;
 
-                return that._handleTransaction(skipRead);
+                return that._doApiCall({method: "setToDate", params: {to: roundedToDate}, skipRead: skipRead});
             });
     };
 
@@ -526,8 +525,7 @@ define([
         }
 
         this.to = null;
-
-        return this._handleTransaction(skipRead);
+        return this._doApiCall({method: "clearToDate", skipRead: skipRead});  
     };
 
     // Reservation does not use due dates

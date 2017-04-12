@@ -57,6 +57,21 @@ define(function () {
             return (reservation.status=="open") && (now.isAfter(reservation.fromDate));
         },
         /**
+         * isReservationInThePast
+         *
+         * @memberOf common
+         * @name  common#isReservationInThePast
+         * @method
+         *
+         * @param  {object}  reservation
+         * @param  {moment}  now
+         * @return {Boolean}
+         */
+        isReservationInThePast: function(reservation, now) {
+            now = now || moment();
+            return (reservation.status=="open") && (now.isAfter(reservation.fromDate)) && (now.isAfter(reservation.toDate));
+        },
+        /**
          * isReservationArchived
          *
          * @memberOf common

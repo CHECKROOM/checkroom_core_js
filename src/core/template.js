@@ -22,6 +22,7 @@ define([
         unit: "inch",
         askSignature: false,
         system: true,
+        archived: null,
         createdBy: null,
         createdOn: null,
         modifiedBy: null,
@@ -47,6 +48,7 @@ define([
      * @property {float} height         the height of the template
      * @property {string} unit          this unit that is used for dimensions (mm, inch)
      * @property {boolean} system       is it a system template which cannot be changed?
+     * @property {Moment} archived      is the template archived
      * @property {string} createdBy     the user that created the template (null for system templates)
      * @property {Moment} createdOn     when the template was created
      * @property {string} modifiedBy    the user that modified the template (null for system templates)
@@ -68,6 +70,7 @@ define([
         this.height = spec.height || DEFAULTS.height;
         this.unit = spec.unit || DEFAULTS.unit;
         this.system = (spec.system!=null) ? (spec.system==true) : DEFAULTS.system;
+        this.archived = spec.archived || DEFAULTS.archived;
         this.createdBy = spec.createdBy || DEFAULTS.createdBy;
         this.createdOn = spec.createdOn || DEFAULTS.createdOn;
         this.modifiedBy = spec.modifiedBy || DEFAULTS.modifiedBy;
@@ -129,7 +132,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.isArchived = function() {
-        return (this.status == "archived");
+        return !(this.archived == null);
     };
 
     /**
@@ -241,7 +244,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.canArchive = function() {
-        return (this.status!="archived");
+        return !this.isArchived();
     };
 
     /**
@@ -250,7 +253,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.canUndoArchive = function() {
-        return (this.status=="archived");
+        return this.isArchived();
     };
 
     // toJson, fromJson

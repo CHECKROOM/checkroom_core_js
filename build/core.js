@@ -7226,16 +7226,16 @@ DateHelper = function ($, moment) {
       now = moment(now);
     }
     i18n = i18n || {
-      year: 'Year',
-      years: 'Years',
-      month: 'Month',
-      months: 'Months',
-      week: 'Week',
-      weeks: 'Weeks',
-      day: 'Day',
-      days: 'Days',
-      hour: 'Hour',
-      hours: 'Hours'
+      year: 'year',
+      years: 'years',
+      month: 'month',
+      months: 'months',
+      week: 'week',
+      weeks: 'weeks',
+      day: 'day',
+      days: 'days',
+      hour: 'hour',
+      hours: 'hours'
     };
     var timeOptions = [
         'years',
@@ -7263,17 +7263,15 @@ DateHelper = function ($, moment) {
     }
     now = now || this.getNow();
     if (chosenIndex >= 0) {
-      while (ranges.length < numRanges) {
-        counter = avgHours / val;
-        counter += ranges.length * counter;
+      for (var i = 1; i <= numRanges; i++) {
+        counter = i * avgHours;
         title = i18n[counter == 1 ? opt.replace('s', '') : opt];
         ranges.push({
           option: opt,
-          hours: avgHours * counter,
-          counter: counter,
+          hours: counter,
           title: counter + ' ' + title,
           from: now.clone(),
-          to: now.clone().add(ranges.length * avgHours, 'hours')
+          to: now.clone().add(counter, 'hours')
         });
       }
     }
@@ -9529,16 +9527,16 @@ dateHelper = function ($, moment) {
       now = moment(now);
     }
     i18n = i18n || {
-      year: 'Year',
-      years: 'Years',
-      month: 'Month',
-      months: 'Months',
-      week: 'Week',
-      weeks: 'Weeks',
-      day: 'Day',
-      days: 'Days',
-      hour: 'Hour',
-      hours: 'Hours'
+      year: 'year',
+      years: 'years',
+      month: 'month',
+      months: 'months',
+      week: 'week',
+      weeks: 'weeks',
+      day: 'day',
+      days: 'days',
+      hour: 'hour',
+      hours: 'hours'
     };
     var timeOptions = [
         'years',
@@ -9566,17 +9564,15 @@ dateHelper = function ($, moment) {
     }
     now = now || this.getNow();
     if (chosenIndex >= 0) {
-      while (ranges.length < numRanges) {
-        counter = avgHours / val;
-        counter += ranges.length * counter;
+      for (var i = 1; i <= numRanges; i++) {
+        counter = i * avgHours;
         title = i18n[counter == 1 ? opt.replace('s', '') : opt];
         ranges.push({
           option: opt,
-          hours: avgHours * counter,
-          counter: counter,
+          hours: counter,
           title: counter + ' ' + title,
           from: now.clone(),
-          to: now.clone().add(ranges.length * avgHours, 'hours')
+          to: now.clone().add(counter, 'hours')
         });
       }
     }

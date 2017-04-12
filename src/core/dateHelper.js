@@ -159,16 +159,16 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         }
 
         i18n = i18n || {
-            year: "Year",
-            years: "Years",
-            month: "Month",
-            months: "Months",
-            week: "Week",
-            weeks: "Weeks",
-            day: "Day",
-            days: "Days",
-            hour: "Hour",
-            hours: "Hours"
+            year: "year",
+            years: "years",
+            month: "month",
+            months: "months",
+            week: "week",
+            weeks: "weeks",
+            day: "day",
+            days: "days",
+            hour: "hour",
+            hours: "hours"
         };
         var timeOptions = ["years", "months", "weeks", "days", "hours"],
             timeHourVals = [365*24, 30*24,    7*24,    24,     1],
@@ -193,17 +193,16 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
         now = now || this.getNow();
         if (chosenIndex>=0) {
-            while (ranges.length < numRanges) {
-                counter = (avgHours / val);
-                counter += (ranges.length * counter);
+            for(var i=1;i<=numRanges;i++){
+                counter = i * avgHours;
+
                 title = i18n[(counter==1) ? opt.replace("s", "") : opt];
                 ranges.push({
                     option: opt,
-                    hours: avgHours * counter,
-                    counter: counter,
+                    hours: counter,
                     title: counter + " " + title,
                     from: now.clone(),
-                    to: now.clone().add(ranges.length * avgHours, "hours")
+                    to: now.clone().add(counter, "hours")
                 })
             }
         }

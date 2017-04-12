@@ -5033,6 +5033,27 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Field stuff
   // ----
   /**
+   * Sets multiple custom fields in a single call
+   * @name Base#setFields
+   * @method
+   * @param fields
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFields = function (fields, skipRead) {
+    var that = this, changedFields = {};
+    $.each(fields, function (key, value) {
+      if (that.fields[key] != fields[key]) {
+        changedFields[key] = value;
+      }
+    });
+    return this._doApiCall({
+      method: 'setFields',
+      params: { fields: changedFields },
+      skipRead: skipRead
+    });
+  };
+  /**
    * Sets a custom field
    * @name Base#setField
    * @method
@@ -5891,6 +5912,27 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
   };
   // Field stuff
   // ----
+  /**
+   * Sets multiple custom fields in a single call
+   * @name Base#setFields
+   * @method
+   * @param fields
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFields = function (fields, skipRead) {
+    var that = this, changedFields = {};
+    $.each(fields, function (key, value) {
+      if (that.fields[key] != fields[key]) {
+        changedFields[key] = value;
+      }
+    });
+    return this._doApiCall({
+      method: 'setFields',
+      params: { fields: changedFields },
+      skipRead: skipRead
+    });
+  };
   /**
    * Sets a custom field
    * @name Base#setField
@@ -11412,6 +11454,7 @@ PermissionHandler = function () {
       case 'delete':
       case 'expire':
       case 'undoExpire':
+      case 'setFields':
       case 'setField':
       case 'clearField':
       case 'addAttachment':
@@ -11454,6 +11497,7 @@ PermissionHandler = function () {
       case 'duplicate':
       case 'update':
       case 'delete':
+      case 'setFields':
       case 'setField':
       case 'clearField':
       case 'addAttachment':
@@ -11514,6 +11558,7 @@ PermissionHandler = function () {
       case 'checkin':
       case 'checkout':
       // Generic actions
+      case 'setFields':
       case 'setField':
       case 'clearField':
       case 'addAttachment':
@@ -11566,6 +11611,7 @@ PermissionHandler = function () {
       case 'reserveAgain':
       case 'reserveRepeat':
       // Generic actions
+      case 'setFields':
       case 'setField':
       case 'clearField':
       case 'addAttachment':
@@ -11597,6 +11643,7 @@ PermissionHandler = function () {
       case 'delete':
       case 'archive':
       case 'undoArchive':
+      case 'setFields':
       case 'setField':
       case 'clearField':
       case 'addAttachment':
@@ -12648,6 +12695,7 @@ Template = function ($, common, api, Document) {
       that.height = data.height || DEFAULTS.height;
       that.unit = data.unit || DEFAULTS.unit;
       that.system = data.system != null ? data.system == true : DEFAULTS.system;
+      that.archived = data.archived || DEFAULTS.archived;
       that.createdBy = data.createdBy || DEFAULTS.createdBy;
       that.createdOn = data.createdOn || DEFAULTS.createdOn;
       that.modifiedBy = data.modifiedBy || DEFAULTS.modifiedBy;

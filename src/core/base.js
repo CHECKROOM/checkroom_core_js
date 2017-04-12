@@ -169,6 +169,30 @@ define([
     // Field stuff
     // ----
     /**
+     * Sets multiple custom fields in a single call
+     * @name Base#setFields
+     * @method
+     * @param fields
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setFields = function(fields, skipRead) {
+        var that = this,
+            changedFields = {};
+        $.each(fields, function(key, value) {
+            if (that.fields[key]!=fields[key]) {
+                changedFields[key] = value;
+            }
+        });
+
+        return this._doApiCall({
+            method: 'setFields',
+            params: {fields: changedFields},
+            skipRead: skipRead
+        });
+    };
+
+    /**
      * Sets a custom field
      * @name Base#setField
      * @method

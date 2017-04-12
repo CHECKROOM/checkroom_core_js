@@ -202,6 +202,7 @@ define([], function () {
                     case "delete":
                     case "expire":
                     case "undoExpire":
+                    case "setFields":
                     case "setField":
                     case "clearField":
                     case "addAttachment":
@@ -244,6 +245,7 @@ define([], function () {
                     case "duplicate":
                     case "update":
                     case "delete":
+                    case "setFields":
                     case "setField":
                     case "clearField":
                     case "addAttachment":
@@ -306,6 +308,7 @@ define([], function () {
                     case "checkin":
                     case "checkout":
                     // Generic actions
+                    case "setFields":
                     case "setField":
                     case "clearField":
                     case "addAttachment":
@@ -360,6 +363,7 @@ define([], function () {
                     case "reserveAgain":
                     case "reserveRepeat":
                     // Generic actions
+                    case "setFields":
                     case "setField":
                     case "clearField":
                     case "addAttachment":
@@ -391,6 +395,7 @@ define([], function () {
                     case "delete":
                     case "archive":
                     case "undoArchive":
+                    case "setFields":
                     case "setField":
                     case "clearField":
                     case "addAttachment":

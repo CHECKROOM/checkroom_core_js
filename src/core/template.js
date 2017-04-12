@@ -304,6 +304,7 @@ define([
                 that.height = data.height || DEFAULTS.height;
                 that.unit = data.unit || DEFAULTS.unit;
                 that.system = (data.system!=null) ? (data.system==true) : DEFAULTS.system;
+                that.archived = data.archived || DEFAULTS.archived;
                 that.createdBy = data.createdBy || DEFAULTS.createdBy;
                 that.createdOn = data.createdOn || DEFAULTS.createdOn;
                 that.modifiedBy = data.modifiedBy || DEFAULTS.modifiedBy;

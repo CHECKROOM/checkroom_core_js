@@ -8412,7 +8412,7 @@ Item = function ($, common, Base) {
     if (this.raw && this.status != 'in_custody') {
       var locId = DEFAULTS.location;
       if (this.raw.location) {
-        locId = this.helper.ensureId(this.raw.location._id);
+        locId = this.raw.location._id ? this.raw.location._id : this.raw.location;
       }
       return this.location != locId;
     } else {

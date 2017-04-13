@@ -3,6 +3,26 @@
  */
 define(['moment'], function (moment) {
 	return {
+		templateIsArchived: function(templ) {
+			return !(templ.archived == null);
+		},
+		templateCanDelete: function(templ) {
+			return (!templ.system);
+		},
+		templateCanActivate: function(templ) {
+			return (templ.status=="inactive") && (templ.archived==null);
+		},
+		templateCanDeactivate: function(templ) {
+			return (templ.status=="active") && (templ.archived==null);
+		},
+		templateCanArchive: function(templ) {
+			return (templ.archived == null);
+		},
+		templateCanUndoArchive: function(templ) {
+			return (templ.archived != null);
+		},
+
+
 		/**
 		 * getFriendlyTemplateStatus
 		 *

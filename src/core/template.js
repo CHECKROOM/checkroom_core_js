@@ -132,7 +132,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.isArchived = function() {
-        return !(this.archived == null);
+        return common.templateIsArchived(this);
     };
 
     /**
@@ -217,7 +217,7 @@ define([
      * @override
      */
     Template.prototype.canDelete = function() {
-        return (!this.system);
+        return common.templateCanDelete(this);
     };
 
     /**
@@ -226,7 +226,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.canActivate = function() {
-        return (this.status=="inactive");
+        return common.templateCanActivate(this);
     };
 
     /**
@@ -235,7 +235,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.canDeactivate = function() {
-        return (this.status=="active");
+        return common.templateCanDeactivate(this);
     };
 
     /**
@@ -244,7 +244,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.canArchive = function() {
-        return !this.isArchived();
+        return common.templateCanArchive(this);
     };
 
     /**
@@ -253,7 +253,7 @@ define([
      * @returns {boolean}
      */
     Template.prototype.canUndoArchive = function() {
-        return this.isArchived();
+        return common.templateCanUndoArchive(this);
     };
 
     // toJson, fromJson

@@ -282,10 +282,10 @@ define([
     };
 
     Item.prototype._isDirtyLocation = function() {
-        if (this.raw) {
+        if (this.raw && this.status != 'in_custody') {
             var locId = DEFAULTS.location;
             if (this.raw.location) {
-                locId = (this.raw.location._id) ? this.raw.location._id : this.raw.location;
+                locId = ( ? this.raw.location._id : this.raw.location;
             }
             return (this.location!=locId);
         } else {
@@ -382,7 +382,8 @@ define([
                     dfdCategory.resolve();
                 }
 
-                if (that._isDirtyLocation()) {
+                // Skip update location if item is in custody
+                if (that._isDirtyLocation() && that.status != "in_custody") {
                     dfdLocation = that.changeLocation(that.location);
                 } else {
                     dfdLocation.resolve();

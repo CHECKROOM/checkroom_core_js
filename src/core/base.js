@@ -180,7 +180,7 @@ define([
         var that = this,
             changedFields = {};
         $.each(fields, function(key, value) {
-            if (that.fields[key]!=fields[key]) {
+            if (that.raw.fields[key]!=fields[key]) {
                 changedFields[key] = value;
             }
         });
@@ -188,7 +188,8 @@ define([
         return this._doApiCall({
             method: 'setFields',
             params: {fields: changedFields},
-            skipRead: skipRead
+            skipRead: skipRead,
+            usePost: true
         });
     };
 

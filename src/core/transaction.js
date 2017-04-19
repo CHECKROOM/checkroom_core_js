@@ -753,6 +753,19 @@ define([
         ((this.status == "cancelled") || (this.status == "closed")));
     };
 
+
+    Transaction.prototype.setField = function(field, value, skipRead){
+         var that = this;
+        return this._ensureTransactionExists(skipRead)
+            .then(function() {
+                return that._doApiCall({
+                    method: 'setField',
+                    params: {field: field, value: value},
+                    skipRead: skipRead
+                });
+            });
+    }
+
     //
     // Implementation stuff
     //

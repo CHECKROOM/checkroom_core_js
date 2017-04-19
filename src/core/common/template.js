@@ -79,13 +79,39 @@ define(['moment'], function (moment) {
                 (template.height==11.0)) {
                 return "US Letter";
             } else if(
-                (template.unit="mm") &&
+                (template.unit=="mm") &&
                 (template.width==210.0) &&
                 (template.height==297.0)) {
                 return "A4";
             } else {
                 return template.width + template.unit + " x " + template.height + template.unit;
             }
-	    }
+	    },
+		/**
+         * getFriendlyPageSize
+		 *
+		 * @memberOf common
+		 * @name common#getFriendlyPageSize
+		 * @method
+		 *
+         * @param pageWidth
+         * @param pageHeight
+         * @param unit
+         * @returns string
+         */
+        getFriendlyPageSize: function(pageWidth, pageHeight, unit) {
+            if( (unit=="inch") &&
+                (pageWidth==8.5) &&
+                (pageHeight==11.0)) {
+                return "US Letter";
+            } else if (
+                (unit=="cm") &&
+                (pageWidth==21.0) &&
+                (pageHeight==29.7)) {
+                return "A4";
+            } else {
+                return "Other";
+            }
+        }
 	};
 });

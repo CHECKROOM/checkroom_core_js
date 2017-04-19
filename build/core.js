@@ -3839,19 +3839,21 @@ common_template = function (moment) {
     * @name  common#getFriendlyTemplateSize
     * @method
     * 
-    * @param  {object} template
-    * @return {string}      
+    * @param  {float} width
+    * @param  {float} height
+    * @param  {string} unit
+    * @return {string}
     */
-    getFriendlyTemplateSize: function (template) {
-      if (template.width == 0 || template.height == 0) {
+    getFriendlyTemplateSize: function (width, height, unit) {
+      if (width == 0 || height == 0) {
         return '';
-      } else if (template.unit == 'inch' && template.width == 8.5 && template.height == 11) {
+      } else if (unit == 'inch' && width == 8.5 && height == 11) {
         return 'US Letter';
-      } else if (template.unit == 'mm' && template.width == 210 && template.height == 297) {
+      } else if (unit == 'mm' && width == 210 && height == 297) {
         return 'A4';
       } else {
-        var friendlyUnit = template.unit == 'inch' ? '"' : template.unit;
-        return template.width + template.friendlyUnit + ' x ' + template.height + template.friendlyUnit;
+        var friendlyUnit = unit == 'inch' ? '"' : unit;
+        return width + friendlyUnit + ' x ' + height + friendlyUnit;
       }
     }
   };

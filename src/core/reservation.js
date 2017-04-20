@@ -453,7 +453,13 @@ define([
 
                 that.from = roundedFromDate;
 
-                return that._doApiCall({method: "setFromDate", params: {fromDate: roundedFromDate}, skipRead: skipRead});
+                //If reservation doesn't exist yet, we set from date in create call
+                //otherwise use setFromDate to update transaction
+                if(!that.existsInDb()){
+                    return that._createTransaction(skipRead);
+                } else{
+                    return that._doApiCall({method: "setFromDate", params: {fromDate: roundedFromDate}, skipRead: skipRead});
+                }
             });
     };
 
@@ -508,7 +514,13 @@ define([
 
                 that.to = roundedToDate;
 
-                return that._doApiCall({method: "setToDate", params: {toDate: roundedToDate}, skipRead: skipRead});
+                //If reservation doesn't exist yet, we set to date in create call
+                //otherwise use setToDate to update transaction
+                if(!that.existsInDb()){
+                    return that._createTransaction(skipRead);
+                } else{
+                    return that._doApiCall({method: "setToDate", params: {toDate: roundedToDate}, skipRead: skipRead});
+                }
             });
     };
 

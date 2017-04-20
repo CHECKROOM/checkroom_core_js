@@ -7053,8 +7053,10 @@ Contact = function ($, Base, common, User, Helper) {
    * @returns {boolean}
    */
   Contact.prototype.canDelete = function () {
-    var can = Base.prototype.canDelete.call(this);
-    return can && common.contactCanDelete(this);
+    var that = this;
+    return Base.prototype.canDelete.call(this).then(function (resp) {
+      return resp.result && common.contactCanDelete(that);
+    });
   };
   /**
    * Archive a contact

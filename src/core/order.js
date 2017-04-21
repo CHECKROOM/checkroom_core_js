@@ -174,6 +174,16 @@ define([
     };
 
     /**
+     * Checks if the order has an reservation linked to it
+     * @method
+     * @name Order#canGoToReservation
+     * @returns {boolean}
+     */
+    Order.prototype.canGoToReservation = function(){
+        return this.reservation != null;
+    }
+
+    /**
      * Checks if due date is valid for an creating order
      * oterwise return true
      *

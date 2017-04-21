@@ -4595,6 +4595,29 @@ Attachment = function ($) {
     return EXT.exec(fileName)[1] || '';
   };
   /**
+   * Gets a friendly file size
+   * @param  {int} size 
+   * @return {string}      
+   */
+  Attachment.prototype.getFriendlyFileSize = function () {
+    var size = this.fileSize;
+    if (isNaN(size))
+      size = 0;
+    if (size < 1024)
+      return size + ' Bytes';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Kb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Mb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Gb';
+    size /= 1024;
+    return size.toFixed(2) + ' Tb';
+  };
+  /**
    * Checks if the attachment is an image
    * @name  Attachment#isImage
    * @method
@@ -4786,6 +4809,29 @@ attachment = function ($) {
   Attachment.prototype.getExt = function (fileName) {
     fileName = fileName || this.fileName;
     return EXT.exec(fileName)[1] || '';
+  };
+  /**
+   * Gets a friendly file size
+   * @param  {int} size 
+   * @return {string}      
+   */
+  Attachment.prototype.getFriendlyFileSize = function () {
+    var size = this.fileSize;
+    if (isNaN(size))
+      size = 0;
+    if (size < 1024)
+      return size + ' Bytes';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Kb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Mb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Gb';
+    size /= 1024;
+    return size.toFixed(2) + ' Tb';
   };
   /**
    * Checks if the attachment is an image
@@ -10862,6 +10908,15 @@ Order = function ($, api, Transaction, Conflict, common) {
    */
   Order.prototype.canCheckin = function () {
     return this.status == 'open';
+  };
+  /**
+   * Checks if the order has an reservation linked to it
+   * @method
+   * @name Order#canGoToReservation
+   * @returns {boolean}
+   */
+  Order.prototype.canGoToReservation = function () {
+    return this.reservation != null;
   };
   /**
    * Checks if due date is valid for an creating order

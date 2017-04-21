@@ -78,6 +78,40 @@ define(['jquery'], /** Attachment */ function ($) {
     };
 
     /**
+     * Gets a friendly file size
+     * @param  {int} size 
+     * @return {string}      
+     */
+    Attachment.prototype.getFriendlyFileSize = function(){
+        var size = this.fileSize;
+
+        if (isNaN(size))
+            size = 0;
+
+        if (size < 1024)
+            return size + ' Bytes';
+
+        size /= 1024;
+
+        if (size < 1024)
+            return size.toFixed(2) + ' Kb';
+
+        size /= 1024;
+
+        if (size < 1024)
+            return size.toFixed(2) + ' Mb';
+
+        size /= 1024;
+
+        if (size < 1024)
+            return size.toFixed(2) + ' Gb';
+
+        size /= 1024;
+
+        return size.toFixed(2) + ' Tb';
+    }
+
+    /**
      * Checks if the attachment is an image
      * @name  Attachment#isImage
      * @method

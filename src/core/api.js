@@ -45,9 +45,11 @@ define([
     api.ApiForbidden.prototype = new Error();
     api.ApiUnprocessableEntity = function (msg, opt) {    this.code = 422; this.message = msg || "Some data is invalid"; this.opt = opt; };
     api.ApiUnprocessableEntity.prototype = new Error();
+    api.ApiSubcriptionLimit = function (msg, opt) {       this.code = 422; this.message = msg || "You have reached your subscription limit"; this.opt = opt; };
+    api.ApiSubcriptionLimit.prototype = new Error();
     api.ApiPaymentRequired = function (msg, opt) {        this.code = 402; this.message = msg || "Your subscription has expired"; this.opt = opt; };
     api.ApiPaymentRequired.prototype = new Error();
-    api.ApiServerCapicity = function(msg, opt){                 this.code = 503; this.message = msg || "Back-end server is at capacity"; this.opt = opt; };
+    api.ApiServerCapicity = function(msg, opt){           this.code = 503; this.message = msg || "Back-end server is at capacity"; this.opt = opt; };
     api.ApiServerCapicity.prototype = new Error();
 
     //*************
@@ -121,7 +123,16 @@ define([
                 case 403: dfd.reject(new api.ApiForbidden(msg, opt)); break;
                 case 404: dfd.reject(new api.ApiNotFound(msg, opt)); break;
                 case 408: dfd.reject(new api.NetworkTimeout(msg, opt)); break;
-                case 422: dfd.reject(new api.ApiUnprocessableEntity(msg, opt)); break;
+                case 422:
+                    // 422 Notify user: Cannot create item, max limit 50 items reached
+                    if( (msg) &&
+                        (msg.indexOf('limit') >= 0) &&
+                        (msg.indexOf('reach') >= 0)) {
+                        dfd.reject(new api.ApiSubcriptionLimit(msg, opt));
+                    } else {
+                        dfd.reject(new api.ApiUnprocessableEntity(msg, opt));
+                    }
+                    break;
                 case 503: dfd.reject(new api.ApiServerCapicity(msg, opt)); break;
                 case 500:
                 default: dfd.reject(new api.ApiError(msg, opt)); break;

@@ -664,23 +664,41 @@ define([
      */
     Item.prototype.updateBasicFields = function(name, brand, model, warrantyDate, purchaseDate, purchasePrice, skipRead) {
         var that = this,
-            params = {
-                name: name,
-                brand: brand,
-                model: model,
-                warrantyDate: warrantyDate,
-                purchaseDate: purchaseDate,
-                purchasePrice: purchasePrice
-            };
+            params = {};
+
+        if( (name!=null) &&
+            (name!=this.raw.name)) {
+            params["name"] = name;
+        }
+        if( (brand!=null) &&
+            (brand!=this.raw.brand)) {
+            params["brand"] = brand;
+        }
+        if( (model!=null) &&
+            (model!=this.raw.model)) {
+            params["model"] = model;
+        }
+        if( (warrantyDate!=null) &&
+            (!warrantyDate.isSame(this.raw.warrantyDate))) {
+            params["warrantyDate"] = warrantyDate;
+        }
+        if( (purchaseDate!=null) &&
+            (!purchaseDate.isSame(this.raw.purchaseDate))) {
+            params["purchaseDate"] = purchaseDate;
+        }
+        if( (purchasePrice!=null) &&
+            (purchasePrice!=this.raw.purchasePrice)) {
+            params["purchasePrice"] = purchasePrice;
+        }
 
         // Remove values of null during create
         // Avoids: 422 Unprocessable Entity
         // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
-        for (var k in params) {
-            if (params[k] == null) {
-                delete params[k];
-            }
-        }
+        //for (var k in params) {
+        //    if (params[k] == null) {
+        //        delete params[k];
+        //    }
+        //}
 
         return this.ds.update(this.id, params, this._fields)
             .then(function(data) {

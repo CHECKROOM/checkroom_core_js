@@ -76,12 +76,12 @@ api = function ($, jsonp, moment) {
     this.opt = opt;
   };
   api.ApiUnprocessableEntity.prototype = new Error();
-  api.ApiSubcriptionLimit = function (msg, opt) {
+  api.ApiSubscriptionLimit = function (msg, opt) {
     this.code = 422;
     this.message = msg || 'You have reached your subscription limit';
     this.opt = opt;
   };
-  api.ApiSubcriptionLimit.prototype = new Error();
+  api.ApiSubscriptionLimit.prototype = new Error();
   api.ApiPaymentRequired = function (msg, opt) {
     this.code = 402;
     this.message = msg || 'Your subscription has expired';
@@ -168,7 +168,7 @@ api = function ($, jsonp, moment) {
       case 422:
         // 422 Notify user: Cannot create item, max limit 50 items reached
         if (msg && msg.indexOf('limit') >= 0 && msg.indexOf('reach') >= 0) {
-          dfd.reject(new api.ApiSubcriptionLimit(msg, opt));
+          dfd.reject(new api.ApiSubscriptionLimit(msg, opt));
         } else {
           dfd.reject(new api.ApiUnprocessableEntity(msg, opt));
         }

@@ -271,6 +271,26 @@ define([
             });
     };
 
+    Contact.prototype._update = function(skipRead) {
+        var that = this;
+
+        // Don't use the original `_update`
+        // because it uses `_toJson` and lists fields, even if they didn't change
+        // var data = this._toJson();
+        var data = {};
+        if (this._isDirtyStringProperty("name")) {
+            data["name"] = that.name;
+        }
+        if (this._isDirtyStringProperty("email")) {
+            data["email"] = that.email;
+        }
+
+        return this.ds.update(this.id, data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
     return Contact;
 
 });

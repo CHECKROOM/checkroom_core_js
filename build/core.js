@@ -5386,7 +5386,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     }
   };
   /**
-   * Runs over the custom fields that are dirty and calls `setField
+   * Runs over the custom fields that are dirty and calls `setField`
    * @returns {*}
    * @private
    */
@@ -6267,7 +6267,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     }
   };
   /**
-   * Runs over the custom fields that are dirty and calls `setField
+   * Runs over the custom fields that are dirty and calls `setField`
    * @returns {*}
    * @private
    */
@@ -7220,6 +7220,22 @@ Contact = function ($, Base, common, User, Helper) {
     var that = this, data = $.extend({}, this._toJson(), this._toJsonFields());
     delete data.id;
     return this.ds.create(data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  Contact.prototype._update = function (skipRead) {
+    var that = this;
+    // Don't use the original `_update`
+    // because it uses `_toJson` and lists fields, even if they didn't change
+    // var data = this._toJson();
+    var data = {};
+    if (this._isDirtyStringProperty('name')) {
+      data['name'] = that.name;
+    }
+    if (this._isDirtyStringProperty('email')) {
+      data['email'] = that.email;
+    }
+    return this.ds.update(this.id, data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };

@@ -472,7 +472,7 @@ define([
     };
 
     /**
-     * Runs over the custom fields that are dirty and calls `setField
+     * Runs over the custom fields that are dirty and calls `setField`
      * @returns {*}
      * @private
      */

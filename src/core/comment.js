@@ -29,6 +29,7 @@ define(['jquery'], /** Comment */ function ($) {
         this.created = spec.created || DEFAULTS.created;
         this.modified = spec.modified || DEFAULTS.modified;
         this.by = spec.by || DEFAULTS.by;
+        this.fromReservation = spec.fromReservation || false;
     };
 
     /**

@@ -97,39 +97,6 @@ define([
             });
     };
 
-    Order.prototype._fromKeyValuesJson = function(data, options) {
-        var that = this;
-
-        // Also parse reservation comments?
-        if( (that.dsReservations) &&
-            (data.reservation) &&
-            (data.reservation.keyValues) &&
-            (data.reservation.keyValues.length > 0)){
-
-            // Parse Reservation keyValues
-            return Transaction.prototype._fromKeyValuesJson.call(that, data.reservation, $.extend(options, {
-                ds: that.dsReservations
-            })).then(function(){
-                var reservationComments = that.comments;
-                var reservationAttachments = that.attachments;
-
-                // Parse Order keyValues
-                return Transaction.prototype._fromKeyValuesJson.call(that, data, options).then(function(){
-                    // Add reservation comments/attachments to order keyvalues
-                    that.comments = that.comments.concat(reservationComments).sort(function(a, b) {
-                        return b.modified > a.modified;
-                    });
-                    that.attachments = that.attachments.concat(reservationAttachments).sort(function(a, b) {
-                        return b.modified > a.modified;
-                    });
-                });
-            });
-        }
-
-        // Use Default keyValues parser
-        return Transaction.prototype._fromKeyValuesJson.call(that, data, options);
-    };
-
     //
     // Helpers
     //
@@ -688,6 +655,62 @@ define([
      */
     Order.prototype.generateDocument = function(template, signature, skipRead) {
         return this._doApiCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
+    };
+
+    /**
+     * Override _fromCommentsJson to also include linked reservation comments 
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Order.prototype._fromCommentsJson = function(data, options) {
+        var that = this;
+
+        // Also parse reservation comments?
+        if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+          // Parse Reservation keyValues
+          return Base.prototype._fromCommentsJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations, fromReservation: true })).then(function () {
+            var reservationComments = that.comments;
+            return Base.prototype._fromCommentsJson.call(that, data, options).then(function () {
+              // Add reservation comments
+              that.comments = that.comments.concat(reservationComments).sort(function (a, b) {
+                return b.modified > a.modified;
+              });
+            });
+          });
+        }
+
+        // Use Default comments parser
+        return Base.prototype._fromCommentsJson.call(that, data, options);
+    };
+
+    /**
+     * Override _fromAttachmentsJson to also include linked reservation attachments
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Order.prototype._fromAttachmentsJson = function(data, options) {
+        var that = this;
+
+        // Also parse reservation comments?
+        if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+          // Parse Reservation keyValues
+          return Base.prototype._fromAttachmentsJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations, fromReservation: true })).then(function () {
+            var reservationAttachments = that.attachments;
+            return Base.prototype._fromAttachmentsJson.call(that, data, options).then(function () {
+              // Add reservation attachments
+              that.attachments = that.attachments.concat(reservationAttachments).sort(function (a, b) {
+                return b.modified > a.modified;
+              });
+            });
+          });
+        }
+
+        // Use Default comments parser
+        return Base.prototype._fromCommentsJson.call(that, data, options);
     };
 
     //

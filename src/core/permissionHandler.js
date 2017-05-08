@@ -22,7 +22,7 @@ define([], function () {
         this._useWebHooks =           (limits.allowWebHooks);
         this._useOrders =             (limits.allowOrders) &&           (profile.useOrders);
         this._useReservations =       (limits.allowReservations) &&     (profile.useReservations);
-        this._useOrderAgreements =    (limits.allowGeneratePdf) &&      (profile.useOrderAgreements);
+        this._usePdf =                (limits.allowGeneratePdf);
         this._useKits =               (limits.allowKits) &&             (profile.useKits);
         this._useCustody =            (limits.allowCustody) &&          (profile.useCustody);
         this._useGeo =                                                  (profile.useGeo);
@@ -326,7 +326,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._useOrderAgreements;
+                        return this._usePdf;
                     case "checkinAt":
                         return this._useCheckinLocation;
                     case "forceConflictResolving":
@@ -381,7 +381,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._useOrderAgreements;
+                        return this._usePdf;
                 }
                 break;
             case "customers":
@@ -412,7 +412,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._useOrderAgreements;
+                        return this._usePdf;
                 }
                 break;
             case "users":

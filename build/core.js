@@ -7455,7 +7455,7 @@ DateHelper = function ($, moment) {
         ranges.push({
           option: opt,
           hours: counter,
-          title: counter + ' ' + title,
+          title: counter / timeHourVals[chosenIndex] + ' ' + title,
           from: now.clone(),
           to: now.clone().add(counter, 'hours')
         });
@@ -9768,7 +9768,7 @@ dateHelper = function ($, moment) {
         ranges.push({
           option: opt,
           hours: counter,
-          title: counter + ' ' + title,
+          title: counter / timeHourVals[chosenIndex] + ' ' + title,
           from: now.clone(),
           to: now.clone().add(counter, 'hours')
         });

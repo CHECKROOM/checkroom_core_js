@@ -11464,8 +11464,8 @@ Order = function ($, api, Transaction, Conflict, common) {
         });
       });
     }
-    // Use Default comments parser
-    return Base.prototype._fromCommentsJson.call(that, data, options);
+    // Use Default attachments parser
+    return Base.prototype._fromAttachmentsJson.call(that, data, options);
   };
   //
   // Implementation
@@ -12157,7 +12157,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canReserveAgain = function () {
-    return this.status == 'open' || this.status == 'closed';
+    return this.status == 'open' || (this.status == 'closed' || this.status == 'cancelled');
   };
   /**
    * Checks if the reservation can be into recurring reservations (based on status)

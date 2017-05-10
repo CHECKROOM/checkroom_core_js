@@ -241,7 +241,7 @@ define([
      * @returns {boolean}
      */
     Reservation.prototype.canReserveAgain = function() {
-        return (this.status == "open") || (this.status == "closed");
+        return (this.status == "open") || (this.status == "closed" || (this.status == "cancelled"));
     };
 
     /**

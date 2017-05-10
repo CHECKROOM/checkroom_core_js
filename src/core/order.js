@@ -709,8 +709,8 @@ define([
           });
         }
 
-        // Use Default comments parser
-        return Base.prototype._fromCommentsJson.call(that, data, options);
+        // Use Default attachments parser
+        return Base.prototype._fromAttachmentsJson.call(that, data, options);
     };
 
     //

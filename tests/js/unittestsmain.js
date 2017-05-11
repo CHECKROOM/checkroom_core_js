@@ -72,7 +72,7 @@ require([
         //userTest.run();
         //availabilityTest.run();
         //webHookTest.run();
-        signupTest.run();
+        //signupTest.run();
 
         // start QUnit.
         QUnit.start();

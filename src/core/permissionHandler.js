@@ -32,7 +32,7 @@ define([], function () {
         this._useOrderTransfers =     (limits.allowOrderTransfers) &&   (profile.useOrderTransfers);
         this._useSendMessage =        (limits.allowSendMessage) &&      (profile.useSendMessage);
         this._useUserSync =           (limits.allowUserSync) &&         (profile.useUserSync);
-        this._useFlags =              (profile.useCustom);
+        this._useFlags =              (profile.useFlags);
         this._useGeo =                (profile.useGeo);
 
         this._canSetFlag = false;

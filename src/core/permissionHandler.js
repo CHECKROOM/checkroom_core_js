@@ -330,7 +330,7 @@ define([], function () {
                     case "checkinAt":
                         return this._useCheckinLocation;
                     case "forceConflictResolving":
-                        return this.profile.forceConflictResolving;
+                        return false; // this.profile.forceConflictResolving;
                 }
                 break;
             case "reservations":

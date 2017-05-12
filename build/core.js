@@ -11776,7 +11776,7 @@ PermissionHandler = function () {
       case 'checkinAt':
         return this._useCheckinLocation;
       case 'forceConflictResolving':
-        return this.profile.forceConflictResolving;
+        return false;  // this.profile.forceConflictResolving;
       }
       break;
     case 'reservations':
@@ -12210,77 +12210,68 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @private
    */
   Reservation.prototype._getConflicts = function () {
-    var conflicts = [];
-    var conflict = null;
+    var that = this, conflicts = [], conflict = null;
     // Reservations can only have conflicts
     // when we have a (location OR (from AND to)) AND at least 1 item
     if (this.items && this.items.length && (this.location || this.from && this.to)) {
-      if (this.status == 'open') {
-        // Reservations in "open" status,
-        // can use the Items' current status and location
-        // to see if there are any conflicts for fullfilling into an Order
-        var locId = this._getId(this.location);
-        $.each(this.items, function (i, item) {
-          if (item.status == 'expired') {
+      return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
+        cnflcts = cnflcts || [];
+        // Now we have the conflicts for this reservation
+        // run over the items again and find the conflict for each item
+        $.each(that.items, function (i, item) {
+          conflict = cnflcts.find(function (conflictObj) {
+            return conflictObj.item == item._id;
+          });
+          if (conflict) {
+            var kind = conflict.kind || '';
+            kind = kind || (conflict.order ? 'order' : '');
+            kind = kind || (conflict.reservation ? 'reservation' : '');
             conflicts.push(new Conflict({
-              kind: 'expired',
+              kind: kind,
               item: item._id,
               itemName: item.name,
-              doc: item.order
+              doc: conflict.conflictsWith
             }));
-          } else if (item.status == 'in_custody') {
-            conflicts.push(new Conflict({
-              kind: 'custody',
-              item: item._id,
-              itemName: item.name,
-              doc: item.order
-            }));
-          } else if (item.status != 'available') {
-            conflicts.push(new Conflict({
-              kind: 'order',
-              item: item._id,
-              itemName: item.name,
-              doc: item.order
-            }));
-          } else if (item.location != locId) {
-            conflicts.push(new Conflict({
-              kind: 'location',
-              item: item._id,
-              itemName: item.name,
-              locationCurrent: item.location,
-              locationDesired: locId,
-              doc: item.order
-            }));
+          } else {
+            // Reservations in "open" status,
+            // can use the Items' current status and location
+            // to see if there are any conflicts for fullfilling into an Order
+            var locId = that._getId(that.location);
+            if (item.status == 'expired') {
+              conflicts.push(new Conflict({
+                kind: 'expired',
+                item: item._id,
+                itemName: item.name,
+                doc: item.order
+              }));
+            } else if (item.status == 'in_custody') {
+              conflicts.push(new Conflict({
+                kind: 'custody',
+                item: item._id,
+                itemName: item.name,
+                doc: item.order
+              }));
+            } else if (item.status != 'available') {
+              conflicts.push(new Conflict({
+                kind: 'order',
+                item: item._id,
+                itemName: item.name,
+                doc: item.order
+              }));
+            } else if (item.location != locId) {
+              conflicts.push(new Conflict({
+                kind: 'location',
+                item: item._id,
+                itemName: item.name,
+                locationCurrent: item.location,
+                locationDesired: locId,
+                doc: item.order
+              }));
+            }
           }
         });
-      } else if (this.status == 'creating') {
-        var that = this;
-        // Reservations in "creating" status,
-        // use a server side check
-        return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
-          if (cnflcts && cnflcts.length) {
-            // Now we have the conflicts for this reservation
-            // run over the items again and find the conflict for each item
-            $.each(that.items, function (i, item) {
-              conflict = cnflcts.find(function (conflictObj) {
-                return conflictObj.item == item._id;
-              });
-              if (conflict) {
-                var kind = conflict.kind || '';
-                kind = kind || (conflict.order ? 'order' : '');
-                kind = kind || (conflict.reservation ? 'reservation' : '');
-                conflicts.push(new Conflict({
-                  kind: kind,
-                  item: item._id,
-                  itemName: item.name,
-                  doc: conflict.conflictsWith
-                }));
-              }
-            });
-          }
-          return conflicts;
-        });
-      }
+        return conflicts;
+      });
     }
     return $.Deferred().resolve(conflicts);
   };
@@ -12619,9 +12610,6 @@ Reservation = function ($, api, Transaction, Conflict) {
         if (item.status != 'available') {
           unavailable['status'] = unavailable['status'] || [];
           unavailable['status'].push(item._id);
-        } else if (item.location != locId) {
-          unavailable['location'] = unavailable['location'] || [];
-          unavailable['location'].push(item._id);
         }
       });
     }

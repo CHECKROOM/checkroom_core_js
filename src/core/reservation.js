@@ -338,7 +338,7 @@ define([
                                     // Reservations in "open" status,
                                     // can use the Items' current status and location
                                     // to see if there are any conflicts for fullfilling into an Order
-                                    var locId = that._getId(that.location);
+                                    var locId = that.location?that._getId(that.location):null;
 
                                     if (item.status=="expired") {
                                         conflicts.push(new Conflict({
@@ -361,7 +361,7 @@ define([
                                             itemName: item.name,
                                             doc: item.order
                                         }));
-                                    } else if (item.location!=locId) {
+                                    } else if (locId && item.location!=locId) {
                                         conflicts.push(new Conflict({
                                             kind: "location",
                                             item: item._id,

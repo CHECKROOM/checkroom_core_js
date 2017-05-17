@@ -11557,12 +11557,15 @@ PermissionHandler = function () {
     return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs');
   };
   PermissionHandler.prototype.hasDashboardPermission = function (action, data, location) {
-    // Everyone can see the calendar tab
+    // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
+    if (this._isSelfService) {
+      return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
+    }
     return true;
   };
   PermissionHandler.prototype.hasCalendarPermission = function (action, data, location) {
-    // Everyone can see the calendar tab
-    return true;
+    // Calendar permission depends on reservation or checkout permission
+    return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
   };
   PermissionHandler.prototype.hasItemPermission = function (action, data, location) {
     return this.hasPermission(action, 'items', data, location);

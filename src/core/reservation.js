@@ -81,7 +81,7 @@ define([
     /**
      * Checks if from date is valid for open/creating reservation
      * otherwise return always true
-     * 
+     *
      * @return {Boolean}
      */
     Reservation.prototype.isValidFromDate = function(){
@@ -90,7 +90,7 @@ define([
             now = this.getNow();
 
         if((status == "creating" || status == "open")){
-            return from != null && from.isAfter(now);             
+            return from != null && from.isAfter(now);
         }
 
         return true;
@@ -99,7 +99,7 @@ define([
     /**
      * Checks if to date is valid for open/creating reservation
      * otherwise return always true
-     * 
+     *
      * @return {Boolean}
      */
     Reservation.prototype.isValidToDate = function(){
@@ -108,7 +108,7 @@ define([
             status = this.status;
 
         if((status == "creating" || status == "open")){
-            return to != null && to.isAfter(from); 
+            return to != null && to.isAfter(from);
         }
 
         return true;
@@ -122,14 +122,14 @@ define([
      */
     Reservation.prototype.canReserve = function() {
         return (
-            (this.status=="creating") &&
-                (this.location) &&
-                ((this.contact) &&
-                 (this.contact.status == "active")) &&
-                (this.isValidFromDate()) &&
-                (this.isValidToDate()) &&
-                (this.items) &&
-                (this.items.length));
+        (this.status=="creating") &&
+        (this.location) &&
+        ((this.contact) &&
+        (this.contact.status == "active")) &&
+        (this.isValidFromDate()) &&
+        (this.isValidToDate()) &&
+        (this.items) &&
+        (this.items.length));
     };
 
     /**
@@ -309,74 +309,86 @@ define([
 
         // Reservations can only have conflicts
         // when we have a (location OR (from AND to)) AND at least 1 item
+        // So we'll only hit the server if there are possible conflicts.
+        //
+        // However, some conflicts only start making sense when the reservation fields filled in
+        // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
         if( (this.items) &&
             (this.items.length) &&
             ((this.location) || (this.from && this.to))) {
 
-             return this.ds.call(this.id, "getConflicts")
-                    .then(function(cnflcts) {
-                        cnflcts = cnflcts || [];                        
+            var locId = this.location ? this._getId(this.location) : null;
+            var showOrderConflicts = (this.from && this.to);
+            var showLocationConflicts = (this.location!=null);
+            var showStatusConflicts = true; // always show conflicts for expired, custody
 
-                            // Now we have the conflicts for this reservation
-                            // run over the items again and find the conflict for each item
-                            $.each(that.items, function(i, item) {
-                                conflict = cnflcts.find(function(conflictObj){
-                                    return conflictObj.item == item._id;
-                                });
-                                if (conflict) {
-                                    var kind = conflict.kind || "";
-                                    kind = kind || (conflict.order ? "order" : "");
-                                    kind = kind || (conflict.reservation ? "reservation" : "");
+            return this.ds.call(this.id, "getConflicts")
+                .then(function(cnflcts) {
+                    cnflcts = cnflcts || [];
 
-                                    conflicts.push(new Conflict({
-                                        kind: kind,
-                                        item: item._id,
-                                        itemName: item.name,
-                                        doc: conflict.conflictsWith
-                                    }));
-                                }else{
-                                    // Reservations in "open" status,
-                                    // can use the Items' current status and location
-                                    // to see if there are any conflicts for fullfilling into an Order
-                                    var locId = that.location?that._getId(that.location):null;
+                    // Now we have 0 or more conflicts for this reservation
+                    // run over the items again and find the conflict for each item
+                    $.each(that.items, function(i, item) {
+                        conflict = cnflcts.find(function(conflictObj){
+                            return conflictObj.item == item._id;
+                        });
 
-                                    if (item.status=="expired") {
-                                        conflicts.push(new Conflict({
-                                            kind: "expired",
-                                            item: item._id,
-                                            itemName: item.name,
-                                            doc: item.order
-                                        }));
-                                    } else if (item.status == "in_custody"){
-                                        conflicts.push(new Conflict({
-                                            kind: "custody",
-                                            item: item._id,
-                                            itemName: item.name,
-                                            doc: item.order
-                                        }));
-                                    } else if (item.status!="available") {
-                                        conflicts.push(new Conflict({
-                                            kind: "order",
-                                            item: item._id,
-                                            itemName: item.name,
-                                            doc: item.order
-                                        }));
-                                    } else if (locId && item.location!=locId) {
-                                        conflicts.push(new Conflict({
-                                            kind: "location",
-                                            item: item._id,
-                                            itemName: item.name,
-                                            locationCurrent: item.location,
-                                            locationDesired: locId,
-                                            doc: item.order
-                                        }));
-                                    }
-                                }
-                            });
-                        
+                        // Does this item have a server-side conflict?
+                        if (conflict) {
+                            var kind = conflict.kind || "";
+                            kind = kind || (conflict.order ? "order" : "");
+                            kind = kind || (conflict.reservation ? "reservation" : "");
 
-                        return conflicts;
+                            conflicts.push(new Conflict({
+                                kind: kind,
+                                item: item._id,
+                                itemName: item.name,
+                                doc: conflict.conflictsWith
+                            }));
+                        } else {
+                            if( (showStatusConflicts) &&
+                                (item.status=="expired")) {
+                                conflicts.push(new Conflict({
+                                    kind: "expired",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    doc: item.order
+                                }));
+                            } else if (
+                                (showStatusConflicts) &&
+                                (item.status == "in_custody")) {
+                                conflicts.push(new Conflict({
+                                    kind: "custody",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    doc: item.order
+                                }));
+                            } else if (
+                                (showOrderConflicts) &&
+                                (item.status!="available")) {
+                                conflicts.push(new Conflict({
+                                    kind: "order",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    doc: item.order
+                                }));
+                            } else if (
+                                (showLocationConflicts) &&
+                                (item.location!=locId)) {
+                                conflicts.push(new Conflict({
+                                    kind: "location",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    locationCurrent: item.location,
+                                    locationDesired: locId,
+                                    doc: item.order
+                                }));
+                            }
+                        }
                     });
+                    
+                    return conflicts;
+                });
         }
 
         return $.Deferred().resolve(conflicts);
@@ -467,7 +479,7 @@ define([
         }
 
         this.from = null;
-        return this._doApiCall({method: "clearFromDate", skipRead: skipRead});           
+        return this._doApiCall({method: "clearFromDate", skipRead: skipRead});
     };
 
     /**
@@ -528,7 +540,7 @@ define([
         }
 
         this.to = null;
-        return this._doApiCall({method: "clearToDate", skipRead: skipRead});  
+        return this._doApiCall({method: "clearToDate", skipRead: skipRead});
     };
 
     // Reservation does not use due dates
@@ -675,9 +687,9 @@ define([
 
         if (roundedFromDate && roundedToDate) {
             return $.when(
-                    this._checkFromDateBetweenMinMax(roundedFromDate),
-                    this._checkToDateBetweenMinMax(roundedToDate)
-                )
+                this._checkFromDateBetweenMinMax(roundedFromDate),
+                this._checkToDateBetweenMinMax(roundedToDate)
+            )
                 .then(function(fromRes, toRes) {
                     var interval = dateHelper.roundMinutes;
                     // TODO: We should never get here

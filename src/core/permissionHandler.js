@@ -32,7 +32,7 @@ define([], function () {
         this._useOrderTransfers =     (limits.allowOrderTransfers) &&   (profile.useOrderTransfers);
         this._useSendMessage =        (limits.allowSendMessage) &&      (profile.useSendMessage);
         this._useUserSync =           (limits.allowUserSync) &&         (profile.useUserSync);
-        this._useFlags =              (profile.useCustom);
+        this._useFlags =              (profile.useFlags);
         this._useGeo =                (profile.useGeo);
 
         this._canSetFlag = false;
@@ -71,14 +71,18 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasDashboardPermission = function(action, data, location) {
-        // Everyone can see the calendar tab
+        // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
+        if(this._isSelfService){
+            return this.hasReservationPermission("read") || this.hasCheckoutPermission("read");
+        }
+
         return true;
     };
 
 
     PermissionHandler.prototype.hasCalendarPermission = function(action, data, location) {
-        // Everyone can see the calendar tab
-        return true;
+        // Calendar permission depends on reservation or checkout permission
+        return this.hasReservationPermission("read") || this.hasCheckoutPermission("read");
     };
 
     
@@ -330,7 +334,7 @@ define([], function () {
                     case "checkinAt":
                         return this._useCheckinLocation;
                     case "forceConflictResolving":
-                        return this.profile.forceConflictResolving;
+                        return false; // this.profile.forceConflictResolving;
                 }
                 break;
             case "reservations":

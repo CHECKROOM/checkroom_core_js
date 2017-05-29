@@ -28,7 +28,7 @@ Call `grunt gh-pages` to publish the documentation
 //
 // Authenticating via username and password
 //
-var baseUrl = 'https://app.cheqroom.com/api/v2_2';
+var baseUrl = 'https://api.cheqroom.com/api/v2_5';
 var userName = "";
 var password = "";
 

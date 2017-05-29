@@ -319,7 +319,7 @@ define([
 
             var locId = this.location ? this._getId(this.location) : null;
             var showOrderConflicts = (this.from && this.to);
-            var showLocationConflicts = (this.location!=null);
+            var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
 
             return this.ds.call(this.id, "getConflicts")
@@ -386,7 +386,7 @@ define([
                             }
                         }
                     });
-                    
+
                     return conflicts;
                 });
         }
@@ -632,7 +632,7 @@ define([
      * @returns {promise}
      */
     Reservation.prototype.generateDocument = function(template, signature, skipRead) {
-        return this._doApiCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
+        return this._doApiLongCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
     };
 
     /**

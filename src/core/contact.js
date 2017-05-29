@@ -187,7 +187,7 @@ define([
      * @returns {promise}
      */
     Contact.prototype.generateDocument = function(template, signature, skipRead) {
-        return this._doApiCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
+        return this._doApiLongCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
     };
 
     //

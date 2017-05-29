@@ -356,6 +356,19 @@ define([
             });
     };
 
+    /**
+     * Wrapping the this.ds.call method with a longer timeout
+     * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
+     * @method
+     * @param spec
+     * @returns {promise}
+     * @private
+     */
+    Document.prototype._doApiLongCall = function(spec) {
+        spec.timeOut = spec.timeOut || 30000;
+        return this._doApiCall(spec);
+    };
+
     return Document;
 
 });

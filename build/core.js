@@ -4442,6 +4442,18 @@ document = function ($, common, api) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
   };
+  /**
+   * Wrapping the this.ds.call method with a longer timeout
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
+   * @method
+   * @param spec
+   * @returns {promise}
+   * @private
+   */
+  Document.prototype._doApiLongCall = function (spec) {
+    spec.timeOut = spec.timeOut || 30000;
+    return this._doApiCall(spec);
+  };
   return Document;
 }(jquery, common, api);
 Availability = function ($, common, api, Document) {
@@ -7182,7 +7194,7 @@ Contact = function ($, Base, common, User, Helper) {
    * @returns {promise}
    */
   Contact.prototype.generateDocument = function (template, signature, skipRead) {
-    return this._doApiCall({
+    return this._doApiLongCall({
       method: 'generateDocument',
       params: {
         template: template,
@@ -7959,6 +7971,18 @@ Document = function ($, common, api) {
     return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
+  };
+  /**
+   * Wrapping the this.ds.call method with a longer timeout
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
+   * @method
+   * @param spec
+   * @returns {promise}
+   * @private
+   */
+  Document.prototype._doApiLongCall = function (spec) {
+    spec.timeOut = spec.timeOut || 30000;
+    return this._doApiCall(spec);
   };
   return Document;
 }(jquery, common, api);
@@ -11442,7 +11466,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @returns {promise}
    */
   Order.prototype.generateDocument = function (template, signature, skipRead) {
-    return this._doApiCall({
+    return this._doApiLongCall({
       method: 'generateDocument',
       params: {
         template: template,
@@ -12263,7 +12287,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     if (this.items && this.items.length && (this.location || this.from && this.to)) {
       var locId = this.location ? this._getId(this.location) : null;
       var showOrderConflicts = this.from && this.to;
-      var showLocationConflicts = this.location != null;
+      var showLocationConflicts = locId != null;
       var showStatusConflicts = true;
       // always show conflicts for expired, custody
       return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
@@ -12564,7 +12588,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {promise}
    */
   Reservation.prototype.generateDocument = function (template, signature, skipRead) {
-    return this._doApiCall({
+    return this._doApiLongCall({
       method: 'generateDocument',
       params: {
         template: template,

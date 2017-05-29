@@ -32,7 +32,9 @@ define(function () {
             // Field contains value?
             if(fields.indexOf('fields') != -1){
                 if(doc.fields){
-                	var findValue = Object.values(doc.fields).find(function(fieldValue){ return fieldValue.toString().indexOf(value) != -1; });
+                	var findValue = Object.values(doc.fields).find(function(fieldValue){ 
+                        return fieldValue.toString().toLowerCase().indexOf(value) != -1; 
+                    });
                 	if(findValue){
                 		return true;
                 	}
@@ -42,7 +44,7 @@ define(function () {
             // Code contains value?
             if(fields.indexOf('codes') != -1){
                 if(doc.codes){
-                	var findValue = doc.codes.find(function(code){ return code.indexOf(value) != -1; });
+                	var findValue = doc.codes.find(function(code){ return code.toLowerCase().indexOf(value) != -1; });
                 	if(findValue){
                 		return true;
                 	}
@@ -52,7 +54,7 @@ define(function () {
             // Barcode contains value?
             if(fields.indexOf('barcodes') != -1){
                 if(doc.barcodes){
-                    var findValue = doc.barcodes.find(function(code){ return code.indexOf(value) != -1; });
+                    var findValue = doc.barcodes.find(function(code){ return code.toLowerCase().indexOf(value) != -1; });
                     if(findValue){
                         return true;
                     }

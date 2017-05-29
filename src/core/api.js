@@ -7,8 +7,8 @@
 define([
     'jquery',
     'jquery-jsonp',
-    'moment',
-    'common'], function ($, jsonp, moment, common) {
+    'moment'], function ($, jsonp, moment) {
+    var MAX_QUERYSTRING_LENGTH = 2048;
 
     //TODO change this
     //system.log fallback
@@ -45,8 +45,12 @@ define([
     api.ApiForbidden.prototype = new Error();
     api.ApiUnprocessableEntity = function (msg, opt) {    this.code = 422; this.message = msg || "Some data is invalid"; this.opt = opt; };
     api.ApiUnprocessableEntity.prototype = new Error();
+    api.ApiSubscriptionLimit = function (msg, opt) {       this.code = 422; this.message = msg || "You have reached your subscription limit"; this.opt = opt; };
+    api.ApiSubscriptionLimit.prototype = new Error();
     api.ApiPaymentRequired = function (msg, opt) {        this.code = 402; this.message = msg || "Your subscription has expired"; this.opt = opt; };
     api.ApiPaymentRequired.prototype = new Error();
+    api.ApiServerCapicity = function(msg, opt){           this.code = 503; this.message = msg || "Back-end server is at capacity"; this.opt = opt; };
+    api.ApiServerCapicity.prototype = new Error();
 
     //*************
     // ApiAjax
@@ -93,14 +97,23 @@ define([
         // ajax call was aborted
         if(t == "abort") return;
 
-        var msg = null;
+        var msg = "";
         if (m==="timeout") {
             dfd.reject(new api.NetworkTimeout(msg, opt));
         } else {
-            if ((x) &&
-               (x.statusText) &&
-               (x.statusText.indexOf("Notify user:") > -1)) {
-               msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
+            if (x){
+                if((x.statusText) &&
+                    (x.statusText.indexOf("Notify user:") > -1)) {
+                    msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
+                }
+
+                if( (x.status == 422) &&
+                    (x.responseText) &&
+                    (x.responseText.match(/HTTPError: \(.+\)/g).length > 0)){
+                    opt = {
+                        detail: x.responseText.match(/HTTPError: \(.+\)/g)[0]
+                    }
+                }
             }
 
             switch(x.status) {
@@ -110,7 +123,17 @@ define([
                 case 403: dfd.reject(new api.ApiForbidden(msg, opt)); break;
                 case 404: dfd.reject(new api.ApiNotFound(msg, opt)); break;
                 case 408: dfd.reject(new api.NetworkTimeout(msg, opt)); break;
-                case 422: dfd.reject(new api.ApiUnprocessableEntity(msg, opt)); break;
+                case 422:
+                    // 422 Notify user: Cannot create item, max limit 50 items reached
+                    if( (msg) &&
+                        (msg.indexOf('limit') >= 0) &&
+                        (msg.indexOf('reach') >= 0)) {
+                        dfd.reject(new api.ApiSubscriptionLimit(msg, opt));
+                    } else {
+                        dfd.reject(new api.ApiUnprocessableEntity(msg, opt));
+                    }
+                    break;
+                case 503: dfd.reject(new api.ApiServerCapicity(msg, opt)); break;
                 case 500:
                 default: dfd.reject(new api.ApiError(msg, opt)); break;
             }
@@ -196,9 +219,10 @@ define([
 
     api.ApiAjax.prototype._prepareDict = function(data) {
         // Makes sure all values from the dict are serializable and understandable for json
-	if (!data) {
+        if (!data) {
             return {};
-	};
+        }
+
         $.each(data, function(key, value) {
             if(moment.isMoment(value)) {
                 data[key] = value.toJSONDate();
@@ -207,13 +231,13 @@ define([
         return data;
     };
 
-     /**
+    /**
      * Turns all strings that look like datetimes into moment objects recursively
-     * 
+     *
      * @name  DateHelper#fixDates
      * @method
      * @private
-     * 
+     *
      * @param data
      * @returns {*}
      */
@@ -238,7 +262,7 @@ define([
             });
         }
         return data;
-    }
+    };
 
     //*************
     // ApiUser
@@ -286,10 +310,10 @@ define([
     api.ApiUser.prototype.isValid = function() {
         system.log('ApiUser: isValid');
         return (
-            (this.userId) &&
-            (this.userId.length>0) &&
-            (this.userToken) &&
-            (this.userToken.length>0));
+        (this.userId) &&
+        (this.userId.length>0) &&
+        (this.userToken) &&
+        (this.userToken.length>0));
     };
 
     api.ApiUser.prototype._reset = function() {
@@ -481,16 +505,7 @@ define([
         this.user = spec.user;
         this.ajax = spec.ajax;
         this.version = spec.version;
-
-        // Make the baseurl only once, we assume the collection and user never changes
-        var tokenType = ((this.user.tokenType != null) && (this.user.tokenType.length>0)) ? this.user.tokenType : 'null';
-        this._baseUrl =
-            this.urlApi + '/' +
-            this.user.userId + '/' +
-            this.user.userToken + '/' +
-            tokenType + '/' +
-            this.collection + '/';
-    };
+   };
 
     /**
      * Checks if a certain document exists
@@ -525,9 +540,9 @@ define([
                 if (that.ajax.useJsonp) {
                     dfd.resolve(null);
                 } else if (error instanceof api.ApiNotFound) {
-                   dfd.resolve(null);
+                    dfd.resolve(null);
                 } else {
-                   dfd.reject(error);
+                    dfd.reject(error);
                 }
             });
         return dfd.promise();
@@ -618,15 +633,31 @@ define([
     };
 
     /**
+     * Deletes documents by their primary key
+     * @method
+     * @name ApiDataSource#deleteMultiple
+     * @param pks
+     * @returns {promise}
+     */
+    api.ApiDataSource.prototype.deleteMultiple = function(pks) {
+        system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
+        var cmd = "deleteMultiple";
+        var url = this.getBaseUrl() + pks.join(',') + '/delete';
+        return this._ajaxGet(cmd, url);
+    };
+
+    /**
      * Updates a document by its primary key and a params objects
      * @method
      * @name ApiDataSource#update
      * @param pk
      * @param params
      * @param fields
+     * @param timeOut
+     * @param usePost
      * @returns {promise}
      */
-    api.ApiDataSource.prototype.update = function(pk, params, fields) {
+    api.ApiDataSource.prototype.update = function(pk, params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
         var cmd = "update";
         var url = this.getBaseUrl() + pk + '/update';
@@ -635,8 +666,14 @@ define([
             (fields.length>0)) {
             p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
         }
-        url += '?' + this.getParams(p);
-        return this._ajaxGet(cmd, url);
+        var geturl = url + '?' + this.getParams(p);
+
+        if( (usePost) || 
+            (geturl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p, timeOut);
+        } else {
+            return this._ajaxGet(cmd, geturl, timeOut);
+        }
     };
 
     /**
@@ -645,9 +682,11 @@ define([
      * @name ApiDataSource#create
      * @param params
      * @param fields
+     * @param timeOut
+     * @param usePost
      * @returns {promise}
      */
-    api.ApiDataSource.prototype.create = function(params, fields) {
+    api.ApiDataSource.prototype.create = function(params, fields, timeOut, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': create');
         var cmd = "create";
         var url = this.getBaseUrl() + 'create';
@@ -657,12 +696,18 @@ define([
             p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
         }
 
-        url += '?' + this.getParams(p);
-        return this._ajaxGet(cmd, url);
+        var geturl = url + '?' + this.getParams(p);
+
+        if( (usePost) || 
+            (geturl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p, timeOut);
+        } else {
+            return this._ajaxGet(cmd, geturl, timeOut);
+        }
     };
 
     /**
-     * Creates multiple objects in one goe
+     * Creates multiple objects in one go
      * @method
      * @name ApiDataSource#createMultiple
      * @param objects
@@ -773,12 +818,39 @@ define([
             this.getBaseUrl() + pk + '/call/' + method :
             this.getBaseUrl() + 'call/' + method;
         var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
+        var getUrl = url + '?' + this.getParams(p);
 
-        if (usePost) {
+        if( (usePost) ||
+            (getUrl.length >= MAX_QUERYSTRING_LENGTH)) {
             return this._ajaxPost(cmd, url, p, timeOut);
         } else {
-            url += '?' + this.getParams(p);
-            return this._ajaxGet(cmd, url, timeOut);
+            return this._ajaxGet(cmd, getUrl, timeOut);
+        }
+    };
+
+    /**
+     * Calls a certain method on one or more objects in a collection
+     * @method
+     * @name ApiDataSource#callMultiple
+     * @param pks
+     * @param method
+     * @param params
+     * @param fields
+     * @param timeOut
+     * @param usePost
+     * @returns {promise}
+     */
+    api.ApiDataSource.prototype.callMultiple = function(pks, method, params, fields, timeOut, usePost) {
+        system.log('ApiDataSource: ' + this.collection + ': call ' + method);
+        var cmd = "call." + method;
+        var url = this.getBaseUrl() + pks.join(',') + '/call/' + method;
+        var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
+        var getUrl = url + '?' + this.getParams(p);
+
+        if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+            return this._ajaxPost(cmd, url, p, timeOut);
+        } else {
+            return this._ajaxGet(cmd, getUrl, timeOut);
         }
     };
 
@@ -804,7 +876,15 @@ define([
      * @returns {string}
      */
     api.ApiDataSource.prototype.getBaseUrl = function() {
-        return this._baseUrl;
+        var tokenType = ((this.user.tokenType != null) && (this.user.tokenType.length>0)) ? this.user.tokenType : 'null';            
+   
+        //Don't use cached version of this because when user session gets expired
+        //a new token is generated
+        return this.urlApi + '/' +
+            this.user.userId + '/' +
+            this.user.userToken + '/' +
+            tokenType + '/' +
+            this.collection + '/';
     };
 
     /**

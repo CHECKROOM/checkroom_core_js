@@ -24,9 +24,11 @@ define([
     var Order = function(opt) {
         var spec = $.extend({
             crtype: "cheqroom.types.order",
-            fields: ["*"]
+            _fields: ["*"]
         }, opt);
         Transaction.call(this, spec);
+
+        this.dsReservations = spec.dsReservations;
     };
 
     Order.prototype = new tmp();
@@ -68,6 +70,9 @@ define([
     // Document overrides
     //
     Order.prototype._toJson = function(options) {
+        // Should only be used during create
+        // and never be called on order update
+        // since most updates are done via setter methods
         var data = Transaction.prototype._toJson.call(this, options);
         data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
         data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
@@ -83,6 +88,7 @@ define([
         that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
         that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
         that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
+        that.reservation = data.reservation || null;
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
@@ -95,30 +101,23 @@ define([
     // Helpers
     //
     /**
+     * Gets a moment duration object
+     * @method
+     * @name Order#getDuration
+     * @returns {duration}
+     */
+    Order.prototype.getDuration = function() {
+        return common.getOrderDuration(this.raw);
+    };
+
+    /**
      * Gets a friendly order duration or empty string
      * @method
      * @name Order#getFriendlyDuration
      * @returns {string}
      */
     Order.prototype.getFriendlyDuration = function() {
-        var duration = this.getDuration();
-        return (duration!=null) ? this._getDateHelper().getFriendlyDuration(duration) : "";
-    };
-
-    /**
-     * Gets a moment duration object
-     * @method
-     * @name Order#getDuration
-     * @returns {*}
-     */
-    Order.prototype.getDuration = function() {
-        if (this.from!=null) {
-            var to = (this.status=="closed") ? this.to : this.due;
-            if (to) {
-                return moment.duration(to - this.from);
-            }
-        }
-        return null;
+        return common.getFriendlyOrderDuration(this.raw, this._getDateHelper());
     };
 
     /**
@@ -142,6 +141,35 @@ define([
     };
 
     /**
+     * Checks if the order has an reservation linked to it
+     * @method
+     * @name Order#canGoToReservation
+     * @returns {boolean}
+     */
+    Order.prototype.canGoToReservation = function(){
+        return this.reservation != null;
+    }
+
+    /**
+     * Checks if due date is valid for an creating order
+     * oterwise return true
+     *
+     * @name Order#isValidDueDate
+     * @return {Boolean} 
+     */
+    Order.prototype.isValidDueDate = function(){
+        var due = this.due,
+            now = this.getNow(),
+            status = this.status;
+
+        if(status == "creating"){
+            return due!=null && due.isAfter(now);
+        }
+
+        return true;
+    }
+
+    /**
      * Checks if order can be checked out
      * @method
      * @name Order#canCheckout
@@ -151,16 +179,14 @@ define([
         var that = this;
         return (
             (this.status=="creating") &&
-            (this.location) &&
-            ((this.contact) &&
-             (this.contact.status == "active")) &&
-            (this.due) &&
-            (this.due.isAfter(this._getDateHelper().getNow())) &&
-            (this.items) &&
-            (this.items.length) &&
-            (common.getItemsByStatus(this.items, function(item){
-                return that.id == that.helper.ensureId(item.order);
-            }).length == this.items.length));
+            (this.location!=null) &&
+            ((this.contact!=null) &&
+            (this.contact.status == "active")) &&
+            (this.isValidDueDate()) &&
+            ((this.items) &&
+            (this.items.length > 0) &&
+            (this.items.filter(function(item){ return that.id == that.helper.ensureId(item.order); }).length > 0))
+        );
     };
 
     /**
@@ -173,6 +199,55 @@ define([
         return (this.status=="open");
     };
 
+    /**
+     * Checks if the order can be deleted (based on status)
+     * @method
+     * @name Order#canDelete
+     * @returns {boolean}
+     */
+    Order.prototype.canDelete = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be added to the checkout (based on status)
+     * @method
+     * @name Order#canAddItems
+     * @returns {boolean}
+     */
+    Order.prototype.canAddItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be removed from the checkout (based on status)
+     * @method
+     * @name Order#canRemoveItems
+     * @returns {boolean}
+     */
+    Order.prototype.canRemoveItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be swapped in the checkout (based on status)
+     * @method
+     * @name Order#canSwapItems
+     * @returns {boolean}
+     */
+    Order.prototype.canSwapItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if we can generate a document for this order (based on status)
+     * @name Order#canGenerateDocument
+     * @returns {boolean}
+     */
+    Order.prototype.canGenerateDocument = function() {
+        return (this.status=="open") || (this.status=="closed");
+    };
+
     //
     // Base overrides
     //
@@ -180,6 +255,42 @@ define([
     //
     // Transaction overrides
     //
+    Order.prototype._getConflictsForExtend = function() {
+        var conflicts = [];
+
+        // Only orders which are incomplete,
+        // but have items and / or due date can have conflicts
+        if (this.status=="open") {
+
+            // Only check for new conflicts on the items
+            // that are still checked out under this order
+            var items = [],
+                that = this;
+            $.each(this.items, function(i, item) {
+                if( (item.status == "checkedout") &&
+                    (item.order == that.id)) {
+                    items.push(item);
+                }
+            });
+
+            // If we have a due date,
+            // check if it conflicts with any reservations
+            if (this.due) {
+                return this._getServerConflicts(
+                    this.items,
+                    this.from,
+                    this.due,
+                    this.id,  // orderId
+                    this.helper.ensureId(this.reservation))  // reservationId
+                    .then(function(serverConflicts) {
+                        return conflicts.concat(serverConflicts);
+                    });
+            }
+        }
+
+        return $.Deferred().resolve(conflicts);
+    };
+
     /**
      * Gets a list of Conflict objects
      * used during Transaction._fromJson
@@ -194,83 +305,123 @@ define([
         if( (this.status=="creating") &&
             (this.items.length>0)) {
 
-            // Check if all the items are:
-            // - at the right location
-            // - not expired
-            var locId = this._getId(this.location);
-
-            $.each(this.items, function(i, item) {
-                if (item.status == "expired") {
-                    conflicts.push(new Conflict({
-                        kind: "expired",
-                        item: item._id,
-                        itemName: item.name,
-                        locationCurrent: item.location,
-                        locationDesired: locId
-                    }));
-                } else if (item.location != locId) {
-                    conflicts.push(new Conflict({
-                        kind: "location",
-                        item: item._id,
-                        itemName: item.name,
-                        locationCurrent: item.location,
-                        locationDesired: locId
-                    }));
-                }
-            });
+            // Get some conflicts we can already calculate on the client side
+            conflicts = this._getClientConflicts();
 
             // If we have a due date,
             // check if it conflicts with any reservations
             if (this.due) {
-                var that = this;
-                var kind = "";
-                var transItem = null;
-
-                // Get the availabilities for these items
-                return this.dsItems.call(null, "getAvailabilities", {
-                    items: $.map(this.items, function(item) { return item._id; }),
-                    fromDate: this.from,
-                    toDate: this.due})
-                    .then(function(data) {
-
-                        // Run over unavailabilties for these items
-                        $.each(data, function(i, av) {
-                            // Lookup the more complete item object via transaction.items
-                            // It has useful info like item.name we can use in the conflict message
-                            transItem = $.grep(that.items, function(item) { return item._id == av.item});
-
-                            // $.grep returns an array with 1 item, we need reference to the item for transItem
-                            if(transItem && transItem.length > 0){
-                                transItem = transItem[0];
-                            }
-
-                            if( (transItem!=null) &&
-                                (transItem.status!="expired")) {
-
-                                // Order cannot conflict with itself
-                                if(av.order != that.id) {
-                                    kind = "";
-                                    kind = kind || ((av.order) ? "order" : "");
-                                    kind = kind || ((av.reservation) ? "reservation" : "");
-
-                                    conflicts.push(new Conflict({
-                                        kind: kind,
-                                        item: transItem._id,
-                                        itemName: transItem.name,
-                                        fromDate: av.fromDate,
-                                        toDate: av.toDate,
-                                        doc: av.order || av.reservation
-                                    }));
-                                }
-                            }
-                        });
-
-                        return conflicts;
+                return this._getServerConflicts(
+                    this.items,
+                    this.from,
+                    this.due,
+                    this.id,  // orderId
+                    this.helper.ensureId(this.reservation))  // reservationId
+                    .then(function(serverConflicts) {
+                        return conflicts.concat(serverConflicts);
                     });
             }
         }
 
         return $.Deferred().resolve(conflicts);
+    };
+
+    /**
+     * Get server side conflicts for items between two dates
+     * Also pass extra info like own order and reservation
+     * so we can avoid listing conflicts with ourselves
+     * @param items array of item objects (not just the ids)
+     * @param fromDate
+     * @param dueDate
+     * @param orderId
+     * @param reservationId
+     * @returns {*}
+     * @private
+     */
+    Order.prototype._getServerConflicts = function(items, fromDate, dueDate, orderId, reservationId) {
+        var conflicts = [],
+            kind = "",
+            transItem = null,
+            itemIds = common.getItemIds(items);
+
+        // Get the availabilities for these items
+        return this.dsItems.call(null, "getAvailabilities", {
+            items: itemIds,
+            fromDate: fromDate,
+            toDate: dueDate})
+            .then(function(data) {
+
+                // Run over unavailabilties for these items
+                $.each(data, function(i, av) {
+
+                    // Find back the more complete item object via the `items` param
+                    // It has useful info like item.name we can use in the conflict message
+                    // $.grep returns an array with 1 item,
+                    // we need reference to the 1st item for transItem
+                    transItem = $.grep(items, function(item) { return item._id == av.item});
+                    if( (transItem) &&
+                        (transItem.length > 0)) {
+                        transItem = transItem[0];
+                    }
+
+                    if( (transItem!=null) &&
+                        (transItem.status!="expired")) {
+
+                        // Order cannot conflict with itself
+                        // or with the Reservation from which it was created
+                        if( (av.order != orderId) &&
+                            (av.reservation != reservationId)) {
+                            kind = "";
+                            kind = kind || ((av.order) ? "order" : "");
+                            kind = kind || ((av.reservation) ? "reservation" : "");
+
+                            conflicts.push(new Conflict({
+                                kind: kind,
+                                item: transItem._id,
+                                itemName: transItem.name,
+                                fromDate: av.fromDate,
+                                toDate: av.toDate,
+                                doc: av.order || av.reservation
+                            }));
+                        }
+                    }
+                });
+
+                return conflicts;
+            });
+    };
+
+    Order.prototype._getClientConflicts = function() {
+        // Some conflicts can be checked already on the client
+        // We can check if all the items are:
+        // - at the right location
+        // - not expired
+        var conflicts = [],
+            locId = this.helper.ensureId(this.location || "");
+
+        $.each(this.items, function(i, item) {
+            if (item.status == "expired") {
+                conflicts.push(new Conflict({
+                    kind: "expired",
+                    item: item._id,
+                    itemName: item.name,
+                    locationCurrent: item.location,
+                    locationDesired: locId
+                }));
+                // If order location is defined, check if item
+                // is at the right location
+            } else if (locId && item.location != locId) {
+                conflicts.push(new Conflict({
+                    kind: "location",
+                    item: item._id,
+                    itemName: item.name,
+                    locationCurrent: item.location,
+                    locationDesired: locId
+                }));
+            }
+        });
+
+        return conflicts;
     };
 
     /**
@@ -360,7 +511,7 @@ define([
         }
 
         // The to date must be:
-        // 1) at least 30 minutes into the feature
+        // 1) at least 30 minutes into the future
         // 2) at least 15 minutes after the from date (if set)
         var that = this;
         var roundedDueDate = this._getDateHelper().roundTimeTo(due);
@@ -370,7 +521,26 @@ define([
         return this._checkDueDateBetweenMinMax(roundedDueDate)
             .then(function() {
                 that.due = roundedDueDate;
-                return that._handleTransaction(skipRead);
+
+                //If order doesn't exist yet, we set due date in create call
+                //otherwise use setDueDate to update transaction
+                if(!that.existsInDb()){
+                    return that._createTransaction(skipRead);
+                } else{
+                    // If status is open when due date is changed, 
+                    // we need to check for conflicts
+                    if(that.status == "open"){
+                        return that.canExtend(roundedDueDate).then(function(resp){
+                            if(resp && resp.result == true){
+                                return that.extend(roundedDueDate, skipRead);
+                            }else{
+                                return $.Deferred().reject("Cannot extend order to given date because it has conflicts.", resp);
+                            }
+                        })
+                    }else{
+                        return that._doApiCall({method: "setDueDate", params: {due: roundedDueDate}, skipRead: skipRead});
+                    }
+                }
             });
     };
 
@@ -387,8 +557,7 @@ define([
         }
 
         this.due = null;
-
-        return this._handleTransaction(skipRead);
+        return this._doApiCall({method: "clearDueDate", skipRead: skipRead});
     };
 
     Order.prototype.setToDate = function(date, skipRead) {
@@ -452,14 +621,96 @@ define([
     };
 
     /**
-     * Generates a PDF agreement for the order
+     * Checks of order due date can be extended to given date
+     * @param  {moment} due
+     * @param  {bool} skipRead
+     * @return {promise}
+     */
+    Order.prototype.canExtend = function(due){
+        //return this._doApiCall({ method: "canExtend", params: { due: due }, skipRead: true });
+
+        // TODO CHANGE THIS
+        // Currently always allow order to be extended
+        return $.Deferred().resolve({ result: true });
+    }
+
+    /**
+     * Extends order due date
+     * @param  {moment} due
+     * @param  {bool} skipRead
+     * @return {promise}
+     */
+    Order.prototype.extend = function(due, skipRead){
+        return this._doApiCall({ method: "extend", params: { due: due }, skipRead: skipRead });
+    };
+
+    /**
+     * Generates a PDF document for the order
      * @method
-     * @name Order#generateAgreement
-     * @param skipRead
+     * @name Order#generateDocument
+     * @param {string} template id
+     * @param {string} signature (base64)
+     * @param {bool} skipRead
      * @returns {promise}
      */
-    Order.prototype.generateAgreement = function(skipRead) {
-        return this._doApiCall({method: "generateAgreement", skipRead: skipRead});
+    Order.prototype.generateDocument = function(template, signature, skipRead) {
+        return this._doApiLongCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
+    };
+
+    /**
+     * Override _fromCommentsJson to also include linked reservation comments 
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Order.prototype._fromCommentsJson = function(data, options) {
+        var that = this;
+
+        // Also parse reservation comments?
+        if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+          // Parse Reservation keyValues
+          return Base.prototype._fromCommentsJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations, fromReservation: true })).then(function () {
+            var reservationComments = that.comments;
+            return Base.prototype._fromCommentsJson.call(that, data, options).then(function () {
+              // Add reservation comments
+              that.comments = that.comments.concat(reservationComments).sort(function (a, b) {
+                return b.modified > a.modified;
+              });
+            });
+          });
+        }
+
+        // Use Default comments parser
+        return Base.prototype._fromCommentsJson.call(that, data, options);
+    };
+
+    /**
+     * Override _fromAttachmentsJson to also include linked reservation attachments
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Order.prototype._fromAttachmentsJson = function(data, options) {
+        var that = this;
+
+        // Also parse reservation comments?
+        if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+          // Parse Reservation keyValues
+          return Base.prototype._fromAttachmentsJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations, fromReservation: true })).then(function () {
+            var reservationAttachments = that.attachments;
+            return Base.prototype._fromAttachmentsJson.call(that, data, options).then(function () {
+              // Add reservation attachments
+              that.attachments = that.attachments.concat(reservationAttachments).sort(function (a, b) {
+                return b.modified > a.modified;
+              });
+            });
+          });
+        }
+
+        // Use Default attachments parser
+        return Base.prototype._fromAttachmentsJson.call(that, data, options);
     };
 
     //
@@ -494,5 +745,5 @@ define([
     };
 
     return Order;
-    
+
 });

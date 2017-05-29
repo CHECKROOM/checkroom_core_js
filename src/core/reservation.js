@@ -24,11 +24,12 @@ define([
     var Reservation = function(opt) {
         var spec = $.extend({
             crtype: "cheqroom.types.reservation",
-            fields: ["*"]
+            _fields: ["*"]
         }, opt);
         Transaction.call(this, spec);
 
         this.conflicts = [];
+        this.order = null;
     };
 
     Reservation.prototype = new tmp();
@@ -58,6 +59,62 @@ define([
     // Helpers
     //
     /**
+     * Gets a moment duration object
+     * @method
+     * @name Reservation#getDuration
+     * @returns {duration}
+     */
+    Reservation.prototype.getDuration = function() {
+        return common.getReservationDuration(this.raw);
+    };
+
+    /**
+     * Gets a friendly order duration or empty string
+     * @method
+     * @name Reservation#getFriendlyDuration
+     * @returns {string}
+     */
+    Reservation.prototype.getFriendlyDuration = function() {
+        return common.getFriendlyReservationDuration(this.raw, this._getDateHelper());
+    };
+
+    /**
+     * Checks if from date is valid for open/creating reservation
+     * otherwise return always true
+     *
+     * @return {Boolean}
+     */
+    Reservation.prototype.isValidFromDate = function(){
+        var from = this.from,
+            status = this.status,
+            now = this.getNow();
+
+        if((status == "creating" || status == "open")){
+            return from != null && from.isAfter(now);
+        }
+
+        return true;
+    };
+
+    /**
+     * Checks if to date is valid for open/creating reservation
+     * otherwise return always true
+     *
+     * @return {Boolean}
+     */
+    Reservation.prototype.isValidToDate = function(){
+        var from = this.from,
+            to = this.to,
+            status = this.status;
+
+        if((status == "creating" || status == "open")){
+            return to != null && to.isAfter(from);
+        }
+
+        return true;
+    }
+
+    /**
      * Checks if the reservation can be booked
      * @method
      * @name Reservation#canReserve
@@ -65,14 +122,24 @@ define([
      */
     Reservation.prototype.canReserve = function() {
         return (
-            (this.status=="creating") &&
-                (this.location) &&
-                ((this.contact) &&
-                 (this.contact.status == "active")) &&
-                (this.from) &&
-                (this.to) &&
-                (this.items) &&
-                (this.items.length));
+        (this.status=="creating") &&
+        (this.location) &&
+        ((this.contact) &&
+        (this.contact.status == "active")) &&
+        (this.isValidFromDate()) &&
+        (this.isValidToDate()) &&
+        (this.items) &&
+        (this.items.length));
+    };
+
+    /**
+     * Checks if the reservation can be undone (based on status)
+     * @method
+     * @name Reservation#canUndoReserve
+     * @returns {boolean}
+     */
+    Reservation.prototype.canUndoReserve = function() {
+        return (this.status=="open");
     };
 
     /**
@@ -106,6 +173,36 @@ define([
     };
 
     /**
+     * Checks if items can be added to the reservation (based on status)
+     * @method
+     * @name Reservation#canAddItems
+     * @returns {boolean}
+     */
+    Reservation.prototype.canAddItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be removed from the reservation (based on status)
+     * @method
+     * @name Reservation#canRemoveItems
+     * @returns {boolean}
+     */
+    Reservation.prototype.canRemoveItems = function() {
+        return (this.status=="creating");
+    };
+
+    /**
+     * Checks if items can be swapped in the reservation (based on status)
+     * @method
+     * @name Reservation#canSwapItems
+     * @returns {boolean}
+     */
+    Reservation.prototype.canSwapItems = function() {
+        return (this.status=="creating") || (this.status=="open");
+    };
+
+    /**
      * Checks if the reservation can be turned into an order
      * @method
      * @name Reservation#canMakeOrder
@@ -127,6 +224,45 @@ define([
         }
     };
 
+    /**
+     * Checks if the reservation has an order linked to it
+     * @method
+     * @name Reservation#canGoToOrder
+     * @returns {boolean}
+     */
+    Reservation.prototype.canGoToOrder = function(){
+        return this.order != null;
+    }
+
+    /**
+     * Checks if the reservation can be reserved again (based on status)
+     * @method
+     * @name Reservation#canReserveAgain
+     * @returns {boolean}
+     */
+    Reservation.prototype.canReserveAgain = function() {
+        return (this.status == "open") || (this.status == "closed" || (this.status == "cancelled"));
+    };
+
+    /**
+     * Checks if the reservation can be into recurring reservations (based on status)
+     * @method
+     * @name Reservation#canReserveRepeat
+     * @returns {boolean}
+     */
+    Reservation.prototype.canReserveRepeat = function() {
+        return (this.status == "open") || (this.status == "closed");
+    };
+
+    /**
+     * Checks if we can generate a document for this reservation (based on status)
+     * @name Reservation#canGenerateDocument
+     * @returns {boolean}
+     */
+    Reservation.prototype.canGenerateDocument = function() {
+        return (this.status=="open") || (this.status=="closed");
+    };
+
     //
     // Document overrides
     //
@@ -145,19 +281,11 @@ define([
         that.from = ((data.fromDate==null) || (data.fromDate=="null")) ? null : data.fromDate;
         that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
         that.due = null;
+        that.order = data.order || null;
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
-                // TODO: existsInDb should always return true?
-                // If that is the case we can simplify the part below
-                if (that.existsInDb()) {
-                    return that._loadConflicts(data, options)
-                        .then(function() {
-                            $.publish("reservation.fromJson", data);
-                        });
-                } else {
-                    $.publish("reservation.fromJson", data);
-                }
+                $.publish("reservation.fromJson", data);
             });
     };
 
@@ -175,71 +303,92 @@ define([
      * @private
      */
     Reservation.prototype._getConflicts = function() {
-        var conflicts = [];
-        var conflict = null;
+        var that = this,
+            conflicts = [],
+            conflict = null;
 
         // Reservations can only have conflicts
         // when we have a (location OR (from AND to)) AND at least 1 item
+        // So we'll only hit the server if there are possible conflicts.
+        //
+        // However, some conflicts only start making sense when the reservation fields filled in
+        // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
         if( (this.items) &&
             (this.items.length) &&
             ((this.location) || (this.from && this.to))) {
 
-            if (this.status == "open") {
-                // Reservations in "open" status,
-                // can use the Items' current status and location
-                // to see if there are any conflicts for fullfilling into an Order
-                var locId = this._getId(this.location);
+            var locId = this.location ? this._getId(this.location) : null;
+            var showOrderConflicts = (this.from && this.to);
+            var showLocationConflicts = (locId!=null);
+            var showStatusConflicts = true; // always show conflicts for expired, custody
 
-                $.each(this.items, function(i, item) {
-                    if (item.status!="available") {
-                        conflicts.push(new Conflict({
-                            kind: "status",
-                            item: item._id,
-                            itemName: item.name,
-                            doc: item.order
-                        }));
-                    } else if (item.location!=locId) {
-                        conflicts.push(new Conflict({
-                            kind: "location",
-                            item: item._id,
-                            itemName: item.name,
-                            locationCurrent: item.location,
-                            locationDesired: locId,
-                            doc: item.order
-                        }));
-                    }
-                });
+            return this.ds.call(this.id, "getConflicts")
+                .then(function(cnflcts) {
+                    cnflcts = cnflcts || [];
 
-            } else if (this.status == "creating") {
-                var that = this;
+                    // Now we have 0 or more conflicts for this reservation
+                    // run over the items again and find the conflict for each item
+                    $.each(that.items, function(i, item) {
+                        conflict = cnflcts.find(function(conflictObj){
+                            return conflictObj.item == item._id;
+                        });
 
-                // Reservations in "creating" status,
-                // use a server side check
-                return this.ds.call(this.id, "getConflicts")
-                    .then(function(cnflcts) {
-                        if( (cnflcts) &&
-                            (cnflcts.length)) {
+                        // Does this item have a server-side conflict?
+                        if (conflict) {
+                            var kind = conflict.kind || "";
+                            kind = kind || (conflict.order ? "order" : "");
+                            kind = kind || (conflict.reservation ? "reservation" : "");
 
-                            // Now we have the conflicts for this reservation
-                            // run over the items again and find the conflict for each item
-                            $.each(that.items, function(i, item) {
-                                conflict = $.grep(cnflcts, function(c) { return c.item==item._id});
-                                if (conflict) {
-                                    var kind = "";
-                                    kind = kind || (conflict.order) ? "order" : "";
-                                    kind = kind || (conflict.reservation) ? "reservation" : "";
-
-                                    conflicts.push(new Conflict({
-                                        kind: kind,
-                                        item: item._id,
-                                        itemName: item.name,
-                                        doc: conflict.conflictsWith
-                                    }));
-                                }
-                            });
+                            conflicts.push(new Conflict({
+                                kind: kind,
+                                item: item._id,
+                                itemName: item.name,
+                                doc: conflict.conflictsWith
+                            }));
+                        } else {
+                            if( (showStatusConflicts) &&
+                                (item.status=="expired")) {
+                                conflicts.push(new Conflict({
+                                    kind: "expired",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    doc: item.order
+                                }));
+                            } else if (
+                                (showStatusConflicts) &&
+                                (item.status == "in_custody")) {
+                                conflicts.push(new Conflict({
+                                    kind: "custody",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    doc: item.order
+                                }));
+                            } else if (
+                                (showOrderConflicts) &&
+                                (item.status!="available")) {
+                                conflicts.push(new Conflict({
+                                    kind: "order",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    doc: item.order
+                                }));
+                            } else if (
+                                (showLocationConflicts) &&
+                                (item.location!=locId)) {
+                                conflicts.push(new Conflict({
+                                    kind: "location",
+                                    item: item._id,
+                                    itemName: item.name,
+                                    locationCurrent: item.location,
+                                    locationDesired: locId,
+                                    doc: item.order
+                                }));
+                            }
                         }
                     });
-            }
+
+                    return conflicts;
+                });
         }
 
         return $.Deferred().resolve(conflicts);
@@ -269,7 +418,8 @@ define([
             .then(function() {
                 that.from = roundedFromDate;
                 that.to = roundedToDate;
-                return that._handleTransaction(skipRead);
+
+                return that._doApiCall({method: "setFromToDate", params: { fromDate: roundedFromDate, toDate: roundedToDate }, skipRead: skipRead});
             });
     };
 
@@ -306,7 +456,13 @@ define([
 
                 that.from = roundedFromDate;
 
-                return that._handleTransaction(skipRead);
+                //If reservation doesn't exist yet, we set from date in create call
+                //otherwise use setFromDate to update transaction
+                if(!that.existsInDb()){
+                    return that._createTransaction(skipRead);
+                } else{
+                    return that._doApiCall({method: "setFromDate", params: {fromDate: roundedFromDate}, skipRead: skipRead});
+                }
             });
     };
 
@@ -323,8 +479,7 @@ define([
         }
 
         this.from = null;
-
-        return this._handleTransaction(skipRead);
+        return this._doApiCall({method: "clearFromDate", skipRead: skipRead});
     };
 
     /**
@@ -362,7 +517,13 @@ define([
 
                 that.to = roundedToDate;
 
-                return that._handleTransaction(skipRead);
+                //If reservation doesn't exist yet, we set to date in create call
+                //otherwise use setToDate to update transaction
+                if(!that.existsInDb()){
+                    return that._createTransaction(skipRead);
+                } else{
+                    return that._doApiCall({method: "setToDate", params: {toDate: roundedToDate}, skipRead: skipRead});
+                }
             });
     };
 
@@ -379,8 +540,7 @@ define([
         }
 
         this.to = null;
-
-        return this._handleTransaction(skipRead);
+        return this._doApiCall({method: "clearToDate", skipRead: skipRead});
     };
 
     // Reservation does not use due dates
@@ -392,9 +552,9 @@ define([
         throw "Reservation.setDueDate not implemented";
     };
 
-//
-// Business logic calls
-//
+    //
+    // Business logic calls
+    //
 
     /**
      * Searches for Items that are available for this reservation
@@ -452,9 +612,74 @@ define([
         return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
     };
 
-//
-// Implementation
-//
+    /**
+     * Switch reservation to order
+     * @method
+     * @name Reservation#switchToOrder
+     * @return {*}
+     */
+    Reservation.prototype.switchToOrder = function() {
+        return this._doApiCall({method: "switchToOrder", skipRead: true});
+    };
+
+    /**
+     * Generates a PDF document for the reservation
+     * @method
+     * @name Reservation#generateDocument
+     * @param {string} template id
+     * @param {string} signature (base64)
+     * @param {bool} skipRead
+     * @returns {promise}
+     */
+    Reservation.prototype.generateDocument = function(template, signature, skipRead) {
+        return this._doApiLongCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
+    };
+
+    /**
+     * Creates a new, incomplete reservation with the same info
+     * as the original reservation but other fromDate, toDate
+     * Important; the response will be another Reservation document!
+     * @method
+     * @name Reservation#reserveAgain
+     * @param fromDate
+     * @param toDate
+     * @param customer
+     * @param location
+     * @param skipRead
+     * @returns {promise}
+     */
+    Reservation.prototype.reserveAgain = function(fromDate, toDate, customer, location, skipRead) {
+        return this._doApiCall({method: "reserveAgain", params: {
+            fromDate: fromDate,
+            toDate: toDate,
+            location: location,
+            customer: customer}, skipRead: skipRead});
+    };
+
+    /**
+     * Creates a list of new reservations with `open` status
+     * as the original reservation but other fromDate, toDate
+     * Important; the response will be a list of other Reservation documents
+     * @method
+     * @name Reservation#reserveRepeat
+     * @param frequency (days, weeks, weekdays, months)
+     * @param customer
+     * @param location
+     * @param until
+     * @returns {promise}
+     */
+    Reservation.prototype.reserveRepeat = function(frequency, until, customer, location) {
+        return this._doApiCall({method: "reserveRepeat", params: {
+            frequency: frequency,
+            until: until,
+            customer: customer,
+            location: location}, skipRead: true}); // response is a array of reservations
+    };
+
+
+    //
+    // Implementation
+    //
     Reservation.prototype._checkFromToDate = function(from, to) {
         var dateHelper = this._getDateHelper();
         var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
@@ -462,9 +687,9 @@ define([
 
         if (roundedFromDate && roundedToDate) {
             return $.when(
-                    this._checkFromDateBetweenMinMax(roundedFromDate),
-                    this._checkToDateBetweenMinMax(roundedToDate)
-                )
+                this._checkFromDateBetweenMinMax(roundedFromDate),
+                this._checkToDateBetweenMinMax(roundedToDate)
+            )
                 .then(function(fromRes, toRes) {
                     var interval = dateHelper.roundMinutes;
                     // TODO: We should never get here
@@ -497,77 +722,11 @@ define([
                 if (item.status!="available") {
                     unavailable["status"] = unavailable["status"] || [];
                     unavailable["status"].push(item._id);
-                } else if (item.location!=locId) {
-                    unavailable["location"] = unavailable["location"] || [];
-                    unavailable["location"].push(item._id);
                 }
             });
         }
 
         return unavailable;
-    };
-
-    Reservation.prototype._loadConflicts = function(data, options) {
-        // Only load conflicts when it"s possible to have conflicts
-        // location, at least 1 date and at least 1 item
-        var that = this;
-        var locId = this._getId(this.location);
-        var hasLocation = (locId!=null) && (locId.length>0);
-        var hasAnyDate = (this.from!=null) || (this.to!=null);
-        var hasAnyItem = (this.items!=null) && (this.items.length>0);
-        var hasNonConflictStatus = (this.status!="creating") && (this.status!="open");
-
-        if( (hasNonConflictStatus) ||
-            (!hasLocation && !hasAnyDate && !hasAnyItem)) {
-
-            // We cannot have conflicts, so make the conflicts array empty
-            this.conflicts = [];
-            return $.Deferred().resolve(data);
-
-        } else if (this.status == "creating") {
-
-            // We can have conflicts,
-            // so we better check the server if there are any
-            return this.ds.call(this.id, "getConflicts")
-                .then(function(conflicts) {
-                    that.conflicts = conflicts || [];
-                });
-
-        } else if (this.status == "open") {
-
-            this.conflicts = [];
-
-            // The reservation is already open,
-            // so the only conflicts we can have
-            // are for turning it into an order
-            $.each(this.raw.items, function(i, item) {
-                if (item.status=="expired") {
-                    that.conflicts.push(new Conflict({
-                        item: that._getId(item),
-                        kind: "expired"
-                    }));
-                } else if (item.status!="available") {
-                    that.conflicts.push(new Conflict({
-                        item: that._getId(item),
-                        kind: "status"
-                    }));
-                } else if(item.location!=locId) {
-                    that.conflicts.push(new Conflict({
-                        item: that._getId(item),
-                        kind: "location"
-                    }));
-                }
-            });
-
-            return $.Deferred().resolve(data);
-
-        } else {
-
-            // We should never get here :)
-            this.conflicts = [];
-            return $.Deferred().resolve(data);
-
-        }
     };
 
     return Reservation;

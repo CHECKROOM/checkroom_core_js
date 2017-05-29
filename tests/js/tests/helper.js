@@ -11,11 +11,11 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
     };
 
     helper.getApiAuth = function() {
-        return new cr.api.ApiAuthV2({ajax: helper.getApiAjax(), urlAuth: settings.baseUrl + '/authenticate'});
+        return new cr.api.ApiAuthV2({ajax: helper.getApiAjax(), urlAuth: settings.urlApi + '/authenticate'});
     };
 
     helper.getApiAnonymous = function(){
-        return new cr.api.ApiAnonymous({ajax: helper.getApiAjax(), urlApi: settings.baseUrl.replace('/v2_0', '')});
+        return new cr.api.ApiAnonymous({ajax: helper.getApiAjax(), urlApi: settings.urlApi.replace('/latest', '')});
     };
 
     helper.getApiUser = function(userName, password) {
@@ -39,7 +39,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
                     collection: collection,
                     ajax: helper.getApiAjax(),
                     user: user,
-                    urlApi: settings.baseUrl
+                    urlApi: settings.urlApi
                 });
                 return ds;
             });
@@ -55,7 +55,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
                         collection: coll,
                         ajax: ajax,
                         user: user,
-                        urlApi: settings.baseUrl
+                        urlApi: settings.urlApi
                     });
                 });
                 return dss;
@@ -68,7 +68,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
         return helper.getApiDataSource(collection, userName, password)
             .then(function(ds) {
                 if (pk==null) {
-                    return ds.list()
+                    return ds.list(null, null, 1)
                         .then(function(docs) {
                             return (docs!=null) && (docs.length>0) ? docs[0] : null;
                         });
@@ -78,10 +78,10 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             });
     };
 
-    helper.apiList = function(name, collection, userName, password) {
+    helper.apiList = function(name, collection, fields, limit, userName, password) {
         return helper.getApiDataSource(collection, userName, password)
             .then(function(ds) {
-                return ds.list(name);
+                return ds.list(name, fields, limit);
             });
     };
 
@@ -125,6 +125,66 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             .then(function(resp) {
                 return (resp!=null) && (resp.docs!=null) && (resp.docs.length>0) ? resp.docs[0] : null;
             });
+    };
+
+    helper.getAnyCategory = function(){
+         return helper.apiSearch({pk__startswith:'cheqroom.types.item.', _sort:'pk'}, "categories").then(function(resp){
+            return (resp!=null)  && (resp.docs!=null) && (resp.docs.length > 0)? resp.docs[0] : null;
+         });
+    };
+
+    helper.getNewItem = function(ds, category, location, name){
+       var item = new cr.Item({
+            ds: ds,
+            name: name, 
+            category: category._id,
+            location: location._id
+        });
+        var dfd = $.Deferred();
+        item.create().done(function(){
+            dfd.resolve(item);
+        });
+
+        return dfd;
+    };
+
+    helper.getNewOpenOrder = function(ds, dsItems, due, location, contact, items){
+        var order = new cr.Order({
+            ds: ds,
+            dsItems: dsItems,
+            autoCleanup: true,
+            location: location._id,
+            contact: contact._id,
+            due: due
+        });
+        var dfd = $.Deferred();
+        order.addItems(items).then(function(){
+            order.checkout().done(function(){
+                dfd.resolve(order);
+            });
+        });     
+
+        return dfd; 
+    };
+
+    helper.getNewOpenReservation = function(ds, dsItems, from, to, location, contact, items){
+        var reservation = new cr.Reservation({
+            ds: ds,
+            dsItems: dsItems,
+            location: location._id,
+            contact: contact._id,
+            from: from,
+            to: to
+        });
+        var dfd = $.Deferred();
+        reservation.addItems(items)
+            .then(function(){
+                reservation.reserve().done(function(){
+                    dfd.resolve(reservation);
+                })
+            });
+
+        return dfd;
     };
 
     return helper;

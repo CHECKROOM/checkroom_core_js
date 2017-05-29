@@ -1,10 +1,10 @@
 define([], function () {
 
     var settings = {
-        baseUrl: 'https://staging.cheqroom.com/api/v2_0',
+        urlApi: 'https://staging.cheqroom.com/api/latest',
         userName: 'heavy',
         password: 'jap93wep',
-        useJsonp: true
+        useJsonp: false
     };
 
     return settings;

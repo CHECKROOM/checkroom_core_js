@@ -36,7 +36,7 @@ define([
      */
     var Location = function(opt) {
         var spec = $.extend({
-            fields: ['*']
+            _fields: ['*']
         }, opt);
         Base.call(this, spec);
 

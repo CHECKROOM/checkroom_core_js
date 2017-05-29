@@ -9,68 +9,71 @@ define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, hel
             var collection = "orders";
 
             // Get a user with token
-            helper.getApiDataSources([collection, "items"])
+            helper.getApiDataSources([collection, "items", "reservations"])
                 .done(function(dss) {
                     var ds = dss[collection];
                     var dsItems = dss["items"];
+                    var dsReservations = dss["reservations"];
 
                     /**
                      * Testing API /list calls
                      */
 
-                    // Test getting a list of orders
-                    asyncTest("list orders", function() {
-                        ds.list()
+                    // Test searching orders
+                    asyncTest("search orders", function() {
+                        ds.search({ _limit:1, _skip: 0 })
                             .done(function(orders) {
                                 ok(orders!=null);
-                                ok(orders.length>0);
+                                ok(orders.docs.length>0);
                             })
                             .always(function(){
                                 start();
                             });
                     });
 
-                    asyncTest("list orders -- incomplete", function() {
-                        ds.list("creating_orders")
+                    asyncTest("search orders -- incomplete", function() {
+                        ds.search({listName:"creating_orders", _limit: 1, _skip: 0})
                             .done(function(orders) {
                                 ok(orders!=null);
-                                ok(orders.length>0);
+                                ok(orders.docs.length>0);
                             })
                             .always(function(){
                                 start();
                             });
                     });
 
-                    asyncTest("list orders -- open", function() {
-                        ds.list("open_orders")
+                    asyncTest("search orders -- open", function() {
+                        ds.search({listName:"open_orders", _limit:1, _skip: 0})
                             .done(function(orders) {
                                 ok(orders!=null);
-                                ok(orders.length>0);
+                                ok(orders.docs.length>0);
                             })
                             .always(function(){
                                 start();
                             });
                     });
 
-                    asyncTest("list orders -- closed", function() {
-                        ds.list("closed_orders")
+                    asyncTest("search orders -- closed", function() {
+                        ds.search({listName:"closed_orders", _limit: 1, _skip: 0})
                             .done(function(orders) {
                                 ok(orders!=null);
-                                ok(orders.length>0);
+                                ok(orders.docs.length>0);
                             })
                             .always(function(){
                                 start();
                             });
                     });
+
 
                     /**
                      * Testing Order viewmodel calls
                      */
                     $.when(
                         helper.getAnyContact(),
-                        helper.getAnyLocation()
+                        helper.getAnyLocation(),
+                        helper.getAnyCategory()
                     )
-                        .done(function(contact, location) {
+                        .done(function(contact, location, category) {
 
                             /*asyncTest("create Order object -- with location and contact objects set", function() {
                                 var order = new cr.Order({
@@ -208,8 +211,31 @@ define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, hel
                                             });
                                     });
                             });*/
+                                
+                            asyncTest("create Order object with due, setDueDate", function() {
+                                var order = new cr.Order({
+                                    ds: ds,
+                                    dsItems: dsItems,
+                                    autoCleanup: true,
+                                    location: location._id,
+                                    contact: contact._id
+                                });
 
-                            asyncTest("create Order object via constructor, searchItems", function() {
+                                ok(!order.existsInDb());
+
+                                var due = moment().add(5, 'days');
+
+                                order.setDueDate(due)
+                                    .done(function() {
+                                        ok(order.existsInDb());
+                                        ok(order.due.isSameOrAfter(due));                                       
+                                    }).always(function(){
+                                        start();
+                                    });
+                            });
+
+                             
+                           asyncTest("create Order object via constructor, searchItems", function() {
                                 var order = new cr.Order({
                                     ds: ds,
                                     dsItems: dsItems,
@@ -297,6 +323,59 @@ define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, hel
                                                     });
                                             });
                                     });
+                            });
+
+                            asyncTest("extend due date of Order, setDueDate", function(){
+                                helper.getNewItem(dsItems, category, location, "qunit item").done(function(item){
+                                    var due = moment().add(5, "days");
+
+                                    helper.getNewOpenOrder(ds, dsItems, due, location, contact, [item.id]).done(function(order){
+                                        ok(order.status == "open");
+
+                                        var extendDue = due.add(5, "days");
+                                        order.setDueDate(extendDue)
+                                            .done(function(){
+                                                ok(order.due.isSameOrAfter(extendDue));
+                                            })
+                                            .fail(function(){
+                                                ok(false);
+                                            })
+                                            .always(function(){
+                                                start();
+                                            });                                        
+                                    })
+                                });                               
+                            });
+
+                            asyncTest("extend due date of Order with conflicts, setDueDate", function(){
+                                helper.getNewItem(dsItems, category, location, "qunit item").done(function(item){
+                                    var due = moment().add(5, "days");
+
+                                    helper.getNewOpenOrder(ds, dsItems, due, location, contact, [item.id]).done(function(order){
+                                        var from = due.clone().add(1, "days");
+                                        var to = due.clone().add(7, "days");
+
+                                        helper.getNewOpenReservation(dsReservations, dsItems, from, to, location, contact, [item.id])
+                                            .done(function(reservation){
+                                                var invalidExtendDue = due.clone().add(3, "days");
+
+                                                // Wait 10s, so planner has run
+                                                // http://api.qunitjs.com/async/
+                                                setTimeout(function(){
+                                                    order.setDueDate(invalidExtendDue)
+                                                        .done(function(){
+                                                            ok(false)
+                                                        })
+                                                        .fail(function(){
+                                                            ok(true);
+                                                        })
+                                                        .always(function(){
+                                                            start();
+                                                        });    
+                                                }, 20000)
+                                            });                                                                              
+                                    })
+                                });                               
                             });
 
                         });

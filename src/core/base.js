@@ -12,21 +12,19 @@ define([
     'document',
     'comment',
     'attachment',
-    'keyvalue'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, KeyValue) {
+    'field'],  /** @lends Base */ function ($, common, api, Document, Comment, Attachment, Field) {
 
     // Some constant values
-    var COMMENT = "cheqroom.Comment",
-        ATTACHMENT = "cheqroom.Attachment",
-        IMAGE = "cheqroom.prop.Image",
-        IMAGE_OTHER = "cheqroom.attachment.Image",
-        DEFAULTS = {
-            id: "",
-            modified: null,
-            cover: null,
-            comments: [],
-            attachments: [],
-            keyValues: []
-        };
+    var DEFAULTS = {
+        id: "",
+        modified: null,
+        cover: null,
+        flag: null,
+        fields: {},
+        comments: [],
+        attachments: [],
+        barcodes: []
+    };
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -39,9 +37,10 @@ define([
      * @property {ApiDataSource} dsAttachments   attachments datasource
      * @property {string} crtype                 e.g. cheqroom.types.customer
      * @property {moment} modified               last modified timestamp
+     * @property {string} flag                   the document flag
+     * @property {object} fields                 dictionary of document fields
      * @property {array} comments                array of Comment objects
      * @property {array} attachments             array of Attachment objects
-     * @property {array} keyValues               array of KeyValue objects
      * @property {string} cover                  cover attachment id, default null
      * @constructor
      * @extends Document
@@ -53,10 +52,12 @@ define([
         this.dsAttachments = spec.dsAttachments;                                // ApiDataSource for the attachments coll
         this.crtype = spec.crtype;                                              // e.g. cheqroom.types.customer
         this.modified = spec.modified || DEFAULTS.modified;                     // last modified timestamp in momentjs
+        this.flag = spec.flag || DEFAULTS.flag;                                 // flag
+        this.fields = spec.fields || $.extend({}, DEFAULTS.fields);             // fields dictionary
         this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
-        this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();          // keyValues array
         this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
+        this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();             // barcodes array
     };
 
     Base.prototype = new tmp();
@@ -72,7 +73,7 @@ define([
     /**
      * Checks if the object is empty
      * after calling reset() isEmpty() should return true
-     * We'll only check for comments, attachments, keyValues here
+     * We'll only check for fields, comments, attachments here
      * @name  Base#isEmpty
      * @method
      * @returns {boolean}
@@ -80,10 +81,22 @@ define([
      */
     Base.prototype.isEmpty = function() {
         return (
+            (this.flag==DEFAULTS.flag) &&
+            ((this.fields==null) || (Object.keys(this.fields).length==0)) &&
             ((this.comments==null) || (this.comments.length==0)) &&
-            ((this.attachments==null) || (this.attachments.length==0)) &&
-            ((this.keyValues==null) || (this.keyValues.length==0))
+            ((this.attachments==null) || (this.attachments.length==0))
         );
+    };
+
+    /**
+     * Checks if the base is dirty and needs saving
+     * @name Base#isDirty
+     * @returns {boolean}
+     */
+    Base.prototype.isDirty = function() {
+        return (
+        (this._isDirtyFlag()) ||
+        (this._isDirtyFields()));
     };
 
     /**
@@ -113,7 +126,11 @@ define([
      * @returns {promise}
      */
     Base.prototype.addComment = function(comment, skipRead) {
-        return this.addKeyValue(COMMENT, comment, "string", skipRead);
+        return this._doApiCall({
+            method: 'addComment',
+            params: {comment: comment},
+            skipRead: skipRead
+        });
     };
 
     /**
@@ -126,7 +143,11 @@ define([
      * @returns {promise}
      */
     Base.prototype.updateComment = function(id, comment, skipRead) {
-        return this.updateKeyValue(id, COMMENT, comment, "string", skipRead);
+        return this._doApiCall({
+            method: 'updateComment',
+            params: {commentId: id, comment: comment},
+            skipRead: skipRead
+        });
     };
 
     /**
@@ -138,106 +159,100 @@ define([
      * @returns {promise}
      */
     Base.prototype.deleteComment = function(id, skipRead) {
-        return this.removeKeyValue(id, skipRead);
+        return this._doApiCall({
+            method: 'removeComment',
+            params: {commentId: id},
+            skipRead: skipRead
+        });
     };
 
-    // KeyValue stuff
+    // Field stuff
     // ----
     /**
-     * Adds a key value
-     * @name  Base#addKeyValue
+     * Sets multiple custom fields in a single call
+     * @name Base#setFields
      * @method
-     * @param key
+     * @param fields
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setFields = function(fields, skipRead) {
+        var that = this,
+            changedFields = {};
+        $.each(fields, function(key, value) {
+            if (that.raw.fields[key]!=fields[key]) {
+                changedFields[key] = value;
+            }
+        });
+
+        return this._doApiCall({
+            method: 'setFields',
+            params: {fields: changedFields},
+            skipRead: skipRead,
+            usePost: true
+        });
+    };
+
+    /**
+     * Sets a custom field
+     * @name Base#setField
+     * @method
+     * @param field
      * @param value
-     * @param kind
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.addKeyValue = function(key, value, kind, skipRead) {
+    Base.prototype.setField = function(field, value, skipRead) {
         return this._doApiCall({
-            method: 'addKeyValue',
-            params: {key: key, value: value, kind: kind},
+            method: 'setField',
+            params: {field: field, value: value},
             skipRead: skipRead
         });
     };
 
     /**
-     * Updates a keyvalue by id
-     * @name  Base#updateKeyValue
+     * Clears a custom field
+     * @name Base#clearField
      * @method
-     * @param id
-     * @param key
-     * @param value
-     * @param kind
+     * @param field
      * @param skipRead
-     * @returns {promise}
      */
-    Base.prototype.updateKeyValue = function(id, key, value, kind, skipRead) {
+    Base.prototype.clearField = function(field, skipRead) {
         return this._doApiCall({
-            method: 'updateKeyValue',
-            params: {id: id, key: key, value: value, kind: kind},
+            method: 'clearField',
+            params: {field: field},
             skipRead: skipRead
         });
     };
 
     /**
-     * Removes a keyvalue by id
-     * @name  Base#removeKeyValue
-     * @method
-     * @param id
+     * Adds a barcode
+     * @name Base#addBarcode
+     * @param code
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.removeKeyValue = function(id, skipRead) {
+    Base.prototype.addBarcode = function(code, skipRead) {
         return this._doApiCall({
-            method: 'removeKeyValue',
-            params: {id: id},
+            method: 'addBarcode', 
+            params: {barcode: code}, 
             skipRead: skipRead
         });
     };
 
     /**
-     * Sets a keyvalue by id
-     * @name  Base#setKeyValue
-     * @method
-     * @param id
-     * @param key
-     * @param value
-     * @param kind
+     * Removes a barcode
+     * @name Item#removeBarcode
+     * @param code
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.setKeyValue = function(id, key, value, kind, skipRead) {
-        var params = {key: key, value: value, kind: kind};
-        if( (id!=null) &&
-            (id.length>0)) {
-            params.id = id;
-        }
+    Base.prototype.removeBarcode = function(code, skipRead) {
         return this._doApiCall({
-            method: 'setKeyValue',
-            params: params,
+            method: 'removeBarcode', 
+            params: {barcode: code}, 
             skipRead: skipRead
         });
-    };
-
-    /**
-     * Moves a keyvalue by its id to a new position
-     * @name Base#moveKeyValueIndex
-     * @method
-     * @param id
-     * @param pos
-     * @returns {promise}
-     */
-    Base.prototype.moveKeyValueIndex = function(id, pos) {
-        /*
-        // def moveKeyValueById(self, model, kvId, toPos, kvList=None, validate=True):
-        var that = this;
-        var pk = this.itemId();
-        return this.ds.call(pk, "moveKeyValueById", {kvId: kvId, toPos: newPos})
-            .pipe(function(item) {
-                return that._updateFromItemResponse(item);
-            });
-        */
     };
 
     // Attachments stuff
@@ -264,7 +279,7 @@ define([
     };
 
     /**
-     * changes the cover image to another Attachment
+     * Set the cover image to an Attachment
      * @name  Base#setCover
      * @method
      * @param att
@@ -274,49 +289,39 @@ define([
     Base.prototype.setCover = function(att, skipRead) {
         return this._doApiCall({
             method: 'setCover',
-            params: {kvId: att._id},
+            params: {attachmentId: att._id},
             skipRead: skipRead
         });
     };
 
     /**
-     * attaches an image Attachment file, shortcut to attach
-     * @name  Base#attachImage
+     * Clears the cover image
+     * @name  Base#clearCover
      * @method
-     * @param att
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.attachImage = function(att, skipRead) {
-        return this.attach(att, IMAGE, skipRead);
-    };
-
-    /**
-     * attaches an Attachment file, shortcut to attach
-     * @name  Base#attachFile
-     * @method
-     * @param att
-     * @param skipRead
-     * @returns {promise}
-     */
-    Base.prototype.attachFile = function(att, skipRead) {
-        return this.attach(att, ATTACHMENT, skipRead);
+    Base.prototype.clearCover = function(skipRead) {
+        return this._doApiCall({
+            method: 'clearCover',
+            params: {},
+            skipRead: skipRead
+        });
     };
 
     /**
      * attaches an Attachment object
      * @name  Base#attach
      * @method
-     * @param att
-     * @param key
+     * @param attachmentId
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.attach = function(att, key, skipRead) {
+    Base.prototype.attach = function(attachmentId, skipRead) {
         if (this.existsInDb()) {
             return this._doApiCall({
                 method: 'attach',
-                params: {attachments: [att._id], key: key},
+                params: {attachments: [attachmentId]},
                 skipRead: skipRead
             });
         } else {
@@ -328,19 +333,164 @@ define([
      * detaches an Attachment by kvId (guid)
      * @name  Base#detach
      * @method
-     * @param keyId (usually the attachment._id)
+     * @param attachmentId
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.detach = function(keyId, skipRead) {
+    Base.prototype.detach = function(attachmentId, skipRead) {
         if (this.existsInDb()) {
             return this._doApiCall({
                 method: 'detach',
-                params: {attachments: [keyId], kvId: keyId},
+                params: {attachments: [attachmentId]},
                 skipRead: skipRead
             });
         } else {
             return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
+        }
+    };
+
+    // Flags stuff
+    // ----
+
+    /**
+     * Sets the flag of an item
+     * @name Base#setFlag
+     * @param flag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setFlag = function(flag, skipRead) {
+        return this._doApiCall({
+            method: 'setFlag',
+            params: { flag: flag },
+            skipRead: skipRead});
+    };
+
+    /**
+     * Clears the flag of an item
+     * @name Base#clearFlag
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.clearFlag = function (skipRead) {
+        return this._doApiCall({
+            method: 'clearFlag',
+            params: {},
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Returns a list of Field objects
+     * @param fieldDefs         array of field definitions
+     * @param onlyFormFields    should return only form fields
+     * @param limit             return no more than x fields
+     * @return {Array}
+     */
+    Base.prototype.getSortedFields = function(fieldDefs, onlyFormFields, limit) {
+        var that = this,
+            fields = [],
+            fieldDef = null,
+            fieldValue = null;
+
+        // Work on copy of fieldDefs array
+        fieldDefs = fieldDefs.slice();
+
+        // Return only form field definitions?
+        fieldDefs = fieldDefs.filter(function(def) { return onlyFormFields == true ? def.form : true; });
+
+        // Create a Field object for each field definition
+        for (var i=0;i<fieldDefs.length;i++) {
+            fieldDef = fieldDefs[i];
+            fieldValue = that.fields[fieldDef.name];
+
+            if( (limit==null) ||
+                (limit>fields.length)) {
+                fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
+            }
+        }
+
+        return fields;
+    };
+
+    /**
+     * Update item fields based on the given Field objects
+     * @param {Array} fields    array of Field objects
+     */
+    Base.prototype.setSortedFields = function(fields) {
+        for (var i=0;i<fields.length;i++) {
+            var field = fields[i];
+            if(field.isEmpty()){
+                delete this.fields[field.name];
+            }else{
+                this.fields[field.name] = field.value;
+            }
+        }
+    };
+
+    /**
+     * Checks if all item fields are valid
+     * @param  {Array}  fields
+     * @return {Boolean}        
+     */
+    Base.prototype.validateSortedFields = function(fields) {
+        for (var i=0;i<fields.length;i++) {
+            if (!fields[i].isValid()) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    // Implementation
+    // ----
+
+    /**
+     * Checks if the flag is dirty compared to the raw response
+     * @returns {boolean}
+     * @private
+     */
+    Base.prototype._isDirtyFlag = function() {
+        if (this.raw) {
+            return (this.flag != this.raw.flag);
+        } else {
+            return false;
+        }
+    };
+
+    /**
+     * Checks if the fields are dirty compared to the raw response
+     * @returns {boolean}
+     * @private
+     */
+    Base.prototype._isDirtyFields = function() {
+        if (this.raw) {
+            return !(common.areEqual(this.fields, this.raw.fields));
+        } else {
+            return false;
+        }
+    };
+
+    /**
+     * Runs over the custom fields that are dirty and calls `setField`
+     * @returns {*}
+     * @private
+     */
+    Base.prototype._updateFields = function() {
+        var calls = [];
+
+        if (this.raw) {
+            for (var key in this.fields) {
+                if (this.fields[key] != this.raw.fields[key]) {
+                    calls.push(this.setField(key, this.fields[key], true));
+                }
+            }
+        }
+
+        if (calls.length>0) {
+            return $.when(calls);
+        } else {
+            return $.Deferred().resolve(this);
         }
     };
 
@@ -368,67 +518,54 @@ define([
         var that = this;
         return Document.prototype._fromJson.call(this, data, options)
             .then(function() {
+                that.flag = data.flag || DEFAULTS.flag;
+                that.fields = (data.fields!=null) ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
                 that.modified = data.modified || DEFAULTS.modified;
-                return that._fromKeyValuesJson(data, options);
+                that.barcodes = data.barcodes || DEFAULTS.barcodes;
+
+                return that._fromCommentsJson(data, options)
+                    .then(function() {
+                        return that._fromAttachmentsJson(data, options);
+                    });
             });
     };
 
     /**
-     * _fromKeyValuesJson: reads the data.keyValues
+     * _toJsonFields: makes json which can be used to set fields during `create`
      * @method
+     * @param options
+     * @returns {{}}
+     * @private
+     */
+    Base.prototype._toJsonFields = function(options) {
+        var fields = {};
+        if (this.fields) {
+            for (var key in this.fields) {
+                fields["fields__"+key] = this.fields[key];
+            }
+        }
+        return fields;
+    };
+
+    /**
+     * _fromCommentsJson: reads the data.comments
      * @param data
      * @param options
      * @returns {*}
      * @private
      */
-    Base.prototype._fromKeyValuesJson = function(data, options) {
-        // Read only the .keyValues part of the response
-        var obj = null;
-        var that = this;
+    Base.prototype._fromCommentsJson = function(data, options) {
+        var obj = null,
+            that = this;
 
         this.comments = DEFAULTS.comments.slice();
-        this.attachments = DEFAULTS.attachments.slice();
-        this.keyValues = DEFAULTS.keyValues.slice();
-        this.cover = data.cover || DEFAULTS.cover;
 
-        if( (data.keyValues) &&
-            (data.keyValues.length)) {
-
-            // Reverse sorting with underscorejs
-            //var kvs = _.sortBy(data.keyValues, function(kv) { return kv.modified});
-            //kvs.reverse();
-
-            // TODO?
-            // Sort so the newest keyvalues are first in the array
-            var kvs = data.keyValues.sort(function(a, b) {
-                return b.modified > a.modified;
-            });
-
-            $.each(kvs, function(i, kv) {
-                switch(kv.key) {
-                    case COMMENT:
-                        obj = that._getComment(kv, options);
-                        if (obj) {
-                            that.comments = that.comments || [];
-                            that.comments.push(obj);
-                        }
-                        break;
-                    case IMAGE:
-                    case ATTACHMENT:
-                    case IMAGE_OTHER:
-                        obj = that._getAttachment(kv, options);
-                        if (obj) {
-                            that.attachments = that.attachments || [];
-                            that.attachments.push(obj);
-                        }
-                        break;
-                    default:
-                        obj = that._getKeyValue(kv, options);
-                        if (obj) {
-                            that.keyValues = that.keyValues || [];
-                            that.keyValues.push(obj);
-                        }
-                        break;
+        if( (data.comments) &&
+            (data.comments.length>0)) {
+            $.each(data.comments, function(i, comment) {
+                obj = that._getComment(comment, options);
+                if (obj) {
+                    that.comments.push(obj);
                 }
             });
         }
@@ -436,31 +573,45 @@ define([
         return $.Deferred().resolve(data);
     };
 
-    Base.prototype._getComment = function(kv, options) {
-        var spec = $.extend({
-                ds: this.ds,
-                fields: this.fields},
-            options || {},
-            kv);
+    /**
+     * _fromAttachmentsJson: reads the data.attachments
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Base.prototype._fromAttachmentsJson = function(data, options) {
+        var obj = null,
+            that = this;
+
+        this.attachments = DEFAULTS.attachments.slice();
+
+        if( (data.attachments) &&
+            (data.attachments.length>0)) {
+            $.each(data.attachments, function(i, att) {
+                obj = that._getAttachment(att, options);
+                if (obj) {
+                    that.attachments.push(obj);
+                }
+            });
+        }
+
+        return $.Deferred().resolve(data);
+    };
+
+    Base.prototype._getComment = function(data, options) {
+        var spec = $.extend({ds: this.ds}, options || {}, data);
         return new Comment(spec);
     };
 
-    Base.prototype._getAttachment = function(kv, options) {
-        var spec = $.extend({
-                ds: this.dsAttachments,
-                fields: this.fields},
-            options || {},  // can contain; isCover, canBeCover
-            kv);
+    Base.prototype._getAttachment = function(data, options) {
+        var spec = $.extend({ds: this.ds}, options || {}, data);
         return new Attachment(spec);
     };
 
-    Base.prototype._getKeyValue = function(kv, options) {
-        var spec = $.extend({
-                ds: this.ds,
-                fields: this.fields},
-            options || {},
-            kv);
-        return new KeyValue(spec);
+    Base.prototype._getField = function(data, options){
+        var spec = $.extend({}, options || {}, data);
+        return new Field(spec);
     };
 
     return Base;

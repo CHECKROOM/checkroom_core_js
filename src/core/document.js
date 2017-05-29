@@ -18,15 +18,16 @@ define([
      * @name Document
      * @class
      * @constructor
+     * @property {ApiDataSource}  ds        - The documents primary key
+     * @property {array}  _fields           - The raw, unprocessed json response
      * @property {string}  id               - The documents primary key
      * @property {string}  raw              - The raw, unprocessed json response
      */
     var Document = function(spec) {
-        this.ds = spec.ds;                                              // ApiDataSource object
-        this.fields = spec.fields;                                      // e.g. [*]
-
         this.raw = null;                                                // raw json object
         this.id = spec.id || DEFAULTS.id;                               // doc _id
+        this.ds = spec.ds;                                              // ApiDataSource object
+        this._fields = spec._fields;                                    // e.g. [*]
     };
 
     /**
@@ -97,12 +98,12 @@ define([
      * Reloads the object from db
      * @name  Document#reload
      * @method
-     * @param fields
+     * @param _fields
      * @returns {promise}
      */
-    Document.prototype.reload = function(fields) {
+    Document.prototype.reload = function(_fields) {
         if (this.existsInDb()) {
-            return this.get(fields);
+            return this.get(_fields);
         } else {
             return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
         }
@@ -112,13 +113,13 @@ define([
      * Gets an object by the default api.get
      * @name  Document#get
      * @method
-     * @param fields
+     * @param _fields
      * @returns {promise}
      */
-    Document.prototype.get = function(fields) {
+    Document.prototype.get = function(_fields) {
         if (this.existsInDb()) {
             var that = this;
-            return this.ds.get(this.id, fields || this.fields)
+            return this.ds.get(this.id, _fields || this._fields)
                 .then(function(data) {
                     return that._fromJson(data);
                 });
@@ -144,14 +145,7 @@ define([
         if (!this.isValid()) {
             return $.Deferred().reject(new Error("Cannot create, invalid document"));
         }
-
-        var that = this;
-        var data = this._toJson();
-        delete data.id;
-        return this.ds.create(data, this.fields)
-            .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
-            });
+        return this._create(skipRead);
     };
 
     /**
@@ -171,14 +165,7 @@ define([
         if (!this.isValid()) {
             return $.Deferred().reject(new Error("Cannot update, invalid document"));
         }
-
-        var that = this;
-        var data = this._toJson();
-        delete data.id;
-        return this.ds.update(this.id, data, this.fields)
-            .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
-            });
+        return this._update(skipRead);
     };
 
     /**
@@ -190,11 +177,7 @@ define([
     Document.prototype.delete = function() {
         // Call the api /delete on this document
         if (this.existsInDb()) {
-            var that = this;
-            return this.ds.delete(this.id)
-                .then(function() {
-                    return that.reset();
-                });
+            return this._delete();
         } else {
             return $.Deferred().reject(new Error("Document does not exist"));
         }
@@ -238,6 +221,103 @@ define([
     // Implementation stuff
     // ---
     /**
+     * The actual _create implementation (after all the checks are done)
+     * @param skipRead
+     * @returns {*}
+     * @private
+     */
+    Document.prototype._create = function(skipRead) {
+        var that = this;
+        var data = this._toJson();
+        delete data.id;
+        return this.ds.create(data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * The actual _update implementation (after all the checks are done)
+     * @param skipRead
+     * @returns {*}
+     * @private
+     */
+    Document.prototype._update = function(skipRead) {
+        var that = this;
+        var data = this._toJson();
+        delete data.id;
+        return this.ds.update(this.id, data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    /**
+     * The actual _delete implementation (after all the checks are done)
+     * @returns {*}
+     * @private
+     */
+    Document.prototype._delete = function() {
+        var that = this;
+        return this.ds.delete(this.id)
+            .then(function() {
+                return that.reset();
+            });
+    };
+
+    /**
+     * Helper for checking if a simple object property is dirty
+     * compared to the original raw result
+     * @param prop
+     * @returns {boolean}
+     * @private
+     */
+    Document.prototype._isDirtyProperty = function(prop) {
+        return (this.raw) ? (this[prop]!=this.raw[prop]) : false;
+    };
+
+    /**
+     * Helper for checking if a simple object property is dirty
+     * compared to the original raw result
+     * Because we know that the API doesn't return empty string properties,
+     * we do a special, extra check on that.
+     * @param prop
+     * @returns {boolean}
+     * @private
+     */
+    Document.prototype._isDirtyStringProperty = function(prop) {
+        if (this.raw) {
+            var same = (this[prop]==this.raw[prop]) || ((this[prop]=="") && (this.raw[prop]==null));
+            return !same;
+        } else {
+            return false;
+        }
+    };
+
+    /**
+     * Helper for checking if a simple object property is dirty
+     * compared to the original raw result
+     * @param prop
+     * @returns {boolean}
+     * @private
+     */
+    Document.prototype._isDirtyMomentProperty = function(prop) {
+        if (this.raw) {
+            var newVal = this[prop],
+                oldVal = this.raw[prop];
+            if (newVal==null && oldVal==null) {
+                return false;
+            } else if (newVal && oldVal) {
+                return !newVal.isSame(oldVal);
+            } else {
+                return true;
+            }
+        } else {
+            return false;
+        }
+    };
+
+    /**
      * Gets the id of a document
      * @param obj
      * @param prop
@@ -248,9 +328,15 @@ define([
         return (typeof obj === 'string') ? obj : obj[prop || "_id"];
     };
 
+    Document.prototype._getIds = function(objs, prop) {
+        return objs.map(function(obj){
+            return typeof(obj) == "string"? obj: obj[prop || "_id"];
+        });
+    };
+
     /**
      * Wrapping the this.ds.call method
-     * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+     * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
      * @method
      * @param spec
      * @returns {promise}
@@ -262,12 +348,25 @@ define([
                 (spec.collectionCall==true) ? null : (spec.pk || this.id),
                 spec.method,
                 spec.params,
-                spec.fields || this.fields,
+                spec._fields || this._fields,
                 spec.timeOut,
                 spec.usePost)
             .then(function(data) {
                 return (spec.skipRead==true) ? data : that._fromJson(data);
             });
+    };
+
+    /**
+     * Wrapping the this.ds.call method with a longer timeout
+     * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
+     * @method
+     * @param spec
+     * @returns {promise}
+     * @private
+     */
+    Document.prototype._doApiLongCall = function(spec) {
+        spec.timeOut = spec.timeOut || 30000;
+        return this._doApiCall(spec);
     };
 
     return Document;

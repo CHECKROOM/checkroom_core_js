@@ -67,6 +67,55 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 return url;
             },
+            getICalUrl: function(urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+                var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
+                    parts = [];
+
+                if (locationId) {
+                    parts.push("locations[]=" + locationId);
+                }
+                if (customerId) {
+                    parts.push("customer=" + customerId);
+                }
+                if (!showOrders) {
+                    parts.push("skipOpenOrders=true");
+                }
+                if (!showReservations) {
+                    parts.push("skipOpenReservations=true");
+                }
+
+                return (parts.length>0) ? url + "?" + parts.join("&") : url;
+            },
+
+            /**
+             * getQRCodeUrl 
+             *
+             * @memberOf helper
+             * @method
+             * @name  helper#getQRCodeUrl
+             * 
+             * @param  {string} code 
+             * @param  {number} size 
+             * @return {string}      
+             */
+            getQRCodeUrl: function(code, size){
+                return common.getQRCodeUrl(settings.urlApi, code, size);
+            },
+            /**
+             * getBarcodeUrl 
+             *
+             * @memberOf helper
+             * @method
+             * @name  helper#getBarcodeUrl
+             * 
+             * @param  {string} code 
+             * @param  {number} size 
+             * @return {string}      
+             */
+            getBarcodeUrl: function(code, width, height){
+                return common.getBarcodeUrl(settings.urlApi, code, width, height);
+            },
+
             /**
              * getNumItemsLeft
              *
@@ -135,7 +184,9 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
             },
             /**
              * getAccessRights returns access rights based on the user role, profile settings 
-             * and account limits 
+             * and account limits
+             *
+             * Deprecated: Use PermissionHandler instead
              *
              * @memberOf helper
              * @method
@@ -149,10 +200,12 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
             getAccessRights: function(role, profile, limits) {
                 var isRootOrAdmin =         (role == "root") || (role == "admin");
                 var isRootOrAdminOrUser =   (role == "root") || (role == "admin") || (role == "user");
+                var useOrders = (limits.allowOrders) && (profile.useOrders);
                 var useReservations = (limits.allowReservations) && (profile.useReservations);
                 var useOrderAgreements = (limits.allowGeneratePdf) && (profile.useOrderAgreements);
                 var useWebHooks = (limits.allowWebHooks);
                 var useKits = (limits.allowKits) && (profile.useKits);
+                var useCustody = (limits.allowCustody) && (profile.useCustody);
                 var useOrderTransfers = (limits.allowOrderTransfers) && (profile.useOrderTransfers);
 
                 return {
@@ -171,20 +224,22 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                         updateGeo: true
                     },
                     orders: {
-                        create: true,
-                        remove: true,
-                        update: true,
+                        create: useOrders,
+                        remove: useOrders,
+                        update: useOrders,
                         updateContact: (role != "selfservice"),
-                        updateLocation: true,
-                        generatePdf: useOrderAgreements && isRootOrAdminOrUser,
-                        transferOrder: useOrderTransfers
+                        updateLocation: useOrders,
+                        generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
+                        transferOrder: useOrders && useOrderTransfers,
+                        archive: useOrders && isRootOrAdminOrUser
                     },
                     reservations: {
                         create: useReservations,
                         remove: useReservations,
                         update: useReservations,
                         updateContact: useReservations && (role != "selfservice"),
-                        updateLocation: useReservations
+                        updateLocation: useReservations,
+                        archive: useReservations && isRootOrAdminOrUser
                     },
                     locations: {
                         create: isRootOrAdmin,
@@ -228,7 +283,13 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              * @return {string}       
              */
             ensureValue: function(obj, prop){
-                return (typeof obj === 'string') ? obj : obj[prop]; 
+                if (typeof obj === 'string') { 
+                    return obj;
+                }else if(obj && obj.hasOwnProperty(prop)){
+                    return obj[prop]; 
+                }else{
+                    return obj;
+                }
             },
             /**
              * ensureId, returns id value of object or if you pass a string it returns that exact string 

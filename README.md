@@ -28,7 +28,7 @@ Call `grunt gh-pages` to publish the documentation
 //
 // Authenticating via username and password
 //
-var baseUrl = 'https://app.cheqroom.com/api/v2_2';
+var baseUrl = 'https://api.cheqroom.com/api/v2_5';
 var userName = "";
 var password = "";
 
@@ -91,16 +91,17 @@ dsUsers.create({name: 'New User', email: 'newuser@gmail.com', role: 'selfservice
 //
 // Using models
 //
-
 // Getting an Item by its primary key
-var item = new cr.api.Item({ds: dsItems, id: 'ANY-ITEM-ID');
+var item = new cr.Item({ds: dsItems, id: 'ANY-ITEM-ID');
+
 item.get()
     .done(function() {
         console.log(item.name, item.status);
     });
 
 // Getting a Contact by its primary key and updating its company name
-var contact = new cr.api.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
+var contact = new cr.Contact({ds: dsContacts, id: 'ANY-CONTACT-ID');
+
 contact.get()
     .done(function() {
         contact.company = "New Company Name";
@@ -112,6 +113,39 @@ contact.get()
 
 ```
 
+//
+// Query operators
+//
+Operators other than equality may also be used in queries — just attach the operator name to a key with a double-underscore:
+
+ne – not equal to
+lt – less than
+lte – less than or equal to
+gt – greater than
+gte – greater than or equal to
+not – negate a standard check, may be used before other operators (e.g. Q(age__not__mod=5))
+in – value is in list (a list of values should be provided)
+nin – value is not in list (a list of values should be provided)
+mod – value % x == y, where x and y are two provided values
+all – every item in list of values provided is in array
+size – the size of the array is
+exists – value for field exists
+
+//
+// String search syntax
+//
+The following operators are available as shortcuts to querying with regular expressions:
+
+exact – string field exactly matches value
+iexact – string field exactly matches value (case insensitive)
+contains – string field contains value
+icontains – string field contains value (case insensitive)
+startswith – string field starts with value
+istartswith – string field starts with value (case insensitive)
+endswith – string field ends with value
+iendswith – string field ends with value (case insensitive)
+match – performs an $elemMatch so you can match an entire document within an array
+
 - - -
 
-Copyright CHECKROOM NV 2016
+Copyright CHECKROOM NV 2017

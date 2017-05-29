@@ -35,7 +35,7 @@ define(['jquery'], /** @lends Conflict */ function ($) {
      */
     var Conflict = function(spec) {
         this.ds = spec.ds;
-        this.fields = spec.fields;
+        this._fields = spec._fields;
 
         this.raw = null; // the raw json object
         this.kind = spec.kind || DEFAULTS.kind;

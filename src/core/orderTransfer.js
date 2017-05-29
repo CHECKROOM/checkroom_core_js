@@ -45,7 +45,7 @@ define([
      */
     var OrderTransfer = function(opt) {
         var spec = $.extend({
-            fields: ['*'],
+            _fields: ['*'],
             crtype: 'cheqroom.types.reservation.ordertransfer'
         }, opt);
         Base.call(this, spec);

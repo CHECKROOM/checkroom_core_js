@@ -8,15 +8,15 @@ define([
     'jquery',
     'base',
     'common',
-    'user'], /** @lends Contact */ function ($, Base, common, User) {
+    'user',
+    'helper'], /** @lends Contact */ function ($, Base, common, User, Helper) {
 
     var DEFAULTS = {
         name: "",
-        company: "",
-        phone: "",
         email: "",
         status: "active",
-        user: {}
+        user: {},
+        kind: "contact"
     };
 
     // Allow overriding the ctor during inheritance
@@ -33,17 +33,18 @@ define([
      */
     var Contact = function(opt) {
         var spec = $.extend({
-            fields: ['*'],
+            _fields: ['*'],
             crtype: 'cheqroom.types.customer'
         }, opt);
         Base.call(this, spec);
 
+        this.helper = spec.helper || new Helper();
+
         this.name = spec.name || DEFAULTS.name;
-        this.company = spec.company || DEFAULTS.company;
-        this.phone = spec.phone || DEFAULTS.phone;
         this.email = spec.email || DEFAULTS.email;
         this.status = spec.status || DEFAULTS.status;
         this.user = spec.user || DEFAULTS.user;
+        this.kind = spec.kind || DEFAULTS.kind;
     };
 
     Contact.prototype = new tmp();
@@ -63,28 +64,6 @@ define([
     };
 
     /**
-     * Checks if company is valid
-     * @name  Contact#isValidCompany
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidCompany = function() {
-        this.company = $.trim(this.company);
-        return (this.company.length>=3);
-    };
-
-    /**
-     * Checks if phone is valid
-     * @name  Contact#isValidPhone
-     * @method
-     * @return {Boolean} [description]
-     */
-    Contact.prototype.isValidPhone = function() {
-        this.phone = $.trim(this.phone);
-        return common.isValidPhone(this.phone);
-    };
-
-    /**
      * Check is email is valid
      * @name  Contact#isValidEmail
      * @method
@@ -93,6 +72,122 @@ define([
     Contact.prototype.isValidEmail = function() {
         this.email = $.trim(this.email);
         return common.isValidEmail(this.email);
+    };
+
+    /**
+     * If the contact is linked to a user,
+     * return its user id
+     * Remark: needs field user
+     * @name Contact#getUserId
+     * @method
+     * @return {string}
+     */
+    Contact.prototype.getUserId = function() {
+        return this.helper.ensureId(this.user);
+    };
+
+    /**
+     * Checks if the user is a synced user
+     * Remark: needs field user
+     * @name Contact#getUserSync
+     * @method
+     * @return {string}
+     */
+    Contact.prototype.getUserSync = function() {
+        return ((this.user!=null) && (this.user.sync!=null)) ? this.user.sync : "";
+    };
+
+    //
+    // Business logic
+    //
+    /**
+     * Checks if a contact can be used in a reservation (based on status)
+     * @name Contact#canReserve
+     * @returns {boolean}
+     */
+    Contact.prototype.canReserve = function() {
+        return common.contactCanReserve(this);
+    };
+
+    /**
+     * Checks if a contact can be used in a checkout (based on status)
+     * @name Contact#canCheckout
+     * @returns {boolean}
+     */
+    Contact.prototype.canCheckout = function() {
+        return common.contactCanCheckout(this);
+    };
+
+    /**
+     * Checks if we can generate a document for this contact (based on status)
+     * @name Contact#canGenerateDocument
+     * @returns {boolean}
+     */
+    Contact.prototype.canGenerateDocument = function() {
+        return common.contactCanGenerateDocument(this);
+    };
+
+    /**
+     * Checks if a contact can be archived (based on status)
+     * @name Contact#canArchive
+     * @returns {boolean}
+     */
+    Contact.prototype.canArchive = function() {
+        return common.contactCanArchive(this);
+    };
+
+    /**
+     * Checks if a contact can be unarchived (based on status)
+     * @name Contact#canUndoArchive
+     * @returns {boolean}
+     */
+    Contact.prototype.canUndoArchive = function() {
+        return common.contactCanUndoArchive(this);
+    };
+
+    /**
+     * Checks if a contact can be deleted (based on status and link to user)
+     * @name Contact#canDelete
+     * @returns {boolean}
+     */
+    Contact.prototype.canDelete = function() {
+        var that = this;
+        return Base.prototype.canDelete.call(this).then(function(resp){
+            return resp.result && common.contactCanDelete(that);
+        });
+    };
+
+    /**
+     * Archive a contact
+     * @name Contact#archive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.archive = function(skipRead) {
+        return this._doApiCall({method: "archive", params: {}, skipRead: skipRead});
+    };
+
+    /**
+     * Undo archive of a contact
+     * @name Contact#undoArchive
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.undoArchive = function(skipRead) {
+        return this._doApiCall({method: "undoArchive", params: {}, skipRead: skipRead});
+    };
+
+    /**
+     * Generates a PDF document for the reservation
+     * @method
+     * @name Contact#generateDocument
+     * @param {string} template id
+     * @param {string} signature (base64)
+     * @param {bool} skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.generateDocument = function(template, signature, skipRead) {
+        return this._doApiLongCall({method: "generateDocument", params: {template: template, signature: signature}, skipRead: skipRead});
     };
 
     //
@@ -107,10 +202,7 @@ define([
      * @override
      */
     Contact.prototype.isValid = function() {
-        return this.isValidName() &&
-            this.isValidCompany() &&
-            this.isValidPhone() &&
-            this.isValidEmail();
+        return this.isValidName() && this.isValidEmail();
     };
 
     /**
@@ -120,11 +212,9 @@ define([
      */
     Contact.prototype.isEmpty = function() {
         return (
-            (Base.prototype.isEmpty.call(this)) &&
-                (this.name==DEFAULTS.name) &&
-                (this.company==DEFAULTS.company) &&
-                (this.phone==DEFAULTS.phone) &&
-                (this.email==DEFAULTS.email));
+        (Base.prototype.isEmpty.call(this)) &&
+        (this.name==DEFAULTS.name) &&
+        (this.email==DEFAULTS.email));
     };
 
     /**
@@ -136,34 +226,9 @@ define([
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
-            isDirty = (
-                (this.name!=this.raw.name)||
-                    (this.company!=this.raw.company)||
-                    (this.phone!=this.raw.phone)||
-                    (this.email!=this.raw.email)
-                );
+            isDirty = this._isDirtyStringProperty("name") || this._isDirtyStringProperty("email");
         }
         return isDirty;
-    };
- 
-    /**
-     * Archive a contact
-     * @name Contact#archive
-     * @param skipRead
-     * @returns {promise}
-     */
-    Contact.prototype.archive = function(skipRead) {
-        return this.ds.call(this.id, 'archive', {}, skipRead);
-    };
-
-    /**
-     * Undo archive of a contact
-     * @name Contact#undoArchive
-     * @param skipRead
-     * @returns {promise}
-     */
-    Contact.prototype.undoArchive = function(skipRead) {
-        return this.ds.call(this.id, 'undoArchive', {}, skipRead);
     };
 
     Contact.prototype._getDefaults = function() {
@@ -173,8 +238,6 @@ define([
     Contact.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
-        data.company = this.company || DEFAULTS.company;
-        data.phone = this.phone || DEFAULTS.phone;
         data.email = this.email || DEFAULTS.email;
         return data;
     };
@@ -184,14 +247,47 @@ define([
         return Base.prototype._fromJson.call(this, data, options)
             .then(function(data) {
                 that.name = data.name || DEFAULTS.name;
-                that.company = data.company || DEFAULTS.company;
-                that.phone = data.phone || DEFAULTS.phone;
                 that.email = data.email || DEFAULTS.email;
                 that.status = data.status || DEFAULTS.status;
                 that.user = data.user || DEFAULTS.user;
-                
+                that.kind = data.kind || DEFAULTS.kind;
+
                 $.publish('contact.fromJson', data);
                 return data;
+            });
+    };
+
+    Contact.prototype._create = function(skipRead) {
+        // We override create because we also want
+        // to set possible `fields` during the `create` command
+        var that = this,
+            data = $.extend({}, this._toJson(), this._toJsonFields());
+
+        delete data.id;
+
+        return this.ds.create(data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
+            });
+    };
+
+    Contact.prototype._update = function(skipRead) {
+        var that = this;
+
+        // Don't use the original `_update`
+        // because it uses `_toJson` and lists fields, even if they didn't change
+        // var data = this._toJson();
+        var data = {};
+        if (this._isDirtyStringProperty("name")) {
+            data["name"] = that.name;
+        }
+        if (this._isDirtyStringProperty("email")) {
+            data["email"] = that.email;
+        }
+
+        return this.ds.update(this.id, data, this._fields)
+            .then(function(data) {
+                return (skipRead==true) ? data : that._fromJson(data);
             });
     };
 

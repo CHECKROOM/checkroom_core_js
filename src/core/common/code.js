@@ -1,7 +1,7 @@
 /**
  * QR and barcode helpers
  */
-define(function () {
+define(['settings'], function (settings) {
     return {
     	/**
          * isCodeValid
@@ -48,7 +48,7 @@ define(function () {
 		 * @return {Boolean}         
 		 */
 		isValidBarcode: function(barCode){
-			return barCode.match(/^[a-z0-9\-]{4,}$/i) != null;
+			return barCode && barCode.length!=8 && barCode.match(/^[A-Z0-9\-]{4,13}$/i) != null;
 		},
 
 		/**
@@ -82,8 +82,22 @@ define(function () {
 		},
 
 		/**
-		 * isValidItemQRCode 
+		 * isValidDocQRCode 
 		 * For example: http://cheqroom.com/qr/eeaa37ed
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidDocQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean} 
+		 */
+		isValidDocQRCode: function(qrCode){
+			return qrCode && (qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null || qrCode.match(/^[a-z0-9]{8}$/i) != null);
+		},
+
+		/**
+		 * isValidItemQRCode 
 		 * 
 		 * @memberOf common
 		 * @name  common#isValidItemQRCode
@@ -93,7 +107,21 @@ define(function () {
 		 * @return {Boolean} 
 		 */
 		isValidItemQRCode: function(qrCode){
-			return qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null;
+			return this.isValidDocQRCode(qrCode);
+		},
+
+		/**
+		 * isValidKitQRCode 
+		 * 
+		 * @memberOf common
+		 * @name  common#isValidKitQRCode
+		 * @method
+		 * 
+		 * @param  {string}  qrCode 
+		 * @return {Boolean} 
+		 */
+		isValidKitQRCode: function(qrCode){
+			return this.isValidDocQRCode(qrCode);
 		},
 
 		/**
@@ -128,6 +156,36 @@ define(function () {
 	        } else {
 	            return '';
 	        }
-		}
+		},
+	 	/**
+         * getQRCodeUrl 
+         *
+         * @memberOf  common
+         * @name  common#getCheqRoomRedirectUrlQR
+         * @method
+         *
+         * @param  {string} urlApi 
+         * @param  {string} code 
+         * @param  {number} size 
+         * @return {string}      
+         */
+        getQRCodeUrl: function(urlApi, code, size){
+            return urlApi + "/qrcode?code=" + code + "&size=" + size;
+        },
+        /**
+         * getBarcodeUrl 
+         *
+         * @memberOf  common
+         * @name  common#getCheqRoomRedirectUrlQR
+         * @method
+         *
+         * @param  {string} urlApi 
+         * @param  {string} code 
+         * @param  {number} size 
+         * @return {string}      
+         */
+        getBarcodeUrl: function(urlApi, code, width, height){
+            return urlApi + "/barcode?code=" + code + "&width=" + width + (height?"&height=" + height:"");
+        }
     };
 });

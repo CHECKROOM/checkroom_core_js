@@ -67,6 +67,55 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 return url;
             },
+            getICalUrl: function(urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+                var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
+                    parts = [];
+
+                if (locationId) {
+                    parts.push("locations[]=" + locationId);
+                }
+                if (customerId) {
+                    parts.push("customer=" + customerId);
+                }
+                if (!showOrders) {
+                    parts.push("skipOpenOrders=true");
+                }
+                if (!showReservations) {
+                    parts.push("skipOpenReservations=true");
+                }
+
+                return (parts.length>0) ? url + "?" + parts.join("&") : url;
+            },
+
+            /**
+             * getQRCodeUrl 
+             *
+             * @memberOf helper
+             * @method
+             * @name  helper#getQRCodeUrl
+             * 
+             * @param  {string} code 
+             * @param  {number} size 
+             * @return {string}      
+             */
+            getQRCodeUrl: function(code, size){
+                return common.getQRCodeUrl(settings.urlApi, code, size);
+            },
+            /**
+             * getBarcodeUrl 
+             *
+             * @memberOf helper
+             * @method
+             * @name  helper#getBarcodeUrl
+             * 
+             * @param  {string} code 
+             * @param  {number} size 
+             * @return {string}      
+             */
+            getBarcodeUrl: function(code, width, height){
+                return common.getBarcodeUrl(settings.urlApi, code, width, height);
+            },
+
             /**
              * getNumItemsLeft
              *
@@ -135,7 +184,9 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
             },
             /**
              * getAccessRights returns access rights based on the user role, profile settings 
-             * and account limits 
+             * and account limits
+             *
+             * Deprecated: Use PermissionHandler instead
              *
              * @memberOf helper
              * @method

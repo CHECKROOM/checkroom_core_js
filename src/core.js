@@ -8,23 +8,27 @@ define([
     'Availability',
     'Attachment',
     'Base',
+    'Category',
     'Comment',
     'Conflict',
     'Contact',
     'DateHelper',
     'Document',
+    'Group',
     'Item',
-    'KeyValue',
     'Kit',
     'Location',
     'Order',
     'helper',
+    'PermissionHandler',
     'Reservation',
+    'Template',
     'Transaction',
     'User',
+    'UserSync',
     'WebHook',
     'common',
-    'OrderTransfer'], function(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, Helper, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
+    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer) {
 
     var core = {};
 
@@ -36,19 +40,23 @@ define([
     core.Availability = Availability;
     core.Attachment = Attachment;
     core.Base = Base;
+    core.Category = Category;
     core.Comment = Comment;
     core.Conflict = Conflict;
     core.Contact = Contact;
     core.DateHelper = DateHelper;
-    core.Document = Document;   
+    core.Document = Document;
+    core.Group = Group;
     core.Item = Item;
-    core.KeyValue = KeyValue;
     core.Kit = Kit;
     core.Location = Location;
     core.Order = Order;
+    core.PermissionHandler = PermissionHandler;
     core.Reservation = Reservation;
+    core.Template = Template;
     core.Transaction = Transaction;
     core.User = User;
+    core.UserSync = UserSync;
     core.WebHook = WebHook;
     core.OrderTransfer = OrderTransfer;
     core.Helper = Helper;

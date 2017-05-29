@@ -5,9 +5,926 @@ define(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);
 factory($, moment, jsonp, pubsub);
 }
 }(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
- * QR and barcode helpers
+ * Provides the classes needed to communicate with the CHECKROOM API
+ * @module api
+ * @namespace api
+ * @copyright CHECKROOM NV 2015
  */
-var common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_clientStorage, common, api, document, Availability, keyvalue, Attachment, comment, attachment, Base, Comment, Conflict, base, user, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, location, dateHelper, settings, helper, transaction, conflict, Order, Reservation, Transaction, User, WebHook, OrderTransfer, core;
+var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, core;
+api = function ($, jsonp, moment) {
+  var MAX_QUERYSTRING_LENGTH = 2048;
+  //TODO change this
+  //system.log fallback
+  var system = {
+    log: function () {
+    }
+  };
+  // Disable caching AJAX requests in IE
+  // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
+  $.ajaxSetup({ cache: false });
+  var api = {};
+  //*************
+  // ApiErrors
+  //*************
+  // Network
+  api.NetworkNotConnected = function (msg, opt) {
+    this.code = 999;
+    this.message = msg || 'Connection interrupted';
+    this.opt = opt;
+  };
+  api.NetworkNotConnected.prototype = new Error();
+  api.NetworkTimeout = function (msg, opt) {
+    this.code = 408;
+    this.message = msg || 'Could not reach the server in time';
+    this.opt = opt;
+  };
+  api.NetworkTimeout.prototype = new Error();
+  // Api
+  api.ApiError = function (msg, opt) {
+    this.code = 500;
+    this.message = msg || 'Something went wrong on the server';
+    this.opt = opt;
+  };
+  api.ApiError.prototype = new Error();
+  api.ApiNotFound = function (msg, opt) {
+    this.code = 404;
+    this.message = msg || 'Could not find what you\'re looking for';
+    this.opt = opt;
+  };
+  api.ApiNotFound.prototype = new Error();
+  api.ApiBadRequest = function (msg, opt) {
+    this.code = 400;
+    this.message = msg || 'The server did not understand your request';
+    this.opt = opt;
+  };
+  api.ApiBadRequest.prototype = new Error();
+  api.ApiUnauthorized = function (msg, opt) {
+    this.code = 401;
+    this.message = msg || 'Your session has expired';
+    this.opt = opt;
+  };
+  api.ApiUnauthorized.prototype = new Error();
+  api.ApiForbidden = function (msg, opt) {
+    this.code = 403;
+    this.message = msg || 'You don\'t have sufficient rights';
+    this.opt = opt;
+  };
+  api.ApiForbidden.prototype = new Error();
+  api.ApiUnprocessableEntity = function (msg, opt) {
+    this.code = 422;
+    this.message = msg || 'Some data is invalid';
+    this.opt = opt;
+  };
+  api.ApiUnprocessableEntity.prototype = new Error();
+  api.ApiSubscriptionLimit = function (msg, opt) {
+    this.code = 422;
+    this.message = msg || 'You have reached your subscription limit';
+    this.opt = opt;
+  };
+  api.ApiSubscriptionLimit.prototype = new Error();
+  api.ApiPaymentRequired = function (msg, opt) {
+    this.code = 402;
+    this.message = msg || 'Your subscription has expired';
+    this.opt = opt;
+  };
+  api.ApiPaymentRequired.prototype = new Error();
+  api.ApiServerCapicity = function (msg, opt) {
+    this.code = 503;
+    this.message = msg || 'Back-end server is at capacity';
+    this.opt = opt;
+  };
+  api.ApiServerCapicity.prototype = new Error();
+  //*************
+  // ApiAjax
+  //*************
+  /**
+   * The ajax communication object which makes the request to the API
+   * @name ApiAjax
+   * @param {object} spec
+   * @param {boolean} spec.useJsonp
+   * @constructor
+   * @memberof api
+   */
+  api.ApiAjax = function (spec) {
+    spec = spec || {};
+    this.useJsonp = spec.useJsonp != null ? spec.useJsonp : true;
+    this.timeOut = spec.timeOut || 10000;
+    this.responseInTz = true;
+  };
+  api.ApiAjax.prototype.get = function (url, timeOut) {
+    system.log('ApiAjax: get ' + url);
+    return this.useJsonp ? this._getJsonp(url, timeOut) : this._getAjax(url, timeOut);
+  };
+  api.ApiAjax.prototype.post = function (url, data, timeOut) {
+    system.log('ApiAjax: post ' + url);
+    if (this.useJsonp) {
+      throw 'ApiAjax cannot post while useJsonp is true';
+    }
+    return this._postAjax(url, data, timeOut);
+  };
+  // Implementation
+  // ----
+  api.ApiAjax.prototype._handleAjaxSuccess = function (dfd, data, opt) {
+    if (this.responseInTz) {
+      data = this._fixDates(data);
+    }
+    return dfd.resolve(data);
+  };
+  api.ApiAjax.prototype._handleAjaxError = function (dfd, x, t, m, opt) {
+    // ajax call was aborted
+    if (t == 'abort')
+      return;
+    var msg = '';
+    if (m === 'timeout') {
+      dfd.reject(new api.NetworkTimeout(msg, opt));
+    } else {
+      if (x) {
+        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+          msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+        }
+        if (x.status == 422 && x.responseText && x.responseText.match(/HTTPError: \(.+\)/g).length > 0) {
+          opt = { detail: x.responseText.match(/HTTPError: \(.+\)/g)[0] };
+        }
+      }
+      switch (x.status) {
+      case 400:
+        dfd.reject(new api.ApiBadRequest(msg, opt));
+        break;
+      case 401:
+        dfd.reject(new api.ApiUnauthorized(msg, opt));
+        break;
+      case 402:
+        dfd.reject(new api.ApiPaymentRequired(msg, opt));
+        break;
+      case 403:
+        dfd.reject(new api.ApiForbidden(msg, opt));
+        break;
+      case 404:
+        dfd.reject(new api.ApiNotFound(msg, opt));
+        break;
+      case 408:
+        dfd.reject(new api.NetworkTimeout(msg, opt));
+        break;
+      case 422:
+        // 422 Notify user: Cannot create item, max limit 50 items reached
+        if (msg && msg.indexOf('limit') >= 0 && msg.indexOf('reach') >= 0) {
+          dfd.reject(new api.ApiSubscriptionLimit(msg, opt));
+        } else {
+          dfd.reject(new api.ApiUnprocessableEntity(msg, opt));
+        }
+        break;
+      case 503:
+        dfd.reject(new api.ApiServerCapicity(msg, opt));
+        break;
+      case 500:
+      default:
+        dfd.reject(new api.ApiError(msg, opt));
+        break;
+      }
+    }
+  };
+  api.ApiAjax.prototype._postAjax = function (url, data, timeOut, opt) {
+    var dfd = $.Deferred();
+    var that = this;
+    var xhr = $.ajax({
+      type: 'POST',
+      url: url,
+      data: JSON.stringify(this._prepareDict(data)),
+      contentType: 'application/json; charset=utf-8',
+      timeout: timeOut || this.timeOut,
+      success: function (data) {
+        return that._handleAjaxSuccess(dfd, data, opt);
+      },
+      error: function (x, t, m) {
+        return that._handleAjaxError(dfd, x, t, m, opt);
+      }
+    });
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfd.promise();
+    promise.abort = function () {
+      xhr.abort();
+    };
+    return promise;
+  };
+  api.ApiAjax.prototype._getAjax = function (url, timeOut, opt) {
+    var dfd = $.Deferred();
+    var that = this;
+    var xhr = $.ajax({
+      url: url,
+      timeout: timeOut || this.timeOut,
+      success: function (data) {
+        return that._handleAjaxSuccess(dfd, data, opt);
+      },
+      error: function (x, t, m) {
+        return that._handleAjaxError(dfd, x, t, m, opt);
+      }
+    });
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfd.promise();
+    promise.abort = function () {
+      xhr.abort();
+    };
+    return promise;
+  };
+  api.ApiAjax.prototype._getJsonp = function (url, timeOut, opt) {
+    var dfd = $.Deferred();
+    var that = this;
+    var xhr = $.jsonp({
+      url: url,
+      type: 'GET',
+      timeout: timeOut || this.timeOut,
+      dataType: ' jsonp',
+      callbackParameter: 'callback',
+      success: function (data, textStatus, xOptions) {
+        return that._handleAjaxSuccess(dfd, data);
+      },
+      error: function (xOptions, textStatus) {
+        // JSONP doesn't support HTTP status codes
+        // https://github.com/jaubourg/jquery-jsonp/issues/37
+        // so we can only return a simple error
+        dfd.reject(new api.ApiError(null, opt));
+      }
+    });
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfd.promise();
+    promise.abort = function () {
+      xhr.abort();
+    };
+    return promise;
+  };
+  api.ApiAjax.prototype._prepareDict = function (data) {
+    // Makes sure all values from the dict are serializable and understandable for json
+    if (!data) {
+      return {};
+    }
+    $.each(data, function (key, value) {
+      if (moment.isMoment(value)) {
+        data[key] = value.toJSONDate();
+      }
+    });
+    return data;
+  };
+  /**
+   * Turns all strings that look like datetimes into moment objects recursively
+   *
+   * @name  DateHelper#fixDates
+   * @method
+   * @private
+   *
+   * @param data
+   * @returns {*}
+   */
+  api.ApiAjax.prototype._fixDates = function (data) {
+    if (typeof data == 'string' || data instanceof String) {
+      // "2014-04-03T12:15:00+00:00" (length 25)
+      // "2014-04-03T09:32:43.841000+00:00" (length 32)
+      if (data.endsWith('+00:00')) {
+        var len = data.length;
+        if (len == 25) {
+          return moment(data.substring(0, len - 6));
+        } else if (len == 32) {
+          return moment(data.substring(0, len - 6).split('.')[0]);
+        }
+      }
+    } else if (data instanceof Object || $.isArray(data)) {
+      var that = this;
+      $.each(data, function (k, v) {
+        data[k] = that._fixDates(v);
+      });
+    }
+    return data;
+  };
+  //*************
+  // ApiUser
+  //*************
+  /**
+   * @name ApiUser
+   * @param {object} spec
+   * @param {string} spec.userId          - the users primary key
+   * @param {string} spec.userToken       - the users token
+   * @param {string} spec.tokenType       - the token type (empty for now)
+   * @constructor
+   * @memberof api
+   */
+  api.ApiUser = function (spec) {
+    spec = spec || {};
+    this.userId = spec.userId || '';
+    this.userToken = spec.userToken || '';
+    this.tokenType = spec.tokenType || '';
+  };
+  api.ApiUser.prototype.fromStorage = function () {
+    this.userId = window.localStorage.getItem('userId') || '';
+    this.userToken = window.localStorage.getItem('userToken') || '';
+    this.tokenType = window.localStorage.getItem('tokenType') || '';
+  };
+  api.ApiUser.prototype.toStorage = function () {
+    window.localStorage.setItem('userId', this.userId);
+    window.localStorage.setItem('userToken', this.userToken);
+    window.localStorage.setItem('tokenType', this.tokenType);
+  };
+  api.ApiUser.prototype.removeFromStorage = function () {
+    window.localStorage.removeItem('userId');
+    window.localStorage.removeItem('userToken');
+    window.localStorage.removeItem('tokenType');
+  };
+  api.ApiUser.prototype.clearToken = function () {
+    window.localStorage.setItem('userToken', null);
+    window.localStorage.setItem('tokenType', null);
+  };
+  api.ApiUser.prototype.isValid = function () {
+    system.log('ApiUser: isValid');
+    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
+  };
+  api.ApiUser.prototype._reset = function () {
+    this.userId = '';
+    this.userToken = '';
+    this.tokenType = '';
+  };
+  //*************
+  // ApiAuth
+  //*************
+  api.ApiAuth = function (spec) {
+    spec = spec || {};
+    this.urlAuth = spec.urlAuth || '';
+    this.ajax = spec.ajax;
+    this.version = spec.version;
+  };
+  api.ApiAuth.prototype.authenticate = function (userId, password) {
+    system.log('ApiAuth: authenticate ' + userId);
+    var url = this.urlAuth + '?' + $.param({
+      user: userId,
+      password: password,
+      auth_v: 2,
+      _v: this.version
+    });
+    var dfd = $.Deferred();
+    this.ajax.get(url, 30000).done(function (resp) {
+      if (resp.status == 'OK') {
+        dfd.resolve(resp.data);
+      } else {
+        dfd.reject(resp);
+      }
+    }).fail(function (err) {
+      dfd.reject(err);
+    });
+    return dfd.promise();
+  };
+  //*************
+  // ApiAuth
+  //*************
+  /**
+   * @name ApiAuthV2
+   * @param {object}  spec
+   * @param {string}  spec.urlAuth          - the api url to use when authenticating
+   * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
+   * @constructor
+   * @memberof api
+   * @example
+   * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
+   * var userName = "";
+   * var password = "";
+   *
+   * var ajax = new cr.api.ApiAjax({useJsonp: true});
+   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
+   * var authUser = null;
+   *
+   * auth.authenticate(userName, password)
+   *     .done(function(data) {
+   *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
+   *     });
+   *
+   */
+  api.ApiAuthV2 = function (spec) {
+    spec = spec || {};
+    this.urlAuth = spec.urlAuth || '';
+    this.ajax = spec.ajax;
+    this.version = spec.version;
+  };
+  /**
+   * The call to authenticate a user with userid an dpassword
+   * @method
+   * @name ApiAuthV2#authenticate
+   * @param userId
+   * @param password
+   * @returns {object}
+   */
+  api.ApiAuthV2.prototype.authenticate = function (userId, password) {
+    system.log('ApiAuthV2: authenticate ' + userId);
+    var url = this.urlAuth + '?' + $.param({
+      user: userId,
+      password: password,
+      auth_v: 2,
+      _v: this.version
+    });
+    var dfd = $.Deferred();
+    this.ajax.get(url, 30000).done(function (resp) {
+      // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
+      // TODO: Handle case for password incorrect, no rights or subscription expired
+      if (resp.status == 'OK') {
+        dfd.resolve(resp.data);
+      } else {
+        // When account expired, /authenticate will respond with
+        //{"status": "ERROR",
+        // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
+        // "data": {...}}
+        var error = null;
+        if (resp.message && resp.message.indexOf('expired') > 0) {
+          error = new api.ApiPaymentRequired(resp.message);
+        } else {
+          error = new Error('Your username or password is not correct');
+        }
+        dfd.reject(error);
+      }
+    }).fail(function (err) {
+      dfd.reject(err);
+    });
+    return dfd.promise();
+  };
+  //*************
+  // ApiAnonymous
+  // Communicates with the API without having token authentication
+  //*************
+  /**
+   * @name ApiAnonymous
+   * @param {object} spec
+   * @param {ApiAjax} spec.ajax
+   * @param {string} spec.urlApi
+   * @constructor
+   * @memberof api
+   */
+  api.ApiAnonymous = function (spec) {
+    spec = spec || {};
+    this.ajax = spec.ajax;
+    this.urlApi = spec.urlApi || '';
+    this.version = spec.version;
+  };
+  /**
+   * Makes a call to the API which doesn't require a token
+   * @method
+   * @name ApiAnonymous#call
+   * @param method
+   * @param params
+   * @param timeOut
+   * @param opt
+   * @returns {*}
+   */
+  api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
+    system.log('ApiAnonymous: call ' + method);
+    if (this.version) {
+      params = params || {};
+      params['_v'] = this.version;
+    }
+    var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
+    return this.ajax.get(url, timeOut, opt);
+  };
+  /**
+   * Makes a long call (timeout 30s) to the API which doesn't require a token
+   * @method
+   * @name ApiAnonymous#longCall
+   * @param method
+   * @param params
+   * @param opt
+   * @returns {*}
+   */
+  api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
+    system.log('ApiAnonymous: longCall ' + method);
+    return this.call(method, params, 30000, opt);
+  };
+  //*************
+  // ApiDataSource
+  // Communicates with the API using an ApiUser
+  //*************
+  /**
+   * @name ApiDataSource
+   * @param {object} spec
+   * @param {string} spec.collection         - the collection this datasource uses, e.g. "items"
+   * @param {string} spec.urlApi             - the api url to use
+   * @param {ApiUser} spec.user              - the user auth object
+   * @param {ApiAjax}  spec.ajax             - the ajax api object to use
+   * @constructor
+   * @memberof api
+   */
+  api.ApiDataSource = function (spec) {
+    spec = spec || {};
+    this.collection = spec.collection || '';
+    this.urlApi = spec.urlApi || '';
+    this.user = spec.user;
+    this.ajax = spec.ajax;
+    this.version = spec.version;
+  };
+  /**
+   * Checks if a certain document exists
+   * @method
+   * @name ApiDataSource#exists
+   * @param pk
+   * @param fields
+   * @returns {*}
+   */
+  api.ApiDataSource.prototype.exists = function (pk, fields) {
+    system.log('ApiDataSource: ' + this.collection + ': exists ' + pk);
+    var cmd = 'exists';
+    var dfd = $.Deferred();
+    var that = this;
+    // We're actually doing a API get
+    // and resolve to an object,
+    // so we also pass the fields
+    var url = this.getBaseUrl() + pk;
+    var p = this.getParams(fields);
+    if (!$.isEmptyObject(p)) {
+      url += '?' + this.getParams(p);
+    }
+    this._ajaxGet(cmd, url).done(function (data) {
+      dfd.resolve(data);
+    }).fail(function (error) {
+      // This doesn't work when not in JSONP mode!!
+      // Since all errors are generic api.ApiErrors
+      // In jsonp mode, if a GET fails, assume it didn't exist
+      if (that.ajax.useJsonp) {
+        dfd.resolve(null);
+      } else if (error instanceof api.ApiNotFound) {
+        dfd.resolve(null);
+      } else {
+        dfd.reject(error);
+      }
+    });
+    return dfd.promise();
+  };
+  /**
+   * Gets a certain document by its primary key
+   * @method
+   * @name ApiDataSource#get
+   * @param pk
+   * @param fields
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.get = function (pk, fields) {
+    system.log('ApiDataSource: ' + this.collection + ': get ' + pk);
+    var cmd = 'get';
+    var url = this.getBaseUrl() + pk;
+    var p = this.getParamsDict(fields);
+    if (!$.isEmptyObject(p)) {
+      url += '?' + this.getParams(p);
+    }
+    return this._ajaxGet(cmd, url);
+  };
+  /**
+   * Gets a certain document by its primary key, but returns null if not found
+   * instead of a rejected promise
+   * @method
+   * @name ApiDataSource#getIgnore404
+   * @param pk
+   * @param fields
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.getIgnore404 = function (pk, fields) {
+    system.log('ApiDataSource: ' + this.collection + ': getIgnore404 ' + pk);
+    var that = this;
+    var dfd = $.Deferred();
+    this.get(pk, fields).done(function (data) {
+      dfd.resolve(data);
+    }).fail(function (err) {
+      if (that.ajax.useJsonp) {
+        // In Jsonp mode, we cannot get other error messages than 500
+        // We'll assume that it doesn't exist when we get an error
+        // Jsonp is not really meant to run in production environment
+        dfd.resolve(null);
+      } else if (err instanceof api.ApiNotFound) {
+        dfd.resolve(null);
+      } else {
+        dfd.reject(err);
+      }
+    });
+    return dfd.promise();
+  };
+  /**
+   * Get multiple document by primary keys in a single query
+   * @method
+   * @name ApiDataSource#getMultiple
+   * @param {array} pks
+   * @param fields
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
+    system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
+    var cmd = 'getMultiple';
+    var url = this.getBaseUrl() + pks.join(',') + ',';
+    var p = this.getParamsDict(fields);
+    if (!$.isEmptyObject(p)) {
+      url += '?' + this.getParams(p);
+    }
+    return this._ajaxGet(cmd, url);
+  };
+  /**
+   * Deletes a document by its primary key
+   * @method
+   * @name ApiDataSource#delete
+   * @param pk
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.delete = function (pk) {
+    system.log('ApiDataSource: ' + this.collection + ': delete ' + pk);
+    var cmd = 'delete';
+    var url = this.getBaseUrl() + pk + '/delete';
+    return this._ajaxGet(cmd, url);
+  };
+  /**
+   * Deletes documents by their primary key
+   * @method
+   * @name ApiDataSource#deleteMultiple
+   * @param pks
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.deleteMultiple = function (pks) {
+    system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
+    var cmd = 'deleteMultiple';
+    var url = this.getBaseUrl() + pks.join(',') + '/delete';
+    return this._ajaxGet(cmd, url);
+  };
+  /**
+   * Updates a document by its primary key and a params objects
+   * @method
+   * @name ApiDataSource#update
+   * @param pk
+   * @param params
+   * @param fields
+   * @param timeOut
+   * @param usePost
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.update = function (pk, params, fields, timeOut, usePost) {
+    system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
+    var cmd = 'update';
+    var url = this.getBaseUrl() + pk + '/update';
+    var p = $.extend({}, params);
+    if (fields != null && fields.length > 0) {
+      p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
+    }
+    var geturl = url + '?' + this.getParams(p);
+    if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p, timeOut);
+    } else {
+      return this._ajaxGet(cmd, geturl, timeOut);
+    }
+  };
+  /**
+   * Creates a document with some data in an object
+   * @method
+   * @name ApiDataSource#create
+   * @param params
+   * @param fields
+   * @param timeOut
+   * @param usePost
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.create = function (params, fields, timeOut, usePost) {
+    system.log('ApiDataSource: ' + this.collection + ': create');
+    var cmd = 'create';
+    var url = this.getBaseUrl() + 'create';
+    var p = $.extend({}, params);
+    if (fields != null && fields.length > 0) {
+      p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
+    }
+    var geturl = url + '?' + this.getParams(p);
+    if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p, timeOut);
+    } else {
+      return this._ajaxGet(cmd, geturl, timeOut);
+    }
+  };
+  /**
+   * Creates multiple objects in one go
+   * @method
+   * @name ApiDataSource#createMultiple
+   * @param objects
+   * @param fields
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.createMultiple = function (objects, fields) {
+    system.log('ApiDataSource: ' + this.collection + ': createMultiple (' + objects.length + ')');
+    var dfd = $.Deferred();
+    var that = this;
+    var todoObjs = objects.slice(0);
+    var doneIds = [];
+    // Trigger the creates sequentially
+    var createRecurse = function (todoObjs) {
+      if (todoObjs.length > 0) {
+        var obj = todoObjs.pop();
+        that.create(obj, fields).done(function (resp) {
+          doneIds.push(resp._id);
+          return createRecurse(todoObjs);
+        }).fail(function (error) {
+          dfd.reject(error);
+        });
+      } else {
+        dfd.resolve(doneIds);
+      }
+    };
+    createRecurse(todoObjs);
+    return dfd.promise();
+  };
+  /**
+   * Get a list of objects from the collection
+   * @method
+   * @name ApiDataSource#list
+   * @param name
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.list = function (name, fields, limit, skip, sort) {
+    name = name || '';
+    system.log('ApiDataSource: ' + this.collection + ': list ' + name);
+    var cmd = 'list.' + name;
+    var url = this.getBaseUrl();
+    if (name != null && name.length > 0) {
+      url += 'list/' + name + '/';
+    }
+    var p = this.getParamsDict(fields, limit, skip, sort);
+    if (!$.isEmptyObject(p)) {
+      url += '?' + this.getParams(p);
+    }
+    return this._ajaxGet(cmd, url);
+  };
+  /**
+   * Searches for objects in the collection
+   * @method
+   * @name ApiDataSource#search
+   * @param params
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @param mimeType
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.search = function (params, fields, limit, skip, sort, mimeType) {
+    system.log('ApiDataSource: ' + this.collection + ': search ' + params);
+    var cmd = 'search';
+    var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
+    return this._ajaxGet(cmd, url);
+  };
+  api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'search';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    url += '?' + this.getParams(p);
+    return url;
+  };
+  /**
+   * Calls a certain method on an object or on the entire collection
+   * @method
+   * @name ApiDataSource#call
+   * @param pk
+   * @param method
+   * @param params
+   * @param fields
+   * @param timeOut
+   * @param usePost
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.call = function (pk, method, params, fields, timeOut, usePost) {
+    system.log('ApiDataSource: ' + this.collection + ': call ' + method);
+    var cmd = 'call.' + method;
+    var url = pk != null && pk.length > 0 ? this.getBaseUrl() + pk + '/call/' + method : this.getBaseUrl() + 'call/' + method;
+    var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
+    var getUrl = url + '?' + this.getParams(p);
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p, timeOut);
+    } else {
+      return this._ajaxGet(cmd, getUrl, timeOut);
+    }
+  };
+  /**
+   * Calls a certain method on one or more objects in a collection
+   * @method
+   * @name ApiDataSource#callMultiple
+   * @param pks
+   * @param method
+   * @param params
+   * @param fields
+   * @param timeOut
+   * @param usePost
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.callMultiple = function (pks, method, params, fields, timeOut, usePost) {
+    system.log('ApiDataSource: ' + this.collection + ': call ' + method);
+    var cmd = 'call.' + method;
+    var url = this.getBaseUrl() + pks.join(',') + '/call/' + method;
+    var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
+    var getUrl = url + '?' + this.getParams(p);
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p, timeOut);
+    } else {
+      return this._ajaxGet(cmd, getUrl, timeOut);
+    }
+  };
+  /**
+   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+   * @method
+   * @name ApiDataSource#longCall
+   * @param pk
+   * @param method
+   * @param params
+   * @param fields
+   * @param usePost
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
+    return this.call(pk, method, params, fields, 30000, usePost);
+  };
+  /**
+   * Gets the base url for all calls to this collection
+   * @method
+   * @name ApiDataSource#getBaseUrl
+   * @returns {string}
+   */
+  api.ApiDataSource.prototype.getBaseUrl = function () {
+    var tokenType = this.user.tokenType != null && this.user.tokenType.length > 0 ? this.user.tokenType : 'null';
+    //Don't use cached version of this because when user session gets expired
+    //a new token is generated
+    return this.urlApi + '/' + this.user.userId + '/' + this.user.userToken + '/' + tokenType + '/' + this.collection + '/';
+  };
+  /**
+   * Prepare some parameters so we can use them during a request
+   * @method
+   * @name ApiDataSource#getParams
+   * @param data
+   * @returns {object}
+   */
+  api.ApiDataSource.prototype.getParams = function (data) {
+    return $.param(this.ajax._prepareDict(data));
+  };
+  /**
+   * Gets a dictionary of parameters
+   * @method
+   * @name ApiDataSource#getParamsDict
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @returns {{}}
+   */
+  api.ApiDataSource.prototype.getParamsDict = function (fields, limit, skip, sort) {
+    var p = {};
+    if (fields) {
+      p['_fields'] = $.isArray(fields) ? fields.join(',') : fields.replace(/\s/g, '');
+    }
+    if (limit) {
+      p['_limit'] = limit;
+    }
+    if (skip) {
+      p['_skip'] = skip;
+    }
+    if (sort) {
+      p['_sort'] = sort;
+    }
+    if (this.version) {
+      p['_v'] = this.version;
+    }
+    return p;
+  };
+  /**
+   * Does an ajax GET call using the api.ApiAjax object
+   * @param cmd
+   * @param url
+   * @param timeout
+   * @returns {promise}
+   * @private
+   */
+  api.ApiDataSource.prototype._ajaxGet = function (cmd, url, timeout) {
+    return this.ajax.get(url, timeout, {
+      coll: this.collection,
+      cmd: cmd
+    });
+  };
+  /**
+   * Does an ajax POST call using the api.ApiAjax object
+   * @param cmd
+   * @param url
+   * @param data
+   * @param timeout
+   * @returns {promise}
+   * @private
+   */
+  api.ApiDataSource.prototype._ajaxPost = function (cmd, url, data, timeout) {
+    return this.ajax.post(url, data, timeout, {
+      coll: this.collection,
+      cmd: cmd
+    });
+  };
+  return api;
+}(jquery, jquery_jsonp, moment);
+settings = { amazonBucket: 'app' };
 common_code = {
   /**
      * isCodeValid
@@ -53,7 +970,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^[0-9\-]{4,}$/i) != null;
+    return barCode && barCode.length != 8 && barCode.match(/^[A-Z0-9\-]{4,13}$/i) != null;
   },
   /**
    * isValidQRCode
@@ -154,6 +1071,36 @@ common_code = {
     } else {
       return '';
     }
+  },
+  /**
+   * getQRCodeUrl 
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrlQR
+   * @method
+   *
+   * @param  {string} urlApi 
+   * @param  {string} code 
+   * @param  {number} size 
+   * @return {string}      
+   */
+  getQRCodeUrl: function (urlApi, code, size) {
+    return urlApi + '/qrcode?code=' + code + '&size=' + size;
+  },
+  /**
+   * getBarcodeUrl 
+   *
+   * @memberOf  common
+   * @name  common#getCheqRoomRedirectUrlQR
+   * @method
+   *
+   * @param  {string} urlApi 
+   * @param  {string} code 
+   * @param  {number} size 
+   * @return {string}      
+   */
+  getBarcodeUrl: function (urlApi, code, width, height) {
+    return urlApi + '/barcode?code=' + code + '&width=' + width + (height ? '&height=' + height : '');
   }
 };
 common_order = function (moment) {
@@ -172,11 +1119,11 @@ common_order = function (moment) {
       // ORDER_STATUS = ('creating', 'open', 'closed')
       switch (status) {
       case 'creating':
-        return 'Incomplete';
+        return 'Draft';
       case 'open':
         return 'Open';
       case 'closed':
-        return 'Closed';
+        return 'Completed';
       default:
         return 'Unknown';
       }
@@ -265,7 +1212,13 @@ common_order = function (moment) {
     */
     getOrderStatus: function (order, now) {
       now = now || moment();
-      return this.isOrderOverdue(order, now) ? 'Overdue' : this.getFriendlyOrderStatus(order.status);
+      if (this.isOrderOverdue(order, now)) {
+        return 'Overdue';
+      } else if (this.isOrderArchived(order)) {
+        return 'Archived';
+      } else {
+        return this.getFriendlyOrderStatus(order.status);
+      }
     },
     /**
     * getOrderCss
@@ -328,16 +1281,46 @@ common_reservation = {
   getFriendlyReservationStatus: function (status) {
     switch (status) {
     case 'creating':
-      return 'Incomplete';
+      return 'Draft';
     case 'open':
-      return 'Open';
+      return 'Booked';
     case 'closed':
-      return 'Closed';
+      return 'Completed';
     case 'cancelled':
       return 'Cancelled';
     default:
       return 'Unknown';
     }
+  },
+  /**
+   * isReservationOverdue
+   *
+   * @memberOf common
+   * @name  common#isReservationOverdue
+   * @method
+   * 
+   * @param  {object}  reservation 
+   * @param  {moment}  now   
+   * @return {Boolean}       
+   */
+  isReservationOverdue: function (reservation, now) {
+    now = now || moment();
+    return reservation.status == 'open' && now.isAfter(reservation.fromDate);
+  },
+  /**
+   * isReservationInThePast
+   *
+   * @memberOf common
+   * @name  common#isReservationInThePast
+   * @method
+   *
+   * @param  {object}  reservation
+   * @param  {moment}  now
+   * @return {Boolean}
+   */
+  isReservationInThePast: function (reservation, now) {
+    now = now || moment();
+    return reservation.status == 'open' && now.isAfter(reservation.fromDate) && now.isAfter(reservation.toDate);
   },
   /**
    * isReservationArchived
@@ -370,18 +1353,49 @@ common_reservation = {
     }
   }
 };
-common_item = {
+common_item = function () {
+  var that = {};
+  that.itemCanTakeCustody = function (item) {
+    return item.status == 'available';
+  };
+  that.itemCanReleaseCustody = function (item) {
+    return item.status == 'in_custody';
+  };
+  that.itemCanTransferCustody = function (item) {
+    return item.status == 'in_custody';
+  };
+  that.itemCanReserve = function (item) {
+    return item.status != 'expired' && item.status != 'in_custody';
+  };
+  that.itemCanCheckout = function (item) {
+    return item.status == 'available';
+  };
+  that.itemCanGoToCheckout = function (item) {
+    return item.status == 'checkedout' || item.status == 'await_checkout';
+  };
+  that.itemCanCheckin = function (item) {
+    return item.status == 'checkedout';
+  };
+  that.itemCanExpire = function (item) {
+    return item.status == 'available';
+  };
+  that.itemCanUndoExpire = function (item) {
+    return item.status == 'expired';
+  };
+  that.itemCanDelete = function (item) {
+    return item.status == 'available' || item.status == 'expired';
+  };
   /**
-   * getFriendlyItemStatus 
-   *
-   * @memberOf common
-   * @name  common#getFriendlyItemStatus
-   * @method
-   * 
-   * @param  status
-   * @return {string}        
-   */
-  getFriendlyItemStatus: function (status) {
+  * getFriendlyItemStatus
+  *
+  * @memberOf common
+  * @name  common#getFriendlyItemStatus
+  * @method
+  *
+  * @param  status
+  * @return {string}
+  */
+  that.getFriendlyItemStatus = function (status) {
     // ITEM_STATUS = ('available', 'checkedout', 'await_checkout', 'in_transit', 'maintenance', 'repair', 'inspection', 'expired')
     switch (status) {
     case 'available':
@@ -405,7 +1419,7 @@ common_item = {
     default:
       return 'Unknown';
     }
-  },
+  };
   /**
   * getItemStatusCss
   *
@@ -416,7 +1430,7 @@ common_item = {
   * @param  status 
   * @return {string}       
   */
-  getItemStatusCss: function (status) {
+  that.getItemStatusCss = function (status) {
     switch (status) {
     case 'available':
       return 'label-available';
@@ -439,7 +1453,7 @@ common_item = {
     default:
       return '';
     }
-  },
+  };
   /**
   * getItemStatusIcon
   *
@@ -450,7 +1464,7 @@ common_item = {
   * @param  status
   * @return {string}       
   */
-  getItemStatusIcon: function (status) {
+  that.getItemStatusIcon = function (status) {
     switch (status) {
     case 'available':
       return 'fa fa-check-circle';
@@ -473,7 +1487,7 @@ common_item = {
     default:
       return '';
     }
-  },
+  };
   /**
   * getItemsByStatus
   *
@@ -485,7 +1499,7 @@ common_item = {
   * @param  {string|function} comparator 
   * @return {Array}           
   */
-  getItemsByStatus: function (items, comparator) {
+  that.getItemsByStatus = function (items, comparator) {
     if (!items)
       return [];
     return items.filter(function (item) {
@@ -497,36 +1511,52 @@ common_item = {
         return comparator(item);
       }
     });
-  },
+  };
   /**
-     * getAvailableItems
-     * 
-     * @memberOf common
+  * getAvailableItems
+  * 
+  * @memberOf common
   * @name  common#getAvailableItems
   * @method
-     * 
-     * @param  {Array} items 
-     * @return {Array}       
-     */
-  getAvailableItems: function (items) {
+  * 
+  * @param  {Array} items 
+  * @return {Array}       
+  */
+  that.getAvailableItems = function (items) {
     return this.getItemsByStatus(items, 'available');
-  },
+  };
   /**
-     * getActiveItems
-     * 
-     * @memberOf common
+  * getActiveItems
+  * 
+  * @memberOf common
   * @name  common#getActiveItems
   * @method
-     * 
-     * @param  {Array} items 
-     * @return {Array}       
-     */
-  getActiveItems: function (items) {
+  * 
+  * @param  {Array} items 
+  * @return {Array}       
+  */
+  that.getActiveItems = function (items) {
     return this.getItemsByStatus(items, function (item) {
       return item.status != 'expired' && item.status != 'in_custody';
     });
-  }
-};
+  };
+  /**
+  * getItemIds
+  *
+  * @memberOf common
+  * @name  common#getItemIds
+  * @method
+  * 
+  * @param  items 
+  * @return {array}       
+  */
+  that.getItemIds = function (items) {
+    return items.map(function (item) {
+      return typeof item === 'string' ? item : item._id;
+    });
+  };
+  return that;
+}();
 common_conflicts = {
   /**
    * getFriendlyConflictKind
@@ -876,11 +1906,40 @@ common_image = function ($) {
       var url = 'https://cheqroom-cdn.s3.amazonaws.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
       if (size && size.length > 0) {
         var parts = url.split('.');
-        var ext = parts.pop();
+        var ext = attachmentId.indexOf('.') != -1 ? parts.pop() : '';
         // pop off the extension, we'll change it
         url = parts.join('.') + '-' + size + '.jpg';  // resized images are always jpg
       }
       return url;
+    },
+    getNoImage: function (size) {
+      var sizes = {
+        'XS': 64,
+        'S': 128,
+        'M': 256,
+        'L': 512,
+        'XL': 1024
+      };
+      var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
+      var $canvas = $('<canvas />').attr({
+        width: canvasWidth,
+        height: canvasHeight
+      });
+      var context = $canvas.get(0).getContext('2d');
+      if (window.devicePixelRatio) {
+        $canvas.attr('width', canvasWidth * window.devicePixelRatio);
+        $canvas.attr('height', canvasHeight * window.devicePixelRatio);
+        $canvas.css('width', canvasCssWidth);
+        $canvas.css('height', canvasCssHeight);
+        context.scale(window.devicePixelRatio, window.devicePixelRatio);
+      }
+      context.fillStyle = 'rgba(255,255,255,0.5)';
+      context.fillRect(0, 0, canvasWidth, canvasHeight);
+      context.font = canvasWidth / 2 + 'px FontAwesome';
+      context.textAlign = 'center';
+      context.fillStyle = 'rgba(0,0,0,0.2)';
+      context.fillText(String.fromCharCode('0xf03e'), canvasCssWidth / 2, canvasCssHeight / 1.5);
+      return $canvas.get(0).toDataURL();
     }
   };
 }(jquery);
@@ -951,10 +2010,10 @@ common_inflection = function () {
   * @memberOf String
   * @name  String#pluralize
   * @method
-  * 
-  * @param  {int} count  
-  * @param  {string} suffix 
-  * @return {string}        
+  *
+  * @param  {int} count
+  * @param  {string} suffix
+  * @return {string}
   */
   String.prototype.pluralize = function (count, suffix) {
     if (this == 'is' && count != 1) {
@@ -973,14 +2032,14 @@ common_inflection = function () {
     }
   };
   /**
-  * capitalize 
+  * capitalize
   *
   * @memberOf String
   * @name  String#capitalize
   * @method
-  * 
-  * @param  {Boolean} lower 
-  * @return {string}       
+  *
+  * @param  {Boolean} lower
+  * @return {string}
   */
   String.prototype.capitalize = function (lower) {
     return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function (a) {
@@ -994,9 +2053,9 @@ common_inflection = function () {
      * @memberOf String
      * @name  String#startsWith
      * @method
-     * 
-     * @param  {string} str 
-     * @return {Boolean}     
+     *
+     * @param  {string} str
+     * @return {Boolean}
      */
     String.prototype.startsWith = function (str) {
       return this.indexOf(str) == 0;
@@ -1009,9 +2068,9 @@ common_inflection = function () {
      * @memberOf String
      * @name  String#endsWith
      * @method
-     * 
-     * @param  {string} str 
-     * @return {Boolean}     
+     *
+     * @param  {string} str
+     * @return {Boolean}
      */
     String.prototype.endsWith = function (str) {
       if (this.length < str.length) {
@@ -1023,14 +2082,14 @@ common_inflection = function () {
   }
   if (!String.prototype.truncate) {
     /**
-     * truncate 
+     * truncate
      *
      * @memberOf String
      * @name  String#truncate
-     * @method 
-     * 
-     * @param  {int} len 
-     * @return {string}     
+     * @method
+     *
+     * @param  {int} len
+     * @return {string}
      */
     String.prototype.truncate = function (len) {
       len = len != null ? len : 25;
@@ -1048,9 +2107,9 @@ common_inflection = function () {
      *
      * @memberOf String
      * @name  String#isValidUrl
-     * @method  
-     * 
-     * @return {Boolean} 
+     * @method
+     *
+     * @return {Boolean}
      */
     String.prototype.isValidUrl = function () {
       var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
@@ -1069,15 +2128,15 @@ common_inflection = function () {
   }
   if (!String.prototype.hashCode) {
     /**
-    * hashCode 
-    * http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
-    *
-    * @memberOf String
-    * @name  String#hashCode
-    * @method
-    * 
-    * @return {string} 
-    */
+     * hashCode
+     * http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+     *
+     * @memberOf String
+     * @name  String#hashCode
+     * @method
+     *
+     * @return {string}
+     */
     String.prototype.hashCode = function () {
       var hash = 0, i, chr, len;
       if (this.length == 0)
@@ -1919,13 +2978,13 @@ common_inflection = function () {
     '\u2093': 'x'
   };
   /**
-  * latinise 
+  * latinise
   *
   * @memberOf  String
   * @name  String#latinise
   * @method
-  * 
-  * @return {string} 
+  *
+  * @return {string}
   */
   String.prototype.latinise = function () {
     return this.replace(/[^A-Za-z0-9\[\] ]/g, function (a) {
@@ -1933,23 +2992,23 @@ common_inflection = function () {
     });
   };
   /**
-  * latinize 
+  * latinize
   *
   * @memberOf  String
   * @name  String#latinize
   * @method
-  * 
-  * @return {string} 
+  *
+  * @return {string}
   */
   String.prototype.latinize = String.prototype.latinise;
   /**
-  * isLatin 
+  * isLatin
   *
   * @memberOf  String
   * @name  String#isLatin
   * @method
-  * 
-  * @return {Boolean} 
+  *
+  * @return {Boolean}
   */
   String.prototype.isLatin = function () {
     return this == this.latinise();
@@ -1960,7 +3019,7 @@ common_inflection = function () {
   * @memberOf String
   * @name  String#OnlyAlphaNumSpaceAndUnderscore
   * @method
-  * 
+  *
   */
   String.prototype.OnlyAlphaNumSpaceAndUnderscore = function () {
     // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
@@ -1974,7 +3033,7 @@ common_inflection = function () {
   * @memberOf String
   * @name  String#OnlyAlphaNumSpaceUnderscoreAndDot
   * @method
-  * 
+  *
   */
   String.prototype.OnlyAlphaNumSpaceUnderscoreAndDot = function () {
     // \s Matches a single white space character, including space, tab, form feed, line feed and other Unicode spaces.
@@ -1982,15 +3041,28 @@ common_inflection = function () {
     // Preceding or trailing whitespaces are removed, and words are also latinised
     return $.trim(this).toLowerCase().replace(/[\s-]+/g, '_').latinise().replace(/[^a-z0-9_\.]/g, '');
   };
+  if (!String.prototype.NoWhiteSpaceInWord) {
+    /**
+     * NoWhiteSpaceInWord
+     *
+     * @memberOf String
+     * @name String#NoWhiteSpaceInWord
+     * @method
+     * @returns {string}
+     */
+    String.prototype.NoWhiteSpaceInWord = function () {
+      return this.replace(/[\s]+/g, '');
+    };
+  }
   if (!String.prototype.addLeadingZero) {
     /**
-     * addLeadingZero adds zeros in front of a number 
+     * addLeadingZero adds zeros in front of a number
      * http://stackoverflow.com/questions/6466135/adding-extra-zeros-in-front-of-a-number-using-jquery
      * ex: 5.pad(3) --> 005
-     *    
-     * @param  {string} str 
-     * @param  {Number} max 
-     * @return {string}     
+     *
+     * @param  {string} str
+     * @param  {Number} max
+     * @return {string}
      */
     String.prototype.addLeadingZero = function (max) {
       var str = this.toString();
@@ -1999,9 +3071,9 @@ common_inflection = function () {
   }
   /**
   * Pad a number with leading zeros f.e. "5".lpad('0',2) -> 005
-  * @param padString 
-  * @param length    
-  * @return {string}           
+  * @param padString
+  * @param length
+  * @return {string}
   */
   String.prototype.lpad = function (padString, length) {
     var str = this;
@@ -2019,10 +3091,10 @@ common_inflection = function () {
      * @memberOf  Number
      * @name  Number#between
      * @method
-     * 
-     * @param  {int} a 
-     * @param  {int} b 
-     * @return {Boolean}   
+     *
+     * @param  {int} a
+     * @param  {int} b
+     * @return {Boolean}
      */
     Number.prototype.between = function (a, b) {
       var min = Math.min(a, b), max = Math.max(a, b);
@@ -2077,46 +3149,81 @@ common_inflection = function () {
       }
       return joined;
     };
-    if (!Array.prototype.find) {
-      /**
-       * Returns a value in the array, if an element in the array 
-       * satisfies the provided testing function. 
-       * Otherwise undefined is returned.
-       * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-       * 
-       * @param  {function} function to contains check to find item 
-       * @return {object}           
-       */
-      Array.prototype.find = function (predicate) {
-        if (this === null) {
-          throw new TypeError('Array.prototype.find called on null or undefined');
+  }
+  if (!Array.prototype.joinAdvanced) {
+    /**
+     * Special join method
+     * ['a','a','a'].specialJoin(',', 'and') -> 'a, a and a'
+     * http://stackoverflow.com/questions/15069587/is-there-a-way-to-join-the-elements-in-an-js-array-but-let-the-last-separator-b
+     *
+     * @param  {string} sep
+     * @param  {string} sepLast
+     */
+    Array.prototype.joinAdvanced = function (sep, sepLast) {
+      var arr = this.slice(0);
+      var outStr = '';
+      if (arr.length === 1) {
+        outStr = arr[0];
+      } else if (arr.length === 2) {
+        //joins all with "and" but no commas
+        //example: "bob and sam"
+        outStr = arr.join(sepLast);
+      } else if (arr.length > 2) {
+        //joins all with commas, but last one gets ", and" (oxford comma!)
+        //example: "bob, joe, and sam"
+        outStr = arr.slice(0, -1).join(sep) + sepLast + arr.slice(-1);
+      }
+      return outStr;
+    };
+  }
+  if (!Array.prototype.find) {
+    /**
+     * Returns a value in the array, if an element in the array
+     * satisfies the provided testing function.
+     * Otherwise undefined is returned.
+     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
+     *
+     * @param  {function} function to contains check to find item
+     * @return {object}
+     */
+    Array.prototype.find = function (predicate) {
+      if (this === null) {
+        throw new TypeError('Array.prototype.find called on null or undefined');
+      }
+      if (typeof predicate !== 'function') {
+        throw new TypeError('predicate must be a function');
+      }
+      var list = Object(this);
+      var length = list.length >>> 0;
+      var thisArg = arguments[1];
+      var value;
+      for (var i = 0; i < length; i++) {
+        value = list[i];
+        if (predicate.call(thisArg, value, i, list)) {
+          return value;
         }
-        if (typeof predicate !== 'function') {
-          throw new TypeError('predicate must be a function');
+      }
+      return undefined;
+    };
+  }
+  if (!Object.values) {
+    Object.values = function (obj) {
+      var vals = [];
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          vals.push(obj[key]);
         }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisArg = arguments[1];
-        var value;
-        for (var i = 0; i < length; i++) {
-          value = list[i];
-          if (predicate.call(thisArg, value, i, list)) {
-            return value;
-          }
-        }
-        return undefined;
-      };
-    }
+      }
+      return vals;
+    };
   }
 }();
 common_validation = {
   /**
    * isValidEmail
-   *
    * @memberOf common
    * @name  common#isValidEmail
    * @method
-   * 
    * @param  {string}  email 
    * @return {Boolean}       
    */
@@ -2125,12 +3232,22 @@ common_validation = {
     return re.test(email);
   },
   /**
+   * isFreeEmail
+   * @memberOf common
+   * @name common#isFreeEmail
+   * @method
+   * @param email
+   * @returns {boolean}
+   */
+  isFreeEmail: function (email) {
+    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+    return !re.test(email);
+  },
+  /**
    * isValidPhone
-   *
    * @memberOf common
    * @name  common#isValidPhone
    * @method
-   * 
    * @param  {string}  phone 
    * @return {Boolean}       
    */
@@ -2144,11 +3261,9 @@ common_validation = {
   },
   /**
    * isValidURL
-   *
    * @memberOf common
    * @name common#isValidURL
    * @method
-   *
    * @param {string}  url
    * @returns {boolean}
    */
@@ -2156,84 +3271,161 @@ common_validation = {
     // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
     var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
     return re.test(url);
+  },
+  /**
+   * isValidPassword
+   * @memberOf common
+   * @name common#isValidPassword
+   * @method
+   * @param password
+   * @returns {boolean}
+   */
+  isValidPassword: function (password) {
+    var hasDigit = password.match(/[0-9]/);
+    return password.length >= 4 && hasDigit;
   }
 };
 common_utils = function ($) {
-  return {
-    /**
-     * Turns an integer into a compact text to show in a badge
-     *
-     * @memberOf  common
-     * @name  common#badgeify
-     * @method         
-     * 
-     * @param  {int} count 
-     * @return {string}       
-     */
-    badgeify: function (count) {
-      if (count > 100) {
-        return '100+';
-      } else if (count > 10) {
-        return '10+';
-      } else if (count > 0) {
-        return '' + count;
-      } else {
-        return '';
-      }
-    },
-    /**
-     * getLoginName
-     *
-     * @memberOf common
-     * @name  common#getLoginName
-     * @method
-     * 
-     * @param  {string} firstName 
-     * @param  {string} lastName  
-     * @return {string}           
-     */
-    getLoginName: function (firstName, lastName) {
-      var patt = /[\s-]*/gim;
-      return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
-    },
-    /**
-     * getUrlParam
-     *
-     * @memberOf common
-     * @name  common#getUrlParam
-     * @method
-     * 
-     * @param  {string} name 
-     * @return {string}      
-     */
-    getUrlParam: function (name) {
-      name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-      var regexS = '[\\?&]' + name + '=([^&#]*)';
-      var regex = new RegExp(regexS);
-      var results = regex.exec(window.location.href);
-      return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : null;
-    },
-    /**
-     * getParsedLines 
-     *
-     * @memberOf common
-     * @name  common#getParsedLines
-     * @method
-     * 
-     * @param  {string} text 
-     * @return {Array}      
-     */
-    getParsedLines: function (text) {
-      if (text && text.length > 0) {
-        var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
-        return customs.filter(function (cust, idx, arr) {
-          return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
-        });
-      } else {
-        return [];
+  var utils = {};
+  /**
+   * Sorts a given fields dict based on a list of fieldDefs
+   * @memberOf utils
+   * @name utils#sortFields
+   * @param {object} fields
+   * @param {Array} fieldDefs
+   * @param {Boolean} onlyFormFields (optional)
+   * @param {int} limit (optional)
+   * @return {Array} list of dicts
+   */
+  utils.sortFields = function (fields, fieldDefs, onlyFormFields, limit) {
+    var sortedFields = [], fieldDef = null, fieldValue = null, fieldText = null;
+    // Work on copy of fieldDefs array
+    fieldDefs = fieldDefs.slice();
+    // Return only form field definitions?
+    if (onlyFormFields != null) {
+      fieldDefs = fieldDefs.filter(function (def) {
+        return def.form == onlyFormFields;
+      });
+    }
+    // Create a Field dict for each field definition
+    for (var i = 0; i < fieldDefs.length; i++) {
+      fieldDef = fieldDefs[i];
+      fieldValue = fields[fieldDef.name];
+      sortedFields.push($.extend({ value: fieldValue }, fieldDef));
+      if (limit != null && sortedFields.length >= limit) {
+        break;
       }
     }
+    return sortedFields;
   };
+  /**
+   * Stringifies an object while first sorting the keys
+   * Ensures we can use it to check object equality
+   * http://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
+   * @memberOf  utils
+   * @name  utils#stringifyOrdered
+   * @method
+   * @param obj
+   * @return {string}
+   */
+  utils.stringifyOrdered = function (obj) {
+    keys = [];
+    if (obj) {
+      for (var key in obj) {
+        keys.push(key);
+      }
+    }
+    keys.sort();
+    var tObj = {};
+    var key;
+    for (var index in keys) {
+      key = keys[index];
+      tObj[key] = obj[key];
+    }
+    return JSON.stringify(tObj);
+  };
+  /**
+   * Checks if two objects are equal
+   * Mimics behaviour from http://underscorejs.org/#isEqual
+   * @memberOf  utils
+   * @name  utils#areEqual
+   * @method
+   * @param obj1
+   * @param obj2
+   * @return {boolean}
+   */
+  utils.areEqual = function (obj1, obj2) {
+    return utils.stringifyOrdered(obj1 || {}) == utils.stringifyOrdered(obj2 || {});
+  };
+  /**
+   * Turns an integer into a compact text to show in a badge
+   * @memberOf  utils
+   * @name  utils#badgeify
+   * @method
+   * @param  {int} count
+   * @return {string}
+   */
+  utils.badgeify = function (count) {
+    if (count > 100) {
+      return '100+';
+    } else if (count > 10) {
+      return '10+';
+    } else if (count > 0) {
+      return '' + count;
+    } else {
+      return '';
+    }
+  };
+  /**
+   * Turns a firstName lastName into a fistname.lastname login
+   * @memberOf utils
+   * @name  utils#getLoginName
+   * @method
+   * @param  {string} firstName
+   * @param  {string} lastName
+   * @return {string}
+   */
+  utils.getLoginName = function (firstName, lastName) {
+    var patt = /[\s-]*/gim;
+    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+  };
+  /**
+   * Gets a parameter from the querystring (returns null if not found)
+   * @memberOf utils
+   * @name  utils#getUrlParam
+   * @method
+   * @param  {string} name
+   * @param {string} default
+   * @return {string}
+   */
+  utils.getUrlParam = function (name, def) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regexS = '[\\?&]' + name + '=([^&#]*)';
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.href);
+    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : def;
+  };
+  // jQuery extension method
+  $.urlParam = utils.getUrlParam;
+  /**
+   * getParsedLines
+   * @memberOf utils
+   * @name  utils#getParsedLines
+   * @method
+   * @param  {string} text
+   * @return {Array}
+   */
+  utils.getParsedLines = function (text) {
+    if (text && text.length > 0) {
+      var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
+      return customs.filter(function (cust, idx, arr) {
+        return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
+      });
+    } else {
+      return [];
+    }
+  };
+  return utils;
 }(jquery);
 common_slimdown = function () {
   /**
@@ -2384,129 +3576,216 @@ common_slimdown = function () {
   window.Slimdown = Slimdown;
 }();
 common_kit = function ($, itemHelpers) {
-  return {
-    /**
-     * getKitStatus 
-     * Available 		=> if all items in the kit are available
-        * Checking out 	=> if all item in the kit is checking out
-        * Checked out 		=> if all item in the kit is checked out 
-        * Expired			=> if all item in the kit is expired
-           * Unknown          => if not all items in the kit have the same status
-           * 
-     * @memberOf common
-     * @name  common#getKitStatus
-     * @method
-     * 
-     * @param  status
-     * @return {string}        
-     */
-    getKitStatus: function (items) {
-      var statuses = {};
-      var itemStatuses = [];
-      var orders = {};
-      var itemOrders = [];
-      // Make dictionary of different item statuses
-      $.each(items, function (i, item) {
-        // Unique item statuses
-        if (!statuses[item.status]) {
-          statuses[item.status] = true;
-          itemStatuses.push(item.status);
-        }
-        // Unique item orders
-        if (!orders[item.order]) {
-          orders[item.order] = true;
-          itemOrders.push(item.order);
-        }
-      });
-      if (itemStatuses.length == 1 && itemOrders.length <= 1) {
-        // All items in the kit have the same status and are in the same order
-        return itemStatuses[0];
-      } else {
-        // Kit has items with different statuses
-        return 'incomplete';
+  var that = {};
+  /**
+   * Checks if a kit can be checked out (any items available)
+   * @memberOf common
+   * @name common#kitCanCheckout
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanCheckout = function (kit) {
+    return common.getAvailableItems(kit.items || []).length > 0;
+  };
+  /**
+   * Checks if a kit can be reserved (any items active)
+   * @memberOf common
+   * @name common#kitCanReserve
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanReserve = function (kit) {
+    return common.getActiveItems(kit.items || []).length > 0;
+  };
+  /**
+   * Checks if custody can be taken for a kit (based on status)
+   * @memberOf common
+   * @name common#kitCanTakeCustody
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanTakeCustody = function (kit) {
+    return kit.status == 'available';
+  };
+  /**
+   * Checks if custody can be released for a kit (based on status)
+   * @memberOf common
+   * @name common#kitCanReleaseCustody
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanReleaseCustody = function (kit) {
+    return kit.status == 'in_custody';
+  };
+  /**
+   * Checks if custody can be transferred for a kit (based on status)
+   * @memberOf common
+   * @name common#kitCanTransferCustody
+   * @method
+   * @param kit
+   * @returns {boolean}
+   */
+  that.kitCanTransferCustody = function (kit) {
+    return kit.status == 'in_custody';
+  };
+  /**
+   * getKitStatus
+   * Available 		=> if all items in the kit are available
+   * Checking out 	=> if all item in the kit is checking out
+   * Checked out 		=> if all item in the kit is checked out
+   * Expired			=> if all item in the kit is expired
+   * Unknown          => if not all items in the kit have the same status
+   *
+   * @memberOf common
+   * @name  common#getKitStatus
+   * @method
+   *
+   * @param  status
+   * @return {string}
+   */
+  that.getKitStatus = function (items) {
+    var statuses = {};
+    var itemStatuses = [];
+    var orders = {};
+    var itemOrders = [];
+    // Make dictionary of different item statuses
+    $.each(items, function (i, item) {
+      // Unique item statuses
+      if (!statuses[item.status]) {
+        statuses[item.status] = true;
+        itemStatuses.push(item.status);
       }
-    },
-    /**
-     * getFriendlyKitStatus 
-     *
-     * @memberOf common
-     * @name  common#getFriendlyKitStatus
-     * @method
-     * 
-     * @param  status
-     * @return {string}        
-     */
-    getFriendlyKitStatus: function (status) {
-      if (status == 'incomplete') {
-        return 'Incomplete';
+      // Unique item orders
+      if (!orders[item.order]) {
+        orders[item.order] = true;
+        itemOrders.push(item.order);
       }
-      return itemHelpers.getFriendlyItemStatus(status);
-    },
-    /**
-     * getKitStatusCss
-     *
-     * @memberOf common
-     * @name  common#getKitStatusCss
-     * @method
-     * 
-     * @param  status 
-     * @return {string}       
-     */
-    getKitStatusCss: function (status) {
-      if (status == 'incomplete') {
-        return 'label-incomplete';
-      }
-      return itemHelpers.getItemStatusCss(status);
-    },
-    /**
-     * getKitIds
-     *
-     * @memberOf common
-     * @name  common#getKitIds
-     * @method
-     * 
-     * @param  items 
-     * @return {array}       
-     */
-    getKitIds: function (items) {
-      var kitDictionary = {};
-      var ids = [];
-      $.each(items, function (i, item) {
-        if (item.kit) {
-          var kitId = typeof item.kit == 'string' ? item.kit : item.kit._id;
-          if (!kitDictionary[kitId]) {
-            kitDictionary[kitId] = true;
-            ids.push(kitId);
-          }
-        }
-      });
-      return ids;
+    });
+    if (itemStatuses.length == 1 && itemOrders.length <= 1) {
+      // All items in the kit have the same status and are in the same order
+      return itemStatuses[0];
+    } else {
+      // Kit has items with different statuses
+      return 'incomplete';
     }
   };
+  /**
+   * getFriendlyKitStatus
+   *
+   * @memberOf common
+   * @name  common#getFriendlyKitStatus
+   * @method
+   *
+   * @param  status
+   * @return {string}
+   */
+  that.getFriendlyKitStatus = function (status) {
+    if (status == 'incomplete') {
+      return 'Incomplete';
+    }
+    return itemHelpers.getFriendlyItemStatus(status);
+  };
+  /**
+   * getKitStatusCss
+   *
+   * @memberOf common
+   * @name  common#getKitStatusCss
+   * @method
+   *
+   * @param  status
+   * @return {string}
+   */
+  that.getKitStatusCss = function (status) {
+    if (status == 'incomplete') {
+      return 'label-incomplete';
+    }
+    return itemHelpers.getItemStatusCss(status);
+  };
+  /**
+   * getKitIds
+   *
+   * @memberOf common
+   * @name  common#getKitIds
+   * @method
+   *
+   * @param  items
+   * @return {array}
+   */
+  that.getKitIds = function (items) {
+    var kitDictionary = {};
+    var ids = [];
+    $.each(items, function (i, item) {
+      if (item.kit) {
+        var kitId = typeof item.kit == 'string' ? item.kit : item.kit._id;
+        if (!kitDictionary[kitId]) {
+          kitDictionary[kitId] = true;
+          ids.push(kitId);
+        }
+      }
+    });
+    return ids;
+  };
+  return that;
 }(jquery, common_item);
 common_contact = function (imageHelper) {
-  return {
-    /**
-     * getContactImageUrl 
-     *
-     * @memberOf common
-     * @name  common#getContactImageUrl
-     * @method
-     * 
-     * @param  cr.Contact or contact object
-     * @return {string} image path or base64 image        
-     */
-    getContactImageUrl: function (ds, contact, size, bustCache) {
-      // Show maintenance avatar?
-      if (contact.kind == 'maintenance')
-        return imageHelper.getMaintenanceAvatar(size);
-      // Show profile picture of user?
-      if (contact.user && contact.user.picture)
-        return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
-      // Show avatar initials
-      return imageHelper.getAvatarInitial(contact.name, size);
+  var that = {};
+  that.contactGetUserId = function (contact) {
+    if (contact.user) {
+      if (typeof contact.user === 'string') {
+        return contact.user;
+      } else if (contact.user.hasOwnProperty('_id')) {
+        return contact._id;
+      }
     }
   };
+  that.contactGetUserSync = function (contact) {
+    if (contact.user && contact.user.sync) {
+      return contact.user.sync;
+    }
+  };
+  that.contactCanReserve = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanCheckout = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanGenerateDocument = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanArchive = function (contact) {
+    return contact.status == 'active' && !that.contactGetUserSync(contact);
+  };
+  that.contactCanUndoArchive = function (contact) {
+    return contact.status == 'archived' && !that.contactGetUserSync(contact);
+  };
+  that.contactCanDelete = function (contact) {
+    return !that.contactGetUserId(contact);
+  };
+  /**
+  * getContactImageUrl
+  *
+  * @memberOf common
+  * @name  common#getContactImageUrl
+  * @method
+  *
+  * @param  cr.Contact or contact object
+  * @return {string} image path or base64 image
+  */
+  that.getContactImageUrl = function (ds, contact, size, bustCache) {
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
+    // Show avatar initials
+    return imageHelper.getAvatarInitial(contact.name, size);
+  };
+  return that;
 }(common_image);
 common_user = function (imageHelper) {
   return {
@@ -2529,6 +3808,96 @@ common_user = function (imageHelper) {
     }
   };
 }(common_image);
+common_template = function (moment) {
+  return {
+    templateIsArchived: function (templ) {
+      return !(templ.archived == null);
+    },
+    templateCanDelete: function (templ) {
+      return !templ.system;
+    },
+    templateCanActivate: function (templ) {
+      return templ.status == 'inactive' && templ.archived == null;
+    },
+    templateCanDeactivate: function (templ) {
+      return templ.status == 'active' && templ.archived == null;
+    },
+    templateCanArchive: function (templ) {
+      return templ.archived == null;
+    },
+    templateCanUndoArchive: function (templ) {
+      return templ.archived != null;
+    },
+    /**
+     * getFriendlyTemplateStatus
+     *
+     * @memberOf common
+     * @name  common#getFriendlyTemplateStatus
+     * @method
+     * 
+     * @param  {string} status
+     * @return {string}        
+     */
+    getFriendlyTemplateStatus: function (status) {
+      switch (status) {
+      case 'inactive':
+        return 'Inactive';
+      case 'active':
+        return 'Active';
+      case 'archived':
+        return 'Archived';
+      default:
+        return 'Unknown';
+      }
+    },
+    /**
+    * getFriendlyTemplateCss
+    *
+    * @memberOf common
+    * @name  common#getFriendlyTemplateCss
+    * @method
+    * 
+    * @param  {string} status 
+    * @return {string}        
+    */
+    getFriendlyTemplateCss: function (status) {
+      switch (status) {
+      case 'inactive':
+        return 'label-inactive';
+      case 'active':
+        return 'label-active';
+      case 'archived':
+        return 'label-archived';
+      default:
+        return '';
+      }
+    },
+    /**
+    * getFriendlyTemplateSize
+    *
+    * @memberOf common
+    * @name  common#getFriendlyTemplateSize
+    * @method
+    * 
+    * @param  {float} width
+    * @param  {float} height
+    * @param  {string} unit
+    * @return {string}
+    */
+    getFriendlyTemplateSize: function (width, height, unit) {
+      if (width == 0 || height == 0) {
+        return '';
+      } else if (unit == 'inch' && width == 8.5 && height == 11) {
+        return 'US Letter';
+      } else if (unit == 'mm' && width == 210 && height == 297) {
+        return 'A4';
+      } else {
+        var friendlyUnit = unit == 'inch' ? '"' : unit;
+        return width + friendlyUnit + ' x ' + height + friendlyUnit;
+      }
+    }
+  };
+}(moment);
 common_clientStorage = function () {
   var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
   /**
@@ -2582,865 +3951,187 @@ common_clientStorage = function () {
     return true;
   };
 }();
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, clientStorage) {
+common_document = {
+  /**
+   * Checks if a given object (document) contains given value
+   *
+   * @memberOf common
+   * @name  common#searchDocument
+   * @method
+   * 
+   * @param  doc
+   * @param  value
+   * @param  fields  
+   * @return Boolean       
+   */
+  containsValue: function (doc, value, fields) {
+    doc = doc || {};
+    fields = fields || [
+      'name',
+      'fields',
+      'codes',
+      'barcodes'
+    ];
+    // Trim search
+    value = $.trim(value).toLowerCase();
+    // Name contains value?
+    if (fields.indexOf('name') != -1) {
+      if (doc.name && doc.name.toLowerCase().indexOf(value) != -1)
+        return true;
+    }
+    // Field contains value?
+    if (fields.indexOf('fields') != -1) {
+      if (doc.fields) {
+        var findValue = Object.values(doc.fields).find(function (fieldValue) {
+          return fieldValue.toString().toLowerCase().indexOf(value) != -1;
+        });
+        if (findValue) {
+          return true;
+        }
+      }
+    }
+    // Code contains value?
+    if (fields.indexOf('codes') != -1) {
+      if (doc.codes) {
+        var findValue = doc.codes.find(function (code) {
+          return code.toLowerCase().indexOf(value) != -1;
+        });
+        if (findValue) {
+          return true;
+        }
+      }
+    }
+    // Barcode contains value?
+    if (fields.indexOf('barcodes') != -1) {
+      if (doc.barcodes) {
+        var findValue = doc.barcodes.find(function (code) {
+          return code.toLowerCase().indexOf(value) != -1;
+        });
+        if (findValue) {
+          return true;
+        }
+      }
+    }
+    return false;
+  },
+  /**
+  * getDocumentIds
+  * @memberOf common
+  * @name  common#getDocumentIds
+  * @method
+  * @param  docs
+  * @return {array}
+   */
+  getDocumentIds: function (docs) {
+    return docs.map(function (doc) {
+      return typeof doc === 'string' ? doc : doc._id;
+    });
+  }
+};
+common_transaction = function (moment, keyValues) {
+  var that = {};
+  /**
+  * getTransactionSummary
+  * Return a friendly summary for a given transaction or custom name
+  *
+  * @memberOf common
+  * @name  common#getTransactionSummary
+  * @method
+  *
+  * @param  {object} transaction
+  * @param  {string} emptyText
+  * @return {string}
+  */
+  that.getTransactionSummary = function (transaction, emptyText) {
+    if (transaction) {
+      if (transaction.name) {
+        return transaction.name;
+      } else if (transaction.itemSummary) {
+        return transaction.itemSummary;
+      } else if (transaction.items && transaction.items.length > 0) {
+        return keyValues.getCategorySummary(transaction.items);
+      }
+    }
+    return emptyText || 'No items';
+  };
+  /**
+     * getOrderDuration
+  * Gets a moment duration object
+     *
+  * @memberOf common
+  * @name common#getOrderDuration
+     * @method
+  *
+     * @returns {duration}
+     */
+  that.getOrderDuration = function (transaction) {
+    if (transaction.started != null) {
+      var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+      if (to) {
+        return moment.duration(to - transaction.started);
+      }
+    }
+    return null;
+  };
+  /**
+  * getFriendlyOrderDuration
+  * Gets a friendly duration for a given order
+  *
+  * @memberOf common
+  * @name common#getFriendlyOrderDuration
+  * @method
+  *
+  * @param transaction
+  * @param dateHelper
+  * @returns {string}
+  */
+  that.getFriendlyOrderDuration = function (transaction, dateHelper) {
+    var duration = that.getOrderDuration(transaction);
+    return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
+  };
+  /**
+  * getReservationDuration
+  * Return a Moment duration for a given reservation
+  *
+  * @memberOf common
+  * @name common#getReservationDuration
+  * @method
+  *
+  * @param transaction
+  * @returns {duration}
+  */
+  that.getReservationDuration = function (transaction) {
+    if (transaction) {
+      if (transaction.fromDate != null && transaction.toDate != null) {
+        return moment.duration(transaction.toDate - transaction.fromDate);
+      }
+      return null;
+    }
+  };
+  /**
+  * getFriendlyReservationDuration
+  * Gets a friendly duration for a given reservation
+  *
+  * @memberOf common
+  * @name common#getFriendlyReservationDuration
+  * @method
+  *
+  * @param transaction
+  * @param dateHelper
+  * @returns {string}
+  */
+  that.getFriendlyReservationDuration = function (transaction, dateHelper) {
+    var duration = that.getReservationDuration(transaction);
+    return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
+  };
+  return that;
+}(moment, common_keyValues);
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction) {
   /**
    * Return common object with different helper methods
    */
-  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_clientStorage);
-api = function ($, jsonp, moment, common) {
-  var MAX_QUERYSTRING_LENGTH = 2048;
-  //TODO change this
-  //system.log fallback
-  var system = {
-    log: function () {
-    }
-  };
-  // Disable caching AJAX requests in IE
-  // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
-  $.ajaxSetup({ cache: false });
-  var api = {};
-  //*************
-  // ApiErrors
-  //*************
-  // Network
-  api.NetworkNotConnected = function (msg, opt) {
-    this.code = 999;
-    this.message = msg || 'Connection interrupted';
-    this.opt = opt;
-  };
-  api.NetworkNotConnected.prototype = new Error();
-  api.NetworkTimeout = function (msg, opt) {
-    this.code = 408;
-    this.message = msg || 'Could not reach the server in time';
-    this.opt = opt;
-  };
-  api.NetworkTimeout.prototype = new Error();
-  // Api
-  api.ApiError = function (msg, opt) {
-    this.code = 500;
-    this.message = msg || 'Something went wrong on the server';
-    this.opt = opt;
-  };
-  api.ApiError.prototype = new Error();
-  api.ApiNotFound = function (msg, opt) {
-    this.code = 404;
-    this.message = msg || 'Could not find what you\'re looking for';
-    this.opt = opt;
-  };
-  api.ApiNotFound.prototype = new Error();
-  api.ApiBadRequest = function (msg, opt) {
-    this.code = 400;
-    this.message = msg || 'The server did not understand your request';
-    this.opt = opt;
-  };
-  api.ApiBadRequest.prototype = new Error();
-  api.ApiUnauthorized = function (msg, opt) {
-    this.code = 401;
-    this.message = msg || 'Your session has expired';
-    this.opt = opt;
-  };
-  api.ApiUnauthorized.prototype = new Error();
-  api.ApiForbidden = function (msg, opt) {
-    this.code = 403;
-    this.message = msg || 'You don\'t have sufficient rights';
-    this.opt = opt;
-  };
-  api.ApiForbidden.prototype = new Error();
-  api.ApiUnprocessableEntity = function (msg, opt) {
-    this.code = 422;
-    this.message = msg || 'Some data is invalid';
-    this.opt = opt;
-  };
-  api.ApiUnprocessableEntity.prototype = new Error();
-  api.ApiPaymentRequired = function (msg, opt) {
-    this.code = 402;
-    this.message = msg || 'Your subscription has expired';
-    this.opt = opt;
-  };
-  api.ApiPaymentRequired.prototype = new Error();
-  api.ApiServerCapicity = function (msg, opt) {
-    this.code = 503;
-    this.message = msg || 'Back-end server is at capacity';
-    this.opt = opt;
-  };
-  api.ApiServerCapicity.prototype = new Error();
-  //*************
-  // ApiAjax
-  //*************
-  /**
-   * The ajax communication object which makes the request to the API
-   * @name ApiAjax
-   * @param {object} spec
-   * @param {boolean} spec.useJsonp
-   * @constructor
-   * @memberof api
-   */
-  api.ApiAjax = function (spec) {
-    spec = spec || {};
-    this.useJsonp = spec.useJsonp != null ? spec.useJsonp : true;
-    this.timeOut = spec.timeOut || 10000;
-    this.responseInTz = true;
-  };
-  api.ApiAjax.prototype.get = function (url, timeOut) {
-    system.log('ApiAjax: get ' + url);
-    return this.useJsonp ? this._getJsonp(url, timeOut) : this._getAjax(url, timeOut);
-  };
-  api.ApiAjax.prototype.post = function (url, data, timeOut) {
-    system.log('ApiAjax: post ' + url);
-    if (this.useJsonp) {
-      throw 'ApiAjax cannot post while useJsonp is true';
-    }
-    return this._postAjax(url, data, timeOut);
-  };
-  // Implementation
-  // ----
-  api.ApiAjax.prototype._handleAjaxSuccess = function (dfd, data, opt) {
-    if (this.responseInTz) {
-      data = this._fixDates(data);
-    }
-    return dfd.resolve(data);
-  };
-  api.ApiAjax.prototype._handleAjaxError = function (dfd, x, t, m, opt) {
-    // ajax call was aborted
-    if (t == 'abort')
-      return;
-    var msg = null;
-    if (m === 'timeout') {
-      dfd.reject(new api.NetworkTimeout(msg, opt));
-    } else {
-      if (x) {
-        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
-          msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
-        }
-        if (x.status == 422 && x.responseText && x.responseText.match(/HTTPError: \(.+\)/g).length > 0) {
-          opt = { detail: x.responseText.match(/HTTPError: \(.+\)/g)[0] };
-        }
-      }
-      switch (x.status) {
-      case 400:
-        dfd.reject(new api.ApiBadRequest(msg, opt));
-        break;
-      case 401:
-        dfd.reject(new api.ApiUnauthorized(msg, opt));
-        break;
-      case 402:
-        dfd.reject(new api.ApiPaymentRequired(msg, opt));
-        break;
-      case 403:
-        dfd.reject(new api.ApiForbidden(msg, opt));
-        break;
-      case 404:
-        dfd.reject(new api.ApiNotFound(msg, opt));
-        break;
-      case 408:
-        dfd.reject(new api.NetworkTimeout(msg, opt));
-        break;
-      case 422:
-        dfd.reject(new api.ApiUnprocessableEntity(msg, opt));
-        break;
-      case 503:
-        dfd.reject(new api.ApiServerCapicity(msg, opt));
-        break;
-      case 500:
-      default:
-        dfd.reject(new api.ApiError(msg, opt));
-        break;
-      }
-    }
-  };
-  api.ApiAjax.prototype._postAjax = function (url, data, timeOut, opt) {
-    var dfd = $.Deferred();
-    var that = this;
-    var xhr = $.ajax({
-      type: 'POST',
-      url: url,
-      data: JSON.stringify(this._prepareDict(data)),
-      contentType: 'application/json; charset=utf-8',
-      timeout: timeOut || this.timeOut,
-      success: function (data) {
-        return that._handleAjaxSuccess(dfd, data, opt);
-      },
-      error: function (x, t, m) {
-        return that._handleAjaxError(dfd, x, t, m, opt);
-      }
-    });
-    // Extend promise with abort method
-    // to abort xhr request if needed
-    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-    var promise = dfd.promise();
-    promise.abort = function () {
-      xhr.abort();
-    };
-    return promise;
-  };
-  api.ApiAjax.prototype._getAjax = function (url, timeOut, opt) {
-    var dfd = $.Deferred();
-    var that = this;
-    var xhr = $.ajax({
-      url: url,
-      timeout: timeOut || this.timeOut,
-      success: function (data) {
-        return that._handleAjaxSuccess(dfd, data, opt);
-      },
-      error: function (x, t, m) {
-        return that._handleAjaxError(dfd, x, t, m, opt);
-      }
-    });
-    // Extend promise with abort method
-    // to abort xhr request if needed
-    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-    var promise = dfd.promise();
-    promise.abort = function () {
-      xhr.abort();
-    };
-    return promise;
-  };
-  api.ApiAjax.prototype._getJsonp = function (url, timeOut, opt) {
-    var dfd = $.Deferred();
-    var that = this;
-    var xhr = $.jsonp({
-      url: url,
-      type: 'GET',
-      timeout: timeOut || this.timeOut,
-      dataType: ' jsonp',
-      callbackParameter: 'callback',
-      success: function (data, textStatus, xOptions) {
-        return that._handleAjaxSuccess(dfd, data);
-      },
-      error: function (xOptions, textStatus) {
-        // JSONP doesn't support HTTP status codes
-        // https://github.com/jaubourg/jquery-jsonp/issues/37
-        // so we can only return a simple error
-        dfd.reject(new api.ApiError(null, opt));
-      }
-    });
-    // Extend promise with abort method
-    // to abort xhr request if needed
-    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-    var promise = dfd.promise();
-    promise.abort = function () {
-      xhr.abort();
-    };
-    return promise;
-  };
-  api.ApiAjax.prototype._prepareDict = function (data) {
-    // Makes sure all values from the dict are serializable and understandable for json
-    if (!data) {
-      return {};
-    }
-    $.each(data, function (key, value) {
-      if (moment.isMoment(value)) {
-        data[key] = value.toJSONDate();
-      }
-    });
-    return data;
-  };
-  /**
-   * Turns all strings that look like datetimes into moment objects recursively
-   * 
-   * @name  DateHelper#fixDates
-   * @method
-   * @private
-   * 
-   * @param data
-   * @returns {*}
-   */
-  api.ApiAjax.prototype._fixDates = function (data) {
-    if (typeof data == 'string' || data instanceof String) {
-      // "2014-04-03T12:15:00+00:00" (length 25)
-      // "2014-04-03T09:32:43.841000+00:00" (length 32)
-      if (data.endsWith('+00:00')) {
-        var len = data.length;
-        if (len == 25) {
-          return moment(data.substring(0, len - 6));
-        } else if (len == 32) {
-          return moment(data.substring(0, len - 6).split('.')[0]);
-        }
-      }
-    } else if (data instanceof Object || $.isArray(data)) {
-      var that = this;
-      $.each(data, function (k, v) {
-        data[k] = that._fixDates(v);
-      });
-    }
-    return data;
-  };
-  //*************
-  // ApiUser
-  //*************
-  /**
-   * @name ApiUser
-   * @param {object} spec
-   * @param {string} spec.userId          - the users primary key
-   * @param {string} spec.userToken       - the users token
-   * @param {string} spec.tokenType       - the token type (empty for now)
-   * @constructor
-   * @memberof api
-   */
-  api.ApiUser = function (spec) {
-    spec = spec || {};
-    this.userId = spec.userId || '';
-    this.userToken = spec.userToken || '';
-    this.tokenType = spec.tokenType || '';
-  };
-  api.ApiUser.prototype.fromStorage = function () {
-    this.userId = window.localStorage.getItem('userId') || '';
-    this.userToken = window.localStorage.getItem('userToken') || '';
-    this.tokenType = window.localStorage.getItem('tokenType') || '';
-  };
-  api.ApiUser.prototype.toStorage = function () {
-    window.localStorage.setItem('userId', this.userId);
-    window.localStorage.setItem('userToken', this.userToken);
-    window.localStorage.setItem('tokenType', this.tokenType);
-  };
-  api.ApiUser.prototype.removeFromStorage = function () {
-    window.localStorage.removeItem('userId');
-    window.localStorage.removeItem('userToken');
-    window.localStorage.removeItem('tokenType');
-  };
-  api.ApiUser.prototype.clearToken = function () {
-    window.localStorage.setItem('userToken', null);
-    window.localStorage.setItem('tokenType', null);
-  };
-  api.ApiUser.prototype.isValid = function () {
-    system.log('ApiUser: isValid');
-    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
-  };
-  api.ApiUser.prototype._reset = function () {
-    this.userId = '';
-    this.userToken = '';
-    this.tokenType = '';
-  };
-  //*************
-  // ApiAuth
-  //*************
-  api.ApiAuth = function (spec) {
-    spec = spec || {};
-    this.urlAuth = spec.urlAuth || '';
-    this.ajax = spec.ajax;
-    this.version = spec.version;
-  };
-  api.ApiAuth.prototype.authenticate = function (userId, password) {
-    system.log('ApiAuth: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
-      user: userId,
-      password: password,
-      auth_v: 2,
-      _v: this.version
-    });
-    var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
-      if (resp.status == 'OK') {
-        dfd.resolve(resp.data);
-      } else {
-        dfd.reject(resp);
-      }
-    }).fail(function (err) {
-      dfd.reject(err);
-    });
-    return dfd.promise();
-  };
-  //*************
-  // ApiAuth
-  //*************
-  /**
-   * @name ApiAuthV2
-   * @param {object}  spec
-   * @param {string}  spec.urlAuth          - the api url to use when authenticating
-   * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
-   * @constructor
-   * @memberof api
-   * @example
-   * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-   * var userName = "";
-   * var password = "";
-   *
-   * var ajax = new cr.api.ApiAjax({useJsonp: true});
-   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
-   * var authUser = null;
-   *
-   * auth.authenticate(userName, password)
-   *     .done(function(data) {
-   *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-   *     });
-   *
-   */
-  api.ApiAuthV2 = function (spec) {
-    spec = spec || {};
-    this.urlAuth = spec.urlAuth || '';
-    this.ajax = spec.ajax;
-    this.version = spec.version;
-  };
-  /**
-   * The call to authenticate a user with userid an dpassword
-   * @method
-   * @name ApiAuthV2#authenticate
-   * @param userId
-   * @param password
-   * @returns {object}
-   */
-  api.ApiAuthV2.prototype.authenticate = function (userId, password) {
-    system.log('ApiAuthV2: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
-      user: userId,
-      password: password,
-      auth_v: 2,
-      _v: this.version
-    });
-    var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
-      // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
-      // TODO: Handle case for password incorrect, no rights or subscription expired
-      if (resp.status == 'OK') {
-        dfd.resolve(resp.data);
-      } else {
-        // When account expired, /authenticate will respond with
-        //{"status": "ERROR",
-        // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
-        // "data": {...}}
-        var error = null;
-        if (resp.message && resp.message.indexOf('expired') > 0) {
-          error = new api.ApiPaymentRequired(resp.message);
-        } else {
-          error = new Error('Your username or password is not correct');
-        }
-        dfd.reject(error);
-      }
-    }).fail(function (err) {
-      dfd.reject(err);
-    });
-    return dfd.promise();
-  };
-  //*************
-  // ApiAnonymous
-  // Communicates with the API without having token authentication
-  //*************
-  /**
-   * @name ApiAnonymous
-   * @param {object} spec
-   * @param {ApiAjax} spec.ajax
-   * @param {string} spec.urlApi
-   * @constructor
-   * @memberof api
-   */
-  api.ApiAnonymous = function (spec) {
-    spec = spec || {};
-    this.ajax = spec.ajax;
-    this.urlApi = spec.urlApi || '';
-    this.version = spec.version;
-  };
-  /**
-   * Makes a call to the API which doesn't require a token
-   * @method
-   * @name ApiAnonymous#call
-   * @param method
-   * @param params
-   * @param timeOut
-   * @param opt
-   * @returns {*}
-   */
-  api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
-    system.log('ApiAnonymous: call ' + method);
-    if (this.version) {
-      params = params || {};
-      params['_v'] = this.version;
-    }
-    var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
-    return this.ajax.get(url, timeOut, opt);
-  };
-  /**
-   * Makes a long call (timeout 30s) to the API which doesn't require a token
-   * @method
-   * @name ApiAnonymous#longCall
-   * @param method
-   * @param params
-   * @param opt
-   * @returns {*}
-   */
-  api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
-    system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 30000, opt);
-  };
-  //*************
-  // ApiDataSource
-  // Communicates with the API using an ApiUser
-  //*************
-  /**
-   * @name ApiDataSource
-   * @param {object} spec
-   * @param {string} spec.collection         - the collection this datasource uses, e.g. "items"
-   * @param {string} spec.urlApi             - the api url to use
-   * @param {ApiUser} spec.user              - the user auth object
-   * @param {ApiAjax}  spec.ajax             - the ajax api object to use
-   * @constructor
-   * @memberof api
-   */
-  api.ApiDataSource = function (spec) {
-    spec = spec || {};
-    this.collection = spec.collection || '';
-    this.urlApi = spec.urlApi || '';
-    this.user = spec.user;
-    this.ajax = spec.ajax;
-    this.version = spec.version;
-    // Make the baseurl only once, we assume the collection and user never changes
-    var tokenType = this.user.tokenType != null && this.user.tokenType.length > 0 ? this.user.tokenType : 'null';
-    this._baseUrl = this.urlApi + '/' + this.user.userId + '/' + this.user.userToken + '/' + tokenType + '/' + this.collection + '/';
-  };
-  /**
-   * Checks if a certain document exists
-   * @method
-   * @name ApiDataSource#exists
-   * @param pk
-   * @param fields
-   * @returns {*}
-   */
-  api.ApiDataSource.prototype.exists = function (pk, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': exists ' + pk);
-    var cmd = 'exists';
-    var dfd = $.Deferred();
-    var that = this;
-    // We're actually doing a API get
-    // and resolve to an object,
-    // so we also pass the fields
-    var url = this.getBaseUrl() + pk;
-    var p = this.getParams(fields);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    this._ajaxGet(cmd, url).done(function (data) {
-      dfd.resolve(data);
-    }).fail(function (error) {
-      // This doesn't work when not in JSONP mode!!
-      // Since all errors are generic api.ApiErrors
-      // In jsonp mode, if a GET fails, assume it didn't exist
-      if (that.ajax.useJsonp) {
-        dfd.resolve(null);
-      } else if (error instanceof api.ApiNotFound) {
-        dfd.resolve(null);
-      } else {
-        dfd.reject(error);
-      }
-    });
-    return dfd.promise();
-  };
-  /**
-   * Gets a certain document by its primary key
-   * @method
-   * @name ApiDataSource#get
-   * @param pk
-   * @param fields
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.get = function (pk, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': get ' + pk);
-    var cmd = 'get';
-    var url = this.getBaseUrl() + pk;
-    var p = this.getParamsDict(fields);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    return this._ajaxGet(cmd, url);
-  };
-  /**
-   * Gets a certain document by its primary key, but returns null if not found
-   * instead of a rejected promise
-   * @method
-   * @name ApiDataSource#getIgnore404
-   * @param pk
-   * @param fields
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.getIgnore404 = function (pk, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': getIgnore404 ' + pk);
-    var that = this;
-    var dfd = $.Deferred();
-    this.get(pk, fields).done(function (data) {
-      dfd.resolve(data);
-    }).fail(function (err) {
-      if (that.ajax.useJsonp) {
-        // In Jsonp mode, we cannot get other error messages than 500
-        // We'll assume that it doesn't exist when we get an error
-        // Jsonp is not really meant to run in production environment
-        dfd.resolve(null);
-      } else if (err instanceof api.ApiNotFound) {
-        dfd.resolve(null);
-      } else {
-        dfd.reject(err);
-      }
-    });
-    return dfd.promise();
-  };
-  /**
-   * Get multiple document by primary keys in a single query
-   * @method
-   * @name ApiDataSource#getMultiple
-   * @param {array} pks
-   * @param fields
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
-    var cmd = 'getMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + ',';
-    var p = this.getParamsDict(fields);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    return this._ajaxGet(cmd, url);
-  };
-  /**
-   * Deletes a document by its primary key
-   * @method
-   * @name ApiDataSource#delete
-   * @param pk
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.delete = function (pk) {
-    system.log('ApiDataSource: ' + this.collection + ': delete ' + pk);
-    var cmd = 'delete';
-    var url = this.getBaseUrl() + pk + '/delete';
-    return this._ajaxGet(cmd, url);
-  };
-  /**
-   * Updates a document by its primary key and a params objects
-   * @method
-   * @name ApiDataSource#update
-   * @param pk
-   * @param params
-   * @param fields
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.update = function (pk, params, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
-    var cmd = 'update';
-    var url = this.getBaseUrl() + pk + '/update';
-    var p = $.extend({}, params);
-    if (fields != null && fields.length > 0) {
-      p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
-    }
-    url += '?' + this.getParams(p);
-    return this._ajaxGet(cmd, url);
-  };
-  /**
-   * Creates a document with some data in an object
-   * @method
-   * @name ApiDataSource#create
-   * @param params
-   * @param fields
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.create = function (params, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': create');
-    var cmd = 'create';
-    var url = this.getBaseUrl() + 'create';
-    var p = $.extend({}, params);
-    if (fields != null && fields.length > 0) {
-      p['_fields'] = $.isArray(fields) ? fields.join(',') : fields;
-    }
-    url += '?' + this.getParams(p);
-    return this._ajaxGet(cmd, url);
-  };
-  /**
-   * Creates multiple objects in one go
-   * @method
-   * @name ApiDataSource#createMultiple
-   * @param objects
-   * @param fields
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.createMultiple = function (objects, fields) {
-    system.log('ApiDataSource: ' + this.collection + ': createMultiple (' + objects.length + ')');
-    var dfd = $.Deferred();
-    var that = this;
-    var todoObjs = objects.slice(0);
-    var doneIds = [];
-    // Trigger the creates sequentially
-    var createRecurse = function (todoObjs) {
-      if (todoObjs.length > 0) {
-        var obj = todoObjs.pop();
-        that.create(obj, fields).done(function (resp) {
-          doneIds.push(resp._id);
-          return createRecurse(todoObjs);
-        }).fail(function (error) {
-          dfd.reject(error);
-        });
-      } else {
-        dfd.resolve(doneIds);
-      }
-    };
-    createRecurse(todoObjs);
-    return dfd.promise();
-  };
-  /**
-   * Get a list of objects from the collection
-   * @method
-   * @name ApiDataSource#list
-   * @param name
-   * @param fields
-   * @param limit
-   * @param skip
-   * @param sort
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.list = function (name, fields, limit, skip, sort) {
-    name = name || '';
-    system.log('ApiDataSource: ' + this.collection + ': list ' + name);
-    var cmd = 'list.' + name;
-    var url = this.getBaseUrl();
-    if (name != null && name.length > 0) {
-      url += 'list/' + name + '/';
-    }
-    var p = this.getParamsDict(fields, limit, skip, sort);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    return this._ajaxGet(cmd, url);
-  };
-  /**
-   * Searches for objects in the collection
-   * @method
-   * @name ApiDataSource#search
-   * @param params
-   * @param fields
-   * @param limit
-   * @param skip
-   * @param sort
-   * @param mimeType
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.search = function (params, fields, limit, skip, sort, mimeType) {
-    system.log('ApiDataSource: ' + this.collection + ': search ' + params);
-    var cmd = 'search';
-    var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
-    return this._ajaxGet(cmd, url);
-  };
-  api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
-    var url = this.getBaseUrl() + 'search';
-    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
-    if (mimeType != null && mimeType.length > 0) {
-      p['mimeType'] = mimeType;
-    }
-    url += '?' + this.getParams(p);
-    return url;
-  };
-  /**
-   * Calls a certain method on an object or on the entire collection
-   * @method
-   * @name ApiDataSource#call
-   * @param pk
-   * @param method
-   * @param params
-   * @param fields
-   * @param timeOut
-   * @param usePost
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.call = function (pk, method, params, fields, timeOut, usePost) {
-    system.log('ApiDataSource: ' + this.collection + ': call ' + method);
-    var cmd = 'call.' + method;
-    var url = pk != null && pk.length > 0 ? this.getBaseUrl() + pk + '/call/' + method : this.getBaseUrl() + 'call/' + method;
-    var p = $.extend({}, this.getParamsDict(fields, null, null, null), params);
-    var getUrl = url + '?' + this.getParams(p);
-    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
-      return this._ajaxPost(cmd, url, p, timeOut);
-    } else {
-      return this._ajaxGet(cmd, getUrl, timeOut);
-    }
-  };
-  /**
-   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
-   * @method
-   * @name ApiDataSource#longCall
-   * @param pk
-   * @param method
-   * @param params
-   * @param fields
-   * @param usePost
-   * @returns {promise}
-   */
-  api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-    return this.call(pk, method, params, fields, 30000, usePost);
-  };
-  /**
-   * Gets the base url for all calls to this collection
-   * @method
-   * @name ApiDataSource#getBaseUrl
-   * @returns {string}
-   */
-  api.ApiDataSource.prototype.getBaseUrl = function () {
-    return this._baseUrl;
-  };
-  /**
-   * Prepare some parameters so we can use them during a request
-   * @method
-   * @name ApiDataSource#getParams
-   * @param data
-   * @returns {object}
-   */
-  api.ApiDataSource.prototype.getParams = function (data) {
-    return $.param(this.ajax._prepareDict(data));
-  };
-  /**
-   * Gets a dictionary of parameters
-   * @method
-   * @name ApiDataSource#getParamsDict
-   * @param fields
-   * @param limit
-   * @param skip
-   * @param sort
-   * @returns {{}}
-   */
-  api.ApiDataSource.prototype.getParamsDict = function (fields, limit, skip, sort) {
-    var p = {};
-    if (fields) {
-      p['_fields'] = $.isArray(fields) ? fields.join(',') : fields.replace(/\s/g, '');
-    }
-    if (limit) {
-      p['_limit'] = limit;
-    }
-    if (skip) {
-      p['_skip'] = skip;
-    }
-    if (sort) {
-      p['_sort'] = sort;
-    }
-    if (this.version) {
-      p['_v'] = this.version;
-    }
-    return p;
-  };
-  /**
-   * Does an ajax GET call using the api.ApiAjax object
-   * @param cmd
-   * @param url
-   * @param timeout
-   * @returns {promise}
-   * @private
-   */
-  api.ApiDataSource.prototype._ajaxGet = function (cmd, url, timeout) {
-    return this.ajax.get(url, timeout, {
-      coll: this.collection,
-      cmd: cmd
-    });
-  };
-  /**
-   * Does an ajax POST call using the api.ApiAjax object
-   * @param cmd
-   * @param url
-   * @param data
-   * @param timeout
-   * @returns {promise}
-   * @private
-   */
-  api.ApiDataSource.prototype._ajaxPost = function (cmd, url, data, timeout) {
-    return this.ajax.post(url, data, timeout, {
-      coll: this.collection,
-      cmd: cmd
-    });
-  };
-  return api;
-}(jquery, jquery_jsonp, moment, common);
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction);
 document = function ($, common, api) {
   // Some constant values
   var DEFAULTS = { id: '' };
@@ -3448,17 +4139,19 @@ document = function ($, common, api) {
    * @name Document
    * @class
    * @constructor
+   * @property {ApiDataSource}  ds        - The documents primary key
+   * @property {array}  _fields           - The raw, unprocessed json response
    * @property {string}  id               - The documents primary key
    * @property {string}  raw              - The raw, unprocessed json response
    */
   var Document = function (spec) {
-    this.ds = spec.ds;
-    // ApiDataSource object
-    this.fields = spec.fields;
-    // e.g. [*]
     this.raw = null;
     // raw json object
-    this.id = spec.id || DEFAULTS.id;  // doc _id
+    this.id = spec.id || DEFAULTS.id;
+    // doc _id
+    this.ds = spec.ds;
+    // ApiDataSource object
+    this._fields = spec._fields;  // e.g. [*]
   };
   /**
    * Resets the object
@@ -3522,12 +4215,12 @@ document = function ($, common, api) {
    * Reloads the object from db
    * @name  Document#reload
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.reload = function (fields) {
+  Document.prototype.reload = function (_fields) {
     if (this.existsInDb()) {
-      return this.get(fields);
+      return this.get(_fields);
     } else {
       return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
     }
@@ -3536,13 +4229,13 @@ document = function ($, common, api) {
    * Gets an object by the default api.get
    * @name  Document#get
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.get = function (fields) {
+  Document.prototype.get = function (_fields) {
     if (this.existsInDb()) {
       var that = this;
-      return this.ds.get(this.id, fields || this.fields).then(function (data) {
+      return this.ds.get(this.id, _fields || this._fields).then(function (data) {
         return that._fromJson(data);
       });
     } else {
@@ -3566,12 +4259,7 @@ document = function ($, common, api) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
-    var that = this;
-    var data = this._toJson();
-    delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
-    });
+    return this._create(skipRead);
   };
   /**
    * Updates an object by the default api.update
@@ -3590,12 +4278,7 @@ document = function ($, common, api) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this;
-    var data = this._toJson();
-    delete data.id;
-    return this.ds.update(this.id, data, this.fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
-    });
+    return this._update(skipRead);
   };
   /**
    * Deletes an object by the default api.delete
@@ -3606,10 +4289,7 @@ document = function ($, common, api) {
   Document.prototype.delete = function () {
     // Call the api /delete on this document
     if (this.existsInDb()) {
-      var that = this;
-      return this.ds.delete(this.id).then(function () {
-        return that.reset();
-      });
+      return this._delete();
     } else {
       return $.Deferred().reject(new Error('Document does not exist'));
     }
@@ -3647,6 +4327,93 @@ document = function ($, common, api) {
   // Implementation stuff
   // ---
   /**
+   * The actual _create implementation (after all the checks are done)
+   * @param skipRead
+   * @returns {*}
+   * @private
+   */
+  Document.prototype._create = function (skipRead) {
+    var that = this;
+    var data = this._toJson();
+    delete data.id;
+    return this.ds.create(data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  /**
+   * The actual _update implementation (after all the checks are done)
+   * @param skipRead
+   * @returns {*}
+   * @private
+   */
+  Document.prototype._update = function (skipRead) {
+    var that = this;
+    var data = this._toJson();
+    delete data.id;
+    return this.ds.update(this.id, data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  /**
+   * The actual _delete implementation (after all the checks are done)
+   * @returns {*}
+   * @private
+   */
+  Document.prototype._delete = function () {
+    var that = this;
+    return this.ds.delete(this.id).then(function () {
+      return that.reset();
+    });
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyProperty = function (prop) {
+    return this.raw ? this[prop] != this.raw[prop] : false;
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
+   * Because we know that the API doesn't return empty string properties,
+   * we do a special, extra check on that.
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyStringProperty = function (prop) {
+    if (this.raw) {
+      var same = this[prop] == this.raw[prop] || this[prop] == '' && this.raw[prop] == null;
+      return !same;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyMomentProperty = function (prop) {
+    if (this.raw) {
+      var newVal = this[prop], oldVal = this.raw[prop];
+      if (newVal == null && oldVal == null) {
+        return false;
+      } else if (newVal && oldVal) {
+        return !newVal.isSame(oldVal);
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  };
+  /**
    * Gets the id of a document
    * @param obj
    * @param prop
@@ -3663,7 +4430,7 @@ document = function ($, common, api) {
   };
   /**
    * Wrapping the this.ds.call method
-   * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
    * @method
    * @param spec
    * @returns {promise}
@@ -3671,9 +4438,21 @@ document = function ($, common, api) {
    */
   Document.prototype._doApiCall = function (spec) {
     var that = this;
-    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec.fields || this.fields, spec.timeOut, spec.usePost).then(function (data) {
+    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
+  };
+  /**
+   * Wrapping the this.ds.call method with a longer timeout
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
+   * @method
+   * @param spec
+   * @returns {promise}
+   * @private
+   */
+  Document.prototype._doApiLongCall = function (spec) {
+    spec.timeOut = spec.timeOut || 30000;
+    return this._doApiCall(spec);
   };
   return Document;
 }(jquery, common, api);
@@ -3789,117 +4568,126 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
-keyvalue = function ($) {
+Attachment = function ($) {
+  var EXT = /(?:\.([^.]+))?$/;
+  var IMAGES = [
+    'jpg',
+    'jpeg',
+    'png'
+  ];
+  var PREVIEWS = [
+    'jpg',
+    'jpeg',
+    'png',
+    'doc',
+    'docx',
+    'pdf'
+  ];
   var DEFAULTS = {
-    id: '',
-    pk: '',
-    key: '',
-    kind: 'string',
-    value: null,
-    modified: null,
-    by: null,
-    index: 0
+    fileName: '',
+    fileSize: 0,
+    isCover: false,
+    canBeCover: true
   };
   /**
-   * KeyValue class
-   * @name  KeyValue
-   * @class    
+   * @name  Attachment
+   * @class
+   * @property {ApiDataSource} ds    attachments datasource
+   * @property {bool} isCover        is this the cover image of a document
+   * @property {bool} canBeCover     can this attachment be the cover of a document?
    * @constructor
-   * 
-   * @param spec
    */
-  var KeyValue = function (spec) {
+  var Attachment = function (spec) {
+    spec = spec || {};
     this.ds = spec.ds;
-    this.fields = spec.fields;
     this.raw = null;
     // the raw json object
-    this.id = spec.id || DEFAULTS.id;
-    this.pk = spec.pk || DEFAULTS.pk;
-    this.key = spec.key || DEFAULTS.key;
-    this.kind = spec.kind || DEFAULTS.kind;
-    // string, int, float, bool, date, attachment
+    this.fileName = spec.fileName || DEFAULTS.fileName;
+    this.fileSize = spec.fileSize || DEFAULTS.fileSize;
     this.value = spec.value || DEFAULTS.value;
-    this.modified = spec.modified || DEFAULTS.modified;
+    this.created = spec.created || DEFAULTS.created;
     this.by = spec.by || DEFAULTS.by;
-    this.index = spec.index || DEFAULTS.index;
+    this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
+    this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
   };
   /**
-   * Checks if the document exists in the database
-   * @name  KeyValue#existsInDb
+   * Gets the url of a thumbnail
+   * "XS": 32,
+   * "S": 64,
+   * "M": 128,
+   * "L": 256,
+   * "XL": 512
+   * "orig": original size
+   * @name Attachment#getThumbnailUrl
    * @method
-   * @returns {boolean}
+   * @param size
+   * @returns {string}
    */
-  KeyValue.prototype.existsInDb = function () {
-    return this.id != null && this.id.length > 0;
+  Attachment.prototype.getThumbnailUrl = function (size) {
+    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : '';
   };
   /**
-   * Gets the name for this keyValue
-   * @name  KeyValue#getName
+   * Gets the url where the attachment can be downloaded
+   * @name Attachment#getDownloadUrl
    * @method
    * @returns {string}
    */
-  KeyValue.prototype.getName = function () {
-    // cheqroom.prop.Warranty+date
-    // cheqroom.prop.Buy+price;EUR
-    var keyParts = this.key.split(';');
-    var noUnit = keyParts[0];
-    return noUnit.split('.').pop().split('+').join(' ');
+  Attachment.prototype.getDownloadUrl = function () {
+    return this.ds.getBaseUrl() + this.value + '?download=True';
   };
   /**
-   * Gets the unit for this keyValue, if no unit returns ""
-   * @name  KeyValue#getUnit
+   * Gets the extension part of a filename
+   * @name  Attachment#getExt
    * @method
+   * @param fileName
    * @returns {string}
    */
-  KeyValue.prototype.getUnit = function () {
-    var keyParts = this.key.split(';');
-    return keyParts.length == 2 ? keyParts[1] : '';
+  Attachment.prototype.getExt = function (fileName) {
+    fileName = fileName || this.fileName;
+    return EXT.exec(fileName)[1] || '';
   };
   /**
-   * Returns if keyValue is a url 
-   * @name  KeyValue#isUrl
+   * Gets a friendly file size
+   * @param  {int} size 
+   * @return {string}      
+   */
+  Attachment.prototype.getFriendlyFileSize = function () {
+    var size = this.fileSize;
+    if (isNaN(size))
+      size = 0;
+    if (size < 1024)
+      return size + ' Bytes';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Kb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Mb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Gb';
+    size /= 1024;
+    return size.toFixed(2) + ' Tb';
+  };
+  /**
+   * Checks if the attachment is an image
+   * @name  Attachment#isImage
    * @method
    * @returns {boolean}
    */
-  KeyValue.prototype.isUrl = function () {
-    return this.value && (typeof this.value == 'string' && this.value.isValidUrl());
+  Attachment.prototype.isImage = function () {
+    var ext = this.getExt(this.fileName);
+    return $.inArray(ext, IMAGES) >= 0;
   };
   /**
-   * Checks if the object is empty
-   * after calling reset() isEmpty() should return true
-   * @name  KeyValue#isEmpty
+   * Checks if the attachment has a preview
+   * @name  Attachment#hasPreview
    * @method
    * @returns {boolean}
    */
-  KeyValue.prototype.isEmpty = function () {
-    return this.id == DEFAULTS.id && this.pk == DEFAULTS.pk && this.key == DEFAULTS.key && this.kind == DEFAULTS.kind && this.value == DEFAULTS.value && this.modified == DEFAULTS.modified && this.by == DEFAULTS.by;
-  };
-  /**
-   * Checks if the object has changed
-   * @name KeyValue#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isDirty = function () {
-    return false;
-  };
-  /**
-   * Checks if the object is valid
-   * @name  KeyValue#isValid
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isValid = function () {
-    return true;
-  };
-  /**
-   * Resets the object
-   * @name  KeyValue#reset
-   * @method
-   * @returns promise
-   */
-  KeyValue.prototype.reset = function () {
-    return this._fromJson(DEFAULTS, null);
+  Attachment.prototype.hasPreview = function () {
+    var ext = this.getExt(this.fileName);
+    return $.inArray(ext, PREVIEWS) >= 0;
   };
   /**
    * _toJson, makes a dict of the object
@@ -3908,164 +4696,96 @@ keyvalue = function ($) {
    * @returns {object}
    * @private
    */
-  KeyValue.prototype._toJson = function (options) {
+  Attachment.prototype._toJson = function (options) {
     return {
-      id: this.id,
-      pk: this.pk,
-      key: this.key,
-      kind: this.kind,
+      fileName: this.fileName,
+      fileSize: this.fileSize,
       value: this.value,
-      modified: this.modified,
+      created: this.created,
       by: this.by
     };
   };
   /**
-   * _fromJson: in this implementation we'll only read
-   * the data.keyValues into: comments, attachments, keyValues
+   * _fromJson: reads the Attachment object from json
    * @method
    * @param {object} data the json response
    * @param {object} options dict
    * @returns promise
    * @private
    */
-  KeyValue.prototype._fromJson = function (data, options) {
+  Attachment.prototype._fromJson = function (data, options) {
+    this.raw = data;
+    this.fileName = data.fileName || DEFAULTS.fileName;
+    this.fileSize = data.fileSize || DEFAULTS.fileSize;
+    this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
+    this.by = data.by || DEFAULTS.by;
+    return $.Deferred().resolve(data);
+  };
+  return Attachment;
+}(jquery);
+comment = function ($) {
+  var DEFAULTS = {
+    id: '',
+    value: null,
+    created: null,
+    modified: null,
+    by: null
+  };
+  /**
+   * @name  Comment
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var Comment = function (spec) {
+    spec = spec || {};
+    this.ds = spec.ds;
+    this.raw = null;
+    // the raw json object
+    this.id = spec.id || DEFAULTS.id;
+    this.value = spec.value || DEFAULTS.value;
+    this.created = spec.created || DEFAULTS.created;
+    this.modified = spec.modified || DEFAULTS.modified;
+    this.by = spec.by || DEFAULTS.by;
+    this.fromReservation = spec.fromReservation || false;
+  };
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  Comment.prototype._toJson = function (options) {
+    return {
+      id: this.id,
+      value: this.value,
+      created: this.created,
+      modified: this.modified,
+      by: this.by
+    };
+  };
+  /**
+   * _fromJson: reads the Comment object from json
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns promise
+   * @private
+   */
+  Comment.prototype._fromJson = function (data, options) {
     this.raw = data;
     this.id = data.id || DEFAULTS.id;
-    this.pk = data.pk || DEFAULTS.pk;
-    this.key = data.key || DEFAULTS.key;
-    this.kind = data.kind || DEFAULTS.kind;
     this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
     this.modified = data.modified || DEFAULTS.modified;
     this.by = data.by || DEFAULTS.by;
     return $.Deferred().resolve(data);
   };
-  return KeyValue;
-}(jquery);
-Attachment = function ($, KeyValue) {
-  var EXT = /(?:\.([^.]+))?$/;
-  var IMAGES = [
-    'jpg',
-    'jpeg',
-    'png'
-  ];
-  var PREVIEWS = [
-    'jpg',
-    'jpeg',
-    'png',
-    'doc',
-    'docx',
-    'pdf'
-  ];
-  var DEFAULTS = {
-    isCover: false,
-    canBeCover: true
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = KeyValue.prototype;
-  /**
-   * @name  Attachment
-   * @class
-   * @property {ApiDataSource} ds    attachments datasource
-   * @property {bool} isCover        is this the cover image of a document
-   * @property {bool} canBeCover     can this attachment be the cover of a document?
-   * @constructor
-   * @extends KeyValue
-   */
-  var Attachment = function (spec) {
-    KeyValue.call(this, spec);
-    this.ds = spec.ds;
-    this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
-    this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
-  };
-  Attachment.prototype = new tmp();
-  Attachment.prototype.constructor = Attachment;
-  /**
-   * Gets the url of a thumbnail
-   * "XS": 32,
-   * "S": 64,
-   * "M": 128,
-   * "L": 256,
-   * "XL": 512
-   * "orig": original size
-   * @name Attachment#getThumbnailUrl
-   * @method
-   * @param size
-   * @returns {string}
-   */
-  Attachment.prototype.getThumbnailUrl = function (size) {
-    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : '';
-  };
-  /**
-   * Gets the url where the attachment can be downloaded
-   * @name Attachment#getDownloadUrl
-   * @method
-   * @returns {string}
-   */
-  Attachment.prototype.getDownloadUrl = function () {
-    return this.ds.getBaseUrl() + this.id + '?download=True';
-  };
-  /**
-   * Gets the extension part of a filename
-   * @name  Attachment#getExt
-   * @method
-   * @param fileName
-   * @returns {string}
-   */
-  Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.id;
-    return EXT.exec(fileName)[1] || '';
-  };
-  /**
-   * Checks if the attachment is an image
-   * @name  Attachment#isImage
-   * @method
-   * @returns {boolean}
-   */
-  Attachment.prototype.isImage = function () {
-    var fileName = this.id;
-    var ext = this.getExt(fileName);
-    return $.inArray(ext, IMAGES) >= 0;
-  };
-  /**
-   * Checks if the attachment has a preview
-   * @name  Attachment#hasPreview
-   * @method
-   * @returns {boolean}
-   */
-  Attachment.prototype.hasPreview = function () {
-    var fileName = this.id;
-    var ext = this.getExt(fileName);
-    return $.inArray(ext, PREVIEWS) >= 0;
-  };
-  return Attachment;
-}(jquery, keyvalue);
-comment = function ($, KeyValue) {
-  var KEY = 'cheqroom.Comment';
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = KeyValue.prototype;
-  /**
-   * @name  Comment
-   * @class
-   * @constructor
-   * @extends KeyValue
-   */
-  var Comment = function (spec) {
-    spec = spec || {};
-    spec.key = KEY;
-    spec.kind = 'string';
-    KeyValue.call(this, spec);
-  };
-  Comment.prototype = new tmp();
-  Comment.prototype.constructor = Comment;
   return Comment;
-}(jquery, keyvalue);
-attachment = function ($, KeyValue) {
+}(jquery);
+attachment = function ($) {
   var EXT = /(?:\.([^.]+))?$/;
   var IMAGES = [
     'jpg',
@@ -4081,14 +4801,11 @@ attachment = function ($, KeyValue) {
     'pdf'
   ];
   var DEFAULTS = {
+    fileName: '',
+    fileSize: 0,
     isCover: false,
     canBeCover: true
   };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = KeyValue.prototype;
   /**
    * @name  Attachment
    * @class
@@ -4096,16 +4813,20 @@ attachment = function ($, KeyValue) {
    * @property {bool} isCover        is this the cover image of a document
    * @property {bool} canBeCover     can this attachment be the cover of a document?
    * @constructor
-   * @extends KeyValue
    */
   var Attachment = function (spec) {
-    KeyValue.call(this, spec);
+    spec = spec || {};
     this.ds = spec.ds;
+    this.raw = null;
+    // the raw json object
+    this.fileName = spec.fileName || DEFAULTS.fileName;
+    this.fileSize = spec.fileSize || DEFAULTS.fileSize;
+    this.value = spec.value || DEFAULTS.value;
+    this.created = spec.created || DEFAULTS.created;
+    this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
   };
-  Attachment.prototype = new tmp();
-  Attachment.prototype.constructor = Attachment;
   /**
    * Gets the url of a thumbnail
    * "XS": 32,
@@ -4120,7 +4841,7 @@ attachment = function ($, KeyValue) {
    * @returns {string}
    */
   Attachment.prototype.getThumbnailUrl = function (size) {
-    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : '';
+    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : '';
   };
   /**
    * Gets the url where the attachment can be downloaded
@@ -4129,7 +4850,7 @@ attachment = function ($, KeyValue) {
    * @returns {string}
    */
   Attachment.prototype.getDownloadUrl = function () {
-    return this.ds.getBaseUrl() + this.id + '?download=True';
+    return this.ds.getBaseUrl() + this.value + '?download=True';
   };
   /**
    * Gets the extension part of a filename
@@ -4139,8 +4860,31 @@ attachment = function ($, KeyValue) {
    * @returns {string}
    */
   Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.id;
+    fileName = fileName || this.fileName;
     return EXT.exec(fileName)[1] || '';
+  };
+  /**
+   * Gets a friendly file size
+   * @param  {int} size 
+   * @return {string}      
+   */
+  Attachment.prototype.getFriendlyFileSize = function () {
+    var size = this.fileSize;
+    if (isNaN(size))
+      size = 0;
+    if (size < 1024)
+      return size + ' Bytes';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Kb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Mb';
+    size /= 1024;
+    if (size < 1024)
+      return size.toFixed(2) + ' Gb';
+    size /= 1024;
+    return size.toFixed(2) + ' Tb';
   };
   /**
    * Checks if the attachment is an image
@@ -4149,8 +4893,7 @@ attachment = function ($, KeyValue) {
    * @returns {boolean}
    */
   Attachment.prototype.isImage = function () {
-    var fileName = this.id;
-    var ext = this.getExt(fileName);
+    var ext = this.getExt(this.fileName);
     return $.inArray(ext, IMAGES) >= 0;
   };
   /**
@@ -4160,22 +4903,116 @@ attachment = function ($, KeyValue) {
    * @returns {boolean}
    */
   Attachment.prototype.hasPreview = function () {
-    var fileName = this.id;
-    var ext = this.getExt(fileName);
+    var ext = this.getExt(this.fileName);
     return $.inArray(ext, PREVIEWS) >= 0;
   };
-  return Attachment;
-}(jquery, keyvalue);
-Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
-  // Some constant values
-  var COMMENT = 'cheqroom.Comment', ATTACHMENT = 'cheqroom.Attachment', IMAGE = 'cheqroom.prop.Image', IMAGE_OTHER = 'cheqroom.attachment.Image', DEFAULTS = {
-      id: '',
-      modified: null,
-      cover: null,
-      comments: [],
-      attachments: [],
-      keyValues: []
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  Attachment.prototype._toJson = function (options) {
+    return {
+      fileName: this.fileName,
+      fileSize: this.fileSize,
+      value: this.value,
+      created: this.created,
+      by: this.by
     };
+  };
+  /**
+   * _fromJson: reads the Attachment object from json
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns promise
+   * @private
+   */
+  Attachment.prototype._fromJson = function (data, options) {
+    this.raw = data;
+    this.fileName = data.fileName || DEFAULTS.fileName;
+    this.fileSize = data.fileSize || DEFAULTS.fileSize;
+    this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
+    this.by = data.by || DEFAULTS.by;
+    return $.Deferred().resolve(data);
+  };
+  return Attachment;
+}(jquery);
+field = function ($) {
+  var DEFAULTS = {
+    name: null,
+    value: null,
+    required: false,
+    unit: '',
+    kind: 'string',
+    form: false,
+    editor: null,
+    description: ''
+  };
+  /**
+   * @name  Field
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var Field = function (spec) {
+    spec = spec || {};
+    this.raw = spec;
+    this.name = spec.name || DEFAULTS.name;
+    this.value = spec.value || DEFAULTS.value;
+    this.required = spec.required || DEFAULTS.required;
+    this.unit = spec.unit || DEFAULTS.unit;
+    this.kind = spec.kind || DEFAULTS.kind;
+    this.form = spec.form || DEFAULTS.form;
+    this.editor = spec.editor || DEFAULTS.editor;
+    this.description = spec.description || DEFAULTS.description;
+  };
+  /**
+   * isValid
+   * @name  Field#isValid
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isValid = function () {
+    if (!this.required)
+      return true;
+    return $.trim(this.value) != '';
+  };
+  /**
+   * isDirty
+   * @name  Field#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isDirty = function () {
+    return this.raw.value != this.value;
+  };
+  /**
+   * isEmpty
+   * @name  Field#isEmpty
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isEmpty = function () {
+    return $.trim(this.value) == '';
+  };
+  return Field;
+}(jquery);
+Base = function ($, common, api, Document, Comment, Attachment, Field) {
+  // Some constant values
+  var DEFAULTS = {
+    id: '',
+    modified: null,
+    cover: null,
+    flag: null,
+    fields: {},
+    comments: [],
+    attachments: [],
+    barcodes: []
+  };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -4187,9 +5024,10 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @property {ApiDataSource} dsAttachments   attachments datasource
    * @property {string} crtype                 e.g. cheqroom.types.customer
    * @property {moment} modified               last modified timestamp
+   * @property {string} flag                   the document flag
+   * @property {object} fields                 dictionary of document fields
    * @property {array} comments                array of Comment objects
    * @property {array} attachments             array of Attachment objects
-   * @property {array} keyValues               array of KeyValue objects
    * @property {string} cover                  cover attachment id, default null
    * @constructor
    * @extends Document
@@ -4203,13 +5041,17 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     // e.g. cheqroom.types.customer
     this.modified = spec.modified || DEFAULTS.modified;
     // last modified timestamp in momentjs
+    this.flag = spec.flag || DEFAULTS.flag;
+    // flag
+    this.fields = spec.fields || $.extend({}, DEFAULTS.fields);
+    // fields dictionary
     this.comments = spec.comments || DEFAULTS.comments.slice();
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
     // attachments array
-    this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();
-    // keyValues array
-    this.cover = spec.cover || DEFAULTS.cover;  // cover attachment id, default null
+    this.cover = spec.cover || DEFAULTS.cover;
+    // cover attachment id, default null
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -4222,14 +5064,22 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   /**
    * Checks if the object is empty
    * after calling reset() isEmpty() should return true
-   * We'll only check for comments, attachments, keyValues here
+   * We'll only check for fields, comments, attachments here
    * @name  Base#isEmpty
    * @method
    * @returns {boolean}
    * @override
    */
   Base.prototype.isEmpty = function () {
-    return (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0) && (this.keyValues == null || this.keyValues.length == 0);
+    return this.flag == DEFAULTS.flag && (this.fields == null || Object.keys(this.fields).length == 0) && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
+  };
+  /**
+   * Checks if the base is dirty and needs saving
+   * @name Base#isDirty
+   * @returns {boolean}
+   */
+  Base.prototype.isDirty = function () {
+    return this._isDirtyFlag() || this._isDirtyFields();
   };
   /**
    * Checks via the api if we can delete the document
@@ -4300,114 +5150,88 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
       skipRead: skipRead
     });
   };
-  // KeyValue stuff
+  // Field stuff
   // ----
   /**
-   * Adds a key value
-   * @name  Base#addKeyValue
+   * Sets multiple custom fields in a single call
+   * @name Base#setFields
    * @method
-   * @param key
+   * @param fields
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFields = function (fields, skipRead) {
+    var that = this, changedFields = {};
+    $.each(fields, function (key, value) {
+      if (that.raw.fields[key] != fields[key]) {
+        changedFields[key] = value;
+      }
+    });
+    return this._doApiCall({
+      method: 'setFields',
+      params: { fields: changedFields },
+      skipRead: skipRead,
+      usePost: true
+    });
+  };
+  /**
+   * Sets a custom field
+   * @name Base#setField
+   * @method
+   * @param field
    * @param value
-   * @param kind
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.addKeyValue = function (key, value, kind, skipRead) {
+  Base.prototype.setField = function (field, value, skipRead) {
     return this._doApiCall({
-      method: 'addKeyValue',
+      method: 'setField',
       params: {
-        key: key,
-        value: value,
-        kind: kind
+        field: field,
+        value: value
       },
       skipRead: skipRead
     });
   };
   /**
-   * Updates a keyvalue by id
-   * @name  Base#updateKeyValue
+   * Clears a custom field
+   * @name Base#clearField
    * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
+   * @param field
    * @param skipRead
-   * @returns {promise}
    */
-  Base.prototype.updateKeyValue = function (id, key, value, kind, skipRead) {
+  Base.prototype.clearField = function (field, skipRead) {
     return this._doApiCall({
-      method: 'updateKeyValue',
-      params: {
-        id: id,
-        key: key,
-        value: value,
-        kind: kind
-      },
+      method: 'clearField',
+      params: { field: field },
       skipRead: skipRead
     });
   };
   /**
-   * Removes a keyvalue by id
-   * @name  Base#removeKeyValue
-   * @method
-   * @param id
+   * Adds a barcode
+   * @name Base#addBarcode
+   * @param code
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.removeKeyValue = function (id, key, kind, skipRead) {
+  Base.prototype.addBarcode = function (code, skipRead) {
     return this._doApiCall({
-      method: 'removeKeyValue',
-      params: {
-        id: id,
-        key: key,
-        kind: kind
-      },
+      method: 'addBarcode',
+      params: { barcode: code },
       skipRead: skipRead
     });
   };
   /**
-   * Sets a keyvalue by id
-   * @name  Base#setKeyValue
-   * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
+   * Removes a barcode
+   * @name Item#removeBarcode
+   * @param code
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.setKeyValue = function (id, key, value, kind, skipRead) {
-    var params = {
-      key: key,
-      value: value,
-      kind: kind
-    };
-    if (id != null && id.length > 0) {
-      params.id = id;
-    }
+  Base.prototype.removeBarcode = function (code, skipRead) {
     return this._doApiCall({
-      method: 'setKeyValue',
-      params: params,
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Moves a keyvalue by its id to a new position
-   * @name Base#moveKeyValueIndex
-   * @method
-   * @param id
-   * @param pos
-   * @returns {promise}
-   */
-  Base.prototype.moveKeyValueIndex = function (id, pos, key, kind, skipRead) {
-    return this._doApiCall({
-      method: 'moveKeyValueById',
-      params: {
-        id: id,
-        toPos: pos,
-        key: key,
-        kind: kind
-      },
+      method: 'removeBarcode',
+      params: { barcode: code },
       skipRead: skipRead
     });
   };
@@ -4430,7 +5254,7 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     return attachment != null && attachment.length > 0 ? this.helper.getImageCDNUrl(groupId, attachment, size) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
   };
   /**
-   * changes the cover image to another Attachment
+   * Set the cover image to an Attachment
    * @name  Base#setCover
    * @method
    * @param att
@@ -4440,49 +5264,37 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype.setCover = function (att, skipRead) {
     return this._doApiCall({
       method: 'setCover',
-      params: { kvId: att._id },
+      params: { attachmentId: att._id },
       skipRead: skipRead
     });
   };
   /**
-   * attaches an image Attachment file, shortcut to attach
-   * @name  Base#attachImage
+   * Clears the cover image
+   * @name  Base#clearCover
    * @method
-   * @param att
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attachImage = function (att, skipRead) {
-    return this.attach(att, IMAGE, skipRead);
-  };
-  /**
-   * attaches an Attachment file, shortcut to attach
-   * @name  Base#attachFile
-   * @method
-   * @param att
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.attachFile = function (att, skipRead) {
-    return this.attach(att, ATTACHMENT, skipRead);
+  Base.prototype.clearCover = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearCover',
+      params: {},
+      skipRead: skipRead
+    });
   };
   /**
    * attaches an Attachment object
    * @name  Base#attach
    * @method
-   * @param att
-   * @param key
+   * @param attachmentId
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attach = function (att, key, skipRead) {
+  Base.prototype.attach = function (attachmentId, skipRead) {
     if (this.existsInDb()) {
       return this._doApiCall({
         method: 'attach',
-        params: {
-          attachments: [att._id],
-          key: key
-        },
+        params: { attachments: [attachmentId] },
         skipRead: skipRead
       });
     } else {
@@ -4493,22 +5305,146 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * detaches an Attachment by kvId (guid)
    * @name  Base#detach
    * @method
-   * @param keyId (usually the attachment._id)
+   * @param attachmentId
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.detach = function (keyId, skipRead) {
+  Base.prototype.detach = function (attachmentId, skipRead) {
     if (this.existsInDb()) {
       return this._doApiCall({
         method: 'detach',
-        params: {
-          attachments: [keyId],
-          kvId: keyId
-        },
+        params: { attachments: [attachmentId] },
         skipRead: skipRead
       });
     } else {
       return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
+    }
+  };
+  // Flags stuff
+  // ----
+  /**
+   * Sets the flag of an item
+   * @name Base#setFlag
+   * @param flag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFlag = function (flag, skipRead) {
+    return this._doApiCall({
+      method: 'setFlag',
+      params: { flag: flag },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the flag of an item
+   * @name Base#clearFlag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearFlag = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearFlag',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Returns a list of Field objects
+   * @param fieldDefs         array of field definitions
+   * @param onlyFormFields    should return only form fields
+   * @param limit             return no more than x fields
+   * @return {Array}
+   */
+  Base.prototype.getSortedFields = function (fieldDefs, onlyFormFields, limit) {
+    var that = this, fields = [], fieldDef = null, fieldValue = null;
+    // Work on copy of fieldDefs array
+    fieldDefs = fieldDefs.slice();
+    // Return only form field definitions?
+    fieldDefs = fieldDefs.filter(function (def) {
+      return onlyFormFields == true ? def.form : true;
+    });
+    // Create a Field object for each field definition
+    for (var i = 0; i < fieldDefs.length; i++) {
+      fieldDef = fieldDefs[i];
+      fieldValue = that.fields[fieldDef.name];
+      if (limit == null || limit > fields.length) {
+        fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
+      }
+    }
+    return fields;
+  };
+  /**
+   * Update item fields based on the given Field objects
+   * @param {Array} fields    array of Field objects
+   */
+  Base.prototype.setSortedFields = function (fields) {
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i];
+      if (field.isEmpty()) {
+        delete this.fields[field.name];
+      } else {
+        this.fields[field.name] = field.value;
+      }
+    }
+  };
+  /**
+   * Checks if all item fields are valid
+   * @param  {Array}  fields
+   * @return {Boolean}        
+   */
+  Base.prototype.validateSortedFields = function (fields) {
+    for (var i = 0; i < fields.length; i++) {
+      if (!fields[i].isValid()) {
+        return false;
+      }
+    }
+    return true;
+  };
+  // Implementation
+  // ----
+  /**
+   * Checks if the flag is dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFlag = function () {
+    if (this.raw) {
+      return this.flag != this.raw.flag;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Checks if the fields are dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFields = function () {
+    if (this.raw) {
+      return !common.areEqual(this.fields, this.raw.fields);
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Runs over the custom fields that are dirty and calls `setField`
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._updateFields = function () {
+    var calls = [];
+    if (this.raw) {
+      for (var key in this.fields) {
+        if (this.fields[key] != this.raw.fields[key]) {
+          calls.push(this.setField(key, this.fields[key], true));
+        }
+      }
+    }
+    if (calls.length > 0) {
+      return $.when(calls);
+    } else {
+      return $.Deferred().resolve(this);
     }
   };
   // toJson, fromJson
@@ -4532,112 +5468,342 @@ Base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype._fromJson = function (data, options) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.flag = data.flag || DEFAULTS.flag;
+      that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
-      return that._fromKeyValuesJson(data, options);
+      that.barcodes = data.barcodes || DEFAULTS.barcodes;
+      return that._fromCommentsJson(data, options).then(function () {
+        return that._fromAttachmentsJson(data, options);
+      });
     });
   };
   /**
-   * _fromKeyValuesJson: reads the data.keyValues
+   * _toJsonFields: makes json which can be used to set fields during `create`
    * @method
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Base.prototype._toJsonFields = function (options) {
+    var fields = {};
+    if (this.fields) {
+      for (var key in this.fields) {
+        fields['fields__' + key] = this.fields[key];
+      }
+    }
+    return fields;
+  };
+  /**
+   * _fromCommentsJson: reads the data.comments
    * @param data
    * @param options
    * @returns {*}
    * @private
    */
-  Base.prototype._fromKeyValuesJson = function (data, options) {
-    // Read only the .keyValues part of the response
-    var obj = null;
-    var that = this;
+  Base.prototype._fromCommentsJson = function (data, options) {
+    var obj = null, that = this;
     this.comments = DEFAULTS.comments.slice();
-    this.attachments = DEFAULTS.attachments.slice();
-    this.keyValues = DEFAULTS.keyValues.slice();
-    this.cover = data.cover || DEFAULTS.cover;
-    if (data.keyValues && data.keyValues.length) {
-      $.each(data.keyValues, function (i, kv) {
-        kv.index = i;
-        // original index needed for sorting, swapping positions
-        switch (kv.key) {
-        case COMMENT:
-          obj = that._getComment(kv, options);
-          if (obj) {
-            that.comments = that.comments || [];
-            that.comments.push(obj);
-          }
-          break;
-        case IMAGE:
-        case ATTACHMENT:
-        case IMAGE_OTHER:
-          obj = that._getAttachment(kv, options);
-          if (obj) {
-            that.attachments = that.attachments || [];
-            that.attachments.push(obj);
-          }
-          break;
-        default:
-          obj = that._getKeyValue(kv, options);
-          if (obj) {
-            that.keyValues = that.keyValues || [];
-            that.keyValues.push(obj);
-          }
-          break;
+    if (data.comments && data.comments.length > 0) {
+      $.each(data.comments, function (i, comment) {
+        obj = that._getComment(comment, options);
+        if (obj) {
+          that.comments.push(obj);
         }
       });
     }
-    that.attachments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
-    that.comments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
     return $.Deferred().resolve(data);
   };
-  Base.prototype._getComment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
+  /**
+   * _fromAttachmentsJson: reads the data.attachments
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._fromAttachmentsJson = function (data, options) {
+    var obj = null, that = this;
+    this.attachments = DEFAULTS.attachments.slice();
+    if (data.attachments && data.attachments.length > 0) {
+      $.each(data.attachments, function (i, att) {
+        obj = that._getAttachment(att, options);
+        if (obj) {
+          that.attachments.push(obj);
+        }
+      });
+    }
+    return $.Deferred().resolve(data);
+  };
+  Base.prototype._getComment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Comment(spec);
   };
-  Base.prototype._getAttachment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.dsAttachments,
-      fields: this.fields
-    }, options || {}, // can contain; isCover, canBeCover
-    kv);
+  Base.prototype._getAttachment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Attachment(spec);
   };
-  Base.prototype._getKeyValue = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
-    return new KeyValue(spec);
+  Base.prototype._getField = function (data, options) {
+    var spec = $.extend({}, options || {}, data);
+    return new Field(spec);
   };
   return Base;
-}(jquery, common, api, document, comment, attachment, keyvalue);
-Comment = function ($, KeyValue) {
-  var KEY = 'cheqroom.Comment';
+}(jquery, common, api, document, comment, attachment, field);
+Category = function ($, common, api, Document) {
+  /*
+  id = StringField(primary_key=True)  # category id in reverse domain format cheqroom.types.customer
+  name = StringField()  # A friendly name for the category
+  count = IntField(default=0)  # How many categories are under this parent
+  defs = ListField(EmbeddedDocumentField(KeyValueDef))  # a list of allowed KeyValueDefs
+  parent = ReferenceField("Category")  # the parent category
+  by = ReferenceField(User)  # The user that add / updated this meta
+  modified = DateTimeField(default=DateHelper.getNow)  # The data when it was added / update
+   */
+  // Some constant values
+  var DEFAULTS = {
+    id: '',
+    name: '',
+    count: 0,
+    defs: [],
+    parent: '',
+    modified: null
+  };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
   };
-  tmp.prototype = KeyValue.prototype;
+  tmp.prototype = Document.prototype;
+  /**
+   * Category describes a category which can trigger on certain events (signals)
+   * @name  Category
+   * @class
+   * @property {string} name          the category name
+   * @property {string} count         how many categories are under this node
+   * @property {array} defs           a list of allowed keyvalue definitions
+   * @property {string} parent        the primary key of the parent category
+   * @property {Moment} modified      the modified date of the category
+   * @constructor
+   * @extends Document
+   */
+  var Category = function (opt) {
+    var spec = $.extend({}, opt);
+    Document.call(this, spec);
+    this.name = spec.name || DEFAULTS.name;
+    this.count = spec.count || DEFAULTS.count;
+    this.defs = spec.defs || DEFAULTS.defs.slice();
+    this.parent = spec.parent || DEFAULTS.parent;
+    this.modified = spec.modified || DEFAULTS.modified;
+  };
+  Category.prototype = new tmp();
+  Category.prototype.constructor = Category;
+  //
+  // Specific validators
+  /**
+   * Checks if name is valid
+   * @name Category#isValidName
+   * @method
+   * @return {Boolean}
+   */
+  Category.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    if (this.name.length >= 3) {
+      var nospecial = this.name.latinise().replace(/[`~!@#$%^&*()_|+\-=?;:'",.<\{\}\[\]\\\/]/gi, '');
+      return this.name == nospecial;
+    } else {
+      return false;
+    }
+  };
+  //
+  // Document overrides
+  //
+  /**
+   * Checks if the category has any validation errors
+   * @name Category#isValid
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Category.prototype.isValid = function () {
+    return this.isValidName();
+  };
+  Category.prototype._getDefaults = function () {
+    return DEFAULTS;
+  };
+  /**
+   * Checks if the object is empty, it never is
+   * @name  Category#isEmpty
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Category.prototype.isEmpty = function () {
+    return Document.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
+  };
+  /**
+   * Checks if the category is dirty and needs saving
+   * @returns {boolean}
+   * @override
+   */
+  Category.prototype.isDirty = function () {
+    var isDirty = Document.prototype.isDirty.call(this);
+    if (!isDirty && this.raw) {
+      isDirty = this.name != this.raw.name;
+    }
+    return isDirty;
+  };
+  /**
+   * Checks via the api if we can delete the Category document
+   * @name  Category#canDelete
+   * @method
+   * @returns {promise}
+   * @override
+   */
+  Category.prototype.canDelete = function () {
+    return this.ds.call(this.id, 'canDeleteCategory', { omitFields: true });
+  };
+  /**
+   * Checks via the api if we can rename the Category document
+   * e.g. if it would not clash with any existing categories
+   * @method
+   * @param name
+   * @returns {promise}
+   */
+  Category.prototype.canChangeName = function (name) {
+    return this.ds.call(this.id, 'canChangeName', { name: name });
+  };
+  /**
+   * Changes the name of a category
+   * @method
+   * @param name
+   * @returns {promise}
+   */
+  Category.prototype.changeName = function (name) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'changeName',
+      params: { name: name }
+    });
+  };
+  /**
+   * Checks via the api if we can change the parent of a Category document
+   * e.g. if it would not clash with any existing categories
+   * @param parentId
+   * @returns {promise}
+   */
+  Category.prototype.canChangeParent = function (parentId) {
+    return this.ds.call(this.id, 'canChangeParent', {
+      parent: parentId,
+      omitFields: true
+    });
+  };
+  /**
+   * Changes the parent of a category
+   * @param parentId
+   * @returns {promise}
+   */
+  Category.prototype.changeParent = function (parentId) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'changeParent',
+      params: {
+        parent: parentId,
+        omitFields: true
+      }
+    });
+  };
+  // toJson, fromJson
+  // ----
+  /**
+   * _toJson, makes a dict of params to use during create / update
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Category.prototype._toJson = function (options) {
+    var data = Document.prototype._toJson.call(this, options);
+    data.name = this.name;
+    return data;
+  };
+  /**
+   * _fromJson: read some basic information
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns {promise}
+   * @private
+   */
+  Category.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.name = data.name || DEFAULTS.name;
+      that.count = data.count || DEFAULTS.count;
+      that.defs = data.defs || DEFAULTS.defs.slice();
+      that.parent = data.parent || DEFAULTS.parent;
+      that.modified = data.modified || DEFAULTS.modified;
+      return data;
+    });
+  };
+  return Category;
+}(jquery, common, api, document);
+Comment = function ($) {
+  var DEFAULTS = {
+    id: '',
+    value: null,
+    created: null,
+    modified: null,
+    by: null
+  };
   /**
    * @name  Comment
    * @class
+   * @param spec
    * @constructor
-   * @extends KeyValue
    */
   var Comment = function (spec) {
     spec = spec || {};
-    spec.key = KEY;
-    spec.kind = 'string';
-    KeyValue.call(this, spec);
+    this.ds = spec.ds;
+    this.raw = null;
+    // the raw json object
+    this.id = spec.id || DEFAULTS.id;
+    this.value = spec.value || DEFAULTS.value;
+    this.created = spec.created || DEFAULTS.created;
+    this.modified = spec.modified || DEFAULTS.modified;
+    this.by = spec.by || DEFAULTS.by;
+    this.fromReservation = spec.fromReservation || false;
   };
-  Comment.prototype = new tmp();
-  Comment.prototype.constructor = Comment;
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  Comment.prototype._toJson = function (options) {
+    return {
+      id: this.id,
+      value: this.value,
+      created: this.created,
+      modified: this.modified,
+      by: this.by
+    };
+  };
+  /**
+   * _fromJson: reads the Comment object from json
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns promise
+   * @private
+   */
+  Comment.prototype._fromJson = function (data, options) {
+    this.raw = data;
+    this.id = data.id || DEFAULTS.id;
+    this.value = data.value || DEFAULTS.value;
+    this.created = data.created || DEFAULTS.created;
+    this.modified = data.modified || DEFAULTS.modified;
+    this.by = data.by || DEFAULTS.by;
+    return $.Deferred().resolve(data);
+  };
   return Comment;
-}(jquery, keyvalue);
+}(jquery);
 Conflict = function ($) {
   var DEFAULTS = {
     kind: '',
@@ -4667,7 +5833,7 @@ Conflict = function ($) {
    */
   var Conflict = function (spec) {
     this.ds = spec.ds;
-    this.fields = spec.fields;
+    this._fields = spec._fields;
     this.raw = null;
     // the raw json object
     this.kind = spec.kind || DEFAULTS.kind;
@@ -4717,16 +5883,18 @@ Conflict = function ($) {
   };
   return Conflict;
 }(jquery);
-base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
+base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Some constant values
-  var COMMENT = 'cheqroom.Comment', ATTACHMENT = 'cheqroom.Attachment', IMAGE = 'cheqroom.prop.Image', IMAGE_OTHER = 'cheqroom.attachment.Image', DEFAULTS = {
-      id: '',
-      modified: null,
-      cover: null,
-      comments: [],
-      attachments: [],
-      keyValues: []
-    };
+  var DEFAULTS = {
+    id: '',
+    modified: null,
+    cover: null,
+    flag: null,
+    fields: {},
+    comments: [],
+    attachments: [],
+    barcodes: []
+  };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -4738,9 +5906,10 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * @property {ApiDataSource} dsAttachments   attachments datasource
    * @property {string} crtype                 e.g. cheqroom.types.customer
    * @property {moment} modified               last modified timestamp
+   * @property {string} flag                   the document flag
+   * @property {object} fields                 dictionary of document fields
    * @property {array} comments                array of Comment objects
    * @property {array} attachments             array of Attachment objects
-   * @property {array} keyValues               array of KeyValue objects
    * @property {string} cover                  cover attachment id, default null
    * @constructor
    * @extends Document
@@ -4754,13 +5923,17 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     // e.g. cheqroom.types.customer
     this.modified = spec.modified || DEFAULTS.modified;
     // last modified timestamp in momentjs
+    this.flag = spec.flag || DEFAULTS.flag;
+    // flag
+    this.fields = spec.fields || $.extend({}, DEFAULTS.fields);
+    // fields dictionary
     this.comments = spec.comments || DEFAULTS.comments.slice();
     // comments array
     this.attachments = spec.attachments || DEFAULTS.attachments.slice();
     // attachments array
-    this.keyValues = spec.keyValues || DEFAULTS.keyValues.slice();
-    // keyValues array
-    this.cover = spec.cover || DEFAULTS.cover;  // cover attachment id, default null
+    this.cover = spec.cover || DEFAULTS.cover;
+    // cover attachment id, default null
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -4773,14 +5946,22 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   /**
    * Checks if the object is empty
    * after calling reset() isEmpty() should return true
-   * We'll only check for comments, attachments, keyValues here
+   * We'll only check for fields, comments, attachments here
    * @name  Base#isEmpty
    * @method
    * @returns {boolean}
    * @override
    */
   Base.prototype.isEmpty = function () {
-    return (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0) && (this.keyValues == null || this.keyValues.length == 0);
+    return this.flag == DEFAULTS.flag && (this.fields == null || Object.keys(this.fields).length == 0) && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
+  };
+  /**
+   * Checks if the base is dirty and needs saving
+   * @name Base#isDirty
+   * @returns {boolean}
+   */
+  Base.prototype.isDirty = function () {
+    return this._isDirtyFlag() || this._isDirtyFields();
   };
   /**
    * Checks via the api if we can delete the document
@@ -4851,114 +6032,88 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
       skipRead: skipRead
     });
   };
-  // KeyValue stuff
+  // Field stuff
   // ----
   /**
-   * Adds a key value
-   * @name  Base#addKeyValue
+   * Sets multiple custom fields in a single call
+   * @name Base#setFields
    * @method
-   * @param key
+   * @param fields
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFields = function (fields, skipRead) {
+    var that = this, changedFields = {};
+    $.each(fields, function (key, value) {
+      if (that.raw.fields[key] != fields[key]) {
+        changedFields[key] = value;
+      }
+    });
+    return this._doApiCall({
+      method: 'setFields',
+      params: { fields: changedFields },
+      skipRead: skipRead,
+      usePost: true
+    });
+  };
+  /**
+   * Sets a custom field
+   * @name Base#setField
+   * @method
+   * @param field
    * @param value
-   * @param kind
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.addKeyValue = function (key, value, kind, skipRead) {
+  Base.prototype.setField = function (field, value, skipRead) {
     return this._doApiCall({
-      method: 'addKeyValue',
+      method: 'setField',
       params: {
-        key: key,
-        value: value,
-        kind: kind
+        field: field,
+        value: value
       },
       skipRead: skipRead
     });
   };
   /**
-   * Updates a keyvalue by id
-   * @name  Base#updateKeyValue
+   * Clears a custom field
+   * @name Base#clearField
    * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
+   * @param field
    * @param skipRead
-   * @returns {promise}
    */
-  Base.prototype.updateKeyValue = function (id, key, value, kind, skipRead) {
+  Base.prototype.clearField = function (field, skipRead) {
     return this._doApiCall({
-      method: 'updateKeyValue',
-      params: {
-        id: id,
-        key: key,
-        value: value,
-        kind: kind
-      },
+      method: 'clearField',
+      params: { field: field },
       skipRead: skipRead
     });
   };
   /**
-   * Removes a keyvalue by id
-   * @name  Base#removeKeyValue
-   * @method
-   * @param id
+   * Adds a barcode
+   * @name Base#addBarcode
+   * @param code
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.removeKeyValue = function (id, key, kind, skipRead) {
+  Base.prototype.addBarcode = function (code, skipRead) {
     return this._doApiCall({
-      method: 'removeKeyValue',
-      params: {
-        id: id,
-        key: key,
-        kind: kind
-      },
+      method: 'addBarcode',
+      params: { barcode: code },
       skipRead: skipRead
     });
   };
   /**
-   * Sets a keyvalue by id
-   * @name  Base#setKeyValue
-   * @method
-   * @param id
-   * @param key
-   * @param value
-   * @param kind
+   * Removes a barcode
+   * @name Item#removeBarcode
+   * @param code
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.setKeyValue = function (id, key, value, kind, skipRead) {
-    var params = {
-      key: key,
-      value: value,
-      kind: kind
-    };
-    if (id != null && id.length > 0) {
-      params.id = id;
-    }
+  Base.prototype.removeBarcode = function (code, skipRead) {
     return this._doApiCall({
-      method: 'setKeyValue',
-      params: params,
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Moves a keyvalue by its id to a new position
-   * @name Base#moveKeyValueIndex
-   * @method
-   * @param id
-   * @param pos
-   * @returns {promise}
-   */
-  Base.prototype.moveKeyValueIndex = function (id, pos, key, kind, skipRead) {
-    return this._doApiCall({
-      method: 'moveKeyValueById',
-      params: {
-        id: id,
-        toPos: pos,
-        key: key,
-        kind: kind
-      },
+      method: 'removeBarcode',
+      params: { barcode: code },
       skipRead: skipRead
     });
   };
@@ -4981,7 +6136,7 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
     return attachment != null && attachment.length > 0 ? this.helper.getImageCDNUrl(groupId, attachment, size) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
   };
   /**
-   * changes the cover image to another Attachment
+   * Set the cover image to an Attachment
    * @name  Base#setCover
    * @method
    * @param att
@@ -4991,49 +6146,37 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype.setCover = function (att, skipRead) {
     return this._doApiCall({
       method: 'setCover',
-      params: { kvId: att._id },
+      params: { attachmentId: att._id },
       skipRead: skipRead
     });
   };
   /**
-   * attaches an image Attachment file, shortcut to attach
-   * @name  Base#attachImage
+   * Clears the cover image
+   * @name  Base#clearCover
    * @method
-   * @param att
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attachImage = function (att, skipRead) {
-    return this.attach(att, IMAGE, skipRead);
-  };
-  /**
-   * attaches an Attachment file, shortcut to attach
-   * @name  Base#attachFile
-   * @method
-   * @param att
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.attachFile = function (att, skipRead) {
-    return this.attach(att, ATTACHMENT, skipRead);
+  Base.prototype.clearCover = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearCover',
+      params: {},
+      skipRead: skipRead
+    });
   };
   /**
    * attaches an Attachment object
    * @name  Base#attach
    * @method
-   * @param att
-   * @param key
+   * @param attachmentId
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.attach = function (att, key, skipRead) {
+  Base.prototype.attach = function (attachmentId, skipRead) {
     if (this.existsInDb()) {
       return this._doApiCall({
         method: 'attach',
-        params: {
-          attachments: [att._id],
-          key: key
-        },
+        params: { attachments: [attachmentId] },
         skipRead: skipRead
       });
     } else {
@@ -5044,22 +6187,146 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
    * detaches an Attachment by kvId (guid)
    * @name  Base#detach
    * @method
-   * @param keyId (usually the attachment._id)
+   * @param attachmentId
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.detach = function (keyId, skipRead) {
+  Base.prototype.detach = function (attachmentId, skipRead) {
     if (this.existsInDb()) {
       return this._doApiCall({
         method: 'detach',
-        params: {
-          attachments: [keyId],
-          kvId: keyId
-        },
+        params: { attachments: [attachmentId] },
         skipRead: skipRead
       });
     } else {
       return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
+    }
+  };
+  // Flags stuff
+  // ----
+  /**
+   * Sets the flag of an item
+   * @name Base#setFlag
+   * @param flag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setFlag = function (flag, skipRead) {
+    return this._doApiCall({
+      method: 'setFlag',
+      params: { flag: flag },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the flag of an item
+   * @name Base#clearFlag
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearFlag = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearFlag',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Returns a list of Field objects
+   * @param fieldDefs         array of field definitions
+   * @param onlyFormFields    should return only form fields
+   * @param limit             return no more than x fields
+   * @return {Array}
+   */
+  Base.prototype.getSortedFields = function (fieldDefs, onlyFormFields, limit) {
+    var that = this, fields = [], fieldDef = null, fieldValue = null;
+    // Work on copy of fieldDefs array
+    fieldDefs = fieldDefs.slice();
+    // Return only form field definitions?
+    fieldDefs = fieldDefs.filter(function (def) {
+      return onlyFormFields == true ? def.form : true;
+    });
+    // Create a Field object for each field definition
+    for (var i = 0; i < fieldDefs.length; i++) {
+      fieldDef = fieldDefs[i];
+      fieldValue = that.fields[fieldDef.name];
+      if (limit == null || limit > fields.length) {
+        fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
+      }
+    }
+    return fields;
+  };
+  /**
+   * Update item fields based on the given Field objects
+   * @param {Array} fields    array of Field objects
+   */
+  Base.prototype.setSortedFields = function (fields) {
+    for (var i = 0; i < fields.length; i++) {
+      var field = fields[i];
+      if (field.isEmpty()) {
+        delete this.fields[field.name];
+      } else {
+        this.fields[field.name] = field.value;
+      }
+    }
+  };
+  /**
+   * Checks if all item fields are valid
+   * @param  {Array}  fields
+   * @return {Boolean}        
+   */
+  Base.prototype.validateSortedFields = function (fields) {
+    for (var i = 0; i < fields.length; i++) {
+      if (!fields[i].isValid()) {
+        return false;
+      }
+    }
+    return true;
+  };
+  // Implementation
+  // ----
+  /**
+   * Checks if the flag is dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFlag = function () {
+    if (this.raw) {
+      return this.flag != this.raw.flag;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Checks if the fields are dirty compared to the raw response
+   * @returns {boolean}
+   * @private
+   */
+  Base.prototype._isDirtyFields = function () {
+    if (this.raw) {
+      return !common.areEqual(this.fields, this.raw.fields);
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Runs over the custom fields that are dirty and calls `setField`
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._updateFields = function () {
+    var calls = [];
+    if (this.raw) {
+      for (var key in this.fields) {
+        if (this.fields[key] != this.raw.fields[key]) {
+          calls.push(this.setField(key, this.fields[key], true));
+        }
+      }
+    }
+    if (calls.length > 0) {
+      return $.when(calls);
+    } else {
+      return $.Deferred().resolve(this);
     }
   };
   // toJson, fromJson
@@ -5083,89 +6350,85 @@ base = function ($, common, api, Document, Comment, Attachment, KeyValue) {
   Base.prototype._fromJson = function (data, options) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.flag = data.flag || DEFAULTS.flag;
+      that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
-      return that._fromKeyValuesJson(data, options);
+      that.barcodes = data.barcodes || DEFAULTS.barcodes;
+      return that._fromCommentsJson(data, options).then(function () {
+        return that._fromAttachmentsJson(data, options);
+      });
     });
   };
   /**
-   * _fromKeyValuesJson: reads the data.keyValues
+   * _toJsonFields: makes json which can be used to set fields during `create`
    * @method
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Base.prototype._toJsonFields = function (options) {
+    var fields = {};
+    if (this.fields) {
+      for (var key in this.fields) {
+        fields['fields__' + key] = this.fields[key];
+      }
+    }
+    return fields;
+  };
+  /**
+   * _fromCommentsJson: reads the data.comments
    * @param data
    * @param options
    * @returns {*}
    * @private
    */
-  Base.prototype._fromKeyValuesJson = function (data, options) {
-    // Read only the .keyValues part of the response
-    var obj = null;
-    var that = this;
+  Base.prototype._fromCommentsJson = function (data, options) {
+    var obj = null, that = this;
     this.comments = DEFAULTS.comments.slice();
-    this.attachments = DEFAULTS.attachments.slice();
-    this.keyValues = DEFAULTS.keyValues.slice();
-    this.cover = data.cover || DEFAULTS.cover;
-    if (data.keyValues && data.keyValues.length) {
-      $.each(data.keyValues, function (i, kv) {
-        kv.index = i;
-        // original index needed for sorting, swapping positions
-        switch (kv.key) {
-        case COMMENT:
-          obj = that._getComment(kv, options);
-          if (obj) {
-            that.comments = that.comments || [];
-            that.comments.push(obj);
-          }
-          break;
-        case IMAGE:
-        case ATTACHMENT:
-        case IMAGE_OTHER:
-          obj = that._getAttachment(kv, options);
-          if (obj) {
-            that.attachments = that.attachments || [];
-            that.attachments.push(obj);
-          }
-          break;
-        default:
-          obj = that._getKeyValue(kv, options);
-          if (obj) {
-            that.keyValues = that.keyValues || [];
-            that.keyValues.push(obj);
-          }
-          break;
+    if (data.comments && data.comments.length > 0) {
+      $.each(data.comments, function (i, comment) {
+        obj = that._getComment(comment, options);
+        if (obj) {
+          that.comments.push(obj);
         }
       });
     }
-    that.attachments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
-    that.comments.sort(function (a, b) {
-      return b.modified > a.modified;
-    });
     return $.Deferred().resolve(data);
   };
-  Base.prototype._getComment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
+  /**
+   * _fromAttachmentsJson: reads the data.attachments
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Base.prototype._fromAttachmentsJson = function (data, options) {
+    var obj = null, that = this;
+    this.attachments = DEFAULTS.attachments.slice();
+    if (data.attachments && data.attachments.length > 0) {
+      $.each(data.attachments, function (i, att) {
+        obj = that._getAttachment(att, options);
+        if (obj) {
+          that.attachments.push(obj);
+        }
+      });
+    }
+    return $.Deferred().resolve(data);
+  };
+  Base.prototype._getComment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Comment(spec);
   };
-  Base.prototype._getAttachment = function (kv, options) {
-    var spec = $.extend({
-      ds: this.dsAttachments,
-      fields: this.fields
-    }, options || {}, // can contain; isCover, canBeCover
-    kv);
+  Base.prototype._getAttachment = function (data, options) {
+    var spec = $.extend({ ds: this.ds }, options || {}, data);
     return new Attachment(spec);
   };
-  Base.prototype._getKeyValue = function (kv, options) {
-    var spec = $.extend({
-      ds: this.ds,
-      fields: this.fields
-    }, options || {}, kv);
-    return new KeyValue(spec);
+  Base.prototype._getField = function (data, options) {
+    var spec = $.extend({}, options || {}, data);
+    return new Field(spec);
   };
   return Base;
-}(jquery, common, api, document, comment, attachment, keyvalue);
+}(jquery, common, api, document, comment, attachment, field);
 user = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
@@ -5175,7 +6438,9 @@ user = function ($, Base, common) {
     picture: '',
     role: 'user',
     // user, admin
-    active: true
+    active: true,
+    isOwner: false,
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -5193,7 +6458,7 @@ user = function ($, Base, common) {
    */
   var User = function (opt) {
     var spec = $.extend({
-      fields: [
+      _fields: [
         '*',
         'group',
         'picture'
@@ -5201,27 +6466,15 @@ user = function ($, Base, common) {
     }, opt);
     Base.call(this, spec);
     this.helper = spec.helper;
-    /*
-            from API:
-    
-            login = StringField(primary_key=True, min_length=4)
-            role = StringField(required=True, choices=USER_ROLE)
-            group = ReferenceField(Group)
-            password = StringField(min_length=4)
-            name = StringField(min_length=4)
-            email = EmailField(required=True, unique=True)
-            lastLogin = DateTimeField()
-            profile = EmbeddedDocumentField(UserProfile)
-            active = BooleanField(default=True)
-            picture = ReferenceField(Attachment)
-            timezone = StringField(default="Etc/GMT")  # stored as
-            */
     this.name = spec.name || DEFAULTS.name;
     this.picture = spec.picture || DEFAULTS.picture;
     this.email = spec.email || DEFAULTS.email;
     this.role = spec.role || DEFAULTS.role;
     this.group = spec.group || DEFAULTS.group;
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
+    this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
+    this.archived = spec.archived || DEFAULTS.archived;
+    this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
   User.prototype.constructor = User;
@@ -5241,16 +6494,28 @@ user = function ($, Base, common) {
     case 'user':
     case 'admin':
     case 'root':
+    case 'selfservice':
       return true;
     default:
       return false;
     }
   };
+  User.prototype.emailExists = function () {
+    if (this.isValidEmail()) {
+      // Don't check for emailExists for exisiting user
+      if (this.id != null && this.email == this.raw.email) {
+        return $.Deferred().resolve(false);
+      }
+      return this.dsAnonymous.call('emailExists', { email: this.email }).then(function (resp) {
+        return resp.result;
+      });
+    } else {
+      return $.Deferred().resolve(false);
+    }
+  };
   User.prototype.isValidPassword = function () {
     this.password = $.trim(this.password);
-    var length = this.password.length;
-    var hasDigit = this.password.match(/[0-9]/);
-    return length >= 4 && hasDigit;
+    return common.isValidPassword(this.password);
   };
   /**
    * Checks if the user is valid
@@ -5287,7 +6552,7 @@ user = function ($, Base, common) {
     return isDirty;
   };
   /**
-   * Gets an url for a user avatar
+   * Gets a url for a user avatar
    * 'XS': (64, 64),
    * 'S': (128, 128),
    * 'M': (256, 256),
@@ -5334,6 +6599,100 @@ user = function ($, Base, common) {
       skipRead: skipRead
     });
   };
+  //
+  // Business logic
+  //
+  /**
+   * Checks if a user can be activated
+   * @returns {boolean}
+   */
+  User.prototype.canActivate = function () {
+    return !this.active && this.archived == null;
+  };
+  /**
+   * Checks if a user can be deactivated
+   * @returns {boolean}
+   */
+  User.prototype.canDeactivate = function () {
+    return this.active && this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be archived
+   * @returns {boolean}
+   */
+  User.prototype.canArchive = function () {
+    return this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be unarchived
+   * @returns {boolean}
+   */
+  User.prototype.canUndoArchive = function () {
+    return this.archived != null;
+  };
+  /**
+   * Checks if a user can be owner
+   * @returns {boolean}
+   */
+  User.prototype.canBeOwner = function () {
+    return this.archived == null && this.active && !this.isOwner && this.role == 'admin';
+  };
+  /**
+   * Activates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.activate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'activate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Deactivates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.deactivate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'deactivate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Archives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.archive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'archive',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unarchives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.undoArchive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'undoArchive',
+      skipRead: skipRead
+    });
+  };
   /**
    * Writes the user to a json object
    * @param options
@@ -5346,7 +6705,6 @@ user = function ($, Base, common) {
     data.email = this.email || DEFAULTS.email;
     data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
-    data.active = this.active || DEFAULTS.active;
     return data;
   };
   /**
@@ -5367,17 +6725,310 @@ user = function ($, Base, common) {
       that.email = data.email || DEFAULTS.email;
       that.role = data.role || DEFAULTS.role;
       that.active = data.active != null ? data.active : DEFAULTS.active;
+      that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
+      that.archived = data.archived || DEFAULTS.archived;
       $.publish('user.fromJson', data);
       return data;
     });
   };
   return User;
 }(jquery, base, common);
-Contact = function ($, Base, common, User) {
+helper = function ($, defaultSettings, common) {
+  /**
+   * Allows you to call helpers based on the settings file 
+   * and also settings in group.profile and user.profile
+   * @name Helper
+   * @class Helper
+   * @constructor
+   * @property {object} settings         
+   */
+  return function (settings) {
+    settings = settings || defaultSettings;
+    return {
+      /**
+       * getSettings return settings file which helper uses internally
+       * @return {object}
+       */
+      getSettings: function () {
+        return settings;
+      },
+      /**
+       * getImageCDNUrl gets an image by using the path to a CDN location
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getImageCDNUrl
+       * 
+       * @param groupId
+       * @param attachmentId
+       * @param size
+       * @returns {string}
+       */
+      getImageCDNUrl: function (groupId, attachmentId, size) {
+        return common.getImageCDNUrl(settings, groupId, attachmentId, size);
+      },
+      /**
+       * getImageUrl gets an image by using the datasource /get style and a mimeType
+       * 'XS': (64, 64),
+       * 'S': (128, 128),
+       * 'M': (256, 256),
+       * 'L': (512, 512)
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getImageUrl
+       * 
+       * @param ds
+       * @param pk
+       * @param size
+       * @param bustCache
+       * @returns {string}
+       */
+      getImageUrl: function (ds, pk, size, bustCache) {
+        var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+        if (size) {
+          url += '&size=' + size;
+        }
+        if (bustCache) {
+          url += '&_bust=' + new Date().getTime();
+        }
+        return url;
+      },
+      getICalUrl: function (urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+        var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/locations/call/ical', parts = [];
+        if (locationId) {
+          parts.push('locations[]=' + locationId);
+        }
+        if (customerId) {
+          parts.push('customer=' + customerId);
+        }
+        if (!showOrders) {
+          parts.push('skipOpenOrders=true');
+        }
+        if (!showReservations) {
+          parts.push('skipOpenReservations=true');
+        }
+        return parts.length > 0 ? url + '?' + parts.join('&') : url;
+      },
+      /**
+       * getQRCodeUrl 
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getQRCodeUrl
+       * 
+       * @param  {string} code 
+       * @param  {number} size 
+       * @return {string}      
+       */
+      getQRCodeUrl: function (code, size) {
+        return common.getQRCodeUrl(settings.urlApi, code, size);
+      },
+      /**
+       * getBarcodeUrl 
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getBarcodeUrl
+       * 
+       * @param  {string} code 
+       * @param  {number} size 
+       * @return {string}      
+       */
+      getBarcodeUrl: function (code, width, height) {
+        return common.getBarcodeUrl(settings.urlApi, code, width, height);
+      },
+      /**
+       * getNumItemsLeft
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getNumItemsLeft
+       * 
+       * @param limits
+       * @param stats 
+       * @return {Number}
+       */
+      getNumItemsLeft: function (limits, stats) {
+        var itemsPerStatus = this.getStat(stats, 'items', 'status');
+        return limits.maxItems - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
+      },
+      /**
+       * getNumUsersLeft
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getNumUsersLeft
+       *  
+       * @param limits
+       * @param stats 
+       * @return {Number}
+       */
+      getNumUsersLeft: function (limits, stats) {
+        var usersPerStatus = this.getStat(stats, 'users', 'status');
+        return limits.maxUsers - usersPerStatus.active;
+      },
+      /**
+       * getStat for location
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getStat
+       *
+       * @param stats
+       * @param location
+       * @param type
+       * @param name
+       * @param mode
+       * @return {object}         number or object
+       */
+      getStat: function (stats, type, name, location, mode) {
+        // make sure stats object isn't undefined
+        stats = stats || {};
+        //if no stats for given location found, use all stats object
+        stats = stats[location && location != 'null' ? location : 'all'] || stats['all'];
+        if (stats === undefined)
+          throw 'Invalid stats';
+        // load stats for given mode (defaults to production)
+        stats = stats[mode || 'production'];
+        var statType = stats[type];
+        if (statType === undefined)
+          throw 'Stat doesn\'t exist';
+        if (!name)
+          return statType;
+        var statTypeValue = statType[name];
+        if (statTypeValue === undefined)
+          throw 'Stat value doesn\'t exist';
+        return statTypeValue;
+      },
+      /**
+       * getAccessRights returns access rights based on the user role, profile settings 
+       * and account limits
+       *
+       * Deprecated: Use PermissionHandler instead
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#getAccessRights 
+       * 
+       * @param  role   
+       * @param  profile 
+       * @param  limits
+       * @return {object}       
+       */
+      getAccessRights: function (role, profile, limits) {
+        var isRootOrAdmin = role == 'root' || role == 'admin';
+        var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
+        var useOrders = limits.allowOrders && profile.useOrders;
+        var useReservations = limits.allowReservations && profile.useReservations;
+        var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
+        var useWebHooks = limits.allowWebHooks;
+        var useKits = limits.allowKits && profile.useKits;
+        var useCustody = limits.allowCustody && profile.useCustody;
+        var useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
+        return {
+          contacts: {
+            create: isRootOrAdminOrUser,
+            remove: isRootOrAdminOrUser,
+            update: true,
+            archive: isRootOrAdminOrUser
+          },
+          items: {
+            create: isRootOrAdmin,
+            remove: isRootOrAdmin,
+            update: isRootOrAdmin,
+            updateFlag: isRootOrAdmin,
+            updateLocation: isRootOrAdmin,
+            updateGeo: true
+          },
+          orders: {
+            create: useOrders,
+            remove: useOrders,
+            update: useOrders,
+            updateContact: role != 'selfservice',
+            updateLocation: useOrders,
+            generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
+            transferOrder: useOrders && useOrderTransfers,
+            archive: useOrders && isRootOrAdminOrUser
+          },
+          reservations: {
+            create: useReservations,
+            remove: useReservations,
+            update: useReservations,
+            updateContact: useReservations && role != 'selfservice',
+            updateLocation: useReservations,
+            archive: useReservations && isRootOrAdminOrUser
+          },
+          locations: {
+            create: isRootOrAdmin,
+            remove: isRootOrAdmin,
+            update: isRootOrAdmin
+          },
+          users: {
+            create: isRootOrAdmin,
+            remove: isRootOrAdmin,
+            update: isRootOrAdmin,
+            updateOther: isRootOrAdmin,
+            updateOwn: true
+          },
+          webHooks: {
+            create: useWebHooks && isRootOrAdmin,
+            remove: useWebHooks && isRootOrAdmin,
+            update: useWebHooks && isRootOrAdmin
+          },
+          stickers: {
+            print: isRootOrAdmin,
+            buy: isRootOrAdmin
+          },
+          categories: {
+            create: isRootOrAdmin,
+            update: isRootOrAdmin
+          },
+          account: { update: isRootOrAdmin }
+        };
+      },
+      /**
+       * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
+       * 
+       * @memberOf helper
+       * @method
+       * @name  helper#ensureValue 
+       * 
+       * @param  obj   
+       * @param  prop        
+       * @return {string}       
+       */
+      ensureValue: function (obj, prop) {
+        if (typeof obj === 'string') {
+          return obj;
+        } else if (obj && obj.hasOwnProperty(prop)) {
+          return obj[prop];
+        } else {
+          return obj;
+        }
+      },
+      /**
+       * ensureId, returns id value of object or if you pass a string it returns that exact string 
+       * For example:
+       * ensureId("abc123") --> "abc123"
+       * ensureId({ id:"abc123", name:"example" }) --> "abc123"
+       *
+       * @memberOf helper
+       * @method
+       * @name  helper#ensureId 
+       * 
+       * @param  obj   
+       * @return {string}       
+       */
+      ensureId: function (obj) {
+        return this.ensureValue(obj, '_id');
+      }
+    };
+  };
+}(jquery, settings, common);
+Contact = function ($, Base, common, User, Helper) {
   var DEFAULTS = {
     name: '',
-    company: '',
-    phone: '',
     email: '',
     status: 'active',
     user: {},
@@ -5397,13 +7048,12 @@ Contact = function ($, Base, common, User) {
    */
   var Contact = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.customer'
     }, opt);
     Base.call(this, spec);
+    this.helper = spec.helper || new Helper();
     this.name = spec.name || DEFAULTS.name;
-    this.company = spec.company || DEFAULTS.company;
-    this.phone = spec.phone || DEFAULTS.phone;
     this.email = spec.email || DEFAULTS.email;
     this.status = spec.status || DEFAULTS.status;
     this.user = spec.user || DEFAULTS.user;
@@ -5424,26 +7074,6 @@ Contact = function ($, Base, common, User) {
     return this.name.length >= 3;
   };
   /**
-   * Checks if company is valid
-   * @name  Contact#isValidCompany
-   * @method
-   * @return {Boolean} [description]
-   */
-  Contact.prototype.isValidCompany = function () {
-    this.company = $.trim(this.company);
-    return this.company.length >= 3;
-  };
-  /**
-   * Checks if phone is valid
-   * @name  Contact#isValidPhone
-   * @method
-   * @return {Boolean} [description]
-   */
-  Contact.prototype.isValidPhone = function () {
-    this.phone = $.trim(this.phone);
-    return common.isValidPhone(this.phone);
-  };
-  /**
    * Check is email is valid
    * @name  Contact#isValidEmail
    * @method
@@ -5452,6 +7082,126 @@ Contact = function ($, Base, common, User) {
   Contact.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
     return common.isValidEmail(this.email);
+  };
+  /**
+   * If the contact is linked to a user,
+   * return its user id
+   * Remark: needs field user
+   * @name Contact#getUserId
+   * @method
+   * @return {string}
+   */
+  Contact.prototype.getUserId = function () {
+    return this.helper.ensureId(this.user);
+  };
+  /**
+   * Checks if the user is a synced user
+   * Remark: needs field user
+   * @name Contact#getUserSync
+   * @method
+   * @return {string}
+   */
+  Contact.prototype.getUserSync = function () {
+    return this.user != null && this.user.sync != null ? this.user.sync : '';
+  };
+  //
+  // Business logic
+  //
+  /**
+   * Checks if a contact can be used in a reservation (based on status)
+   * @name Contact#canReserve
+   * @returns {boolean}
+   */
+  Contact.prototype.canReserve = function () {
+    return common.contactCanReserve(this);
+  };
+  /**
+   * Checks if a contact can be used in a checkout (based on status)
+   * @name Contact#canCheckout
+   * @returns {boolean}
+   */
+  Contact.prototype.canCheckout = function () {
+    return common.contactCanCheckout(this);
+  };
+  /**
+   * Checks if we can generate a document for this contact (based on status)
+   * @name Contact#canGenerateDocument
+   * @returns {boolean}
+   */
+  Contact.prototype.canGenerateDocument = function () {
+    return common.contactCanGenerateDocument(this);
+  };
+  /**
+   * Checks if a contact can be archived (based on status)
+   * @name Contact#canArchive
+   * @returns {boolean}
+   */
+  Contact.prototype.canArchive = function () {
+    return common.contactCanArchive(this);
+  };
+  /**
+   * Checks if a contact can be unarchived (based on status)
+   * @name Contact#canUndoArchive
+   * @returns {boolean}
+   */
+  Contact.prototype.canUndoArchive = function () {
+    return common.contactCanUndoArchive(this);
+  };
+  /**
+   * Checks if a contact can be deleted (based on status and link to user)
+   * @name Contact#canDelete
+   * @returns {boolean}
+   */
+  Contact.prototype.canDelete = function () {
+    var that = this;
+    return Base.prototype.canDelete.call(this).then(function (resp) {
+      return resp.result && common.contactCanDelete(that);
+    });
+  };
+  /**
+   * Archive a contact
+   * @name Contact#archive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.archive = function (skipRead) {
+    return this._doApiCall({
+      method: 'archive',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Undo archive of a contact
+   * @name Contact#undoArchive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.undoArchive = function (skipRead) {
+    return this._doApiCall({
+      method: 'undoArchive',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Generates a PDF document for the reservation
+   * @method
+   * @name Contact#generateDocument
+   * @param {string} template id
+   * @param {string} signature (base64)
+   * @param {bool} skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.generateDocument = function (template, signature, skipRead) {
+    return this._doApiLongCall({
+      method: 'generateDocument',
+      params: {
+        template: template,
+        signature: signature
+      },
+      skipRead: skipRead
+    });
   };
   //
   // Base overrides
@@ -5464,7 +7214,7 @@ Contact = function ($, Base, common, User) {
    * @override
    */
   Contact.prototype.isValid = function () {
-    return this.isValidName() && this.isValidCompany() && this.isValidPhone() && this.isValidEmail();
+    return this.isValidName() && this.isValidEmail();
   };
   /**
    * Checks if the contact is empty
@@ -5472,7 +7222,7 @@ Contact = function ($, Base, common, User) {
    * @override
    */
   Contact.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.company == DEFAULTS.company && this.phone == DEFAULTS.phone && this.email == DEFAULTS.email;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email;
   };
   /**
    * Checks if the contact is dirty and needs saving
@@ -5482,27 +7232,9 @@ Contact = function ($, Base, common, User) {
   Contact.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name || this.company != this.raw.company || this.phone != this.raw.phone || this.email != this.raw.email;
+      isDirty = this._isDirtyStringProperty('name') || this._isDirtyStringProperty('email');
     }
     return isDirty;
-  };
-  /**
-   * Archive a contact
-   * @name Contact#archive
-   * @param skipRead
-   * @returns {promise}
-   */
-  Contact.prototype.archive = function (skipRead) {
-    return this.ds.call(this.id, 'archive', {}, skipRead);
-  };
-  /**
-   * Undo archive of a contact
-   * @name Contact#undoArchive
-   * @param skipRead
-   * @returns {promise}
-   */
-  Contact.prototype.undoArchive = function (skipRead) {
-    return this.ds.call(this.id, 'undoArchive', {}, skipRead);
   };
   Contact.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -5510,8 +7242,6 @@ Contact = function ($, Base, common, User) {
   Contact.prototype._toJson = function (options) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
-    data.company = this.company || DEFAULTS.company;
-    data.phone = this.phone || DEFAULTS.phone;
     data.email = this.email || DEFAULTS.email;
     return data;
   };
@@ -5519,8 +7249,6 @@ Contact = function ($, Base, common, User) {
     var that = this;
     return Base.prototype._fromJson.call(this, data, options).then(function (data) {
       that.name = data.name || DEFAULTS.name;
-      that.company = data.company || DEFAULTS.company;
-      that.phone = data.phone || DEFAULTS.phone;
       that.email = data.email || DEFAULTS.email;
       that.status = data.status || DEFAULTS.status;
       that.user = data.user || DEFAULTS.user;
@@ -5529,8 +7257,33 @@ Contact = function ($, Base, common, User) {
       return data;
     });
   };
+  Contact.prototype._create = function (skipRead) {
+    // We override create because we also want
+    // to set possible `fields` during the `create` command
+    var that = this, data = $.extend({}, this._toJson(), this._toJsonFields());
+    delete data.id;
+    return this.ds.create(data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  Contact.prototype._update = function (skipRead) {
+    var that = this;
+    // Don't use the original `_update`
+    // because it uses `_toJson` and lists fields, even if they didn't change
+    // var data = this._toJson();
+    var data = {};
+    if (this._isDirtyStringProperty('name')) {
+      data['name'] = that.name;
+    }
+    if (this._isDirtyStringProperty('email')) {
+      data['email'] = that.email;
+    }
+    return this.ds.update(this.id, data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
   return Contact;
-}(jquery, base, common, user);
+}(jquery, base, common, user, helper);
 DateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
@@ -5606,6 +7359,28 @@ DateHelper = function ($, moment) {
     spec = spec || {};
     this.roundType = spec.roundType || 'nearest';
     this.roundMinutes = spec.roundMinutes || INCREMENT;
+    this.timeFormat24 = spec.timeFormat24 ? spec.timeFormat24 : false;
+    this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
+  };
+  /**
+   * @name parseDate
+   * @method
+   * @param data
+   * @returns {moment}
+   */
+  DateHelper.prototype.parseDate = function (data) {
+    if (typeof data == 'string' || data instanceof String) {
+      // "2014-04-03T12:15:00+00:00" (length 25)
+      // "2014-04-03T09:32:43.841000+00:00" (length 32)
+      if (data.endsWith('+00:00')) {
+        var len = data.length;
+        if (len == 25) {
+          return moment(data.substring(0, len - 6));
+        } else if (len == 32) {
+          return moment(data.substring(0, len - 6).split('.')[0]);
+        }
+      }
+    }
   };
   /**
    * @name  DateHelper#getNow
@@ -5621,7 +7396,7 @@ DateHelper = function ($, moment) {
    * @name DateHelper#getFriendlyDuration
    * @method
    * @param  duration
-   * @return {} 
+   * @return {}
    */
   DateHelper.prototype.getFriendlyDuration = function (duration) {
     return duration.humanize();
@@ -5635,20 +7410,90 @@ DateHelper = function ($, moment) {
    */
   DateHelper.prototype.getFriendlyDateParts = function (date, now, format) {
     /*
-    moment().calendar() shows friendlier dates
-    - when the date is <=7d away:
-      - Today at 4:15 PM
-      - Yesterday at 4:15 PM
-      - Last Monday at 4:15 PM
-      - Wednesday at 4:15 PM
-    - when the date is >7d away:
-      - 07/25/2015
-    */
+     moment().calendar() shows friendlier dates
+     - when the date is <=7d away:
+     - Today at 4:15 PM
+     - Yesterday at 4:15 PM
+     - Last Monday at 4:15 PM
+     - Wednesday at 4:15 PM
+     - when the date is >7d away:
+     - 07/25/2015
+     */
+    if (!moment.isMoment(date)) {
+      date = moment(date);
+    }
     now = now || this.getNow();
-    format = format || 'MMM D [at] h:mm a';
+    format = format || this._momentFormat;
     var diff = now.diff(date, 'days');
     var str = Math.abs(diff) < 7 ? date.calendar() : date.format(format);
     return str.replace('AM', 'am').replace('PM', 'pm').split(' at ');
+  };
+  /**
+   * Returns a number of friendly date ranges with a name
+   * Each date range is a standard transaction duration
+   * @name getDateRanges
+   * @method
+   * @param avgHours
+   * @param numRanges
+   * @param now
+   * @param i18n
+   * @returns {Array} [{counter: 1, from: m(), to: m(), hours: 24, option: 'days', title: '1 Day'}, {...}]
+   */
+  DateHelper.prototype.getDateRanges = function (avgHours, numRanges, now, i18n) {
+    if (now && !moment.isMoment(now)) {
+      now = moment(now);
+    }
+    i18n = i18n || {
+      year: 'year',
+      years: 'years',
+      month: 'month',
+      months: 'months',
+      week: 'week',
+      weeks: 'weeks',
+      day: 'day',
+      days: 'days',
+      hour: 'hour',
+      hours: 'hours'
+    };
+    var timeOptions = [
+        'years',
+        'months',
+        'weeks',
+        'days',
+        'hours'
+      ], timeHourVals = [
+        365 * 24,
+        30 * 24,
+        7 * 24,
+        24,
+        1
+      ], opt = null, val = null, title = null, counter = 0, chosenIndex = -1, ranges = [];
+    // Find the range kind that best fits the avgHours (search from long to short)
+    for (var i = 0; i < timeOptions.length; i++) {
+      val = timeHourVals[i];
+      opt = timeOptions[i];
+      if (avgHours >= val) {
+        if (avgHours % val == 0) {
+          chosenIndex = i;
+          break;
+        }
+      }
+    }
+    now = now || this.getNow();
+    if (chosenIndex >= 0) {
+      for (var i = 1; i <= numRanges; i++) {
+        counter = i * avgHours;
+        title = i18n[counter == 1 ? opt.replace('s', '') : opt];
+        ranges.push({
+          option: opt,
+          hours: counter,
+          title: counter / timeHourVals[chosenIndex] + ' ' + title,
+          from: now.clone(),
+          to: now.clone().add(counter, 'hours')
+        });
+      }
+    }
+    return ranges;
   };
   /**
    * getFriendlyFromTo
@@ -5695,10 +7540,10 @@ DateHelper = function ($, moment) {
   /**
    * @deprecated use getFriendlyFromToInfo
    * [getFriendlyFromToOld]
-   * @param  fromDate    
-   * @param  toDate       
-   * @param  groupProfile 
-   * @return {}              
+   * @param  fromDate
+   * @param  toDate
+   * @param  groupProfile
+   * @return {}
    */
   DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
     var mFrom = this.roundFromTime(fromDate, groupProfile);
@@ -5714,11 +7559,11 @@ DateHelper = function ($, moment) {
   };
   /**
    * [getFriendlyDateText]
-   * @param  date    
-   * @param  useHours 
-   * @param  now     
-   * @param  format  
-   * @return {string}         
+   * @param  date
+   * @param  useHours
+   * @param  now
+   * @param  format
+   * @return {string}
    */
   DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
     if (date == null) {
@@ -5824,17 +7669,19 @@ Document = function ($, common, api) {
    * @name Document
    * @class
    * @constructor
+   * @property {ApiDataSource}  ds        - The documents primary key
+   * @property {array}  _fields           - The raw, unprocessed json response
    * @property {string}  id               - The documents primary key
    * @property {string}  raw              - The raw, unprocessed json response
    */
   var Document = function (spec) {
-    this.ds = spec.ds;
-    // ApiDataSource object
-    this.fields = spec.fields;
-    // e.g. [*]
     this.raw = null;
     // raw json object
-    this.id = spec.id || DEFAULTS.id;  // doc _id
+    this.id = spec.id || DEFAULTS.id;
+    // doc _id
+    this.ds = spec.ds;
+    // ApiDataSource object
+    this._fields = spec._fields;  // e.g. [*]
   };
   /**
    * Resets the object
@@ -5898,12 +7745,12 @@ Document = function ($, common, api) {
    * Reloads the object from db
    * @name  Document#reload
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.reload = function (fields) {
+  Document.prototype.reload = function (_fields) {
     if (this.existsInDb()) {
-      return this.get(fields);
+      return this.get(_fields);
     } else {
       return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
     }
@@ -5912,13 +7759,13 @@ Document = function ($, common, api) {
    * Gets an object by the default api.get
    * @name  Document#get
    * @method
-   * @param fields
+   * @param _fields
    * @returns {promise}
    */
-  Document.prototype.get = function (fields) {
+  Document.prototype.get = function (_fields) {
     if (this.existsInDb()) {
       var that = this;
-      return this.ds.get(this.id, fields || this.fields).then(function (data) {
+      return this.ds.get(this.id, _fields || this._fields).then(function (data) {
         return that._fromJson(data);
       });
     } else {
@@ -5942,12 +7789,7 @@ Document = function ($, common, api) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
-    var that = this;
-    var data = this._toJson();
-    delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
-    });
+    return this._create(skipRead);
   };
   /**
    * Updates an object by the default api.update
@@ -5966,12 +7808,7 @@ Document = function ($, common, api) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this;
-    var data = this._toJson();
-    delete data.id;
-    return this.ds.update(this.id, data, this.fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
-    });
+    return this._update(skipRead);
   };
   /**
    * Deletes an object by the default api.delete
@@ -5982,10 +7819,7 @@ Document = function ($, common, api) {
   Document.prototype.delete = function () {
     // Call the api /delete on this document
     if (this.existsInDb()) {
-      var that = this;
-      return this.ds.delete(this.id).then(function () {
-        return that.reset();
-      });
+      return this._delete();
     } else {
       return $.Deferred().reject(new Error('Document does not exist'));
     }
@@ -6023,6 +7857,93 @@ Document = function ($, common, api) {
   // Implementation stuff
   // ---
   /**
+   * The actual _create implementation (after all the checks are done)
+   * @param skipRead
+   * @returns {*}
+   * @private
+   */
+  Document.prototype._create = function (skipRead) {
+    var that = this;
+    var data = this._toJson();
+    delete data.id;
+    return this.ds.create(data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  /**
+   * The actual _update implementation (after all the checks are done)
+   * @param skipRead
+   * @returns {*}
+   * @private
+   */
+  Document.prototype._update = function (skipRead) {
+    var that = this;
+    var data = this._toJson();
+    delete data.id;
+    return this.ds.update(this.id, data, this._fields).then(function (data) {
+      return skipRead == true ? data : that._fromJson(data);
+    });
+  };
+  /**
+   * The actual _delete implementation (after all the checks are done)
+   * @returns {*}
+   * @private
+   */
+  Document.prototype._delete = function () {
+    var that = this;
+    return this.ds.delete(this.id).then(function () {
+      return that.reset();
+    });
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyProperty = function (prop) {
+    return this.raw ? this[prop] != this.raw[prop] : false;
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
+   * Because we know that the API doesn't return empty string properties,
+   * we do a special, extra check on that.
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyStringProperty = function (prop) {
+    if (this.raw) {
+      var same = this[prop] == this.raw[prop] || this[prop] == '' && this.raw[prop] == null;
+      return !same;
+    } else {
+      return false;
+    }
+  };
+  /**
+   * Helper for checking if a simple object property is dirty
+   * compared to the original raw result
+   * @param prop
+   * @returns {boolean}
+   * @private
+   */
+  Document.prototype._isDirtyMomentProperty = function (prop) {
+    if (this.raw) {
+      var newVal = this[prop], oldVal = this.raw[prop];
+      if (newVal == null && oldVal == null) {
+        return false;
+      } else if (newVal && oldVal) {
+        return !newVal.isSame(oldVal);
+      } else {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  };
+  /**
    * Gets the id of a document
    * @param obj
    * @param prop
@@ -6039,7 +7960,7 @@ Document = function ($, common, api) {
   };
   /**
    * Wrapping the this.ds.call method
-   * {pk: '', method: '', params: {}, fields: '', timeOut: null, usePost: null, skipRead: null}
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
    * @method
    * @param spec
    * @returns {promise}
@@ -6047,18 +7968,409 @@ Document = function ($, common, api) {
    */
   Document.prototype._doApiCall = function (spec) {
     var that = this;
-    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec.fields || this.fields, spec.timeOut, spec.usePost).then(function (data) {
+    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
   };
+  /**
+   * Wrapping the this.ds.call method with a longer timeout
+   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
+   * @method
+   * @param spec
+   * @returns {promise}
+   * @private
+   */
+  Document.prototype._doApiLongCall = function (spec) {
+    spec.timeOut = spec.timeOut || 30000;
+    return this._doApiCall(spec);
+  };
   return Document;
 }(jquery, common, api);
-Item = function ($, Base) {
+Group = function ($, common, api, Document) {
+  // Some constant values
+  var DEFAULTS = {
+    id: '',
+    name: '',
+    itemFlags: [],
+    kitFlags: [],
+    customerFlags: [],
+    orderFlags: [],
+    reservationFlags: [],
+    itemFields: [],
+    kitFields: [],
+    customerFields: [],
+    orderFields: [],
+    reservationFields: [],
+    cancelled: null
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Document.prototype;
+  /**
+   * Group describes a group which can trigger on certain events (signals)
+   * @name  Group
+   * @class
+   * @property {string} name              the group name
+   * @property {array} itemFlags          the groups item flags
+   * @property {array} kitFlags           the groups kit flags
+   * @property {array} customerFlags      the groups customer flags
+   * @property {array} orderFlags         the groups order flags
+   * @property {array} reservationFlags   the groups reservation flags
+   * @property {array} itemFields         the groups item fields
+   * @property {array} kitFields          the groups kit fields
+   * @property {array} customerFields     the groups customer fields
+   * @property {array} reservationFields  the groups reservation fields
+   * @property {array} orderFields        the groups order fields
+   * @constructor
+   * @extends Document
+   */
+  var Group = function (opt) {
+    var spec = $.extend({}, opt);
+    Document.call(this, spec);
+    this.name = spec.name || DEFAULTS.name;
+    this.itemFlags = spec.itemFlags || DEFAULTS.itemFlags.slice();
+    this.kitFlags = spec.kitFlags || DEFAULTS.kitFlags.slice();
+    this.customerFlags = spec.customerFlags || DEFAULTS.customerFlags.slice();
+    this.orderFlags = spec.orderFlags || DEFAULTS.orderFlags.slice();
+    this.reservationFlags = spec.reservationFlags || DEFAULTS.reservationFlags.slice();
+    this.itemFields = spec.itemFields || DEFAULTS.itemFields.slice();
+    this.kitFields = spec.kitFields || DEFAULTS.kitFields.slice();
+    this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
+    this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
+    this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
+  };
+  Group.prototype = new tmp();
+  Group.prototype.constructor = Group;
+  // Business logic
+  // ----
+  /**
+   * Sets the name for a group
+   * @param name
+   * @returns {promise}
+   */
+  Group.prototype.updateName = function (name) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'updateName',
+      location: name
+    });
+  };
+  /**
+   * Gets the stats (for a specific location)
+   * @param locationId
+   * @returns {promise}
+   */
+  Group.prototype.getStats = function (locationId) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'getStats',
+      location: locationId
+    });
+  };
+  /**
+   * Updates the flags for a certain collection of documents
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param flags
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.updateFlags = function (collection, flags, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'updateFlags',
+      collection: collection,
+      flags: flags,
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Creates a field definition for a certain collection of documents
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param name
+   * @param kind
+   * @param required
+   * @param form
+   * @param unit
+   * @param editor
+   * @param description
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'createField',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        name: name,
+        kind: kind,
+        required: required,
+        form: form,
+        unit: unit,
+        editor: editor,
+        description: description
+      }
+    });
+  };
+  /**
+   * Updates a field definition for a certain collection of documents
+   * Also renames the field key on each of the documents that contain that field
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param name
+   * @param newName
+   * @param kind
+   * @param required
+   * @param form
+   * @param unit
+   * @param editor
+   * @param description
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'updateField',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        name: name,
+        newName: newName,
+        kind: kind,
+        required: required,
+        form: form,
+        unit: unit,
+        editor: editor,
+        description: description
+      }
+    });
+  };
+  /**
+   * Deletes a field definition for a certain collection of documents
+   * It will remove the field on all documents of that type
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param name
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.deleteField = function (collection, name, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'deleteField',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        name: name
+      }
+    });
+  };
+  /**
+   * Moves a field definition for a certain collection of documents
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param oldPos
+   * @param newPos
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.moveField = function (collection, oldPos, newPos, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'moveField',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        oldPos: oldPos,
+        newPos: newPos
+      }
+    });
+  };
+  /**
+   * Buys a single product from our in-app store
+   * @param productId
+   * @param quantity
+   * @param shipping
+   * @returns {promise}
+   */
+  Group.prototype.buyProduct = function (productId, quantity, shipping) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'buyProduct',
+      skipRead: true,
+      params: {
+        productId: productId,
+        quantity: quantity,
+        shipping: shipping
+      }
+    });
+  };
+  /**
+   * Buys multiple products from our in-app store
+   * @param listOfProductQtyTuples
+   * @param shipping
+   * @returns {promise}
+   */
+  Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'buyProducts',
+      skipRead: true,
+      params: {
+        products: listOfProductQtyTuples,
+        shipping: shipping
+      }
+    });
+  };
+  /**
+   * Add tags
+   * @param {Array} tags 
+   */
+  Group.prototype.addTags = function (tags) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'addTags',
+      skipRead: true,
+      params: { tags: tags }
+    });
+  };
+  /**
+   * Remove tags
+   * @param {Array} tags 
+   */
+  Group.prototype.removeTags = function (tags) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'removeTags',
+      skipRead: true,
+      params: { tags: tags }
+    });
+  };
+  // Helpers
+  // ----
+  /**
+   * Helper method that gets all known fields for a certain collection of documents
+   * @param coll
+   * @param form
+   * @returns {Array}
+   */
+  Group.prototype.getFieldsForCollection = function (coll, form) {
+    var fields = [];
+    switch (coll) {
+    case 'items':
+      fields = this.itemFields;
+      break;
+    case 'kits':
+      fields = this.kitFields;
+      break;
+    case 'contacts':
+    case 'customers':
+      fields = this.customerFields;
+      break;
+    case 'reservations':
+      fields = this.reservationFields;
+      break;
+    case 'checkouts':
+    case 'orders':
+      fields = this.orderFields;
+      break;
+    default:
+      break;
+    }
+    if (form != null) {
+      fields = $.grep(fields, function (f, i) {
+        return f.form == form;
+      });
+    }
+    return fields;
+  };
+  /**
+   * Helper method that gets all known flags for a certain collection of documents
+   * @param coll
+   * @returns {Array}
+   */
+  Group.prototype.getFlagsForCollection = function (coll) {
+    switch (coll) {
+    case 'items':
+      return this.itemFlags;
+    case 'kits':
+      return this.kitFlags;
+    case 'contacts':
+    case 'customers':
+      return this.customerFlags;
+    case 'reservations':
+      return this.reservationFlags;
+    case 'checkouts':
+    case 'orders':
+      return this.orderFlags;
+    default:
+      return [];
+    }
+  };
+  //
+  // Specific validators
+  /**
+   * Checks if name is valid
+   * @name Group#isValidName
+   * @method
+   * @return {Boolean}
+   */
+  Group.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    return this.name.length >= 3;
+  };
+  // toJson, fromJson
+  // ----
+  /**
+   * _toJson, makes a dict of params to use during create / update
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Group.prototype._toJson = function (options) {
+    var data = Document.prototype._toJson.call(this, options);
+    data.name = this.name;
+    return data;
+  };
+  /**
+   * _fromJson: read some basic information
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns {promise}
+   * @private
+   */
+  Group.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.name = data.name || DEFAULTS.name;
+      that.itemFlags = data.itemFlags || DEFAULTS.itemFlags.slice();
+      that.kitFlags = data.kitFlags || DEFAULTS.kitFlags.slice();
+      that.customerFlags = data.customerFlags || DEFAULTS.customerFlags.slice();
+      that.orderFlags = data.orderFlags || DEFAULTS.orderFlags.slice();
+      that.reservationFlags = data.reservationFlags || DEFAULTS.reservationFlags.slice();
+      that.itemFields = data.itemFields || DEFAULTS.itemFields.slice();
+      that.kitFields = data.kitFields || DEFAULTS.kitFields.slice();
+      that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
+      that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
+      that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
+      that.cancelled = data.cancelled || DEFAULTS.cancelled;
+      return data;
+    });
+  };
+  return Group;
+}(jquery, common, api, document);
+Item = function ($, common, Base) {
   var FLAG = 'cheqroom.prop.Custom', DEFAULT_LAT = 0, DEFAULT_LONG = 0, DEFAULTS = {
       name: '',
       status: '',
       codes: [],
-      flag: '',
+      brand: '',
+      model: '',
+      warrantyDate: null,
+      purchaseDate: null,
+      purchasePrice: null,
       location: '',
       category: '',
       geo: [
@@ -6082,27 +8394,39 @@ Item = function ($, Base) {
    * @name Item
    * @class Item
    * @constructor
-   * @property {string} name         the name of the item
-   * @property {status} status       the status of the item in an order, or expired
-   * @property {string} flag         the item flag
-   * @property {string} location     the item location primary key (empty if in_custody)
-   * @property {string} category     the item category primary key
-   * @property {Array} geo           the item geo position in lat lng array
-   * @property {string} address      the item geo position address
-   * @property {string} order        the order pk, if the item is currently in an order
-   * @property {string} custody      the customer pk, if the item is currently in custody of someone
+   * @property {string} name              the name of the item
+   * @property {string} status            the status of the item in an order, or expired
+   * @property {string} brand             the item brand
+   * @property {string} model             the item model
+   * @property {moment} warrantyDate      the item warranty date
+   * @property {moment} purchaseDate      the item purchase date
+   * @property {string} purchasePrice     the item purchase price
+   * @property {Array} codes              the item qr codes
+   * @property {string} location          the item location primary key (empty if in_custody)
+   * @property {string} category          the item category primary key
+   * @property {Array} geo                the item geo position in lat lng array
+   * @property {string} address           the item geo position address
+   * @property {string} order             the order pk, if the item is currently in an order
+   * @property {string} kit               the kit pk, if the item is currently in a kit
+   * @property {string} custody           the customer pk, if the item is currently in custody of someone
+   * @property {string} cover             the attachment pk of the main image
+   * @property {string} catalog           the catalog pk, if the item was made based on a product in the catalog
    * @extends Base
    */
   var Item = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.item'
     }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.status = spec.status || DEFAULTS.status;
+    this.brand = spec.brand || DEFAULTS.brand;
+    this.model = spec.model || DEFAULTS.model;
+    this.warrantyDate = spec.warrantyDate || DEFAULTS.warrantyDate;
+    this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
+    this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
     this.codes = spec.codes || DEFAULTS.codes;
-    this.flag = spec.flag || DEFAULTS.flag;
     this.location = spec.location || DEFAULTS.location;
     // location._id
     this.category = spec.category || DEFAULTS.category;
@@ -6140,8 +8464,8 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.isEmpty = function () {
-    // Checks for: name, status, codes, flag, location, category
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.codes.length == 0 && this.flag == DEFAULTS.flag && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
+    // Checks for: name, status, brand, model, purchaseDate, purchasePrice, codes, location, category
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.brand == DEFAULTS.brand && this.model == DEFAULTS.model && this.warrantyDate == DEFAULTS.warrantyDate && this.purchaseDate == DEFAULTS.purchaseDate && this.purchasePrice == DEFAULTS.purchasePrice && this.codes.length == 0 && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
   };
   /**
    * Checks if the item is dirty and needs saving
@@ -6149,18 +8473,33 @@ Item = function ($, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyFlag() || this._isDirtyGeo();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
   };
   Item.prototype._toJson = function (options) {
-    // Writes out; id, name, category, location, catalog
+    // Writes out: id, name,
+    //             brand, model, purchaseDate, purchasePrice
+    //             category, location, catalog
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
+    data.brand = this.brand || DEFAULTS.brand;
+    data.model = this.model || DEFAULTS.model;
+    data.warrantyDate = this.warrantyDate || DEFAULTS.warrantyDate;
+    data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
+    data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
     data.category = this.category || DEFAULTS.category;
     data.location = this.location || DEFAULTS.location;
     data.catalog = this.catalog || DEFAULTS.catalog;
+    // Remove values of null during create
+    // Avoids: 422 Unprocessable Entity
+    // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
+    for (var k in data) {
+      if (data[k] == null) {
+        delete data[k];
+      }
+    }
     return data;
   };
   Item.prototype._fromJson = function (data, options) {
@@ -6168,6 +8507,11 @@ Item = function ($, Base) {
     return Base.prototype._fromJson.call(this, data, options).then(function () {
       that.name = data.name || DEFAULTS.name;
       that.status = data.status || DEFAULTS.status;
+      that.brand = data.brand || DEFAULTS.brand;
+      that.model = data.model || DEFAULTS.model;
+      that.warrantyDate = data.warrantyDate || DEFAULTS.warrantyDate;
+      that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
+      that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
       that.codes = data.codes || DEFAULTS.codes;
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
@@ -6199,26 +8543,11 @@ Item = function ($, Base) {
         custodyId = data.custody._id ? data.custody._id : data.custody;
       }
       that.custody = custodyId;
-      // Read the flag from the keyvalues
-      return that._fromJsonFlag(data, options).then(function () {
-        $.publish('item.fromJson', data);
-        return data;
-      });
+      $.publish('item.fromJson', data);
+      return data;
     });
   };
-  Item.prototype._fromJsonFlag = function (data, options) {
-    var that = this;
-    this.flag = DEFAULTS.flag;
-    if (data.keyValues != null && data.keyValues.length > 0) {
-      $.each(data.keyValues, function (i, kv) {
-        if (kv.key == FLAG) {
-          that.flag = kv.value;
-          return false;
-        }
-      });
-    }
-    return $.Deferred().resolve(data);
-  };
+  // Deprecated
   Item.prototype._toJsonKeyValues = function () {
     var that = this;
     var params = {};
@@ -6231,20 +8560,27 @@ Item = function ($, Base) {
     }
     return params;
   };
-  Item.prototype._getKeyValue = function (kv, options) {
-    // Flag is a special keyvalue, we won't read it into keyValues
-    // but set it via _fromJsonFlag
-    return kv.key == FLAG ? null : Base.prototype._getKeyValue(kv, options);
-  };
+  // Deprecated
   Item.prototype._isDirtyName = function () {
-    if (this.raw) {
-      return this.name != this.raw.name;
-    } else {
-      return false;
-    }
+    return this._isDirtyStringProperty('name');
+  };
+  Item.prototype._isDirtyBrand = function () {
+    return this._isDirtyStringProperty('brand');
+  };
+  Item.prototype._isDirtyModel = function () {
+    return this._isDirtyStringProperty('model');
+  };
+  Item.prototype._isDirtyWarrantyDate = function () {
+    return this._isDirtyMomentProperty('warrantyDate');
+  };
+  Item.prototype._isDirtyPurchaseDate = function () {
+    return this._isDirtyMomentProperty('purchaseDate');
+  };
+  Item.prototype._isDirtyPurchasePrice = function () {
+    return this._isDirtyProperty('purchasePrice');
   };
   Item.prototype._isDirtyLocation = function () {
-    if (this.raw) {
+    if (this.raw && this.status != 'in_custody') {
       var locId = DEFAULTS.location;
       if (this.raw.location) {
         locId = this.raw.location._id ? this.raw.location._id : this.raw.location;
@@ -6265,22 +8601,6 @@ Item = function ($, Base) {
       return false;
     }
   };
-  Item.prototype._isDirtyFlag = function () {
-    if (this.raw) {
-      var flag = DEFAULTS.flag;
-      if (this.raw.keyValues && this.raw.keyValues.length) {
-        $.each(this.raw.keyValues, function (i, kv) {
-          if (kv.key == FLAG) {
-            flag = kv.value;
-            return false;
-          }
-        });
-      }
-      return this.flag != flag;
-    } else {
-      return false;
-    }
-  };
   Item.prototype._isDirtyGeo = function () {
     if (this.raw) {
       var address = this.raw.address || DEFAULTS.address;
@@ -6289,6 +8609,9 @@ Item = function ($, Base) {
     } else {
       return false;
     }
+  };
+  Item.prototype._isDirtyFlag = function () {
+    return this._isDirtyStringProperty('flag');
   };
   //
   // Business logic
@@ -6307,11 +8630,11 @@ Item = function ($, Base) {
     });
   };
   /**
-  * updates the Item
-  * We override because Item.update does not support updating categories
-  * @param skipRead
-  * @returns {*}
-  */
+   * updates the Item
+   * We override because Item.update does not support updating categories
+   * @param skipRead
+   * @returns {*}
+   */
   Item.prototype.update = function (skipRead) {
     if (this.isEmpty()) {
       return $.Deferred().reject(new Error('Cannot update to empty document'));
@@ -6322,12 +8645,7 @@ Item = function ($, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this;
-    var dfdCheck = $.Deferred();
-    var dfdCategory = $.Deferred();
-    var dfdLocation = $.Deferred();
-    var dfdName = $.Deferred();
-    var dfdFlag = $.Deferred();
+    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdFlags = $.Deferred(), dfdBasic = $.Deferred();
     if (this._isDirtyCategory()) {
       this.canChangeCategory(this.category).done(function (data) {
         if (data.result) {
@@ -6345,22 +8663,32 @@ Item = function ($, Base) {
       } else {
         dfdCategory.resolve();
       }
-      if (that._isDirtyLocation()) {
+      // Skip update location if item is in custody
+      if (that._isDirtyLocation() && that.status != 'in_custody') {
         dfdLocation = that.changeLocation(that.location);
       } else {
         dfdLocation.resolve();
       }
-      if (that._isDirtyName()) {
-        dfdName = that.updateName(that.name);
+      if (that._isDirtyFields()) {
+        dfdFields = that._updateFields();
       } else {
-        dfdName.resolve();
+        dfdFields.resolve();
       }
       if (that._isDirtyFlag()) {
-        dfdFlag = that.setFlag(that.flag);
+        if (that.flag == '' || that.flag == null) {
+          dfdFlags = that.setFlag(that.flag);
+        } else {
+          dfdFlags = that.clearFlag(that.flag);
+        }
       } else {
-        dfdFlag.resolve();
+        dfdFlags.resolve();
       }
-      return $.when(dfdCategory, dfdLocation, dfdName, dfdFlag);
+      if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice()) {
+        dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice);
+      } else {
+        dfdBasic.resolve();
+      }
+      return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
     });
   };
   /**
@@ -6380,10 +8708,9 @@ Item = function ($, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
-    var that = this;
-    var data = $.extend(this._toJson(), this._toJsonKeyValues());
+    var that = this, data = $.extend(this._toJson(), this._toJsonFields());
     delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
+    return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -6394,7 +8721,7 @@ Item = function ($, Base) {
    * @param  times
    * @param  autoNumber
    * @param  startFrom
-   * @return {promise}       
+   * @return {promise}
    */
   Item.prototype.createMultiple = function (times, autoNumber, startFrom, skipRead) {
     if (this.existsInDb()) {
@@ -6407,12 +8734,19 @@ Item = function ($, Base) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
     var that = this;
-    var data = $.extend(this._toJson(), this._toJsonKeyValues(), {
+    var data = $.extend(this._toJson(), this._toJsonFields(), {
       times: times || 1,
       autoNumber: autoNumber || false,
       startFrom: startFrom
     });
     delete data.id;
+    // BUGFFIX model name clash issue
+    // model == Item property
+    // model == database model
+    if (data.model != null) {
+      data.brandModel = data.model;
+      delete data.model;
+    }
     return this._doApiCall({
       method: 'createMultiple',
       params: data
@@ -6441,6 +8775,63 @@ Item = function ($, Base) {
       },
       skipRead: true  // response is an array of new Item objects!!
     });
+  };
+  /**
+   * Checks if an item can be reserved (based on status)
+   * @name Item#canReserve
+   * @returns {boolean}
+   */
+  Item.prototype.canReserve = function () {
+    return common.itemCanReserve(this);
+  };
+  /**
+   * Checks if an item can be checked out (based on status)
+   * @name Item#canCheckout
+   * @returns {boolean}
+   */
+  Item.prototype.canCheckout = function () {
+    return common.itemCanCheckout(this);
+  };
+  /**
+   * Checks if we can go to the checkout of an item (based on status)
+   * @name Item#canGoToCheckout
+   * @returns {boolean}
+   */
+  Item.prototype.canGoToCheckout = function () {
+    return common.itemCanGoToCheckout(this);
+  };
+  /**
+   * Checks if an item can be checked in (based on status)
+   * @name Item#canCheckin
+   * @returns {boolean}
+   */
+  Item.prototype.canCheckin = function () {
+    return common.itemCanCheckin(this);
+  };
+  /**
+   * Checks if an item can be expired (based on status)
+   * @name Item#canExpire
+   * @returns {boolean}
+   */
+  Item.prototype.canExpire = function () {
+    return common.itemCanExpire(this);
+  };
+  /**
+   * Checks if an item can be made available again (based on status)
+   * @name Item#canUndoExpire
+   * @returns {boolean}
+   */
+  Item.prototype.canUndoExpire = function () {
+    return common.itemCanUndoExpire(this);
+  };
+  /**
+   * Checks if an item can be deleted
+   * @name Item#canDelete
+   * @returns {boolean}
+   */
+  Item.prototype.canDelete = function () {
+    var can = Base.prototype.canDelete.call(this);
+    return can && common.itemCanDelete(this);
   };
   /**
    * Expires an item, puts it in the *expired* status
@@ -6528,15 +8919,50 @@ Item = function ($, Base) {
     });
   };
   /**
-   * Updates the name of an item
-   * @name Item#updateName
+   * Gets the last number for items with this name
+   * @name Item#getLastNumber
+   * @returns {promise}
+   */
+  Item.prototype.getLastNumber = function () {
+    // Do a collection API call to get the last number for items with this name
+    return this.ds.call(null, 'getLastItemNumber', { name: this.name });
+  };
+  /**
+   * Updates the basic fields of an item
+   * @name Item#updateBasicFields
    * @param name
    * @param skipRead
    * @returns {promise}
    */
-  Item.prototype.updateName = function (name, skipRead) {
-    var that = this;
-    return this.ds.update(this.id, { name: name }, this.fields).then(function (data) {
+  Item.prototype.updateBasicFields = function (name, brand, model, warrantyDate, purchaseDate, purchasePrice, skipRead) {
+    var that = this, params = {};
+    if (name != null && name != this.raw.name) {
+      params['name'] = name;
+    }
+    if (brand != null && brand != this.raw.brand) {
+      params['brand'] = brand;
+    }
+    if (model != null && model != this.raw.model) {
+      params['model'] = model;
+    }
+    if (warrantyDate != null && !warrantyDate.isSame(this.raw.warrantyDate)) {
+      params['warrantyDate'] = warrantyDate;
+    }
+    if (purchaseDate != null && !purchaseDate.isSame(this.raw.purchaseDate)) {
+      params['purchaseDate'] = purchaseDate;
+    }
+    if (purchasePrice != null && purchasePrice != this.raw.purchasePrice) {
+      params['purchasePrice'] = purchasePrice;
+    }
+    // Remove values of null during create
+    // Avoids: 422 Unprocessable Entity
+    // ValidationError (Item:TZe33wVKWwkKkpACp6Xy5T) (FloatField only accepts float values: ['purchasePrice'])
+    //for (var k in params) {
+    //    if (params[k] == null) {
+    //        delete params[k];
+    //    }
+    //}
+    return this.ds.update(this.id, params, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -6555,7 +8981,9 @@ Item = function ($, Base) {
         pks: [this.id],
         category: category
       },
-      skipRead: true  // the response is a hash with results and conflicts
+      skipRead: true,
+      // the response is a hash with results and conflicts
+      _fields: '*'
     });
   };
   /**
@@ -6581,31 +9009,28 @@ Item = function ($, Base) {
     });
   };
   /**
-   * Sets the flag of an item
-   * @name Item#setFlag
-   * @param flag
-   * @param skipRead
-   * @returns {promise}
+   * Checks if custody can be taken for an item (based on status)
+   * @name Item#canTakeCustody
+   * @returns {boolean}
    */
-  Item.prototype.setFlag = function (flag, skipRead) {
-    return this._doApiCall({
-      method: 'setFlag',
-      params: { flag: flag },
-      skipRead: skipRead
-    });
+  Item.prototype.canTakeCustody = function () {
+    return common.itemCanTakeCustody(this);
   };
   /**
-   * Clears the flag of an item
-   * @name Item#clearFlag
-   * @param skipRead
-   * @returns {promise}
+   * Checks if custody can be released for an item (based on status)
+   * @name Item#canReleaseCustody
+   * @returns {boolean}
    */
-  Item.prototype.clearFlag = function (skipRead) {
-    return this._doApiCall({
-      method: 'clearFlag',
-      params: {},
-      skipRead: skipRead
-    });
+  Item.prototype.canReleaseCustody = function () {
+    return common.itemCanReleaseCustody(this);
+  };
+  /**
+   * Checks if custody can be transferred for an item (based on status)
+   * @name Item#canTransferCustody
+   * @returns {boolean}
+   */
+  Item.prototype.canTransferCustody = function () {
+    return common.itemCanTransferCustody(this);
   };
   /**
    * Takes custody of an item
@@ -6653,164 +9078,13 @@ Item = function ($, Base) {
     });
   };
   return Item;
-}(jquery, base);
-KeyValue = function ($) {
-  var DEFAULTS = {
-    id: '',
-    pk: '',
-    key: '',
-    kind: 'string',
-    value: null,
-    modified: null,
-    by: null,
-    index: 0
-  };
-  /**
-   * KeyValue class
-   * @name  KeyValue
-   * @class    
-   * @constructor
-   * 
-   * @param spec
-   */
-  var KeyValue = function (spec) {
-    this.ds = spec.ds;
-    this.fields = spec.fields;
-    this.raw = null;
-    // the raw json object
-    this.id = spec.id || DEFAULTS.id;
-    this.pk = spec.pk || DEFAULTS.pk;
-    this.key = spec.key || DEFAULTS.key;
-    this.kind = spec.kind || DEFAULTS.kind;
-    // string, int, float, bool, date, attachment
-    this.value = spec.value || DEFAULTS.value;
-    this.modified = spec.modified || DEFAULTS.modified;
-    this.by = spec.by || DEFAULTS.by;
-    this.index = spec.index || DEFAULTS.index;
-  };
-  /**
-   * Checks if the document exists in the database
-   * @name  KeyValue#existsInDb
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.existsInDb = function () {
-    return this.id != null && this.id.length > 0;
-  };
-  /**
-   * Gets the name for this keyValue
-   * @name  KeyValue#getName
-   * @method
-   * @returns {string}
-   */
-  KeyValue.prototype.getName = function () {
-    // cheqroom.prop.Warranty+date
-    // cheqroom.prop.Buy+price;EUR
-    var keyParts = this.key.split(';');
-    var noUnit = keyParts[0];
-    return noUnit.split('.').pop().split('+').join(' ');
-  };
-  /**
-   * Gets the unit for this keyValue, if no unit returns ""
-   * @name  KeyValue#getUnit
-   * @method
-   * @returns {string}
-   */
-  KeyValue.prototype.getUnit = function () {
-    var keyParts = this.key.split(';');
-    return keyParts.length == 2 ? keyParts[1] : '';
-  };
-  /**
-   * Returns if keyValue is a url 
-   * @name  KeyValue#isUrl
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isUrl = function () {
-    return this.value && (typeof this.value == 'string' && this.value.isValidUrl());
-  };
-  /**
-   * Checks if the object is empty
-   * after calling reset() isEmpty() should return true
-   * @name  KeyValue#isEmpty
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isEmpty = function () {
-    return this.id == DEFAULTS.id && this.pk == DEFAULTS.pk && this.key == DEFAULTS.key && this.kind == DEFAULTS.kind && this.value == DEFAULTS.value && this.modified == DEFAULTS.modified && this.by == DEFAULTS.by;
-  };
-  /**
-   * Checks if the object has changed
-   * @name KeyValue#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isDirty = function () {
-    return false;
-  };
-  /**
-   * Checks if the object is valid
-   * @name  KeyValue#isValid
-   * @method
-   * @returns {boolean}
-   */
-  KeyValue.prototype.isValid = function () {
-    return true;
-  };
-  /**
-   * Resets the object
-   * @name  KeyValue#reset
-   * @method
-   * @returns promise
-   */
-  KeyValue.prototype.reset = function () {
-    return this._fromJson(DEFAULTS, null);
-  };
-  /**
-   * _toJson, makes a dict of the object
-   * @method
-   * @param options
-   * @returns {object}
-   * @private
-   */
-  KeyValue.prototype._toJson = function (options) {
-    return {
-      id: this.id,
-      pk: this.pk,
-      key: this.key,
-      kind: this.kind,
-      value: this.value,
-      modified: this.modified,
-      by: this.by
-    };
-  };
-  /**
-   * _fromJson: in this implementation we'll only read
-   * the data.keyValues into: comments, attachments, keyValues
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @returns promise
-   * @private
-   */
-  KeyValue.prototype._fromJson = function (data, options) {
-    this.raw = data;
-    this.id = data.id || DEFAULTS.id;
-    this.pk = data.pk || DEFAULTS.pk;
-    this.key = data.key || DEFAULTS.key;
-    this.kind = data.kind || DEFAULTS.kind;
-    this.value = data.value || DEFAULTS.value;
-    this.modified = data.modified || DEFAULTS.modified;
-    this.by = data.by || DEFAULTS.by;
-    return $.Deferred().resolve(data);
-  };
-  return KeyValue;
-}(jquery);
+}(jquery, common, base);
 Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     items: [],
-    status: 'unknown'
+    status: 'unknown',
+    cover: ''
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -6826,7 +9100,7 @@ Kit = function ($, Base, common) {
    */
   var Kit = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.kit'
     }, opt);
     Base.call(this, spec);
@@ -6835,6 +9109,7 @@ Kit = function ($, Base, common) {
     this.codes = [];
     this.conflicts = [];
     this.status = spec.status || DEFAULTS.status;
+    this.cover = spec.cover || DEFAULTS.cover;
   };
   Kit.prototype = new tmp();
   Kit.prototype.constructor = Kit;
@@ -6904,13 +9179,32 @@ Kit = function ($, Base, common) {
   Kit.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name;
+      isDirty = this._isDirtyStringProperty('name');
     }
     return isDirty;
   };
   //
   // Business logic
   //
+  // KIT_STATUS = ( 'available', 'checkedout', 'await_checkout', 'in_transit', 'maintenance', 'repair', 'inspection', 'expired', 'in_custody', 'empty', 'incomplete')
+  /**
+   * Checks if a Kit can be checked out (based on status)
+   * @name Kit#canCheckout
+   * @method
+   * @returns {boolean}
+   */
+  Kit.prototype.canCheckout = function () {
+    return common.kitCanCheckout(this);
+  };
+  /**
+   * Checks if a Kit can be reserved (based on status)
+   * @name Kit#canReserve
+   * @method
+   * @returns {boolean}
+   */
+  Kit.prototype.canReserve = function () {
+    return common.kitCanReserve(this);
+  };
   /**
    * addItems; adds a bunch of Items to the transaction using a list of item ids
    * @name Kit#addItems
@@ -6944,6 +9238,28 @@ Kit = function ($, Base, common) {
     return this._doApiCall({
       method: 'removeItems',
       params: { items: items },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * moveItem; moves an Item in a kit to another position
+   * @name Kit#moveItem
+   * @method
+   * @param item
+   * @param toPos
+   * @param skipRead
+   * @returns {promise}
+   */
+  Kit.prototype.moveItem = function (item, toPos, skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot moveItem from document without id'));
+    }
+    return this._doApiCall({
+      method: 'moveItem',
+      params: {
+        item: item,
+        toPos: toPos
+      },
       skipRead: skipRead
     });
   };
@@ -6991,6 +9307,75 @@ Kit = function ($, Base, common) {
       skipRead: skipRead || true
     });
   };
+  /**
+   * Checks if custody can be taken for a kit (based on status)
+   * @name Kit#canTakeCustody
+   * @returns {boolean}
+   */
+  Kit.prototype.canTakeCustody = function () {
+    return common.kitCanTakeCustody(this);
+  };
+  /**
+   * Checks if custody can be released for a kit (based on status)
+   * @name Kit#canReleaseCustody
+   * @returns {boolean}
+   */
+  Kit.prototype.canReleaseCustody = function () {
+    return common.kitCanReleaseCustody(this);
+  };
+  /**
+   * Checks if custody can be transferred for a kit (based on status)
+   * @name Kit#canTransferCustody
+   * @returns {boolean}
+   */
+  Kit.prototype.canTransferCustody = function () {
+    return common.kitCanTransferCustody(this);
+  };
+  /**
+   * Takes custody of a kit (and all items in it)
+   * Puts it in the *in_custody* status
+   * @name Kit#takeCustody
+   * @param customerId (when null, we'll take the customer of the user making the API call)
+   * @param skipRead
+   * @returns {promise}
+   */
+  Kit.prototype.takeCustody = function (customerId, skipRead) {
+    return this._doApiCall({
+      method: 'takeCustody',
+      params: { customer: customerId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Releases custody of a kit (and all items in it) at a certain location
+   * Puts it in the *available* status again
+   * @name Kit#releaseCustody
+   * @param locationId
+   * @param skipRead
+   * @returns {promise}
+   */
+  Kit.prototype.releaseCustody = function (locationId, skipRead) {
+    return this._doApiCall({
+      method: 'releaseCustody',
+      params: { location: locationId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Transfers custody of a kit (and all items in it)
+   * Keeps it in the *in_custody* status
+   * @name Kit#transferCustody
+   * @param customerId (when null, we'll take the customer of the user making the API call)
+   * @param skipRead
+   * @returns {promise}
+   */
+  Kit.prototype.transferCustody = function (customerId, skipRead) {
+    return this._doApiCall({
+      method: 'transferCustody',
+      params: { customer: customerId },
+      skipRead: skipRead
+    });
+  };
   //
   // Implementation stuff
   //
@@ -7010,6 +9395,7 @@ Kit = function ($, Base, common) {
       that.items = data.items || DEFAULTS.items.slice();
       that.codes = data.codes || [];
       that.status = data.status || DEFAULTS.status;
+      that.cover = data.cover || DEFAULTS.cover;
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
@@ -7030,13 +9416,14 @@ Kit = function ($, Base, common) {
     //if (!this.isValid()) {
     //    return $.Deferred().reject(new Error("Cannot create, invalid document"));
     //}
-    var that = this;
-    var data = {
-      name: this.name,
-      items: this._getIds(this.items)
-    };
+    var that = this, data = {
+        name: this.name,
+        items: this._getIds(this.items)
+      };
+    // Also add any possible fields we need during `create`
+    $.extend(data, this._toJsonFields());
     delete data.id;
-    return this.ds.create(data, this.fields).then(function (data) {
+    return this.ds.create(data, this._fields).then(function (data) {
       return skipRead == true ? data : that._fromJson(data);
     });
   };
@@ -7107,7 +9494,7 @@ Location = function ($, Base) {
    *     });
    */
   var Location = function (opt) {
-    var spec = $.extend({ fields: ['*'] }, opt);
+    var spec = $.extend({ _fields: ['*'] }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.address = spec.address || DEFAULTS.address;
@@ -7188,7 +9575,7 @@ location = function ($, Base) {
    *     });
    */
   var Location = function (opt) {
-    var spec = $.extend({ fields: ['*'] }, opt);
+    var spec = $.extend({ _fields: ['*'] }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
     this.address = spec.address || DEFAULTS.address;
@@ -7317,6 +9704,28 @@ dateHelper = function ($, moment) {
     spec = spec || {};
     this.roundType = spec.roundType || 'nearest';
     this.roundMinutes = spec.roundMinutes || INCREMENT;
+    this.timeFormat24 = spec.timeFormat24 ? spec.timeFormat24 : false;
+    this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
+  };
+  /**
+   * @name parseDate
+   * @method
+   * @param data
+   * @returns {moment}
+   */
+  DateHelper.prototype.parseDate = function (data) {
+    if (typeof data == 'string' || data instanceof String) {
+      // "2014-04-03T12:15:00+00:00" (length 25)
+      // "2014-04-03T09:32:43.841000+00:00" (length 32)
+      if (data.endsWith('+00:00')) {
+        var len = data.length;
+        if (len == 25) {
+          return moment(data.substring(0, len - 6));
+        } else if (len == 32) {
+          return moment(data.substring(0, len - 6).split('.')[0]);
+        }
+      }
+    }
   };
   /**
    * @name  DateHelper#getNow
@@ -7332,7 +9741,7 @@ dateHelper = function ($, moment) {
    * @name DateHelper#getFriendlyDuration
    * @method
    * @param  duration
-   * @return {} 
+   * @return {}
    */
   DateHelper.prototype.getFriendlyDuration = function (duration) {
     return duration.humanize();
@@ -7346,20 +9755,90 @@ dateHelper = function ($, moment) {
    */
   DateHelper.prototype.getFriendlyDateParts = function (date, now, format) {
     /*
-    moment().calendar() shows friendlier dates
-    - when the date is <=7d away:
-      - Today at 4:15 PM
-      - Yesterday at 4:15 PM
-      - Last Monday at 4:15 PM
-      - Wednesday at 4:15 PM
-    - when the date is >7d away:
-      - 07/25/2015
-    */
+     moment().calendar() shows friendlier dates
+     - when the date is <=7d away:
+     - Today at 4:15 PM
+     - Yesterday at 4:15 PM
+     - Last Monday at 4:15 PM
+     - Wednesday at 4:15 PM
+     - when the date is >7d away:
+     - 07/25/2015
+     */
+    if (!moment.isMoment(date)) {
+      date = moment(date);
+    }
     now = now || this.getNow();
-    format = format || 'MMM D [at] h:mm a';
+    format = format || this._momentFormat;
     var diff = now.diff(date, 'days');
     var str = Math.abs(diff) < 7 ? date.calendar() : date.format(format);
     return str.replace('AM', 'am').replace('PM', 'pm').split(' at ');
+  };
+  /**
+   * Returns a number of friendly date ranges with a name
+   * Each date range is a standard transaction duration
+   * @name getDateRanges
+   * @method
+   * @param avgHours
+   * @param numRanges
+   * @param now
+   * @param i18n
+   * @returns {Array} [{counter: 1, from: m(), to: m(), hours: 24, option: 'days', title: '1 Day'}, {...}]
+   */
+  DateHelper.prototype.getDateRanges = function (avgHours, numRanges, now, i18n) {
+    if (now && !moment.isMoment(now)) {
+      now = moment(now);
+    }
+    i18n = i18n || {
+      year: 'year',
+      years: 'years',
+      month: 'month',
+      months: 'months',
+      week: 'week',
+      weeks: 'weeks',
+      day: 'day',
+      days: 'days',
+      hour: 'hour',
+      hours: 'hours'
+    };
+    var timeOptions = [
+        'years',
+        'months',
+        'weeks',
+        'days',
+        'hours'
+      ], timeHourVals = [
+        365 * 24,
+        30 * 24,
+        7 * 24,
+        24,
+        1
+      ], opt = null, val = null, title = null, counter = 0, chosenIndex = -1, ranges = [];
+    // Find the range kind that best fits the avgHours (search from long to short)
+    for (var i = 0; i < timeOptions.length; i++) {
+      val = timeHourVals[i];
+      opt = timeOptions[i];
+      if (avgHours >= val) {
+        if (avgHours % val == 0) {
+          chosenIndex = i;
+          break;
+        }
+      }
+    }
+    now = now || this.getNow();
+    if (chosenIndex >= 0) {
+      for (var i = 1; i <= numRanges; i++) {
+        counter = i * avgHours;
+        title = i18n[counter == 1 ? opt.replace('s', '') : opt];
+        ranges.push({
+          option: opt,
+          hours: counter,
+          title: counter / timeHourVals[chosenIndex] + ' ' + title,
+          from: now.clone(),
+          to: now.clone().add(counter, 'hours')
+        });
+      }
+    }
+    return ranges;
   };
   /**
    * getFriendlyFromTo
@@ -7406,10 +9885,10 @@ dateHelper = function ($, moment) {
   /**
    * @deprecated use getFriendlyFromToInfo
    * [getFriendlyFromToOld]
-   * @param  fromDate    
-   * @param  toDate       
-   * @param  groupProfile 
-   * @return {}              
+   * @param  fromDate
+   * @param  toDate
+   * @param  groupProfile
+   * @return {}
    */
   DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
     var mFrom = this.roundFromTime(fromDate, groupProfile);
@@ -7425,11 +9904,11 @@ dateHelper = function ($, moment) {
   };
   /**
    * [getFriendlyDateText]
-   * @param  date    
-   * @param  useHours 
-   * @param  now     
-   * @param  format  
-   * @return {string}         
+   * @param  date
+   * @param  useHours
+   * @param  now
+   * @param  format
+   * @return {string}
    */
   DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
     if (date == null) {
@@ -7528,266 +10007,21 @@ dateHelper = function ($, moment) {
   };
   return DateHelper;
 }(jquery, moment);
-settings = { amazonBucket: 'app' };
-helper = function ($, defaultSettings, common) {
-  /**
-   * Allows you to call helpers based on the settings file 
-   * and also settings in group.profile and user.profile
-   * @name Helper
-   * @class Helper
-   * @constructor
-   * @property {object} settings         
-   */
-  return function (settings) {
-    settings = settings || defaultSettings;
-    return {
-      /**
-       * getSettings return settings file which helper uses internally
-       * @return {object}
-       */
-      getSettings: function () {
-        return settings;
-      },
-      /**
-       * getImageCDNUrl gets an image by using the path to a CDN location
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getImageCDNUrl
-       * 
-       * @param groupId
-       * @param attachmentId
-       * @param size
-       * @returns {string}
-       */
-      getImageCDNUrl: function (groupId, attachmentId, size) {
-        return common.getImageCDNUrl(settings, groupId, attachmentId, size);
-      },
-      /**
-       * getImageUrl gets an image by using the datasource /get style and a mimeType
-       * 'XS': (64, 64),
-       * 'S': (128, 128),
-       * 'M': (256, 256),
-       * 'L': (512, 512)
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getImageUrl
-       * 
-       * @param ds
-       * @param pk
-       * @param size
-       * @param bustCache
-       * @returns {string}
-       */
-      getImageUrl: function (ds, pk, size, bustCache) {
-        var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-        if (size) {
-          url += '&size=' + size;
-        }
-        if (bustCache) {
-          url += '&_bust=' + new Date().getTime();
-        }
-        return url;
-      },
-      /**
-       * getNumItemsLeft
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getNumItemsLeft
-       * 
-       * @param limits
-       * @param stats 
-       * @return {Number}
-       */
-      getNumItemsLeft: function (limits, stats) {
-        var itemsPerStatus = this.getStat(stats, 'items', 'status');
-        return limits.maxItems - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
-      },
-      /**
-       * getNumUsersLeft
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getNumUsersLeft
-       *  
-       * @param limits
-       * @param stats 
-       * @return {Number}
-       */
-      getNumUsersLeft: function (limits, stats) {
-        var usersPerStatus = this.getStat(stats, 'users', 'status');
-        return limits.maxUsers - usersPerStatus.active;
-      },
-      /**
-       * getStat for location
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getStat
-       *
-       * @param stats
-       * @param location
-       * @param type
-       * @param name
-       * @param mode
-       * @return {object}         number or object
-       */
-      getStat: function (stats, type, name, location, mode) {
-        // make sure stats object isn't undefined
-        stats = stats || {};
-        //if no stats for given location found, use all stats object
-        stats = stats[location && location != 'null' ? location : 'all'] || stats['all'];
-        if (stats === undefined)
-          throw 'Invalid stats';
-        // load stats for given mode (defaults to production)
-        stats = stats[mode || 'production'];
-        var statType = stats[type];
-        if (statType === undefined)
-          throw 'Stat doesn\'t exist';
-        if (!name)
-          return statType;
-        var statTypeValue = statType[name];
-        if (statTypeValue === undefined)
-          throw 'Stat value doesn\'t exist';
-        return statTypeValue;
-      },
-      /**
-       * getAccessRights returns access rights based on the user role, profile settings 
-       * and account limits 
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getAccessRights 
-       * 
-       * @param  role   
-       * @param  profile 
-       * @param  limits
-       * @return {object}       
-       */
-      getAccessRights: function (role, profile, limits) {
-        var isRootOrAdmin = role == 'root' || role == 'admin';
-        var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
-        var useOrders = limits.allowOrders && profile.useOrders;
-        var useReservations = limits.allowReservations && profile.useReservations;
-        var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
-        var useWebHooks = limits.allowWebHooks;
-        var useKits = limits.allowKits && profile.useKits;
-        var useCustody = limits.allowCustody && profile.useCustody;
-        var useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
-        return {
-          contacts: {
-            create: isRootOrAdminOrUser,
-            remove: isRootOrAdminOrUser,
-            update: true,
-            archive: isRootOrAdminOrUser
-          },
-          items: {
-            create: isRootOrAdmin,
-            remove: isRootOrAdmin,
-            update: isRootOrAdmin,
-            updateFlag: isRootOrAdmin,
-            updateLocation: isRootOrAdmin,
-            updateGeo: true
-          },
-          orders: {
-            create: useOrders,
-            remove: useOrders,
-            update: useOrders,
-            updateContact: role != 'selfservice',
-            updateLocation: useOrders,
-            generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
-            transferOrder: useOrders && useOrderTransfers,
-            archive: useOrders && isRootOrAdminOrUser
-          },
-          reservations: {
-            create: useReservations,
-            remove: useReservations,
-            update: useReservations,
-            updateContact: useReservations && role != 'selfservice',
-            updateLocation: useReservations,
-            archive: useReservations && isRootOrAdminOrUser
-          },
-          locations: {
-            create: isRootOrAdmin,
-            remove: isRootOrAdmin,
-            update: isRootOrAdmin
-          },
-          users: {
-            create: isRootOrAdmin,
-            remove: isRootOrAdmin,
-            update: isRootOrAdmin,
-            updateOther: isRootOrAdmin,
-            updateOwn: true
-          },
-          webHooks: {
-            create: useWebHooks && isRootOrAdmin,
-            remove: useWebHooks && isRootOrAdmin,
-            update: useWebHooks && isRootOrAdmin
-          },
-          stickers: {
-            print: isRootOrAdmin,
-            buy: isRootOrAdmin
-          },
-          categories: {
-            create: isRootOrAdmin,
-            update: isRootOrAdmin
-          },
-          account: { update: isRootOrAdmin }
-        };
-      },
-      /**
-       * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
-       * 
-       * @memberOf helper
-       * @method
-       * @name  helper#ensureValue 
-       * 
-       * @param  obj   
-       * @param  prop        
-       * @return {string}       
-       */
-      ensureValue: function (obj, prop) {
-        if (typeof obj === 'string') {
-          return obj;
-        } else if (obj && obj.hasOwnProperty(prop)) {
-          return obj[prop];
-        } else {
-          return obj;
-        }
-      },
-      /**
-       * ensureId, returns id value of object or if you pass a string it returns that exact string 
-       * For example:
-       * ensureId("abc123") --> "abc123"
-       * ensureId({ id:"abc123", name:"example" }) --> "abc123"
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#ensureId 
-       * 
-       * @param  obj   
-       * @return {string}       
-       */
-      ensureId: function (obj) {
-        return this.ensureValue(obj, '_id');
-      }
-    };
-  };
-}(jquery, settings, common);
 transaction = function ($, api, Base, Location, DateHelper, Helper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
     to: null,
     due: null,
-    contact: '',
-    location: '',
+    contact: null,
+    location: null,
+    number: '',
     items: [],
     conflicts: [],
     by: null,
-    archived: null
+    archived: null,
+    itemSummary: null,
+    name: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7799,16 +10033,17 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @class Transaction
    * @constructor
    * @extends Base
-   * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
-   * @property {DateHelper} dateHelper              - A DateHelper object ref
-   * @property {string}  status                     - The transaction status
-   * @property {moment}  from                       - The transaction from date
-   * @property {moment}  to                         - The transaction to date
-   * @property {moment}  due                        - The transaction due date
-   * @property {string}  contact                    - The Contact.id for this transaction
-   * @property {string}  location                   - The Location.id for this transaction
-   * @property {Array}  items                       - A list of Item.id strings
-   * @property {Array}  conflicts                   - A list of conflict hashes
+   * @property {boolean} autoCleanup      - Automatically cleanup the transaction if it becomes empty?
+   * @property {DateHelper} dateHelper    - A DateHelper object ref
+   * @property {string} status            - The transaction status
+   * @property {moment} from              - The transaction from date
+   * @property {moment} to                - The transaction to date
+   * @property {moment} due               - The transaction due date
+   * @property {string} number            - The booking number
+   * @property {string} contact           - The Contact.id for this transaction
+   * @property {string} location          - The Location.id for this transaction
+   * @property {Array} items              - A list of Item.id strings
+   * @property {Array} conflicts          - A list of conflict hashes
    */
   var Transaction = function (opt) {
     var spec = $.extend({}, opt);
@@ -7827,6 +10062,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // a date in the future
     this.due = spec.due || DEFAULTS.due;
     // a date even further in the future, we suggest some standard avg durations
+    this.number = spec.number || DEFAULTS.number;
+    // a booking number
     this.contact = spec.contact || DEFAULTS.contact;
     // a contact id
     this.location = spec.location || DEFAULTS.location;
@@ -7836,6 +10073,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
     // an array of Conflict objects
     this.by = spec.by || DEFAULTS.by;
+    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
+    this.name = spec.name || DEFAULTS.name;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -7966,17 +10205,17 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * Checks if the transaction is empty
    * @method isEmpty
    * @name Transaction#isEmpty
-   * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
+   * @returns {boolean}
    */
   Transaction.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && this.from == DEFAULTS.from && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
+    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && (this.crtype == 'cheqroom.types.order' ? true : this.from == DEFAULTS.from) && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
 ;
   };
   /**
    * Checks if the transaction is dirty and needs saving
    * @method
    * @name Transaction#isDirty
-   * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
+   * @returns {boolean}
    */
   Transaction.prototype.isDirty = function () {
     return Base.prototype.isDirty.call(this) || this._isDirtyBasic() || this._isDirtyDates() || this._isDirtyLocation() || this._isDirtyContact() || this._isDirtyItems();
@@ -8070,11 +10309,14 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.cover = null;
       // don't read cover property for Transactions
       that.status = data.status || DEFAULTS.status;
+      that.number = data.number || DEFAULTS.number;
       that.location = data.location || DEFAULTS.location;
       that.contact = data.customer || DEFAULTS.contact;
       that.items = data.items || DEFAULTS.items.slice();
       that.by = data.by || DEFAULTS.by;
       that.archived = data.archived || DEFAULTS.archived;
+      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
+      that.name = data.name || DEFAULTS.name;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -8318,8 +10560,10 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'removeItems',
       params: { items: items },
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -8338,8 +10582,10 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     return this._doApiCall({
       method: 'clearItems',
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -8353,7 +10599,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.swapItem = function (fromItem, toItem, skipRead) {
     if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot clearItems from document without id'));
+      return $.Deferred().reject(new Error('Cannot swapItem from document without id'));
     }
     // swapItem cannot create or delete a transaction
     return this._doApiCall({
@@ -8396,8 +10642,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.archive = function (skipRead) {
-    if (this.status != 'closed') {
-      return $.Deferred().reject(new Error('Cannot archive document that isn\'t closed'));
+    if (!this.canArchive()) {
+      return $.Deferred().reject(new Error('Cannot archive document'));
     }
     return this._doApiCall({
       method: 'archive',
@@ -8412,13 +10658,42 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.undoArchive = function (skipRead) {
-    if (this.status == 'archived') {
-      return $.Deferred().reject(new Error('Cannot unarchive document that isn\'t archived'));
+    if (!this.canUndoArchive()) {
+      return $.Deferred().reject(new Error('Cannot unarchive document'));
     }
     return this._doApiCall({
       method: 'undoArchive',
       params: {},
       skipRead: skipRead
+    });
+  };
+  /**
+   * Checks if we can archive a transaction (based on status)
+   * @name Transaction#canArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canArchive = function () {
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+  };
+  /**
+   * Checks if we can unarchive a transaction (based on status)
+   * @name Transaction#canUndoArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canUndoArchive = function () {
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
+  };
+  Transaction.prototype.setField = function (field, value, skipRead) {
+    var that = this;
+    return this._ensureTransactionExists(skipRead).then(function () {
+      return that._doApiCall({
+        method: 'setField',
+        params: {
+          field: field,
+          value: value
+        },
+        skipRead: skipRead
+      });
     });
   };
   //
@@ -8578,7 +10853,7 @@ conflict = function ($) {
    */
   var Conflict = function (spec) {
     this.ds = spec.ds;
-    this.fields = spec.fields;
+    this._fields = spec._fields;
     this.raw = null;
     // the raw json object
     this.kind = spec.kind || DEFAULTS.kind;
@@ -8643,7 +10918,7 @@ Order = function ($, api, Transaction, Conflict, common) {
   var Order = function (opt) {
     var spec = $.extend({
       crtype: 'cheqroom.types.order',
-      fields: ['*']
+      _fields: ['*']
     }, opt);
     Transaction.call(this, spec);
     this.dsReservations = spec.dsReservations;
@@ -8699,37 +10974,24 @@ Order = function ($, api, Transaction, Conflict, common) {
     that.from = data.started == null || data.started == 'null' ? null : data.started;
     that.to = data.finished == null || data.finished == 'null' ? null : data.finished;
     that.due = data.due == null || data.due == 'null' ? null : data.due;
+    that.reservation = data.reservation || null;
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('order.fromJson', data);
       return data;
     });
   };
-  Order.prototype._fromKeyValuesJson = function (data, options) {
-    var that = this;
-    // Also parse reservation comments?
-    if (that.dsReservations && data.reservation && data.reservation.keyValues && data.reservation.keyValues.length > 0) {
-      // Parse Reservation keyValues
-      return Transaction.prototype._fromKeyValuesJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations })).then(function () {
-        var reservationComments = that.comments;
-        var reservationAttachments = that.attachments;
-        // Parse Order keyValues
-        return Transaction.prototype._fromKeyValuesJson.call(that, data, options).then(function () {
-          // Add reservation comments/attachments to order keyvalues
-          that.comments = that.comments.concat(reservationComments).sort(function (a, b) {
-            return b.modified > a.modified;
-          });
-          that.attachments = that.attachments.concat(reservationAttachments).sort(function (a, b) {
-            return b.modified > a.modified;
-          });
-        });
-      });
-    }
-    // Use Default keyValues parser
-    return Transaction.prototype._fromKeyValuesJson.call(that, data, options);
-  };
   //
   // Helpers
   //
+  /**
+   * Gets a moment duration object
+   * @method
+   * @name Order#getDuration
+   * @returns {duration}
+   */
+  Order.prototype.getDuration = function () {
+    return common.getOrderDuration(this.raw);
+  };
   /**
    * Gets a friendly order duration or empty string
    * @method
@@ -8737,23 +10999,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @returns {string}
    */
   Order.prototype.getFriendlyDuration = function () {
-    var duration = this.getDuration();
-    return duration != null ? this._getDateHelper().getFriendlyDuration(duration) : '';
-  };
-  /**
-   * Gets a moment duration object
-   * @method
-   * @name Order#getDuration
-   * @returns {*}
-   */
-  Order.prototype.getDuration = function () {
-    if (this.from != null) {
-      var to = this.status == 'closed' ? this.to : this.due;
-      if (to) {
-        return moment.duration(to - this.from);
-      }
-    }
-    return null;
+    return common.getFriendlyOrderDuration(this.raw, this._getDateHelper());
   };
   /**
    * Checks if a PDF document can be generated
@@ -8774,6 +11020,29 @@ Order = function ($, api, Transaction, Conflict, common) {
     return this.status == 'open';
   };
   /**
+   * Checks if the order has an reservation linked to it
+   * @method
+   * @name Order#canGoToReservation
+   * @returns {boolean}
+   */
+  Order.prototype.canGoToReservation = function () {
+    return this.reservation != null;
+  };
+  /**
+   * Checks if due date is valid for an creating order
+   * oterwise return true
+   *
+   * @name Order#isValidDueDate
+   * @return {Boolean} 
+   */
+  Order.prototype.isValidDueDate = function () {
+    var due = this.due, now = this.getNow(), status = this.status;
+    if (status == 'creating') {
+      return due != null && due.isAfter(now);
+    }
+    return true;
+  };
+  /**
    * Checks if order can be checked out
    * @method
    * @name Order#canCheckout
@@ -8781,9 +11050,9 @@ Order = function ($, api, Transaction, Conflict, common) {
    */
   Order.prototype.canCheckout = function () {
     var that = this;
-    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.due && this.due.isAfter(this._getDateHelper().getNow()) && this.items && this.items.length && common.getItemsByStatus(this.items, function (item) {
+    return this.status == 'creating' && this.location != null && (this.contact != null && this.contact.status == 'active') && this.isValidDueDate() && (this.items && this.items.length > 0 && this.items.filter(function (item) {
       return that.id == that.helper.ensureId(item.order);
-    }).length == this.items.length;
+    }).length > 0);
   };
   /**
    * Checks if order can undo checkout
@@ -8794,12 +11063,81 @@ Order = function ($, api, Transaction, Conflict, common) {
   Order.prototype.canUndoCheckout = function () {
     return this.status == 'open';
   };
+  /**
+   * Checks if the order can be deleted (based on status)
+   * @method
+   * @name Order#canDelete
+   * @returns {boolean}
+   */
+  Order.prototype.canDelete = function () {
+    return this.status == 'creating';
+  };
+  /**
+   * Checks if items can be added to the checkout (based on status)
+   * @method
+   * @name Order#canAddItems
+   * @returns {boolean}
+   */
+  Order.prototype.canAddItems = function () {
+    return this.status == 'creating';
+  };
+  /**
+   * Checks if items can be removed from the checkout (based on status)
+   * @method
+   * @name Order#canRemoveItems
+   * @returns {boolean}
+   */
+  Order.prototype.canRemoveItems = function () {
+    return this.status == 'creating';
+  };
+  /**
+   * Checks if items can be swapped in the checkout (based on status)
+   * @method
+   * @name Order#canSwapItems
+   * @returns {boolean}
+   */
+  Order.prototype.canSwapItems = function () {
+    return this.status == 'creating';
+  };
+  /**
+   * Checks if we can generate a document for this order (based on status)
+   * @name Order#canGenerateDocument
+   * @returns {boolean}
+   */
+  Order.prototype.canGenerateDocument = function () {
+    return this.status == 'open' || this.status == 'closed';
+  };
   //
   // Base overrides
   //
   //
   // Transaction overrides
   //
+  Order.prototype._getConflictsForExtend = function () {
+    var conflicts = [];
+    // Only orders which are incomplete,
+    // but have items and / or due date can have conflicts
+    if (this.status == 'open') {
+      // Only check for new conflicts on the items
+      // that are still checked out under this order
+      var items = [], that = this;
+      $.each(this.items, function (i, item) {
+        if (item.status == 'checkedout' && item.order == that.id) {
+          items.push(item);
+        }
+      });
+      // If we have a due date,
+      // check if it conflicts with any reservations
+      if (this.due) {
+        return this._getServerConflicts(this.items, this.from, this.due, this.id, // orderId
+        this.helper.ensureId(this.reservation))  // reservationId
+.then(function (serverConflicts) {
+          return conflicts.concat(serverConflicts);
+        });
+      }
+    }
+    return $.Deferred().resolve(conflicts);
+  };
   /**
    * Gets a list of Conflict objects
    * used during Transaction._fromJson
@@ -8811,77 +11149,100 @@ Order = function ($, api, Transaction, Conflict, common) {
     // Only orders which are incomplete,
     // but have items and / or due date can have conflicts
     if (this.status == 'creating' && this.items.length > 0) {
-      // Check if all the items are:
-      // - at the right location
-      // - not expired
-      var locId = this._getId(this.location);
-      $.each(this.items, function (i, item) {
-        if (item.status == 'expired') {
-          conflicts.push(new Conflict({
-            kind: 'expired',
-            item: item._id,
-            itemName: item.name,
-            locationCurrent: item.location,
-            locationDesired: locId
-          }));  // If order location is defined, check if item
-                // is at the right location
-        } else if (locId && item.location != locId) {
-          conflicts.push(new Conflict({
-            kind: 'location',
-            item: item._id,
-            itemName: item.name,
-            locationCurrent: item.location,
-            locationDesired: locId
-          }));
-        }
-      });
+      // Get some conflicts we can already calculate on the client side
+      conflicts = this._getClientConflicts();
       // If we have a due date,
       // check if it conflicts with any reservations
       if (this.due) {
-        var that = this;
-        var kind = '';
-        var transItem = null;
-        // Get the availabilities for these items
-        return this.dsItems.call(null, 'getAvailabilities', {
-          items: $.map(this.items, function (item) {
-            return item._id;
-          }),
-          fromDate: this.from,
-          toDate: this.due
-        }).then(function (data) {
-          // Run over unavailabilties for these items
-          $.each(data, function (i, av) {
-            // Lookup the more complete item object via transaction.items
-            // It has useful info like item.name we can use in the conflict message
-            transItem = $.grep(that.items, function (item) {
-              return item._id == av.item;
-            });
-            // $.grep returns an array with 1 item, we need reference to the item for transItem
-            if (transItem && transItem.length > 0) {
-              transItem = transItem[0];
-            }
-            if (transItem != null && transItem.status != 'expired') {
-              // Order cannot conflict with itself
-              if (av.order != that.id) {
-                kind = '';
-                kind = kind || (av.order ? 'order' : '');
-                kind = kind || (av.reservation ? 'reservation' : '');
-                conflicts.push(new Conflict({
-                  kind: kind,
-                  item: transItem._id,
-                  itemName: transItem.name,
-                  fromDate: av.fromDate,
-                  toDate: av.toDate,
-                  doc: av.order || av.reservation
-                }));
-              }
-            }
-          });
-          return conflicts;
+        return this._getServerConflicts(this.items, this.from, this.due, this.id, // orderId
+        this.helper.ensureId(this.reservation))  // reservationId
+.then(function (serverConflicts) {
+          return conflicts.concat(serverConflicts);
         });
       }
     }
     return $.Deferred().resolve(conflicts);
+  };
+  /**
+   * Get server side conflicts for items between two dates
+   * Also pass extra info like own order and reservation
+   * so we can avoid listing conflicts with ourselves
+   * @param items array of item objects (not just the ids)
+   * @param fromDate
+   * @param dueDate
+   * @param orderId
+   * @param reservationId
+   * @returns {*}
+   * @private
+   */
+  Order.prototype._getServerConflicts = function (items, fromDate, dueDate, orderId, reservationId) {
+    var conflicts = [], kind = '', transItem = null, itemIds = common.getItemIds(items);
+    // Get the availabilities for these items
+    return this.dsItems.call(null, 'getAvailabilities', {
+      items: itemIds,
+      fromDate: fromDate,
+      toDate: dueDate
+    }).then(function (data) {
+      // Run over unavailabilties for these items
+      $.each(data, function (i, av) {
+        // Find back the more complete item object via the `items` param
+        // It has useful info like item.name we can use in the conflict message
+        // $.grep returns an array with 1 item,
+        // we need reference to the 1st item for transItem
+        transItem = $.grep(items, function (item) {
+          return item._id == av.item;
+        });
+        if (transItem && transItem.length > 0) {
+          transItem = transItem[0];
+        }
+        if (transItem != null && transItem.status != 'expired') {
+          // Order cannot conflict with itself
+          // or with the Reservation from which it was created
+          if (av.order != orderId && av.reservation != reservationId) {
+            kind = '';
+            kind = kind || (av.order ? 'order' : '');
+            kind = kind || (av.reservation ? 'reservation' : '');
+            conflicts.push(new Conflict({
+              kind: kind,
+              item: transItem._id,
+              itemName: transItem.name,
+              fromDate: av.fromDate,
+              toDate: av.toDate,
+              doc: av.order || av.reservation
+            }));
+          }
+        }
+      });
+      return conflicts;
+    });
+  };
+  Order.prototype._getClientConflicts = function () {
+    // Some conflicts can be checked already on the client
+    // We can check if all the items are:
+    // - at the right location
+    // - not expired
+    var conflicts = [], locId = this.helper.ensureId(this.location || '');
+    $.each(this.items, function (i, item) {
+      if (item.status == 'expired') {
+        conflicts.push(new Conflict({
+          kind: 'expired',
+          item: item._id,
+          itemName: item.name,
+          locationCurrent: item.location,
+          locationDesired: locId
+        }));  // If order location is defined, check if item
+              // is at the right location
+      } else if (locId && item.location != locId) {
+        conflicts.push(new Conflict({
+          kind: 'location',
+          item: item._id,
+          itemName: item.name,
+          locationCurrent: item.location,
+          locationDesired: locId
+        }));
+      }
+    });
+    return conflicts;
   };
   /**
    * Sets the Order from and due date in a single call
@@ -8954,7 +11315,7 @@ Order = function ($, api, Transaction, Conflict, common) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set order due date, status is ' + this.status));
     }
     // The to date must be:
-    // 1) at least 30 minutes into the feature
+    // 1) at least 30 minutes into the future
     // 2) at least 15 minutes after the from date (if set)
     var that = this;
     var roundedDueDate = this._getDateHelper().roundTimeTo(due);
@@ -9072,9 +11433,9 @@ Order = function ($, api, Transaction, Conflict, common) {
   };
   /**
    * Checks of order due date can be extended to given date
-   * @param  {moment} due      
-   * @param  {bool} skipRead 
-   * @return {promise}          
+   * @param  {moment} due
+   * @param  {bool} skipRead
+   * @return {promise}
    */
   Order.prototype.canExtend = function (due) {
     //return this._doApiCall({ method: "canExtend", params: { due: due }, skipRead: true });
@@ -9084,9 +11445,9 @@ Order = function ($, api, Transaction, Conflict, common) {
   };
   /**
    * Extends order due date
-   * @param  {moment} due      
-   * @param  {bool} skipRead 
-   * @return {promise}          
+   * @param  {moment} due
+   * @param  {bool} skipRead
+   * @return {promise}
    */
   Order.prototype.extend = function (due, skipRead) {
     return this._doApiCall({
@@ -9096,17 +11457,79 @@ Order = function ($, api, Transaction, Conflict, common) {
     });
   };
   /**
-   * Generates a PDF agreement for the order
+   * Generates a PDF document for the order
    * @method
-   * @name Order#generateAgreement
-   * @param skipRead
+   * @name Order#generateDocument
+   * @param {string} template id
+   * @param {string} signature (base64)
+   * @param {bool} skipRead
    * @returns {promise}
    */
-  Order.prototype.generateAgreement = function (skipRead) {
-    return this._doApiCall({
-      method: 'generateAgreement',
+  Order.prototype.generateDocument = function (template, signature, skipRead) {
+    return this._doApiLongCall({
+      method: 'generateDocument',
+      params: {
+        template: template,
+        signature: signature
+      },
       skipRead: skipRead
     });
+  };
+  /**
+   * Override _fromCommentsJson to also include linked reservation comments 
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Order.prototype._fromCommentsJson = function (data, options) {
+    var that = this;
+    // Also parse reservation comments?
+    if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+      // Parse Reservation keyValues
+      return Base.prototype._fromCommentsJson.call(that, data.reservation, $.extend(options, {
+        ds: that.dsReservations,
+        fromReservation: true
+      })).then(function () {
+        var reservationComments = that.comments;
+        return Base.prototype._fromCommentsJson.call(that, data, options).then(function () {
+          // Add reservation comments
+          that.comments = that.comments.concat(reservationComments).sort(function (a, b) {
+            return b.modified > a.modified;
+          });
+        });
+      });
+    }
+    // Use Default comments parser
+    return Base.prototype._fromCommentsJson.call(that, data, options);
+  };
+  /**
+   * Override _fromAttachmentsJson to also include linked reservation attachments
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Order.prototype._fromAttachmentsJson = function (data, options) {
+    var that = this;
+    // Also parse reservation comments?
+    if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+      // Parse Reservation keyValues
+      return Base.prototype._fromAttachmentsJson.call(that, data.reservation, $.extend(options, {
+        ds: that.dsReservations,
+        fromReservation: true
+      })).then(function () {
+        var reservationAttachments = that.attachments;
+        return Base.prototype._fromAttachmentsJson.call(that, data, options).then(function () {
+          // Add reservation attachments
+          that.attachments = that.attachments.concat(reservationAttachments).sort(function (a, b) {
+            return b.modified > a.modified;
+          });
+        });
+      });
+    }
+    // Use Default attachments parser
+    return Base.prototype._fromAttachmentsJson.call(that, data, options);
   };
   //
   // Implementation
@@ -9137,6 +11560,472 @@ Order = function ($, api, Transaction, Conflict, common) {
   };
   return Order;
 }(jquery, api, transaction, conflict, common);
+PermissionHandler = function () {
+  /**
+   * PermissionHandler
+   * @name PermissionHandler
+   * @class PermissionHandler
+   * @param user - a user dict
+   * @param profile - a group profile dict
+   * @param limits - a group limits dict
+   * @constructor
+   */
+  var PermissionHandler = function (user, profile, limits) {
+    this.user = user;
+    this.profile = profile;
+    this.limits = limits;
+    // Helper booleans that mix a bunch of role stuff and profile / limits stuff
+    this._isOwner = user.isOwner;
+    this._isRootOrAdmin = user.role == 'root' || user.role == 'admin';
+    this._isRootOrAdminOrUser = user.role == 'root' || user.role == 'admin' || user.role == 'user';
+    this._isSelfService = user.role == 'selfservice';
+    this._useWebHooks = limits.allowWebHooks;
+    this._useOrders = limits.allowOrders && profile.useOrders;
+    this._useReservations = limits.allowReservations && profile.useReservations;
+    this._usePdf = limits.allowGeneratePdf;
+    this._useKits = limits.allowKits && profile.useKits;
+    this._useCustody = limits.allowCustody && profile.useCustody;
+    this._useGeo = profile.useGeo;
+    this._useSelfService = limits.allowSelfService && profile.useSelfService;
+    this._useCheckinLocation = this._useOrders && profile.orderCheckinLocation;
+    this._usePublicSelfService = limits.allowSelfService && profile.usePublicSelfService;
+    this._useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
+    this._useSendMessage = limits.allowSendMessage && profile.useSendMessage;
+    this._useUserSync = limits.allowUserSync && profile.useUserSync;
+    this._useFlags = profile.useFlags;
+    this._useGeo = profile.useGeo;
+    this._canSetFlag = false;
+    this._canClearFlag = false;
+    switch (user.role) {
+    case 'selfservice':
+      this._canSetFlag = profile.selfServiceCanSetFlag;
+      this._canClearFlag = profile.selfServiceCanClearFlag;
+      break;
+    case 'user':
+      this._canSetFlag = profile.userCanSetFlag;
+      this._canClearFlag = profile.userCanClearFlag;
+      break;
+    default:
+      this._canSetFlag = true;
+      this._canClearFlag = true;
+      break;
+    }
+    if (this._isSelfService) {
+      // Override some permissions for selfservice users
+      this._useOrders = this._useOrders && this._useSelfService && profile.selfServiceCanOrder;
+      this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
+      this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
+    }
+  };
+  PermissionHandler.prototype.hasAnyAdminPermission = function () {
+    return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs');
+  };
+  PermissionHandler.prototype.hasDashboardPermission = function (action, data, location) {
+    // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
+    if (this._isSelfService) {
+      return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
+    }
+    return true;
+  };
+  PermissionHandler.prototype.hasCalendarPermission = function (action, data, location) {
+    // Calendar permission depends on reservation or checkout permission
+    return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
+  };
+  PermissionHandler.prototype.hasItemPermission = function (action, data, location) {
+    return this.hasPermission(action, 'items', data, location);
+  };
+  PermissionHandler.prototype.hasItemCustodyPermission = function () {
+    return this._useCustody;
+  };
+  PermissionHandler.prototype.hasItemFlagPermission = function () {
+    return this._useFlags;
+  };
+  PermissionHandler.prototype.hasItemGeoPermission = function () {
+    return this._useGeo;
+  };
+  PermissionHandler.prototype.hasItemGeoPermission = function () {
+    return this._useGeo;
+  };
+  PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
+    return this.hasPermission(action || 'read', 'kits', data, location);
+  };
+  PermissionHandler.prototype.hasContactPermission = function (action, data, location) {
+    return this.hasPermission(action, 'contacts', data, location);
+  };
+  PermissionHandler.prototype.hasContactReadOtherPermission = function (action, data, location) {
+    return !this._isSelfService;
+  };
+  PermissionHandler.prototype.hasCheckoutPermission = function (action, data, location) {
+    return this.hasPermission(action || 'read', 'orders', data, location);
+  };
+  PermissionHandler.prototype.hasReservationPermission = function (action, data, location) {
+    return this.hasPermission(action || 'read', 'reservations', data, location);
+  };
+  PermissionHandler.prototype.hasCategoriesPermission = function (action, data, location) {
+    return this.hasPermission(action, 'categories', data, location);
+  };
+  PermissionHandler.prototype.hasWebhooksPermission = function (action, data, location) {
+    return this.hasPermission(action, 'webhooks', data, location);
+  };
+  PermissionHandler.prototype.hasUserPermission = function (action, data, location) {
+    return this.hasPermission(action, 'users', data, location);
+  };
+  PermissionHandler.prototype.hasLocationPermission = function (action, data, location) {
+    return this.hasPermission(action, 'locations', data, location);
+  };
+  PermissionHandler.prototype.hasWebhookPermission = function (action, data, location) {
+    return this.hasPermission(action, 'webhooks', data, location);
+  };
+  PermissionHandler.prototype.hasAccountPermission = function (action, data, location) {
+    return this.hasPermission(action, 'account', data, location);
+  };
+  PermissionHandler.prototype.hasAccountInvoicesPermission = function (action, data, location) {
+    return this.hasPermission(action, 'invoices', data, location);
+  };
+  PermissionHandler.prototype.hasAccountSubscriptionPermission = function (action, data, location) {
+    return this.hasPermission(action, 'subscription', data, location);
+  };
+  PermissionHandler.prototype.hasAccountBillingPermission = function (action, data, location) {
+    return this.hasPermission(action, 'billing', data, location);
+  };
+  PermissionHandler.prototype.hasAccountTemplatePermission = function (action, data, location) {
+    return this.hasPermission(action, 'templates', data, location);
+  };
+  PermissionHandler.prototype.hasAccountUserSyncPermission = function (action, data, location) {
+    return this.hasPermission(action, 'syncs', data, location);
+  };
+  PermissionHandler.prototype.hasAssetTagsPermission = function (action, data, location) {
+    //return this.hasPermission(action, "asset-tags", data, location);
+    return this.hasAnyAdminPermission();
+  };
+  PermissionHandler.prototype.hasPermission = function (action, collection, data, location) {
+    if (this._isSelfService && !this._useSelfService) {
+      return false;
+    }
+    switch (collection) {
+    default:
+      return false;
+    case 'items':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return true;
+      case 'create':
+      case 'duplicate':
+      case 'update':
+      case 'delete':
+      case 'expire':
+      case 'undoExpire':
+      case 'setFields':
+      case 'setField':
+      case 'clearField':
+      case 'addAttachment':
+      case 'addComment':
+      case 'updateComment':
+      case 'removeComment':
+      case 'import':
+      case 'export':
+      case 'updateGeo':
+      case 'changeLocation':
+      case 'changeCategory':
+        return this._isRootOrAdmin;
+      // Permissings for asset labels
+      case 'printLabel':
+        return this._isRootOrAdmin;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Modules
+      case 'reserve':
+        return this._useReservations;
+      case 'checkout':
+        return this._useOrders;
+      case 'takeCustody':
+      case 'releaseCustody':
+        return this._useCustody;
+      case 'transferCustody':
+        return this._useCustody && this._isRootOrAdmin;
+      }
+      break;
+    case 'kits':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return this._useKits;
+      case 'create':
+      case 'duplicate':
+      case 'update':
+      case 'delete':
+      case 'setFields':
+      case 'setField':
+      case 'clearField':
+      case 'addAttachment':
+      case 'addComment':
+      case 'updateComment':
+      case 'removeComment':
+      case 'addItems':
+      case 'removeItems':
+      case 'moveItem':
+      case 'export':
+        return this._useKits && this._isRootOrAdmin;
+      // Permissings for asset labels
+      case 'printLabel':
+        return this._isRootOrAdmin;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
+      case 'takeApart':
+        return this.profile.canTakeApartKits;
+      // Modules
+      // Modules
+      case 'reserve':
+        return this._useReservations;
+      case 'checkout':
+        return this._useOrders;
+      case 'takeCustody':
+      case 'releaseCustody':
+        return this._useCustody;
+      case 'transferCustody':
+      case 'giveCustody':
+        return this._useCustody && this._isRootOrAdmin;
+      }
+      break;
+    case 'orders':
+    case 'checkouts':
+      switch (action) {
+      default:
+        return false;
+      // TODO: Checkin at location
+      // TODO: Add items to open check-out
+      // CRUD
+      case 'create':
+      case 'read':
+      case 'update':
+      case 'delete':
+      // Order specific actions
+      case 'setCustomer':
+      case 'clearCustomer':
+      case 'setLocation':
+      case 'clearLocation':
+      case 'addItems':
+      case 'removeItems':
+      case 'swapItems':
+      case 'undoCheckout':
+      case 'checkin':
+      case 'checkout':
+      // Generic actions
+      case 'setFields':
+      case 'setField':
+      case 'clearField':
+      case 'addAttachment':
+      case 'addComment':
+      case 'updateComment':
+      case 'removeComment':
+      case 'export':
+      case 'archive':
+      case 'undoArchive':
+        return this._useOrders;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
+      case 'generateDocument':
+        return this._usePdf;
+      case 'checkinAt':
+        return this._useCheckinLocation;
+      case 'forceConflictResolving':
+        return false;  // this.profile.forceConflictResolving;
+      }
+      break;
+    case 'reservations':
+      switch (action) {
+      default:
+        return false;
+      // TODO: Add items to open reservation
+      // CRUD
+      case 'create':
+      case 'read':
+      case 'update':
+      case 'delete':
+      // Reservation specific actions
+      case 'setFromToDate':
+      case 'setCustomer':
+      case 'clearCustomer':
+      case 'setLocation':
+      case 'clearLocation':
+      case 'addItems':
+      case 'removeItems':
+      case 'swapItems':
+      case 'reserve':
+      case 'undoReserve':
+      case 'cancel':
+      case 'undoCancel':
+      case 'switchToOrder':
+      case 'makeOrder':
+      case 'reserveAgain':
+      case 'reserveRepeat':
+      // Generic actions
+      case 'setFields':
+      case 'setField':
+      case 'clearField':
+      case 'addAttachment':
+      case 'addComment':
+      case 'updateComment':
+      case 'removeComment':
+      case 'export':
+      case 'archive':
+      case 'undoArchive':
+        return this._useReservations;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
+      case 'generateDocument':
+        return this._usePdf;
+      }
+      break;
+    case 'customers':
+    case 'contacts':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+      case 'create':
+      case 'update':
+      case 'delete':
+      case 'archive':
+      case 'undoArchive':
+      case 'setFields':
+      case 'setField':
+      case 'clearField':
+      case 'addAttachment':
+      case 'addComment':
+      case 'updateComment':
+      case 'removeComment':
+      case 'import':
+      case 'export':
+        return this._isRootOrAdminOrUser;
+      // Permissions for flags
+      case 'setFlag':
+        return this._useFlags && this._canSetFlag;
+      case 'clearFlag':
+        return this._useFlags && this._canClearFlag;
+      // Other
+      case 'generateDocument':
+        return this._usePdf;
+      }
+      break;
+    case 'users':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return true;
+      case 'create':
+      case 'update':
+      case 'delete':
+      case 'linkNewCustomer':
+      case 'linkCustomer':
+      case 'unLinkCustomer':
+      case 'inviteUser':
+      case 'archive':
+      case 'undoArchive':
+      case 'activate':
+      case 'deactivate':
+        return this._isRootOrAdmin;
+      case 'changeAccountOwner':
+        return this._isOwner;
+      }
+      break;
+    case 'categories':
+    case 'locations':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return true;
+      case 'create':
+      case 'update':
+      case 'delete':
+        return this._isRootOrAdmin;
+      }
+      break;
+    case 'syncs':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+      case 'create':
+      case 'update':
+      case 'delete':
+      case 'clone':
+      case 'testConnection':
+      case 'syncUsers':
+        return this._useUserSync && this._isRootOrAdmin;
+      }
+      break;
+    case 'webhooks':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+      case 'create':
+      case 'update':
+      case 'delete':
+        return this._useWebHooks && this._isRootOrAdmin;
+      }
+      break;
+    case 'account':
+      switch (action) {
+      default:
+        return this._isRootOrAdmin;
+      case 'reset':
+      case 'cancelPlan':
+      case 'changePlan':
+        return this._isOwner;
+      }
+      break;
+    case 'subscription':
+    case 'invoices':
+    case 'billing':
+    case 'templates':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return true;
+      case 'create':
+      case 'update':
+      case 'delete':
+      case 'archive':
+      case 'undoArchive':
+      case 'activate':
+      case 'deactivate':
+      case 'clone':
+        return this._isRootOrAdmin;
+      }
+      break;
+    case 'asset-tags':
+      switch (action) {
+      default:
+        return this._isRootOrAdmin;
+      }
+      break;
+    }
+  };
+  return PermissionHandler;
+}();
 Reservation = function ($, api, Transaction, Conflict) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9153,10 +12042,11 @@ Reservation = function ($, api, Transaction, Conflict) {
   var Reservation = function (opt) {
     var spec = $.extend({
       crtype: 'cheqroom.types.reservation',
-      fields: ['*']
+      _fields: ['*']
     }, opt);
     Transaction.call(this, spec);
     this.conflicts = [];
+    this.order = null;
   };
   Reservation.prototype = new tmp();
   Reservation.prototype.constructor = Reservation;
@@ -9181,13 +12071,66 @@ Reservation = function ($, api, Transaction, Conflict) {
   // Helpers
   //
   /**
+   * Gets a moment duration object
+   * @method
+   * @name Reservation#getDuration
+   * @returns {duration}
+   */
+  Reservation.prototype.getDuration = function () {
+    return common.getReservationDuration(this.raw);
+  };
+  /**
+   * Gets a friendly order duration or empty string
+   * @method
+   * @name Reservation#getFriendlyDuration
+   * @returns {string}
+   */
+  Reservation.prototype.getFriendlyDuration = function () {
+    return common.getFriendlyReservationDuration(this.raw, this._getDateHelper());
+  };
+  /**
+   * Checks if from date is valid for open/creating reservation
+   * otherwise return always true
+   *
+   * @return {Boolean}
+   */
+  Reservation.prototype.isValidFromDate = function () {
+    var from = this.from, status = this.status, now = this.getNow();
+    if (status == 'creating' || status == 'open') {
+      return from != null && from.isAfter(now);
+    }
+    return true;
+  };
+  /**
+   * Checks if to date is valid for open/creating reservation
+   * otherwise return always true
+   *
+   * @return {Boolean}
+   */
+  Reservation.prototype.isValidToDate = function () {
+    var from = this.from, to = this.to, status = this.status;
+    if (status == 'creating' || status == 'open') {
+      return to != null && to.isAfter(from);
+    }
+    return true;
+  };
+  /**
    * Checks if the reservation can be booked
    * @method
    * @name Reservation#canReserve
    * @returns {boolean}
    */
   Reservation.prototype.canReserve = function () {
-    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.from && this.to && this.items && this.items.length;
+    return this.status == 'creating' && this.location && (this.contact && this.contact.status == 'active') && this.isValidFromDate() && this.isValidToDate() && this.items && this.items.length;
+  };
+  /**
+   * Checks if the reservation can be undone (based on status)
+   * @method
+   * @name Reservation#canUndoReserve
+   * @returns {boolean}
+   */
+  Reservation.prototype.canUndoReserve = function () {
+    return this.status == 'open';
   };
   /**
    * Checks if the reservation can be cancelled
@@ -9217,6 +12160,33 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this.status == 'creating';
   };
   /**
+   * Checks if items can be added to the reservation (based on status)
+   * @method
+   * @name Reservation#canAddItems
+   * @returns {boolean}
+   */
+  Reservation.prototype.canAddItems = function () {
+    return this.status == 'creating';
+  };
+  /**
+   * Checks if items can be removed from the reservation (based on status)
+   * @method
+   * @name Reservation#canRemoveItems
+   * @returns {boolean}
+   */
+  Reservation.prototype.canRemoveItems = function () {
+    return this.status == 'creating';
+  };
+  /**
+   * Checks if items can be swapped in the reservation (based on status)
+   * @method
+   * @name Reservation#canSwapItems
+   * @returns {boolean}
+   */
+  Reservation.prototype.canSwapItems = function () {
+    return this.status == 'creating' || this.status == 'open';
+  };
+  /**
    * Checks if the reservation can be turned into an order
    * @method
    * @name Reservation#canMakeOrder
@@ -9238,6 +12208,41 @@ Reservation = function ($, api, Transaction, Conflict) {
       return false;
     }
   };
+  /**
+   * Checks if the reservation has an order linked to it
+   * @method
+   * @name Reservation#canGoToOrder
+   * @returns {boolean}
+   */
+  Reservation.prototype.canGoToOrder = function () {
+    return this.order != null;
+  };
+  /**
+   * Checks if the reservation can be reserved again (based on status)
+   * @method
+   * @name Reservation#canReserveAgain
+   * @returns {boolean}
+   */
+  Reservation.prototype.canReserveAgain = function () {
+    return this.status == 'open' || (this.status == 'closed' || this.status == 'cancelled');
+  };
+  /**
+   * Checks if the reservation can be into recurring reservations (based on status)
+   * @method
+   * @name Reservation#canReserveRepeat
+   * @returns {boolean}
+   */
+  Reservation.prototype.canReserveRepeat = function () {
+    return this.status == 'open' || this.status == 'closed';
+  };
+  /**
+   * Checks if we can generate a document for this reservation (based on status)
+   * @name Reservation#canGenerateDocument
+   * @returns {boolean}
+   */
+  Reservation.prototype.canGenerateDocument = function () {
+    return this.status == 'open' || this.status == 'closed';
+  };
   //
   // Document overrides
   //
@@ -9254,6 +12259,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.from = data.fromDate == null || data.fromDate == 'null' ? null : data.fromDate;
     that.to = data.toDate == null || data.toDate == 'null' ? null : data.toDate;
     that.due = null;
+    that.order = data.order || null;
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
     });
@@ -9271,70 +12277,74 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @private
    */
   Reservation.prototype._getConflicts = function () {
-    var conflicts = [];
-    var conflict = null;
+    var that = this, conflicts = [], conflict = null;
     // Reservations can only have conflicts
     // when we have a (location OR (from AND to)) AND at least 1 item
+    // So we'll only hit the server if there are possible conflicts.
+    //
+    // However, some conflicts only start making sense when the reservation fields filled in
+    // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
     if (this.items && this.items.length && (this.location || this.from && this.to)) {
-      if (this.status == 'open') {
-        // Reservations in "open" status,
-        // can use the Items' current status and location
-        // to see if there are any conflicts for fullfilling into an Order
-        var locId = this._getId(this.location);
-        $.each(this.items, function (i, item) {
-          if (item.status == 'expired') {
+      var locId = this.location ? this._getId(this.location) : null;
+      var showOrderConflicts = this.from && this.to;
+      var showLocationConflicts = locId != null;
+      var showStatusConflicts = true;
+      // always show conflicts for expired, custody
+      return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
+        cnflcts = cnflcts || [];
+        // Now we have 0 or more conflicts for this reservation
+        // run over the items again and find the conflict for each item
+        $.each(that.items, function (i, item) {
+          conflict = cnflcts.find(function (conflictObj) {
+            return conflictObj.item == item._id;
+          });
+          // Does this item have a server-side conflict?
+          if (conflict) {
+            var kind = conflict.kind || '';
+            kind = kind || (conflict.order ? 'order' : '');
+            kind = kind || (conflict.reservation ? 'reservation' : '');
             conflicts.push(new Conflict({
-              kind: 'expired',
+              kind: kind,
               item: item._id,
               itemName: item.name,
-              doc: item.order
+              doc: conflict.conflictsWith
             }));
-          } else if (item.status != 'available') {
-            conflicts.push(new Conflict({
-              kind: 'status',
-              item: item._id,
-              itemName: item.name,
-              doc: item.order
-            }));
-          } else if (item.location != locId) {
-            conflicts.push(new Conflict({
-              kind: 'location',
-              item: item._id,
-              itemName: item.name,
-              locationCurrent: item.location,
-              locationDesired: locId,
-              doc: item.order
-            }));
+          } else {
+            if (showStatusConflicts && item.status == 'expired') {
+              conflicts.push(new Conflict({
+                kind: 'expired',
+                item: item._id,
+                itemName: item.name,
+                doc: item.order
+              }));
+            } else if (showStatusConflicts && item.status == 'in_custody') {
+              conflicts.push(new Conflict({
+                kind: 'custody',
+                item: item._id,
+                itemName: item.name,
+                doc: item.order
+              }));
+            } else if (showOrderConflicts && item.status != 'available') {
+              conflicts.push(new Conflict({
+                kind: 'order',
+                item: item._id,
+                itemName: item.name,
+                doc: item.order
+              }));
+            } else if (showLocationConflicts && item.location != locId) {
+              conflicts.push(new Conflict({
+                kind: 'location',
+                item: item._id,
+                itemName: item.name,
+                locationCurrent: item.location,
+                locationDesired: locId,
+                doc: item.order
+              }));
+            }
           }
         });
-      } else if (this.status == 'creating') {
-        var that = this;
-        // Reservations in "creating" status,
-        // use a server side check
-        return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
-          if (cnflcts && cnflcts.length) {
-            // Now we have the conflicts for this reservation
-            // run over the items again and find the conflict for each item
-            $.each(that.items, function (i, item) {
-              conflict = cnflcts.find(function (conflictObj) {
-                return conflictObj.item == item._id;
-              });
-              if (conflict) {
-                var kind = conflict.kind || '';
-                kind = kind || conflict.order ? 'order' : '';
-                kind = kind || conflict.reservation ? 'reservation' : '';
-                conflicts.push(new Conflict({
-                  kind: kind,
-                  item: item._id,
-                  itemName: item.name,
-                  doc: conflict.conflictsWith
-                }));
-              }
-            });
-          }
-          return conflicts;
-        });
-      }
+        return conflicts;
+      });
     }
     return $.Deferred().resolve(conflicts);
   };
@@ -9357,7 +12367,14 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this._checkFromToDate(roundedFromDate, roundedToDate).then(function () {
       that.from = roundedFromDate;
       that.to = roundedToDate;
-      return that._handleTransaction(skipRead);
+      return that._doApiCall({
+        method: 'setFromToDate',
+        params: {
+          fromDate: roundedFromDate,
+          toDate: roundedToDate
+        },
+        skipRead: skipRead
+      });
     });
   };
   /**
@@ -9387,7 +12404,17 @@ Reservation = function ($, api, Transaction, Conflict) {
         return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set reservation from date, after (or too close to) to date ' + that.to.toJSONDate()));
       }
       that.from = roundedFromDate;
-      return that._handleTransaction(skipRead);
+      //If reservation doesn't exist yet, we set from date in create call
+      //otherwise use setFromDate to update transaction
+      if (!that.existsInDb()) {
+        return that._createTransaction(skipRead);
+      } else {
+        return that._doApiCall({
+          method: 'setFromDate',
+          params: { fromDate: roundedFromDate },
+          skipRead: skipRead
+        });
+      }
     });
   };
   /**
@@ -9402,7 +12429,10 @@ Reservation = function ($, api, Transaction, Conflict) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot clear reservation from date, status is ' + this.status));
     }
     this.from = null;
-    return this._handleTransaction(skipRead);
+    return this._doApiCall({
+      method: 'clearFromDate',
+      skipRead: skipRead
+    });
   };
   /**
    * setToDate
@@ -9433,7 +12463,17 @@ Reservation = function ($, api, Transaction, Conflict) {
         return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot set reservation to date, before (or too close to) to date ' + that.from.toJSONDate()));
       }
       that.to = roundedToDate;
-      return that._handleTransaction(skipRead);
+      //If reservation doesn't exist yet, we set to date in create call
+      //otherwise use setToDate to update transaction
+      if (!that.existsInDb()) {
+        return that._createTransaction(skipRead);
+      } else {
+        return that._doApiCall({
+          method: 'setToDate',
+          params: { toDate: roundedToDate },
+          skipRead: skipRead
+        });
+      }
     });
   };
   /**
@@ -9448,7 +12488,10 @@ Reservation = function ($, api, Transaction, Conflict) {
       return $.Deferred().reject(new api.ApiUnprocessableEntity('Cannot clear reservation to date, status is ' + this.status));
     }
     this.to = null;
-    return this._handleTransaction(skipRead);
+    return this._doApiCall({
+      method: 'clearToDate',
+      skipRead: skipRead
+    });
   };
   // Reservation does not use due dates
   Reservation.prototype.clearDueDate = function (skipRead) {
@@ -9535,6 +12578,74 @@ Reservation = function ($, api, Transaction, Conflict) {
       skipRead: true
     });
   };
+  /**
+   * Generates a PDF document for the reservation
+   * @method
+   * @name Reservation#generateDocument
+   * @param {string} template id
+   * @param {string} signature (base64)
+   * @param {bool} skipRead
+   * @returns {promise}
+   */
+  Reservation.prototype.generateDocument = function (template, signature, skipRead) {
+    return this._doApiLongCall({
+      method: 'generateDocument',
+      params: {
+        template: template,
+        signature: signature
+      },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Creates a new, incomplete reservation with the same info
+   * as the original reservation but other fromDate, toDate
+   * Important; the response will be another Reservation document!
+   * @method
+   * @name Reservation#reserveAgain
+   * @param fromDate
+   * @param toDate
+   * @param customer
+   * @param location
+   * @param skipRead
+   * @returns {promise}
+   */
+  Reservation.prototype.reserveAgain = function (fromDate, toDate, customer, location, skipRead) {
+    return this._doApiCall({
+      method: 'reserveAgain',
+      params: {
+        fromDate: fromDate,
+        toDate: toDate,
+        location: location,
+        customer: customer
+      },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Creates a list of new reservations with `open` status
+   * as the original reservation but other fromDate, toDate
+   * Important; the response will be a list of other Reservation documents
+   * @method
+   * @name Reservation#reserveRepeat
+   * @param frequency (days, weeks, weekdays, months)
+   * @param customer
+   * @param location
+   * @param until
+   * @returns {promise}
+   */
+  Reservation.prototype.reserveRepeat = function (frequency, until, customer, location) {
+    return this._doApiCall({
+      method: 'reserveRepeat',
+      params: {
+        frequency: frequency,
+        until: until,
+        customer: customer,
+        location: location
+      },
+      skipRead: true
+    });  // response is a array of reservations
+  };
   //
   // Implementation
   //
@@ -9572,9 +12683,6 @@ Reservation = function ($, api, Transaction, Conflict) {
         if (item.status != 'available') {
           unavailable['status'] = unavailable['status'] || [];
           unavailable['status'].push(item._id);
-        } else if (item.location != locId) {
-          unavailable['location'] = unavailable['location'] || [];
-          unavailable['location'].push(item._id);
         }
       });
     }
@@ -9582,18 +12690,305 @@ Reservation = function ($, api, Transaction, Conflict) {
   };
   return Reservation;
 }(jquery, api, transaction, conflict);
+Template = function ($, common, api, Document) {
+  // Some constant values
+  var DEFAULTS = {
+    id: '',
+    status: 'inactive',
+    name: '',
+    body: '',
+    format: '',
+    kind: '',
+    width: 0,
+    height: 0,
+    unit: 'inch',
+    askSignature: false,
+    system: true,
+    archived: null,
+    createdBy: null,
+    createdOn: null,
+    modifiedBy: null,
+    modifiedOn: null
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Document.prototype;
+  /**
+   * Template serves as a starting point for a document or asset label
+   * @name  Template
+   * @class
+   * @property {string} name          the name
+   * @property {string} status        the status
+   * @property {string} body          the body (in html, xml, text, ... depending on the `format`)
+   * @property {string} format        the format (pdf, label, dymo)
+   * @property {string} kind          the kind of pdf (order, reservation, customer)
+   * @property {boolean} askSignature should we ask for a signature when generating a pdf
+   * @property {float} width          the width of the template
+   * @property {float} height         the height of the template
+   * @property {string} unit          this unit that is used for dimensions (mm, inch)
+   * @property {boolean} system       is it a system template which cannot be changed?
+   * @property {Moment} archived      is the template archived
+   * @property {string} createdBy     the user that created the template (null for system templates)
+   * @property {Moment} createdOn     when the template was created
+   * @property {string} modifiedBy    the user that modified the template (null for system templates)
+   * @property {Moment} modifiedOn    when the template was modified
+   * @constructor
+   * @extends Document
+   */
+  var Template = function (opt) {
+    var spec = $.extend({}, opt);
+    Document.call(this, spec);
+    this.name = spec.name || DEFAULTS.name;
+    this.status = spec.status || DEFAULTS.status;
+    this.body = spec.body || DEFAULTS.body;
+    this.format = spec.format || DEFAULTS.format;
+    this.kind = spec.kind || DEFAULTS.kind;
+    this.askSignature = spec.askSignature != null ? spec.askSignature == true : DEFAULTS.askSignature;
+    this.width = spec.width || DEFAULTS.width;
+    this.height = spec.height || DEFAULTS.height;
+    this.unit = spec.unit || DEFAULTS.unit;
+    this.system = spec.system != null ? spec.system == true : DEFAULTS.system;
+    this.archived = spec.archived || DEFAULTS.archived;
+    this.createdBy = spec.createdBy || DEFAULTS.createdBy;
+    this.createdOn = spec.createdOn || DEFAULTS.createdOn;
+    this.modifiedBy = spec.modifiedBy || DEFAULTS.modifiedBy;
+    this.modifiedOn = spec.modifiedOn || DEFAULTS.modifiedOn;
+  };
+  Template.prototype = new tmp();
+  Template.prototype.constructor = Template;
+  //
+  // Specific validators
+  /**
+   * Checks if name is valid
+   * @name Template#isValidName
+   * @method
+   * @return {Boolean}
+   */
+  Template.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    return this.name.length >= 3;
+  };
+  //
+  // Document overrides
+  //
+  /**
+   * Checks if the template has any validation errors
+   * @name Template#isValid
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Template.prototype.isValid = function () {
+    // TODO: Check if the format, kind, etc is correct
+    return this.isValidName();
+  };
+  Template.prototype._getDefaults = function () {
+    return DEFAULTS;
+  };
+  /**
+   * Checks if the object is empty, it never is
+   * @name  Template#isEmpty
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Template.prototype.isEmpty = function () {
+    return Document.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
+  };
+  /**
+   * Checks if the object is archived
+   * @name Template#isArchived
+   * @method
+   * @returns {boolean}
+   */
+  Template.prototype.isArchived = function () {
+    return common.templateIsArchived(this);
+  };
+  /**
+   * Checks if the template is dirty and needs saving
+   * @returns {boolean}
+   * @override
+   */
+  Template.prototype.isDirty = function () {
+    var isDirty = Document.prototype.isDirty.call(this);
+    if (!isDirty && this.raw) {
+      isDirty = this.name != this.raw.name || this.body != this.raw.body || this.format != this.raw.format || this.kind != this.raw.kind || this.askSignature != this.raw.askSignature || this.width != this.raw.width || this.height != this.raw.height || this.unit != this.raw.unit;
+    }
+    return isDirty;
+  };
+  //
+  // Business logic
+  //
+  /**
+   * Clones the template to a new one
+   * @name Template#clone
+   * @returns {promise}
+   */
+  Template.prototype.clone = function () {
+    return this.ds.call(this.id, 'clone');
+  };
+  /**
+   * Archives this template
+   * @name Template#archive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Template.prototype.archive = function (skipRead) {
+    return this._doApiCall({
+      method: 'archive',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unarchives this template
+   * @name Template#undoArchive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Template.prototype.undoArchive = function (skipRead) {
+    return this._doApiCall({
+      method: 'undoArchive',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Activates this template
+   * @name Template#activate
+   * @param skipRead
+   * @returns {promise}
+   */
+  Template.prototype.activate = function (skipRead) {
+    return this._doApiCall({
+      method: 'activate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Deactivates this template
+   * @name Template#deactivate
+   * @param skipRead
+   * @returns {promise}
+   */
+  Template.prototype.deactivate = function (skipRead) {
+    return this._doApiCall({
+      method: 'deactivate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Checks if we can delete the Template document
+   * @name  Template#canDelete
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Template.prototype.canDelete = function () {
+    return common.templateCanDelete(this);
+  };
+  /**
+   * Checks if we can activate a template
+   * @name Template#canActivate
+   * @returns {boolean}
+   */
+  Template.prototype.canActivate = function () {
+    return common.templateCanActivate(this);
+  };
+  /**
+   * Checks if we can deactivate a template
+   * @name Template#canDeactivate
+   * @returns {boolean}
+   */
+  Template.prototype.canDeactivate = function () {
+    return common.templateCanDeactivate(this);
+  };
+  /**
+   * Checks if we can archive a template
+   * @name Template#canArchive
+   * @returns {boolean}
+   */
+  Template.prototype.canArchive = function () {
+    return common.templateCanArchive(this);
+  };
+  /**
+   * Checks if we can undoArchive a template
+   * @name Template#canUndoArchive
+   * @returns {boolean}
+   */
+  Template.prototype.canUndoArchive = function () {
+    return common.templateCanUndoArchive(this);
+  };
+  // toJson, fromJson
+  // ----
+  /**
+   * _toJson, makes a dict of params to use during create / update
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Template.prototype._toJson = function (options) {
+    var data = Document.prototype._toJson.call(this, options);
+    data.name = this.name;
+    data.body = this.body;
+    data.kind = this.kind;
+    data.askSignature = this.askSignature;
+    data.width = this.width;
+    data.height = this.height;
+    data.unit = this.unit;
+    // don't write out fields for:
+    // - format
+    // - status
+    // - system
+    // - created, modified
+    return data;
+  };
+  /**
+   * _fromJson: read some basic information
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns {Promise}
+   * @private
+   */
+  Template.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.name = data.name || DEFAULTS.name;
+      that.status = data.status || DEFAULTS.status;
+      that.body = data.body || DEFAULTS.body;
+      that.format = data.format || DEFAULTS.format;
+      that.kind = data.kind || DEFAULTS.kind;
+      that.askSignature = data.askSignature != null ? data.askSignature == true : DEFAULTS.askSignature;
+      that.width = data.width || DEFAULTS.width;
+      that.height = data.height || DEFAULTS.height;
+      that.unit = data.unit || DEFAULTS.unit;
+      that.system = data.system != null ? data.system == true : DEFAULTS.system;
+      that.archived = data.archived || DEFAULTS.archived;
+      that.createdBy = data.createdBy || DEFAULTS.createdBy;
+      that.createdOn = data.createdOn || DEFAULTS.createdOn;
+      that.modifiedBy = data.modifiedBy || DEFAULTS.modifiedBy;
+      that.modifiedOn = data.modifiedOn || DEFAULTS.modifiedOn;
+      return data;
+    });
+  };
+  return Template;
+}(jquery, common, api, document);
 Transaction = function ($, api, Base, Location, DateHelper, Helper) {
   var DEFAULTS = {
     status: 'creating',
     from: null,
     to: null,
     due: null,
-    contact: '',
-    location: '',
+    contact: null,
+    location: null,
+    number: '',
     items: [],
     conflicts: [],
     by: null,
-    archived: null
+    archived: null,
+    itemSummary: null,
+    name: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9605,16 +13000,17 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @class Transaction
    * @constructor
    * @extends Base
-   * @property {boolean}  autoCleanup               - Automatically cleanup the transaction if it becomes empty?
-   * @property {DateHelper} dateHelper              - A DateHelper object ref
-   * @property {string}  status                     - The transaction status
-   * @property {moment}  from                       - The transaction from date
-   * @property {moment}  to                         - The transaction to date
-   * @property {moment}  due                        - The transaction due date
-   * @property {string}  contact                    - The Contact.id for this transaction
-   * @property {string}  location                   - The Location.id for this transaction
-   * @property {Array}  items                       - A list of Item.id strings
-   * @property {Array}  conflicts                   - A list of conflict hashes
+   * @property {boolean} autoCleanup      - Automatically cleanup the transaction if it becomes empty?
+   * @property {DateHelper} dateHelper    - A DateHelper object ref
+   * @property {string} status            - The transaction status
+   * @property {moment} from              - The transaction from date
+   * @property {moment} to                - The transaction to date
+   * @property {moment} due               - The transaction due date
+   * @property {string} number            - The booking number
+   * @property {string} contact           - The Contact.id for this transaction
+   * @property {string} location          - The Location.id for this transaction
+   * @property {Array} items              - A list of Item.id strings
+   * @property {Array} conflicts          - A list of conflict hashes
    */
   var Transaction = function (opt) {
     var spec = $.extend({}, opt);
@@ -9633,6 +13029,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // a date in the future
     this.due = spec.due || DEFAULTS.due;
     // a date even further in the future, we suggest some standard avg durations
+    this.number = spec.number || DEFAULTS.number;
+    // a booking number
     this.contact = spec.contact || DEFAULTS.contact;
     // a contact id
     this.location = spec.location || DEFAULTS.location;
@@ -9642,6 +13040,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
     // an array of Conflict objects
     this.by = spec.by || DEFAULTS.by;
+    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
+    this.name = spec.name || DEFAULTS.name;
   };
   Transaction.prototype = new tmp();
   Transaction.prototype.constructor = Base;
@@ -9772,17 +13172,17 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * Checks if the transaction is empty
    * @method isEmpty
    * @name Transaction#isEmpty
-   * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
+   * @returns {boolean}
    */
   Transaction.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && this.from == DEFAULTS.from && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
+    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && (this.crtype == 'cheqroom.types.order' ? true : this.from == DEFAULTS.from) && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
 ;
   };
   /**
    * Checks if the transaction is dirty and needs saving
    * @method
    * @name Transaction#isDirty
-   * @returns {*|boolean|boolean|boolean|boolean|boolean|boolean|boolean}
+   * @returns {boolean}
    */
   Transaction.prototype.isDirty = function () {
     return Base.prototype.isDirty.call(this) || this._isDirtyBasic() || this._isDirtyDates() || this._isDirtyLocation() || this._isDirtyContact() || this._isDirtyItems();
@@ -9876,11 +13276,14 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.cover = null;
       // don't read cover property for Transactions
       that.status = data.status || DEFAULTS.status;
+      that.number = data.number || DEFAULTS.number;
       that.location = data.location || DEFAULTS.location;
       that.contact = data.customer || DEFAULTS.contact;
       that.items = data.items || DEFAULTS.items.slice();
       that.by = data.by || DEFAULTS.by;
       that.archived = data.archived || DEFAULTS.archived;
+      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
+      that.name = data.name || DEFAULTS.name;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -10124,8 +13527,10 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'removeItems',
       params: { items: items },
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -10144,8 +13549,10 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     return this._doApiCall({
       method: 'clearItems',
       skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
+    }).then(function (data) {
+      return that._ensureTransactionDeleted().then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   /**
@@ -10159,7 +13566,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.swapItem = function (fromItem, toItem, skipRead) {
     if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot clearItems from document without id'));
+      return $.Deferred().reject(new Error('Cannot swapItem from document without id'));
     }
     // swapItem cannot create or delete a transaction
     return this._doApiCall({
@@ -10202,8 +13609,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.archive = function (skipRead) {
-    if (this.status != 'closed') {
-      return $.Deferred().reject(new Error('Cannot archive document that isn\'t closed'));
+    if (!this.canArchive()) {
+      return $.Deferred().reject(new Error('Cannot archive document'));
     }
     return this._doApiCall({
       method: 'archive',
@@ -10218,13 +13625,42 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.undoArchive = function (skipRead) {
-    if (this.status == 'archived') {
-      return $.Deferred().reject(new Error('Cannot unarchive document that isn\'t archived'));
+    if (!this.canUndoArchive()) {
+      return $.Deferred().reject(new Error('Cannot unarchive document'));
     }
     return this._doApiCall({
       method: 'undoArchive',
       params: {},
       skipRead: skipRead
+    });
+  };
+  /**
+   * Checks if we can archive a transaction (based on status)
+   * @name Transaction#canArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canArchive = function () {
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+  };
+  /**
+   * Checks if we can unarchive a transaction (based on status)
+   * @name Transaction#canUndoArchive
+   * @returns {boolean}
+   */
+  Transaction.prototype.canUndoArchive = function () {
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
+  };
+  Transaction.prototype.setField = function (field, value, skipRead) {
+    var that = this;
+    return this._ensureTransactionExists(skipRead).then(function () {
+      return that._doApiCall({
+        method: 'setField',
+        params: {
+          field: field,
+          value: value
+        },
+        skipRead: skipRead
+      });
     });
   };
   //
@@ -10364,7 +13800,9 @@ User = function ($, Base, common) {
     picture: '',
     role: 'user',
     // user, admin
-    active: true
+    active: true,
+    isOwner: false,
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -10382,7 +13820,7 @@ User = function ($, Base, common) {
    */
   var User = function (opt) {
     var spec = $.extend({
-      fields: [
+      _fields: [
         '*',
         'group',
         'picture'
@@ -10390,27 +13828,15 @@ User = function ($, Base, common) {
     }, opt);
     Base.call(this, spec);
     this.helper = spec.helper;
-    /*
-            from API:
-    
-            login = StringField(primary_key=True, min_length=4)
-            role = StringField(required=True, choices=USER_ROLE)
-            group = ReferenceField(Group)
-            password = StringField(min_length=4)
-            name = StringField(min_length=4)
-            email = EmailField(required=True, unique=True)
-            lastLogin = DateTimeField()
-            profile = EmbeddedDocumentField(UserProfile)
-            active = BooleanField(default=True)
-            picture = ReferenceField(Attachment)
-            timezone = StringField(default="Etc/GMT")  # stored as
-            */
     this.name = spec.name || DEFAULTS.name;
     this.picture = spec.picture || DEFAULTS.picture;
     this.email = spec.email || DEFAULTS.email;
     this.role = spec.role || DEFAULTS.role;
     this.group = spec.group || DEFAULTS.group;
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
+    this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
+    this.archived = spec.archived || DEFAULTS.archived;
+    this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
   User.prototype.constructor = User;
@@ -10430,16 +13856,28 @@ User = function ($, Base, common) {
     case 'user':
     case 'admin':
     case 'root':
+    case 'selfservice':
       return true;
     default:
       return false;
     }
   };
+  User.prototype.emailExists = function () {
+    if (this.isValidEmail()) {
+      // Don't check for emailExists for exisiting user
+      if (this.id != null && this.email == this.raw.email) {
+        return $.Deferred().resolve(false);
+      }
+      return this.dsAnonymous.call('emailExists', { email: this.email }).then(function (resp) {
+        return resp.result;
+      });
+    } else {
+      return $.Deferred().resolve(false);
+    }
+  };
   User.prototype.isValidPassword = function () {
     this.password = $.trim(this.password);
-    var length = this.password.length;
-    var hasDigit = this.password.match(/[0-9]/);
-    return length >= 4 && hasDigit;
+    return common.isValidPassword(this.password);
   };
   /**
    * Checks if the user is valid
@@ -10476,7 +13914,7 @@ User = function ($, Base, common) {
     return isDirty;
   };
   /**
-   * Gets an url for a user avatar
+   * Gets a url for a user avatar
    * 'XS': (64, 64),
    * 'S': (128, 128),
    * 'M': (256, 256),
@@ -10523,6 +13961,100 @@ User = function ($, Base, common) {
       skipRead: skipRead
     });
   };
+  //
+  // Business logic
+  //
+  /**
+   * Checks if a user can be activated
+   * @returns {boolean}
+   */
+  User.prototype.canActivate = function () {
+    return !this.active && this.archived == null;
+  };
+  /**
+   * Checks if a user can be deactivated
+   * @returns {boolean}
+   */
+  User.prototype.canDeactivate = function () {
+    return this.active && this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be archived
+   * @returns {boolean}
+   */
+  User.prototype.canArchive = function () {
+    return this.archived == null && !this.isOwner;
+  };
+  /**
+   * Checks if a user can be unarchived
+   * @returns {boolean}
+   */
+  User.prototype.canUndoArchive = function () {
+    return this.archived != null;
+  };
+  /**
+   * Checks if a user can be owner
+   * @returns {boolean}
+   */
+  User.prototype.canBeOwner = function () {
+    return this.archived == null && this.active && !this.isOwner && this.role == 'admin';
+  };
+  /**
+   * Activates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.activate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'activate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Deactivates a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.deactivate = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'deactivate',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Archives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.archive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'archive',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unarchives a user
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.undoArchive = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'undoArchive',
+      skipRead: skipRead
+    });
+  };
   /**
    * Writes the user to a json object
    * @param options
@@ -10535,7 +14067,6 @@ User = function ($, Base, common) {
     data.email = this.email || DEFAULTS.email;
     data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
-    data.active = this.active || DEFAULTS.active;
     return data;
   };
   /**
@@ -10556,28 +14087,251 @@ User = function ($, Base, common) {
       that.email = data.email || DEFAULTS.email;
       that.role = data.role || DEFAULTS.role;
       that.active = data.active != null ? data.active : DEFAULTS.active;
+      that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
+      that.archived = data.archived || DEFAULTS.archived;
       $.publish('user.fromJson', data);
       return data;
     });
   };
   return User;
 }(jquery, base, common);
-WebHook = function ($, common, api, Document) {
-  /*
-  id = StringField(primary_key=True, default=shortuuid.uuid)
-  name = StringField(required=True, min_length=3)
-  address = URLField()  # e.g.: "http://my.domain.com/inventory_update"
-  topic = StringField(choices=WEBHOOK_TOPICS)
-  fields = StringField(default="*, location.*, items.*, customer.*")  # see also clean function
-  format = StringField(choices=WEBHOOK_FORMATS, default=WEBHOOK_FORMATS[0])
-  created_at = DateTimeField()
-  modified = DateTimeField(default=DateHelper.getNow)
-  enabled = BooleanField(default=True)
-  log = ListField(EmbeddedDocumentField(WebHookLog))  # a log per unique return code and doc id
-  log10 = ListField(EmbeddedDocumentField(WebHookLog))  # a log of the 10 latest fired hooks for this webhook
-  nr_consecutive_fails = IntField(default=0)  # number of consecutive fails of this webhook
-  by = ReferenceField("User")  # The user that added / updated this
+UserSync = function ($, Base, common) {
+  var DEFAULTS = {
+    kind: 'ldap',
+    name: '',
+    enabled: false,
+    host: 'ldap://yourdomain.com',
+    port: 389,
+    timeOut: 10,
+    login: '',
+    password: '',
+    newUsers: 'ignore',
+    existingUsers: 'ignore',
+    missingUsers: 'ignore',
+    autoSync: false,
+    role: 'selfservice',
+    query: '(cn=*)',
+    base: 'ou=team,dc=yourdomain,dc=com',
+    loginField: 'uid',
+    nameField: 'cn',
+    emailField: 'mail'
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Base.prototype;
+  /**
+   * @name UserSync
+   * @class UserSync
+   * @constructor
+   * @extends Base
+   * @property {string} kind                  - The kind
+   * @property {string} name                  - The name
+   * @property {boolean} enabled              - Is the usersync active?
+   * @property {string} host                  - The url of the host
+   * @property {int} port                     - The port number
+   * @property {int} timeOut                  - The timeOut in seconds
+   * @property {string} login                 - The login for the host
+   * @property {string} password              - The password for the host
+   * @property {string} newUsers              - What to with new Users (ignore, create)
+   * @property {string} existingUsers         - What to with existing Users (ignore, update)
+   * @property {string} missingUsers          - What to with missing Users (ignore, archive, deactivate)
+   * @property {boolean} autoSync             - Do a nightly sync automatically?
+   * @property {string} role                  - Sync users under which role? (selfservice, user, admin)
+   * @property {string} query                 - The query
+   * @property {string} base                  - The base
+   * @property {string} loginField            - The loginField
+   * @property {string} nameField             - The nameField
+   * @property {string} emailField            - The emailField
    */
+  var UserSync = function (opt) {
+    var spec = $.extend({ _fields: ['*'] }, opt);
+    Base.call(this, spec);
+    this.helper = spec.helper;
+    this.kind = spec.kind || DEFAULTS.kind;
+    this.name = spec.name || DEFAULTS.name;
+    this.enabled = spec.enabled != null ? spec.enabled : DEFAULTS.enabled;
+    this.host = spec.host || DEFAULTS.host;
+    this.port = spec.port || DEFAULTS.port;
+    this.timeOut = spec.timeOut || DEFAULTS.timeOut;
+    this.login = spec.login || DEFAULTS.login;
+    this.password = spec.password || DEFAULTS.password;
+    this.newUsers = spec.newUsers || DEFAULTS.newUsers;
+    this.existingUsers = spec.existingUsers || DEFAULTS.existingUsers;
+    this.missingUsers = spec.missingUsers || DEFAULTS.missingUsers;
+    this.autoSync = spec.autoSync != null ? spec.autoSync : DEFAULTS.autoSync;
+    this.role = spec.role || DEFAULTS.role;
+    this.query = spec.query || DEFAULTS.query;
+    this.base = spec.base || DEFAULTS.base;
+    this.loginField = spec.loginField || DEFAULTS.loginField;
+    this.nameField = spec.nameField || DEFAULTS.nameField;
+    this.emailField = spec.emailField || DEFAULTS.emailField;
+  };
+  UserSync.prototype = new tmp();
+  UserSync.prototype.constructor = UserSync;
+  //
+  // Document overrides
+  //
+  UserSync.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    return this.name.length >= 3;
+  };
+  UserSync.prototype.isValidRole = function () {
+    switch (this.role) {
+    case 'user':
+    case 'admin':
+    case 'selfservice':
+      return true;
+    default:
+      return false;
+    }
+  };
+  /**
+   * Checks if the usersync is valid
+   * @method
+   * @name UserSync#isValid
+   * @returns {boolean}
+   */
+  UserSync.prototype.isValid = function () {
+    return this.isValidName() && this.isValidRole();
+  };
+  /**
+   * Checks if the user is empty
+   * @method
+   * @name UserSync#isEmpty
+   * @returns {boolean}
+   */
+  UserSync.prototype.isEmpty = function () {
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.enabled == DEFAULTS.enabled && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField;
+  };
+  /**
+   * Checks if the user is dirty and needs saving
+   * @method
+   * @name UserSync#isDirty
+   * @returns {boolean}
+   */
+  UserSync.prototype.isDirty = function () {
+    var isDirty = Base.prototype.isDirty.call(this);
+    if (!isDirty && this.raw) {
+      var kind = this.raw.kind || DEFAULTS.kind;
+      var name = this.raw.name || DEFAULTS.name;
+      var enabled = this.raw.enabled != null ? this.raw.enabled : DEFAULTS.enabled;
+      var host = this.raw.host || DEFAULTS.host;
+      var port = this.raw.port || DEFAULTS.port;
+      var timeOut = this.raw.timeOut || DEFAULTS.timeOut;
+      var login = this.raw.login || DEFAULTS.login;
+      var password = this.raw.password || DEFAULTS.password;
+      var newUsers = this.raw.newUsers || DEFAULTS.newUsers;
+      var existingUsers = this.raw.existingUsers || DEFAULTS.existingUsers;
+      var missingUsers = this.raw.missingUsers || DEFAULTS.missingUsers;
+      var autoSync = this.raw.autoSync != null ? this.raw.autoSync : DEFAULTS.autoSync;
+      var role = this.raw.role || DEFAULTS.role;
+      var query = this.raw.query || DEFAULTS.query;
+      var base = this.raw.base || DEFAULTS.base;
+      var loginField = this.raw.loginField || DEFAULTS.loginField;
+      var nameField = this.raw.nameField || DEFAULTS.nameField;
+      var emailField = this.raw.emailField || DEFAULTS.emailField;
+      return this.kind != kind || this.name != name || this.enabled != enabled || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField;
+    }
+    return isDirty;
+  };
+  UserSync.prototype._getDefaults = function () {
+    return DEFAULTS;
+  };
+  //
+  // Business logic
+  //
+  /**
+   * Clones the template to a new one
+   * @name UserSync#clone
+   * @returns {promise}
+   */
+  UserSync.prototype.clone = function () {
+    return this.ds.call(this.id, 'clone');
+  };
+  /**
+   * Tests the specified connection
+   * @name UserSync#testConnection
+   * @returns {promise}
+   */
+  UserSync.prototype.testConnection = function () {
+    return this.ds.call(this.id, 'testConnection');
+  };
+  /**
+   * Tests the specified sync
+   * @name UserSync#syncUsers
+   * @param wetRun
+   * @returns {promise}
+   */
+  UserSync.prototype.syncUsers = function (wetRun) {
+    return this.ds.call(this.id, 'syncUsers', { wetRun: wetRun });
+  };
+  /**
+   * Writes the usersync to a json object
+   * @param options
+   * @returns {object}
+   * @private
+   */
+  UserSync.prototype._toJson = function (options) {
+    var data = Base.prototype._toJson.call(this, options);
+    data.kind = this.kind || DEFAULTS.kind;
+    data.name = this.name || DEFAULTS.name;
+    data.enabled = this.enabled != null ? this.enabled : DEFAULTS.enabled;
+    data.host = this.host || DEFAULTS.host;
+    data.port = this.port || DEFAULTS.port;
+    data.timeOut = this.timeOut || DEFAULTS.timeOut;
+    data.login = this.login || DEFAULTS.login;
+    data.password = this.password || DEFAULTS.password;
+    data.newUsers = this.newUsers || DEFAULTS.newUsers;
+    data.existingUsers = this.existingUsers || DEFAULTS.existingUsers;
+    data.missingUsers = this.missingUsers || DEFAULTS.missingUsers;
+    data.autoSync = this.autoSync != null ? this.autoSync : DEFAULTS.autoSync;
+    data.role = this.role || DEFAULTS.role;
+    data.query = this.query || DEFAULTS.query;
+    data.base = this.base || DEFAULTS.base;
+    data.loginField = this.loginField || DEFAULTS.loginField;
+    data.nameField = this.nameField || DEFAULTS.nameField;
+    data.emailField = this.emailField || DEFAULTS.emailField;
+    return data;
+  };
+  /**
+   * Reads the usersync from the json object
+   * @param data
+   * @param options
+   * @returns {promise}
+   * @private
+   */
+  UserSync.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Base.prototype._fromJson.call(this, data, options).then(function () {
+      // Read the group id from group or group._id
+      // depending on the fields
+      that.kind = data.kind || DEFAULTS.kind;
+      that.name = data.name || DEFAULTS.name;
+      that.enabled = data.enabled != null ? data.enabled : DEFAULTS.enabled;
+      that.host = data.host || DEFAULTS.host;
+      that.port = data.port || DEFAULTS.port;
+      that.timeOut = data.timeOut || DEFAULTS.timeOut;
+      that.login = data.login || DEFAULTS.login;
+      that.password = data.password || DEFAULTS.password;
+      that.newUsers = data.newUsers || DEFAULTS.newUsers;
+      that.existingUsers = data.existingUsers || DEFAULTS.existingUsers;
+      that.missingUsers = data.missingUsers || DEFAULTS.missingUsers;
+      that.autoSync = data.autoSync != null ? data.autoSync : DEFAULTS.autoSync;
+      that.role = data.role || DEFAULTS.role;
+      that.query = data.query || DEFAULTS.query;
+      that.base = data.base || DEFAULTS.base;
+      that.loginField = data.loginField || DEFAULTS.loginField;
+      that.nameField = data.nameField || DEFAULTS.nameField;
+      that.emailField = data.emailField || DEFAULTS.emailField;
+      $.publish('usersync.fromJson', data);
+      return data;
+    });
+  };
+  return UserSync;
+}(jquery, base, common);
+WebHook = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
     id: '',
@@ -10605,7 +14359,7 @@ WebHook = function ($, common, api, Document) {
    * @property {string} name          the name
    * @property {string} address       the url which will be called
    * @property {string} topic         the topic name ('item.changelocation', 'item.changegeo', 'item.expire', ...)
-   * @property {string} fields        the fields which should be fetched from the db (default: `*, location.*, items.*, customer.*)
+   * @property {string} hookFields    the fields which should be fetched from the db (default: `*, location.*, items.*, customer.*)
    * @property {string} format        the output format (only `json` is supported)
    * @property {Moment} created       the creation date of the webhook
    * @property {Moment} modified      the modified date of the webhook
@@ -10788,7 +14542,7 @@ OrderTransfer = function ($, Base) {
    */
   var OrderTransfer = function (opt) {
     var spec = $.extend({
-      fields: ['*'],
+      _fields: ['*'],
       crtype: 'cheqroom.types.reservation.ordertransfer'
     }, opt);
     Base.call(this, spec);
@@ -10915,7 +14669,7 @@ OrderTransfer = function ($, Base) {
   };
   return OrderTransfer;
 }(jquery, base);
-core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, Helper, Reservation, Transaction, User, WebHook, common, OrderTransfer) {
+core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer) {
   var core = {};
   // namespaces
   core.api = api;
@@ -10924,23 +14678,27 @@ core = function (api, Availability, Attachment, Base, Comment, Conflict, Contact
   core.Availability = Availability;
   core.Attachment = Attachment;
   core.Base = Base;
+  core.Category = Category;
   core.Comment = Comment;
   core.Conflict = Conflict;
   core.Contact = Contact;
   core.DateHelper = DateHelper;
   core.Document = Document;
+  core.Group = Group;
   core.Item = Item;
-  core.KeyValue = KeyValue;
   core.Kit = Kit;
   core.Location = Location;
   core.Order = Order;
+  core.PermissionHandler = PermissionHandler;
   core.Reservation = Reservation;
+  core.Template = Template;
   core.Transaction = Transaction;
   core.User = User;
+  core.UserSync = UserSync;
   core.WebHook = WebHook;
   core.OrderTransfer = OrderTransfer;
   core.Helper = Helper;
   return core;
-}(api, Availability, Attachment, Base, Comment, Conflict, Contact, DateHelper, Document, Item, KeyValue, Kit, Location, Order, helper, Reservation, Transaction, User, WebHook, common, OrderTransfer);
+}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer);
 return core;
 }))

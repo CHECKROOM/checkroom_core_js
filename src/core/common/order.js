@@ -16,9 +16,9 @@ define(['moment'], function (moment) {
 		getFriendlyOrderStatus: function(status) {
 	        // ORDER_STATUS = ('creating', 'open', 'closed')
 	        switch(status) {
-	            case 'creating': return 'Incomplete';
+	            case 'creating': return 'Draft';
 	            case 'open': return 'Open';
-	            case 'closed': return 'Closed';
+	            case 'closed': return 'Completed';
 	            default: return 'Unknown';
 	        }
 	    },
@@ -103,7 +103,13 @@ define(['moment'], function (moment) {
     	 */
     	getOrderStatus: function(order, now) {
         	now = now || moment();
-        	return (this.isOrderOverdue(order, now)) ? "Overdue" : this.getFriendlyOrderStatus(order.status);
+        	if (this.isOrderOverdue(order, now)) {
+				return "Overdue";
+			} else if(this.isOrderArchived(order)) {
+				return "Archived";
+			} else {
+				return this.getFriendlyOrderStatus(order.status);
+			}
     	},
     	/**
     	 * getOrderCss
@@ -119,11 +125,11 @@ define(['moment'], function (moment) {
     	getOrderCss: function(order, now) {
         	now = now || moment();
 
-        	if(this.isOrderOverdue(order, now)){
+        	if(this.isOrderOverdue(order, now)) {
         		return "label-overdue";
-        	}else if(this.isOrderArchived(order)){
+        	} else if(this.isOrderArchived(order)) {
         		return this.getFriendlyOrderCss(order.status) + " label-striped";
-        	}else{
+        	} else {
         		return this.getFriendlyOrderCss(order.status);
         	}
     	}

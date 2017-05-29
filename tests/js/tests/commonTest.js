@@ -6,6 +6,14 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
         var run = function() {
             var common = cr.common;
 
+            test('isFreeEmail', function() {
+                ok(common.isFreeEmail("vincent@gmail.com"));
+                ok(common.isFreeEmail("vincent@hotmail.com"));
+                ok(common.isFreeEmail("vincent@yahoo.com"));
+                ok(!common.isFreeEmail("vincent@cheqroom.com"));
+                ok(!common.isFreeEmail("vincent+nospam@cheqroom.com"));
+            });
+
             test('joinOther', function() {
                 equal(["single"].joinOther(), "single");
                 equal([].joinOther(), "");
@@ -22,6 +30,19 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                 equal(common.isValidEmail("jeroen+jul1000@cheqroom.com"), true);
                 equal(common.isValidEmail("jeroen.verhoest+jul1000@cheqroom.com"), true);
                 equal(common.isValidEmail("jeroen.verhoest+jul1000@cheqroom"), false);
+            });
+
+            test('checkBarcode', function() {
+                equal(common.isValidBarcode(""), false);
+                equal(common.isValidBarcode("     "), false);
+                equal(common.isValidBarcode("12345$"), false); // VT: Technically, a $ is a valid symbol in a code39 barcode
+                equal(common.isValidBarcode("NOT8NOT8"), false); // Not 8 long, although it is actually a valid barcode, it would clash with our qrcode
+                equal(common.isValidBarcode("12345678901234"), false);  // Too long
+
+                equal(common.isValidBarcode("1234-ABCD"), true);
+                equal(common.isValidBarcode("ABC123"), true);
+                equal(common.isValidBarcode("EN0017"), true);
+                equal(common.isValidBarcode("0001234000057"), true);
             });
 
             test("Slimdown", function(assert){

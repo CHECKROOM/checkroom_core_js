@@ -4,22 +4,17 @@
  * @module attachment
  * @copyright CHECKROOM NV 2015
  */
-define([
-    'jquery',
-    'keyvalue'], /** @lends Attachment */ function ($, KeyValue) {
+define(['jquery'], /** Attachment */ function ($) {
 
     var EXT = /(?:\.([^.]+))?$/;
     var IMAGES = ['jpg', 'jpeg', 'png'];
     var PREVIEWS = ['jpg', 'jpeg', 'png', 'doc', 'docx', 'pdf'];
     var DEFAULTS = {
+        fileName: '',
+        fileSize: 0,
         isCover: false,
         canBeCover: true
     };
-
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = KeyValue.prototype;
 
     /**
      * @name  Attachment
@@ -28,18 +23,20 @@ define([
      * @property {bool} isCover        is this the cover image of a document
      * @property {bool} canBeCover     can this attachment be the cover of a document?
      * @constructor
-     * @extends KeyValue
      */
     var Attachment = function(spec) {
-        KeyValue.call(this, spec);
-
+        spec = spec || {};
         this.ds = spec.ds;
+        this.raw = null; // the raw json object
+
+        this.fileName = spec.fileName || DEFAULTS.fileName;
+        this.fileSize = spec.fileSize || DEFAULTS.fileSize;
+        this.value = spec.value || DEFAULTS.value;
+        this.created = spec.created || DEFAULTS.created;
+        this.by = spec.by || DEFAULTS.by;
         this.isCover = (spec.isCover!=null) ? spec.isCover : DEFAULTS.isCover;
         this.canBeCover = (spec.canBeCover!=null) ? spec.canBeCover : DEFAULTS.canBeCover;
     };
-
-    Attachment.prototype = new tmp();
-    Attachment.prototype.constructor = Attachment;
 
     /**
      * Gets the url of a thumbnail
@@ -55,7 +52,7 @@ define([
      * @returns {string}
      */
     Attachment.prototype.getThumbnailUrl = function(size) {
-        return (this.hasPreview()) ? this.helper.getImageUrl(this.ds, this.id, size || 'S') : "";
+        return (this.hasPreview()) ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : "";
     };
 
     /**
@@ -65,7 +62,7 @@ define([
      * @returns {string}
      */
     Attachment.prototype.getDownloadUrl = function() {
-        return this.ds.getBaseUrl() + this.id + '?download=True';
+        return this.ds.getBaseUrl() + this.value + '?download=True';
     };
 
     /**
@@ -76,9 +73,43 @@ define([
      * @returns {string}
      */
     Attachment.prototype.getExt = function(fileName) {
-        fileName = fileName || this.id;
+        fileName = fileName || this.fileName;
         return EXT.exec(fileName)[1] || "";
     };
+
+    /**
+     * Gets a friendly file size
+     * @param  {int} size 
+     * @return {string}      
+     */
+    Attachment.prototype.getFriendlyFileSize = function(){
+        var size = this.fileSize;
+
+        if (isNaN(size))
+            size = 0;
+
+        if (size < 1024)
+            return size + ' Bytes';
+
+        size /= 1024;
+
+        if (size < 1024)
+            return size.toFixed(2) + ' Kb';
+
+        size /= 1024;
+
+        if (size < 1024)
+            return size.toFixed(2) + ' Mb';
+
+        size /= 1024;
+
+        if (size < 1024)
+            return size.toFixed(2) + ' Gb';
+
+        size /= 1024;
+
+        return size.toFixed(2) + ' Tb';
+    }
 
     /**
      * Checks if the attachment is an image
@@ -87,8 +118,7 @@ define([
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
-        var fileName = this.id;
-        var ext = this.getExt(fileName);
+        var ext = this.getExt(this.fileName);
         return ($.inArray(ext, IMAGES) >= 0);
     };
 
@@ -99,9 +129,43 @@ define([
      * @returns {boolean}
      */
     Attachment.prototype.hasPreview = function() {
-        var fileName = this.id;
-        var ext = this.getExt(fileName);
+        var ext = this.getExt(this.fileName);
         return ($.inArray(ext, PREVIEWS) >= 0);
+    };
+
+    /**
+     * _toJson, makes a dict of the object
+     * @method
+     * @param options
+     * @returns {object}
+     * @private
+     */
+    Attachment.prototype._toJson = function(options) {
+        return {
+            fileName: this.fileName,
+            fileSize: this.fileSize,
+            value: this.value,
+            created: this.created,
+            by: this.by
+        };
+    };
+
+    /**
+     * _fromJson: reads the Attachment object from json
+     * @method
+     * @param {object} data the json response
+     * @param {object} options dict
+     * @returns promise
+     * @private
+     */
+    Attachment.prototype._fromJson = function(data, options) {
+        this.raw = data;
+        this.fileName = data.fileName || DEFAULTS.fileName;
+        this.fileSize = data.fileSize || DEFAULTS.fileSize;
+        this.value = data.value || DEFAULTS.value;
+        this.created = data.created || DEFAULTS.created;
+        this.by = data.by || DEFAULTS.by;
+        return $.Deferred().resolve(data);
     };
 
     return Attachment;

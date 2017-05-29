@@ -189,10 +189,47 @@ define(['jquery'], function ($) {
             if( (size) &&
                 (size.length>0)) {
                 var parts = url.split('.');
-                var ext = parts.pop();  // pop off the extension, we'll change it
+                var ext = attachmentId.indexOf('.') != -1?parts.pop():'';  // pop off the extension, we'll change it
                 url = parts.join('.') + "-" + size + ".jpg";  // resized images are always jpg
             }
             return url;          
+        },
+        getNoImage: function(size){
+            var sizes = {
+                "XS": 64,    
+                "S": 128,
+                "M": 256,
+                "L": 512,
+                "XL": 1024
+            };
+
+            var canvasWidth = sizes[size],
+                canvasHeight = sizes[size],
+                canvasCssWidth = canvasWidth,
+                canvasCssHeight = canvasHeight;
+
+            var $canvas = $("<canvas />").attr({
+                width: canvasWidth,
+                height: canvasHeight
+            });
+            var context = $canvas.get(0).getContext("2d");
+
+            if (window.devicePixelRatio) {
+                $canvas.attr("width", canvasWidth * window.devicePixelRatio);
+                $canvas.attr("height", canvasHeight * window.devicePixelRatio);
+                $canvas.css("width", canvasCssWidth);
+                $canvas.css("height", canvasCssHeight);
+                context.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+
+            context.fillStyle = "rgba(255,255,255,0.5)";
+            context.fillRect(0, 0, canvasWidth, canvasHeight);
+            context.font = canvasWidth / 2 + "px FontAwesome";
+            context.textAlign = "center";
+            context.fillStyle = "rgba(0,0,0,0.2)";
+            context.fillText(String.fromCharCode("0xf03e"), canvasCssWidth / 2, canvasCssHeight / 1.5);
+
+            return $canvas.get(0).toDataURL();        
         }
     }
 });

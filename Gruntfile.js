@@ -55,7 +55,36 @@ module.exports = function(grunt){
                         }));
                     }
                 }
-            }
+            },
+            compileSignup: {
+                options: {
+                    baseUrl: "src/core",
+                    out: "build/signup.js",
+                    include: ['signup'],
+                    exclude:['jquery', 'jquery-jsonp', 'jquery-pubsub', 'jstz', 'moment'],
+                    paths:{
+                        "jquery": "empty:",
+                        "jquery-jsonp": "empty:",
+                        "jquery-pubsub": "empty:",
+                        "jstz": "empty:",
+                        "moment": "empty:"
+                    },
+                    optimize: "none",
+                    onModuleBundleComplete: function (data) {
+                        var fs = require('fs'),
+                          amdclean = require('amdclean'),
+                          outputFile = data.path;
+
+                        fs.writeFileSync(outputFile, amdclean.clean({
+                            'filePath': outputFile,
+                            wrap: {
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz', 'jquery-jsonp', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jstz, jsonp, pubsub);\n}\n}(function (jquery, moment, jstz, jquery_jsonp, jquery_pubsub) {",
+                                "end": '\nreturn signup;\n}))'
+                            },
+                        }));
+                    }
+                }
+            }            
         },
         uglify: {
             options: {
@@ -67,6 +96,10 @@ module.exports = function(grunt){
             build: {
                 src: 'build/<%= pkg.name %>.js',
                 dest: 'build/<%= pkg.name %>.min.js'
+            },
+            signup:{
+                src: 'build/signup.js',
+                dest: 'build/signup.min.js'
             }
         },
         qunit: {
@@ -116,4 +149,7 @@ module.exports = function(grunt){
 
     // the default task can be run just by typing "grunt" on the command line
     grunt.registerTask('default', ['requirejs', "uglify", 'connect', 'qunit']);
+
+    // build signup file
+    grunt.registerTask('signup', ['requirejs:compileSignup', "uglify:signup", 'connect', 'qunit']);
 }

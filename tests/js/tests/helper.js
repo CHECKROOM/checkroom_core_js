@@ -11,11 +11,11 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
     };
 
     helper.getApiAuth = function() {
-        return new cr.api.ApiAuthV2({ajax: helper.getApiAjax(), urlAuth: settings.baseUrl + '/authenticate'});
+        return new cr.api.ApiAuthV2({ajax: helper.getApiAjax(), urlAuth: settings.urlApi + '/authenticate'});
     };
 
     helper.getApiAnonymous = function(){
-        return new cr.api.ApiAnonymous({ajax: helper.getApiAjax(), urlApi: settings.baseUrl.replace('/v2_0', '')});
+        return new cr.api.ApiAnonymous({ajax: helper.getApiAjax(), urlApi: settings.urlApi.replace('/latest', '')});
     };
 
     helper.getApiUser = function(userName, password) {
@@ -39,7 +39,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
                     collection: collection,
                     ajax: helper.getApiAjax(),
                     user: user,
-                    urlApi: settings.baseUrl
+                    urlApi: settings.urlApi
                 });
                 return ds;
             });
@@ -55,7 +55,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
                         collection: coll,
                         ajax: ajax,
                         user: user,
-                        urlApi: settings.baseUrl
+                        urlApi: settings.urlApi
                     });
                 });
                 return dss;
@@ -141,7 +141,6 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             location: location._id
         });
         var dfd = $.Deferred();
-
         item.create().done(function(){
             dfd.resolve(item);
         });
@@ -159,7 +158,6 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             due: due
         });
         var dfd = $.Deferred();
-
         order.addItems(items).then(function(){
             order.checkout().done(function(){
                 dfd.resolve(order);
@@ -167,7 +165,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
         });     
 
         return dfd; 
-    }
+    };
 
     helper.getNewOpenReservation = function(ds, dsItems, from, to, location, contact, items){
         var reservation = new cr.Reservation({
@@ -179,15 +177,15 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
             to: to
         });
         var dfd = $.Deferred();
-
-        reservation.addItems(items).then(function(){
-            reservation.reserve().done(function(){
-                dfd.resolve(reservation);
-            })
-        })
+        reservation.addItems(items)
+            .then(function(){
+                reservation.reserve().done(function(){
+                    dfd.resolve(reservation);
+                })
+            });
 
         return dfd;
-    }
+    };
 
     return helper;
 });

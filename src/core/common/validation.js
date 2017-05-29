@@ -5,11 +5,9 @@ define(function () {
     return {
         /**
          * isValidEmail
-         *
          * @memberOf common
          * @name  common#isValidEmail
          * @method
-         * 
          * @param  {string}  email 
          * @return {Boolean}       
          */
@@ -18,12 +16,22 @@ define(function () {
             return re.test(email);
         },
         /**
+         * isFreeEmail
+         * @memberOf common
+         * @name common#isFreeEmail
+         * @method
+         * @param email
+         * @returns {boolean}
+         */
+        isFreeEmail: function(email) {
+            var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+            return !re.test(email);
+        },
+        /**
          * isValidPhone
-         *
          * @memberOf common
          * @name  common#isValidPhone
          * @method
-         * 
          * @param  {string}  phone 
          * @return {Boolean}       
          */
@@ -38,11 +46,9 @@ define(function () {
         },
         /**
          * isValidURL
-         *
          * @memberOf common
          * @name common#isValidURL
          * @method
-         *
          * @param {string}  url
          * @returns {boolean}
          */
@@ -50,6 +56,18 @@ define(function () {
             // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
             var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
             return re.test(url);
+        },
+        /**
+         * isValidPassword
+         * @memberOf common
+         * @name common#isValidPassword
+         * @method
+         * @param password
+         * @returns {boolean}
+         */
+        isValidPassword: function(password) {
+            var hasDigit = password.match(/[0-9]/);
+            return (password.length>=4) && (hasDigit);
         }
     };
 });

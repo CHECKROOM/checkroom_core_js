@@ -626,13 +626,18 @@ define([
      * @param  {bool} skipRead
      * @return {promise}
      */
-    Order.prototype.canExtend = function(due){
-        //return this._doApiCall({ method: "canExtend", params: { due: due }, skipRead: true });
+    Order.prototype.canExtend = function(due) {
+        // We can only extend orders which are open
+        // and for which their due date will be
+        // at least 1 timeslot from now
+        var can = true;
+        if( (this.status!="open") ||
+            (due.isBefore(this.getNextTimeSlot()))) {
+            can = false;
+        }
 
-        // TODO CHANGE THIS
-        // Currently always allow order to be extended
-        return $.Deferred().resolve({ result: true });
-    }
+        return $.Deferred().resolve({ result: can });
+    };
 
     /**
      * Extends order due date

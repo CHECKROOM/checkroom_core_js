@@ -646,9 +646,11 @@ define([
      * @return {promise}
      */
     Order.prototype.extend = function(due, skipRead){
+        var that = this;
+
         return this.canExtend(due).then(function (resp) {
             if (resp && resp.result == true) {
-              return this._doApiCall({ method: "extend", params: { due: due }, skipRead: skipRead });
+              return that._doApiCall({ method: "extend", params: { due: due }, skipRead: skipRead });
             } else {
               return $.Deferred().reject('Cannot extend order to given date because it has conflicts.', resp);
             }

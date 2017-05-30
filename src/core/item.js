@@ -678,13 +678,27 @@ define([
             (model!=this.raw.model)) {
             params["model"] = model;
         }
-        if( (warrantyDate!=null) &&
-            (!warrantyDate.isSame(this.raw.warrantyDate))) {
-            params["warrantyDate"] = warrantyDate;
+        if( (warrantyDate!=null)){
+            // Update date or clear date?
+            if(typeof(warrantyDate) === "object" && warrantyDate.isValid()){
+                // Only update if date changed
+                if(!warrantyDate.isSame(this.raw.warrantyDate)){
+                    params["warrantyDate"] = warrantyDate;
+                }
+            }else{
+                params["warrantyDate"] = "";  
+            }
         }
-        if( (purchaseDate!=null) &&
-            (!purchaseDate.isSame(this.raw.purchaseDate))) {
-            params["purchaseDate"] = purchaseDate;
+        if( (purchaseDate!=null)) {
+            // Update date or clear date
+            if(typeof(purchaseDate) === "object" && purchaseDate.isValid()){
+                // Only update if date changed
+                if(!purchaseDate.isSame(this.raw.purchaseDate)){
+                    params["purchaseDate"] = purchaseDate;
+                }
+            }else{
+                params["purchaseDate"] = "";
+            }
         }
         if( (purchasePrice!=null) &&
             (purchasePrice!=this.raw.purchasePrice)) {

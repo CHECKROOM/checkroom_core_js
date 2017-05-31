@@ -11052,9 +11052,9 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @return {Boolean} 
    */
   Order.prototype.isValidDueDate = function () {
-    var due = this.due, now = this.getNow(), status = this.status;
+    var due = this.due, status = this.status, nextTimeSlot = this.getNextTimeSlot();
     if (status == 'creating' || status == 'open') {
-      return due != null && due.isAfter(now);
+      return due != null && (due.isSame(nextTimeSlot) || due.isAfter(nextTimeSlot));
     }
     return true;
   };

@@ -2,7 +2,7 @@
  * @copyright CHECKROOM NV 2015
  */
 "use strict";
-define(['settings', 'cheqroom-core'], function(settings, cr) {
+define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
 
         var run = function() {
 
@@ -92,6 +92,57 @@ define(['settings', 'cheqroom-core'], function(settings, cr) {
             var d1 = new Date(2013, 11, 13, 11, 55, 30, 111);
             var d1Up = "December 13, 2013 12:00 PM";
             var d1Down = "December 13, 2013 11:45 AM";
+
+            // makeEndDate
+            // ----
+            test('makeEndDate', function() {
+                var m1 = null;
+                var helper = new cr.DateHelper();
+                var dAroundNoon = moment(new Date(2013, 11, 13, 11, 55, 30, 111));
+                var dAfterClosing = moment(new Date(2013, 11, 13, 17, 55, 30, 111));
+
+                // Should round up to noon
+                m1 = helper.makeEndDate(dAroundNoon, true, false);
+                equal(m1.format("LLL"), "December 13, 2013 12:00 PM");
+
+                // Should round up to EOB because day mode
+                m1 = helper.makeEndDate(dAroundNoon, true, true);
+                equal(m1.format("LLL"), "December 13, 2013 5:00 PM");
+
+                // Should just round up
+                m1 = helper.makeEndDate(dAfterClosing, true, false);
+                equal(m1.format("LLL"), "December 13, 2013 6:00 PM");
+
+                // Should round up to EOB because day mode and is same day as today
+                m1 = helper.makeEndDate(dAfterClosing, true, true, dAroundNoon);
+                equal(m1.format("LLL"), "December 13, 2013 11:45 PM");
+            });
+
+            // makeEndDate
+            // ----
+            test('makeStartDate', function() {
+                var m1 = null;
+                var helper = new cr.DateHelper();
+                var dBeforeBiz = moment(new Date(2013, 11, 13, 6, 55, 30, 111));
+                var dAroundNoon = moment(new Date(2013, 11, 13, 11, 55, 30, 111));
+                var dAfterClosing = moment(new Date(2013, 11, 13, 17, 55, 30, 111));
+
+                // Should round up to noon
+                m1 = helper.makeStartDate(dAroundNoon, true, false);
+                equal(m1.format("LLL"), "December 13, 2013 12:00 PM");
+
+                // Should round up to noon
+                m1 = helper.makeStartDate(dAroundNoon, true, true);
+                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");
+
+                // Should round up to 7 am
+                m1 = helper.makeStartDate(dBeforeBiz, true, false);
+                equal(m1.format("LLL"), "December 13, 2013 7:00 AM");
+
+                // Should round up to 9 am
+                m1 = helper.makeStartDate(dBeforeBiz, true, true);
+                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");
+            });
 
             // roundTimeUp
             // ----

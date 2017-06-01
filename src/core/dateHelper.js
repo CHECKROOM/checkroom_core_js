@@ -74,7 +74,9 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      roundType = StringField(default="nearest", choices=ROUND_TYPE)  # nearest, longer, shorter
      */
 
-    var INCREMENT = 15;
+    var INCREMENT = 15,
+        START_OF_DAY_HRS = 9,
+        END_OF_DAY_HRS = 17;
 
     /**
      * @name  DateHelper
@@ -87,6 +89,8 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         this.roundMinutes = spec.roundMinutes || INCREMENT;
         this.timeFormat24 = (spec.timeFormat24) ? spec.timeFormat24 : false;
         this._momentFormat = (this.timeFormat24) ? "MMM D [at] H:mm" : "MMM D [at] h:mm a";
+        this.startOfDayHours = (spec.startOfDayHours!=null) ? startOfDayHours : START_OF_DAY_HRS;
+        this.endOfDayHours = (spec.endOfDayHours!=null) ? endOfDayHours : END_OF_DAY_HRS;
     };
 
     /**
@@ -303,6 +307,110 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         };
     };
 
+
+    /**
+     * makeStartDate helps making an start date for a transaction, usually a reservation
+     * It will do the standard rounding
+     * But also, if you're using dates instead of datetimes,
+     * it will try to make smart decisions about which hours to use
+     * @param m - the Moment date
+     * @param useHours - does the profile use hours?
+     * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+     * @param now - the current moment (just to make testing easier)
+     * @returns {moment}
+     * @private
+     */
+    DateHelper.prototype.makeStartDate = function(m, useHours, dayMode, now) {
+        useHours = (useHours!=null) ? useHours : true;
+        dayMode = (dayMode!=null) ? dayMode : false;
+        now = now || moment();
+
+        if( (useHours) &&
+            (!dayMode)) {
+            // The account is set up to use hours,
+            // and since dayMode is false,
+            // we assume the hours are picked by the user himself
+            // just do the rounding and we're done
+            return this.roundTimeFrom(m);
+        }
+
+        // When we get here we know that either:
+        // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+        // or
+        // 2) The account is set up to use days instead of hours
+        //
+        // Which means we still need to see if we can make a smart decision about the hours part
+        var isToday = m.isSame(now, 'day');
+        if (isToday) {
+            var startOfBusinessDay = this._makeStartOfBusinessDay(now);
+
+            // The end date is today
+            // If the start date is before business hours
+            // set the start time to start-of-business hours
+            // no extra rounding needed
+            if (m.isBefore(startOfBusinessDay)) {
+                return startOfBusinessDay;
+            } else {
+                return this.roundTimeFrom(m);
+            }
+        } else {
+            return this._makeStartOfBusinessDay(m);
+        }
+    };
+
+    /**
+     * makeEndDate helps making an end date for a transaction
+     * It will do the standard rounding
+     * But also, if you're using dates instead of datetimes,
+     * it will try to make smart decisions about which hours to use
+     * @param m - the Moment date
+     * @param useHours - does the profile use hours?
+     * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+     * @param now - the current moment (just to make testing easier)
+     * @returns {moment}
+     * @private
+     */
+    DateHelper.prototype.makeEndDate = function(m, useHours, dayMode, now) {
+        useHours = (useHours!=null) ? useHours : true;
+        dayMode = (dayMode!=null) ? dayMode : false;
+        now = now || moment();
+
+        if( (useHours) &&
+            (!dayMode)) {
+            // The account is set up to use hours,
+            // and since dayMode is false,
+            // we assume the hours are picked by the user himself
+            // just do the rounding and we're done
+            return this.roundTimeTo(m);
+        }
+
+        // When we get here we know that either:
+        // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+        // or
+        // 2) The account is set up to use days instead of hours
+        //
+        // Which means we still need to see if we can make a smart decision about the hours part
+        var isToday = m.isSame(now, 'day');
+        if (isToday) {
+            var endOfBusinessDay = this._makeEndOfBusinessDay(now),
+                endOfDay = this._makeEndOfDay(now);
+            // The end date is today
+            // If the end date is before business hours
+            // set the end time to end-of-business hours
+            // no extra rounding needed
+            if (m.isBefore(endOfBusinessDay)) {
+                return endOfBusinessDay;
+            } else {
+                return endOfDay;
+            }
+        } else {
+            // If it's a date in the future,
+            // we can just apply business hours and we're done
+            // no extra rounding needed
+            return this._makeEndOfBusinessDay(m);
+        }
+    };
+
     /**
      * [getFriendlyDateText]
      * @param  date
@@ -407,6 +515,19 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
                 break;
         }
     };
+
+    DateHelper.prototype._makeStartOfBusinessDay = function(m) {
+        return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    };
+
+    DateHelper.prototype._makeEndOfBusinessDay = function(m) {
+        return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    };
+
+    DateHelper.prototype._makeEndOfDay = function(m) {
+        return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
+    };
+
 
     return DateHelper;
 

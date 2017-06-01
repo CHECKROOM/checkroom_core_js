@@ -318,7 +318,7 @@ define([
             ((this.location) || (this.from && this.to))) {
 
             var locId = this.location ? this._getId(this.location) : null;
-            var showOrderConflicts = (this.from && this.to);
+            var showOrderConflicts = (this.from && this.to && this.status=="open");
             var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
 

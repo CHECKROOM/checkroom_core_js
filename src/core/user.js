@@ -16,7 +16,8 @@ define([
         role: 'user',  // user, admin
         active: true,
         isOwner: false,
-        archived: null
+        archived: null,
+        restrictLocations: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -49,6 +50,7 @@ define([
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
         this.isOwner = (spec.isOwner!=null) ? spec.isOwner : DEFAULTS.isOwner;
         this.archived = spec.archived || DEFAULTS.archived;
+        this.restrictLocations = spec.restrictLocations || DEFAULTS.restrictLocations;
 
         this.dsAnonymous = spec.dsAnonymous;
     };
@@ -303,6 +305,30 @@ define([
         return this._doApiCall({method: 'undoArchive', skipRead: skipRead});
     };
 
+    /**
+     * Restrict user access to specific location(s)
+     * @param locations
+     * @param skipRead
+     * @returns {promise}
+     */
+    User.prototype.setRestrictLocations = function(locations, skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject("User does not exist in database");
+        }
+        return this._doApiCall({method: 'setRestrictLocations', params: { restrictLocations: locations }, skipRead: skipRead});
+    };
+
+    /**
+     * Clear user location(s) access (makes all location accessible for the user)
+     * @param skipRead
+     * @returns {promise}
+     */
+    User.prototype.clearRestrictLocations = function(skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject("User does not exist in database");
+        }
+        return this._doApiCall({method: 'clearRestrictLocations', skipRead: skipRead});
+    };
 
     /**
      * Writes the user to a json object
@@ -316,6 +342,8 @@ define([
         data.email = this.email || DEFAULTS.email;
         data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
+        data.restrictLocations = this.restrictLocations || DEFAULTS.restrictLocations;
+
         return data;
     };
 
@@ -340,6 +368,8 @@ define([
                 that.active = (data.active!=null) ? data.active : DEFAULTS.active;
                 that.isOwner = (data.isOwner!=null) ? data.isOwner : DEFAULTS.isOwner;
                 that.archived = data.archived || DEFAULTS.archived;
+                that.restrictLocations = data.restrictLocations || DEFAULTS.restrictLocations;
+
                 $.publish('user.fromJson', data);
                 return data;
             });

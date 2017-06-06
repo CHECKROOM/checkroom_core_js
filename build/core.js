@@ -6475,7 +6475,7 @@ user = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
-    this.restrictLocations = spec.restrictLocations || DEFAULTS.restrictLocations;
+    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -6534,7 +6534,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -6548,8 +6548,9 @@ user = function ($, Base, common) {
       var name = this.raw.name || DEFAULTS.name;
       var role = this.raw.role || DEFAULTS.role;
       var email = this.raw.email || DEFAULTS.email;
+      var restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
       var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.role != role || this.active != active;
+      return this.name != name || this.email != email || this.role != role || (this.active != active || this.restrictLocations.length != restrictLocations.length);
     }
     return isDirty;
   };
@@ -6760,7 +6761,7 @@ user = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
-      that.restrictLocations = data.restrictLocations || DEFAULTS.restrictLocations;
+      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });
@@ -14106,7 +14107,7 @@ User = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
-    this.restrictLocations = spec.restrictLocations || DEFAULTS.restrictLocations;
+    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -14165,7 +14166,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -14179,8 +14180,9 @@ User = function ($, Base, common) {
       var name = this.raw.name || DEFAULTS.name;
       var role = this.raw.role || DEFAULTS.role;
       var email = this.raw.email || DEFAULTS.email;
+      var restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
       var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.role != role || this.active != active;
+      return this.name != name || this.email != email || this.role != role || (this.active != active || this.restrictLocations.length != restrictLocations.length);
     }
     return isDirty;
   };
@@ -14391,7 +14393,7 @@ User = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
-      that.restrictLocations = data.restrictLocations || DEFAULTS.restrictLocations;
+      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });

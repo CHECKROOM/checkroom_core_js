@@ -299,7 +299,6 @@ define([
             lastName = utils.getUrlParam("lastName", "").capitalize(),
             login = utils.getUrlParam("login", "").toLowerCase(),
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
-            plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
             timezone = utils.getUrlParam("timezone", jstz.determine().name()),
             inviteToken = utils.getUrlParam("code", ""),
@@ -328,7 +327,7 @@ define([
             lastName: lastName,
             login: login,
             source: source,
-            plan: plan,
+            plan: DEFAULT_PLAN,
             period: period,
             inviteToken: inviteToken,
             selfserviceToken: selfserviceToken

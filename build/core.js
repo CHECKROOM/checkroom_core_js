@@ -11260,7 +11260,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @return {Boolean} 
    */
   Order.prototype.isValidDueDate = function () {
-    var due = this.due, status = this.status, nextTimeSlot = this.getNextTimeSlot();
+    var due = this.due, status = this.status, nextTimeSlot = this.getNextTimeSlot(), maxDueDate = this.getMaxDateDue();
     if (status == 'creating' || status == 'open') {
       return due != null && (due.isSame(nextTimeSlot) || due.isAfter(nextTimeSlot));
     }
@@ -11878,8 +11878,8 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasItemGeoPermission = function () {
     return this._useGeo;
   };
-  PermissionHandler.prototype.hasItemGeoPermission = function () {
-    return this._useGeo;
+  PermissionHandler.prototype.hasUserSyncPermission = function () {
+    return this.hasAccountUserSyncPermission('read');
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -12497,6 +12497,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.order = data.order || null;
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
+      return data;
     });
   };
   //

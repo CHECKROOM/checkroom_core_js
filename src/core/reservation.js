@@ -286,6 +286,7 @@ define([
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
                 $.publish("reservation.fromJson", data);
+                return data;
             });
     };
 

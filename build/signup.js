@@ -2601,7 +2601,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), plan = utils.getUrlParam('plan', DEFAULT_PLAN), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
@@ -2619,7 +2619,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
       lastName: lastName,
       login: login,
       source: source,
-      plan: plan,
+      plan: DEFAULT_PLAN,
       period: period,
       inviteToken: inviteToken,
       selfserviceToken: selfserviceToken

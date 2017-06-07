@@ -160,7 +160,8 @@ define([
     Order.prototype.isValidDueDate = function(){
         var due = this.due,
             status = this.status,
-            nextTimeSlot = this.getNextTimeSlot();
+            nextTimeSlot = this.getNextTimeSlot(),
+            maxDueDate = this.getMaxDateDue();
 
         if(status == "creating" || status == "open"){
             return due!=null && (due.isSame(nextTimeSlot) || due.isAfter(nextTimeSlot));

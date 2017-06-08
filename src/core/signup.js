@@ -11,7 +11,8 @@ define([
     "settings",
     "common/inflection",
     "common/validation",
-    "common/utils"], function ($, jstz, api, settings, inflection, validation, utils) {
+    "common/clientStorage",
+    "common/utils"], function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {
 
     var DEFAULT_PLAN = "1215_cr_90";
     var DEFAULT_PERIOD = "yearly";

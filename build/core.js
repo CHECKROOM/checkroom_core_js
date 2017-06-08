@@ -3900,6 +3900,7 @@ common_template = function (moment) {
 }(moment);
 common_clientStorage = function () {
   var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
+  var _data = {};
   /**
    * Override default localStorage.setItem
    * Try to set an object for a key in local storage
@@ -3915,8 +3916,7 @@ common_clientStorage = function () {
         v
       ]);
     } catch (e) {
-      //console.log(e);
-      return false;
+      _data[k] = String(v);
     }
     return true;
   };
@@ -3931,6 +3931,7 @@ common_clientStorage = function () {
     try {
       return getItem.apply(this, [k]);
     } catch (e) {
+      return _data.hasOwnProperty(k) ? _data[k] : undefined;
     }
     return null;
   };
@@ -3945,8 +3946,7 @@ common_clientStorage = function () {
     try {
       removeItem.apply(this, [k]);
     } catch (e) {
-      //console.log(e);
-      return false;
+      delete _data[k];
     }
     return true;
   };

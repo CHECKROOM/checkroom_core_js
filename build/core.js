@@ -3785,6 +3785,26 @@ common_contact = function (imageHelper) {
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
+  /**
+  * getContactImageCDNUrl
+  *
+  * @memberOf common
+  * @name  common#getContactImageCDNUrl
+  * @method
+  *
+  * @param  cr.Contact or contact object
+  * @return {string} image path or base64 image
+  */
+  that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
+    // Show avatar initials
+    return imageHelper.getAvatarInitial(contact.name, size);
+  };
   return that;
 }(common_image);
 common_user = function (imageHelper) {
@@ -3803,6 +3823,23 @@ common_user = function (imageHelper) {
       // Show profile picture of user?
       if (user && user.picture)
         return imageHelper.getImageUrl(ds, user.picture, size, bustCache);
+      // Show avatar initials
+      return imageHelper.getAvatarInitial(user.name, size);
+    },
+    /**
+     * getUserImageCDNUrl 
+     *
+     * @memberOf common
+     * @name  common#getUserImageCDNUrl
+     * @method
+     * 
+     * @param  cr.User or user object
+     * @return {string} image path or base64 image        
+     */
+    getUserImageCDNUrl: function (settings, groupid, user, size, bustCache) {
+      // Show profile picture of user?
+      if (user && user.picture)
+        return imageHelper.getImageCDNUrl(settings, groupid, user.picture, size, bustCache);
       // Show avatar initials
       return imageHelper.getAvatarInitial(user.name, size);
     }

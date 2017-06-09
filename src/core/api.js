@@ -640,6 +640,9 @@ define([
      * @returns {promise}
      */
     api.ApiDataSource.prototype.deleteMultiple = function(pks) {
+        // Make sure no empy pk are passed
+        pks = pks.filter(function(pk){ return $.trim(pk).length > 0; })
+
         system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
         var cmd = "deleteMultiple";
         var url = this.getBaseUrl() + pks.join(',') + '/delete';

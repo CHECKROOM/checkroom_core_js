@@ -470,7 +470,7 @@ define([
     };
 
     /**
-     * Makes a long call (timeout 30s) to the API which doesn't require a token
+     * Makes a long call (timeout 60s) to the API which doesn't require a token
      * @method
      * @name ApiAnonymous#longCall
      * @param method
@@ -480,7 +480,7 @@ define([
      */
     api.ApiAnonymous.prototype.longCall = function(method, params, opt) {
         system.log('ApiAnonymous: longCall ' + method);
-        return this.call(method, params, 30000, opt);
+        return this.call(method, params, 60000, opt);
     };
 
     //*************
@@ -855,7 +855,7 @@ define([
     };
 
     /**
-     * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+     * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
      * @method
      * @name ApiDataSource#longCall
      * @param pk
@@ -866,7 +866,7 @@ define([
      * @returns {promise}
      */
     api.ApiDataSource.prototype.longCall = function(pk, method, params, fields, usePost) {
-        return this.call(pk, method, params, fields, 30000, usePost);
+        return this.call(pk, method, params, fields, 60000, usePost);
     };
 
     /**

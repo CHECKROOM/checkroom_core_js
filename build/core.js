@@ -484,7 +484,7 @@ api = function ($, jsonp, moment) {
     return this.ajax.get(url, timeOut, opt);
   };
   /**
-   * Makes a long call (timeout 30s) to the API which doesn't require a token
+   * Makes a long call (timeout 60s) to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#longCall
    * @param method
@@ -494,7 +494,7 @@ api = function ($, jsonp, moment) {
    */
   api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 30000, opt);
+    return this.call(method, params, 60000, opt);
   };
   //*************
   // ApiDataSource
@@ -829,7 +829,7 @@ api = function ($, jsonp, moment) {
     }
   };
   /**
-   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+   * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
    * @method
    * @name ApiDataSource#longCall
    * @param pk
@@ -840,7 +840,7 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-    return this.call(pk, method, params, fields, 30000, usePost);
+    return this.call(pk, method, params, fields, 60000, usePost);
   };
   /**
    * Gets the base url for all calls to this collection

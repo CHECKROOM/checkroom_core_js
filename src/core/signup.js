@@ -11,7 +11,8 @@ define([
     "settings",
     "common/inflection",
     "common/validation",
-    "common/utils"], function ($, jstz, api, settings, inflection, validation, utils) {
+    "common/clientStorage",
+    "common/utils"], function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {
 
     var DEFAULT_PLAN = "1215_cr_90";
     var DEFAULT_PERIOD = "yearly";
@@ -299,8 +300,8 @@ define([
             lastName = utils.getUrlParam("lastName", "").capitalize(),
             login = utils.getUrlParam("login", "").toLowerCase(),
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
-            plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
+            plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             timezone = utils.getUrlParam("timezone", jstz.determine().name()),
             inviteToken = utils.getUrlParam("code", ""),
             selfserviceToken = utils.getUrlParam("key", "");
@@ -317,6 +318,11 @@ define([
             (firstName.length>0) &&
             (lastName.length>0)) {
             login = utils.getLoginName(firstName, lastName);
+        }
+
+        // Don't allow signup to deprecated plans
+        if(["starter","basic", "professional","enterprise"].indexOf(plan) != -1){
+            plan = DEFAULT_PLAN;
         }
 
         return new Signup($.extend({

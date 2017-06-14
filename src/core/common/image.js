@@ -16,6 +16,8 @@ define(['jquery'], function ($) {
          * @return {string}	base64 image url    
          */
         getAvatarInitial: function (name, size) {
+            name = name || "Unknown";
+
             var sizes = {
                 "XS": 32,    
                 "S": 64,

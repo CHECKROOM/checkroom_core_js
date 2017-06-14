@@ -484,7 +484,7 @@ api = function ($, jsonp, moment) {
     return this.ajax.get(url, timeOut, opt);
   };
   /**
-   * Makes a long call (timeout 30s) to the API which doesn't require a token
+   * Makes a long call (timeout 60s) to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#longCall
    * @param method
@@ -494,7 +494,7 @@ api = function ($, jsonp, moment) {
    */
   api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 30000, opt);
+    return this.call(method, params, 60000, opt);
   };
   //*************
   // ApiDataSource
@@ -829,7 +829,7 @@ api = function ($, jsonp, moment) {
     }
   };
   /**
-   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+   * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
    * @method
    * @name ApiDataSource#longCall
    * @param pk
@@ -840,7 +840,7 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-    return this.call(pk, method, params, fields, 30000, usePost);
+    return this.call(pk, method, params, fields, 60000, usePost);
   };
   /**
    * Gets the base url for all calls to this collection
@@ -1743,6 +1743,7 @@ common_image = function ($) {
      * @return {string}	base64 image url    
      */
     getAvatarInitial: function (name, size) {
+      name = name || 'Unknown';
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -3785,6 +3786,26 @@ common_contact = function (imageHelper) {
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
+  /**
+  * getContactImageCDNUrl
+  *
+  * @memberOf common
+  * @name  common#getContactImageCDNUrl
+  * @method
+  *
+  * @param  cr.Contact or contact object
+  * @return {string} image path or base64 image
+  */
+  that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
+    // Show avatar initials
+    return imageHelper.getAvatarInitial(contact.name, size);
+  };
   return that;
 }(common_image);
 common_user = function (imageHelper) {
@@ -3803,6 +3824,23 @@ common_user = function (imageHelper) {
       // Show profile picture of user?
       if (user && user.picture)
         return imageHelper.getImageUrl(ds, user.picture, size, bustCache);
+      // Show avatar initials
+      return imageHelper.getAvatarInitial(user.name, size);
+    },
+    /**
+     * getUserImageCDNUrl 
+     *
+     * @memberOf common
+     * @name  common#getUserImageCDNUrl
+     * @method
+     * 
+     * @param  cr.User or user object
+     * @return {string} image path or base64 image        
+     */
+    getUserImageCDNUrl: function (settings, groupid, user, size, bustCache) {
+      // Show profile picture of user?
+      if (user && user.picture)
+        return imageHelper.getImageCDNUrl(settings, groupid, user.picture, size, bustCache);
       // Show avatar initials
       return imageHelper.getAvatarInitial(user.name, size);
     }
@@ -3900,6 +3938,7 @@ common_template = function (moment) {
 }(moment);
 common_clientStorage = function () {
   var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
+  var _data = {};
   /**
    * Override default localStorage.setItem
    * Try to set an object for a key in local storage
@@ -3915,8 +3954,7 @@ common_clientStorage = function () {
         v
       ]);
     } catch (e) {
-      //console.log(e);
-      return false;
+      _data[k] = String(v);
     }
     return true;
   };
@@ -3931,6 +3969,7 @@ common_clientStorage = function () {
     try {
       return getItem.apply(this, [k]);
     } catch (e) {
+      return _data.hasOwnProperty(k) ? _data[k] : undefined;
     }
     return null;
   };
@@ -3945,8 +3984,7 @@ common_clientStorage = function () {
     try {
       removeItem.apply(this, [k]);
     } catch (e) {
-      //console.log(e);
-      return false;
+      delete _data[k];
     }
     return true;
   };
@@ -11335,7 +11373,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @return {Boolean} 
    */
   Order.prototype.isValidDueDate = function () {
-    var due = this.due, status = this.status, nextTimeSlot = this.getNextTimeSlot();
+    var due = this.due, status = this.status, nextTimeSlot = this.getNextTimeSlot(), maxDueDate = this.getMaxDateDue();
     if (status == 'creating' || status == 'open') {
       return due != null && (due.isSame(nextTimeSlot) || due.isAfter(nextTimeSlot));
     }
@@ -11953,8 +11991,11 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasItemGeoPermission = function () {
     return this._useGeo;
   };
-  PermissionHandler.prototype.hasItemGeoPermission = function () {
-    return this._useGeo;
+  PermissionHandler.prototype.hasUserSyncPermission = function () {
+    return this.hasAccountUserSyncPermission('read');
+  };
+  PermissionHandler.prototype.hasSelfservicePermission = function () {
+    return this._useSelfService;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -12572,6 +12613,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.order = data.order || null;
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
+      return data;
     });
   };
   //
@@ -12596,7 +12638,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
     if (this.items && this.items.length && (this.location || this.from && this.to)) {
       var locId = this.location ? this._getId(this.location) : null;
-      var showOrderConflicts = this.from && this.to;
+      var showOrderConflicts = this.from && this.to && this.status == 'open';
       var showLocationConflicts = locId != null;
       var showStatusConflicts = true;
       // always show conflicts for expired, custody

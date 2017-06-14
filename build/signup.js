@@ -10,7 +10,7 @@ factory($, moment, jstz, jsonp, pubsub);
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
-var api, settings, common_inflection, common_validation, common_utils, signup;
+var api, settings, common_inflection, common_validation, common_clientStorage, common_utils, signup;
 api = function ($, jsonp, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -484,7 +484,7 @@ api = function ($, jsonp, moment) {
     return this.ajax.get(url, timeOut, opt);
   };
   /**
-   * Makes a long call (timeout 30s) to the API which doesn't require a token
+   * Makes a long call (timeout 60s) to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#longCall
    * @param method
@@ -494,7 +494,7 @@ api = function ($, jsonp, moment) {
    */
   api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 30000, opt);
+    return this.call(method, params, 60000, opt);
   };
   //*************
   // ApiDataSource
@@ -829,7 +829,7 @@ api = function ($, jsonp, moment) {
     }
   };
   /**
-   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+   * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
    * @method
    * @name ApiDataSource#longCall
    * @param pk
@@ -840,7 +840,7 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-    return this.call(pk, method, params, fields, 30000, usePost);
+    return this.call(pk, method, params, fields, 60000, usePost);
   };
   /**
    * Gets the base url for all calls to this collection
@@ -2210,6 +2210,59 @@ common_validation = {
     return password.length >= 4 && hasDigit;
   }
 };
+common_clientStorage = function () {
+  var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
+  var _data = {};
+  /**
+   * Override default localStorage.setItem
+   * Try to set an object for a key in local storage
+   * 
+   * @param {string} k
+   * @param {object|string} v
+   * @return {bool}
+   */
+  Storage.prototype.setItem = function (k, v) {
+    try {
+      setItem.apply(this, [
+        k,
+        v
+      ]);
+    } catch (e) {
+      _data[k] = String(v);
+    }
+    return true;
+  };
+  /**
+   * Override default localStorage.getItem
+   * Try to get an object for a key in local storage
+   * 
+   * @param {string} k
+   * @return {object|string|null}
+   */
+  Storage.prototype.getItem = function (k) {
+    try {
+      return getItem.apply(this, [k]);
+    } catch (e) {
+      return _data.hasOwnProperty(k) ? _data[k] : undefined;
+    }
+    return null;
+  };
+  /**
+   * Override default localStorage.removeItem
+   * Try to remove an object for a key in local storage
+   * 
+   * @param {string} k
+   * @return {object|string|null}
+   */
+  Storage.prototype.removeItem = function (k) {
+    try {
+      removeItem.apply(this, [k]);
+    } catch (e) {
+      delete _data[k];
+    }
+    return true;
+  };
+}();
 common_utils = function ($) {
   var utils = {};
   /**
@@ -2352,7 +2405,7 @@ common_utils = function ($) {
   };
   return utils;
 }(jquery);
-signup = function ($, jstz, api, settings, inflection, validation, utils) {
+signup = function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {
   var DEFAULT_PLAN = '1215_cr_90';
   var DEFAULT_PERIOD = 'yearly';
   var DEFAULT_SOURCE = 'attempt';
@@ -2601,7 +2654,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), plan = utils.getUrlParam('plan', DEFAULT_PLAN), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
@@ -2609,6 +2662,15 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
     }
     if (login.length == 0 && firstName.length > 0 && lastName.length > 0) {
       login = utils.getLoginName(firstName, lastName);
+    }
+    // Don't allow signup to deprecated plans
+    if ([
+        'starter',
+        'basic',
+        'professional',
+        'enterprise'
+      ].indexOf(plan) != -1) {
+      plan = DEFAULT_PLAN;
     }
     return new Signup($.extend({
       name: name,
@@ -2626,6 +2688,6 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
     }, opt), settings);
   };
   return Signup;
-}(jquery, jstz, api, settings, common_inflection, common_validation, common_utils);
+}(jquery, jstz, api, settings, common_inflection, common_validation, common_clientStorage, common_utils);
 return signup;
 }))

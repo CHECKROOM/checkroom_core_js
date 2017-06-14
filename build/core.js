@@ -641,10 +641,6 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.deleteMultiple = function (pks) {
-    // Make sure no empy pk are passed
-    pks = pks.filter(function (pk) {
-      return $.trim(pk).length > 0;
-    });
     system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
     var cmd = 'deleteMultiple';
     var url = this.getBaseUrl() + pks.join(',') + '/delete';
@@ -1747,6 +1743,7 @@ common_image = function ($) {
      * @return {string}	base64 image url    
      */
     getAvatarInitial: function (name, size) {
+      name = name || 'Unknown';
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -11921,6 +11918,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasUserSyncPermission = function () {
     return this.hasAccountUserSyncPermission('read');
+  };
+  PermissionHandler.prototype.hasSelfservicePermission = function () {
+    return this._useSelfService;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);

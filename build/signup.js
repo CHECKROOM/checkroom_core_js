@@ -641,10 +641,6 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.deleteMultiple = function (pks) {
-    // Make sure no empy pk are passed
-    pks = pks.filter(function (pk) {
-      return $.trim(pk).length > 0;
-    });
     system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
     var cmd = 'deleteMultiple';
     var url = this.getBaseUrl() + pks.join(',') + '/delete';
@@ -2658,7 +2654,7 @@ signup = function ($, jstz, api, settings, inflection, validation, clientStorage
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
@@ -2666,6 +2662,15 @@ signup = function ($, jstz, api, settings, inflection, validation, clientStorage
     }
     if (login.length == 0 && firstName.length > 0 && lastName.length > 0) {
       login = utils.getLoginName(firstName, lastName);
+    }
+    // Don't allow signup to deprecated plans
+    if ([
+        'starter',
+        'basic',
+        'professional',
+        'enterprise'
+      ].indexOf(plan) != -1) {
+      plan = DEFAULT_PLAN;
     }
     return new Signup($.extend({
       name: name,
@@ -2676,7 +2681,7 @@ signup = function ($, jstz, api, settings, inflection, validation, clientStorage
       lastName: lastName,
       login: login,
       source: source,
-      plan: DEFAULT_PLAN,
+      plan: plan,
       period: period,
       inviteToken: inviteToken,
       selfserviceToken: selfserviceToken

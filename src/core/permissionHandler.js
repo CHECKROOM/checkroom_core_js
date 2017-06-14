@@ -105,6 +105,10 @@ define([], function () {
     PermissionHandler.prototype.hasUserSyncPermission = function(){
         return this.hasAccountUserSyncPermission("read");
     };
+
+    PermissionHandler.prototype.hasSelfservicePermission = function(){
+        return this._useSelfService;
+    };
     
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
         return this.hasPermission(action || "read", "kits", data, location);

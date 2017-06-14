@@ -301,6 +301,7 @@ define([
             login = utils.getUrlParam("login", "").toLowerCase(),
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
+            plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             timezone = utils.getUrlParam("timezone", jstz.determine().name()),
             inviteToken = utils.getUrlParam("code", ""),
             selfserviceToken = utils.getUrlParam("key", "");
@@ -319,6 +320,11 @@ define([
             login = utils.getLoginName(firstName, lastName);
         }
 
+        // Don't allow signup to deprecated plans
+        if(["starter","basic", "professional","enterprise"].indexOf(plan) != -1){
+            plan = DEFAULT_PLAN;
+        }
+
         return new Signup($.extend({
             name: name,
             email: email,
@@ -328,7 +334,7 @@ define([
             lastName: lastName,
             login: login,
             source: source,
-            plan: DEFAULT_PLAN,
+            plan: plan,
             period: period,
             inviteToken: inviteToken,
             selfserviceToken: selfserviceToken

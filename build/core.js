@@ -11942,6 +11942,7 @@ PermissionHandler = function () {
     this._useUserSync = limits.allowUserSync && profile.useUserSync;
     this._useFlags = profile.useFlags;
     this._useGeo = profile.useGeo;
+    this._useRestrictLocations = limits.allowRestrictLocations && profile.useRestrictLocations;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -12023,6 +12024,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasLocationPermission = function (action, data, location) {
     return this.hasPermission(action, 'locations', data, location);
+  };
+  PermissionHandler.prototype.hasRestrictLocationPermission = function () {
+    return this._useRestrictLocations;
   };
   PermissionHandler.prototype.hasWebhookPermission = function (action, data, location) {
     return this.hasPermission(action, 'webhooks', data, location);

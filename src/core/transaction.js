@@ -392,6 +392,16 @@ define([
         return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
     };
 
+    Transaction.prototype._getUniqueItemIds = function(ids){
+        ids = ids || [];
+
+        //https://stackoverflow.com/questions/38373364/the-best-way-to-remove-duplicate-strings-in-an-array
+        return ids.reduce(function(p,c,i,a){
+          if (p.indexOf(c) == -1) p.push(c);
+          return p;
+        }, []);
+    }
+
     // Setters
     // ----
 
@@ -585,11 +595,15 @@ define([
      */
     Transaction.prototype.addItems = function(items, skipRead) {
         var that = this;
+
+        //Remove duplicate item ids
+        items = that._getUniqueItemIds(items);
+
         return this._ensureTransactionExists(skipRead)
             .then(function() {
                 return that._doApiCall({
                     method: 'addItems',
-                    params: {items: items},
+                    params: {items: items },
                     skipRead: skipRead
                 });
             });
@@ -608,6 +622,9 @@ define([
         if (!this.existsInDb()) {
             return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
         }
+
+        //Remove duplicate item ids
+        items = that._getUniqueItemIds(items);
 
         var that = this;
         return this._doApiCall({

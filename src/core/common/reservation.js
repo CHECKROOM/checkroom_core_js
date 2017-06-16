@@ -54,7 +54,7 @@ define(function () {
          */
         isReservationOverdue: function(reservation, now) {
             now = now || moment();
-            return (reservation.status=="open") && (now.isAfter(reservation.fromDate));
+            return (reservation.status=="open") && (now.isAfter(reservation.fromDate || reservation.from));
         },
         /**
          * isReservationInThePast

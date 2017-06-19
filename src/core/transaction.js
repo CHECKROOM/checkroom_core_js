@@ -619,6 +619,8 @@ define([
      * @returns {promise}
      */
     Transaction.prototype.removeItems = function(items, skipRead) {
+        var that = this;
+
         if (!this.existsInDb()) {
             return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
         }
@@ -626,7 +628,6 @@ define([
         //Remove duplicate item ids
         items = that._getUniqueItemIds(items);
 
-        var that = this;
         return this._doApiCall({
             method: 'removeItems',
             params: {items: items},

@@ -309,12 +309,13 @@ define([
             conflict = null;
 
         // Reservations can only have conflicts
-        // when we have a (location OR (from AND to)) AND at least 1 item
+        // when status open OR creating and we have a (location OR (from AND to)) AND at least 1 item 
         // So we'll only hit the server if there are possible conflicts.
         //
         // However, some conflicts only start making sense when the reservation fields filled in
         // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
-        if( (this.items) &&
+        if( (['creating', 'open'].indexOf(this.status) == 1) &&
+            (this.items) &&
             (this.items.length) &&
             ((this.location) || (this.from && this.to))) {
 

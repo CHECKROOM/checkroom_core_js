@@ -10900,12 +10900,12 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.removeItems = function (items, skipRead) {
+    var that = this;
     if (!this.existsInDb()) {
       return $.Deferred().reject(new Error('Cannot removeItems from document without id'));
     }
     //Remove duplicate item ids
     items = that._getUniqueItemIds(items);
-    var that = this;
     return this._doApiCall({
       method: 'removeItems',
       params: { items: items },
@@ -12648,12 +12648,15 @@ Reservation = function ($, api, Transaction, Conflict) {
   Reservation.prototype._getConflicts = function () {
     var that = this, conflicts = [], conflict = null;
     // Reservations can only have conflicts
-    // when we have a (location OR (from AND to)) AND at least 1 item
+    // when status open OR creating and we have a (location OR (from AND to)) AND at least 1 item 
     // So we'll only hit the server if there are possible conflicts.
     //
     // However, some conflicts only start making sense when the reservation fields filled in
     // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
-    if (this.items && this.items.length && (this.location || this.from && this.to)) {
+    if ([
+        'creating',
+        'open'
+      ].indexOf(this.status) == 1 && this.items && this.items.length && (this.location || this.from && this.to)) {
       var locId = this.location ? this._getId(this.location) : null;
       var showOrderConflicts = this.from && this.to && this.status == 'open';
       var showLocationConflicts = locId != null;
@@ -13899,12 +13902,12 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.removeItems = function (items, skipRead) {
+    var that = this;
     if (!this.existsInDb()) {
       return $.Deferred().reject(new Error('Cannot removeItems from document without id'));
     }
     //Remove duplicate item ids
     items = that._getUniqueItemIds(items);
-    var that = this;
     return this._doApiCall({
       method: 'removeItems',
       params: { items: items },

@@ -150,8 +150,12 @@ define([
 
     User.prototype._isDirtyRestrictLocations = function(){
         if((this.raw)) {
-            var restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-            return this.restrictLocations.length!=restrictLocations.length;
+            var that = this,
+                restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+            
+            // Check if other locations have been selected
+            return this.restrictLocations.filter(function(x){ return restrictLocations.indexOf(x) < 0; }).length > 0 ||
+                    restrictLocations.filter(function(x){ return that.restrictLocations.indexOf(x) < 0; }).length > 0;
         }
         return false;
     };

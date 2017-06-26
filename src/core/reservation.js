@@ -105,10 +105,11 @@ define([
     Reservation.prototype.isValidToDate = function(){
         var from = this.from,
             to = this.to,
-            status = this.status;
+            status = this.status,
+            now = this.getNow();
 
         if((status == "creating" || status == "open")){
-            return to != null && to.isAfter(from);
+            return to != null && to.isAfter(from) && to.isAfter(now);
         }
 
         return true;

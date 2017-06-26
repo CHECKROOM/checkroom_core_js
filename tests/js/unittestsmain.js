@@ -56,13 +56,13 @@ require([
         webHookTest,
         signupTest) {
 
-        commonTest.run();
+        //commonTest.run();
 
         //orderTransferTest.run();
         //helperTest.run();
         //simpleTest.run();
         //dateHelperTest.run();
-        contactTest.run();
+        //contactTest.run();
         //locationTest.run();
         //kitTest.run();
         //itemTest.run();
@@ -72,7 +72,7 @@ require([
         //userTest.run();
         //availabilityTest.run();
         //webHookTest.run();
-        //signupTest.run();
+        signupTest.run();
 
 
         // start QUnit.

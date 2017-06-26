@@ -196,7 +196,7 @@ define([
         var dateHelper = this._getDateHelper();
         var now = dateHelper.getNow();
         var next = dateHelper.roundTimeTo(now);
-        return next.add(365, "day"); // TODO: Is this a sensible date?
+        return next.add(2, "years");
     };
 
     /**

@@ -56,6 +56,31 @@ define(['settings', 'helper', 'cheqroom-signup'], function(settings, helper, Sig
                 equal(s.lastName, "");
             });
 
+            test('testGroupId', function(){
+                var s = new Signup({}, settings);
+                
+                s.company = "Spaces become underscore";
+                equal(s.getGroupId(), "spaces_become_underscore");
+
+                s.company = "CAPITALS TO LOWER";
+                equal(s.getGroupId(), "capitals_to_lower");
+
+                s.company = "dots.are.replaced";
+                equal(s.getGroupId(), "dots_are_replaced");
+
+                s.company = "dashes-are-replaced";
+                equal(s.getGroupId(), "dashes_are_replaced");
+
+                s.company = "Non-ascii is stripped#&$%";
+                equal(s.getGroupId(), "non_ascii_is_stripped");
+
+                s.company = "latinize çéà";
+                equal(s.getGroupId(), "latinize_cea");
+
+                s.company = "Grove Broadcasting Co. Ltd.";
+                equal(s.getGroupId(), "grove_broadcasting_co__ltd_");
+            })
+
         };
 
         return {run: run}

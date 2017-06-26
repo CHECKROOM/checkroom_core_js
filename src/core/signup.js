@@ -150,7 +150,7 @@ define([
     // ----
     Signup.prototype.getGroupId = function() {
         var company = $.trim(this.company);
-        return company.OnlyAlphaNumSpaceAndUnderscore();
+        return company.replace(/[\.-\s]/g, '_').OnlyAlphaNumSpaceAndUnderscore();
     };
 
     Signup.prototype.getFullName = function() {

@@ -2533,7 +2533,7 @@ signup = function ($, jstz, api, settings, inflection, validation, clientStorage
   // ----
   Signup.prototype.getGroupId = function () {
     var company = $.trim(this.company);
-    return company.OnlyAlphaNumSpaceAndUnderscore();
+    return company.replace(/[\.-\s]/g, '_').OnlyAlphaNumSpaceAndUnderscore();
   };
   Signup.prototype.getFullName = function () {
     var firstName = $.trim(this.firstName);

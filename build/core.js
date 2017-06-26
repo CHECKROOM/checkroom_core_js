@@ -6586,8 +6586,13 @@ user = function ($, Base, common) {
   };
   User.prototype._isDirtyRestrictLocations = function () {
     if (this.raw) {
-      var restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-      return this.restrictLocations.length != restrictLocations.length;
+      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+      // Check if other locations have been selected
+      return this.restrictLocations.filter(function (x) {
+        return restrictLocations.indexOf(x) < 0;
+      }).length > 0 || restrictLocations.filter(function (x) {
+        return that.restrictLocations.indexOf(x) < 0;
+      }).length > 0;
     }
     return false;
   };
@@ -10520,7 +10525,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var dateHelper = this._getDateHelper();
     var now = dateHelper.getNow();
     var next = dateHelper.roundTimeTo(now);
-    return next.add(365, 'day');  // TODO: Is this a sensible date?
+    return next.add(2, 'years');
   };
   /**
    * suggestEndDate, makes a new moment() object with a suggested end date,
@@ -12476,9 +12481,9 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @return {Boolean}
    */
   Reservation.prototype.isValidToDate = function () {
-    var from = this.from, to = this.to, status = this.status;
+    var from = this.from, to = this.to, status = this.status, now = this.getNow();
     if (status == 'creating' || status == 'open') {
-      return to != null && to.isAfter(from);
+      return to != null && to.isAfter(from) && to.isAfter(now);
     }
     return true;
   };
@@ -13522,7 +13527,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var dateHelper = this._getDateHelper();
     var now = dateHelper.getNow();
     var next = dateHelper.roundTimeTo(now);
-    return next.add(365, 'day');  // TODO: Is this a sensible date?
+    return next.add(2, 'years');
   };
   /**
    * suggestEndDate, makes a new moment() object with a suggested end date,
@@ -14295,8 +14300,13 @@ User = function ($, Base, common) {
   };
   User.prototype._isDirtyRestrictLocations = function () {
     if (this.raw) {
-      var restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-      return this.restrictLocations.length != restrictLocations.length;
+      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+      // Check if other locations have been selected
+      return this.restrictLocations.filter(function (x) {
+        return restrictLocations.indexOf(x) < 0;
+      }).length > 0 || restrictLocations.filter(function (x) {
+        return that.restrictLocations.indexOf(x) < 0;
+      }).length > 0;
     }
     return false;
   };

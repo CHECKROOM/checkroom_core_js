@@ -95,7 +95,7 @@ define(['jquery'], function ($) {
      */
     utils.badgeify = function(count) {
         if (count>100) {
-            return "100+";
+            return "99+";
         } else if (count>10) {
             return "10+";
         } else if (count>0) {

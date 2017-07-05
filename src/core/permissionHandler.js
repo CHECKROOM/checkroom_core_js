@@ -35,6 +35,7 @@ define([], function () {
         this._useFlags =              (profile.useFlags);
         this._useGeo =                (profile.useGeo);
         this._useRestrictLocations =  (limits.allowRestrictLocations) && (profile.useRestrictLocations);
+        this._useReporting =          (limits.allowReporting) &&        (profile.useReporting);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -111,10 +112,13 @@ define([], function () {
         return this._useSelfService;
     };
     
+    PermissionHandler.prototype.hasReportingPermission = function() {
+        return this._isRootOrAdmin && this._useReporting;
+    };
+
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
         return this.hasPermission(action || "read", "kits", data, location);
     };
-
     
     PermissionHandler.prototype.hasContactPermission = function(action, data, location) {
         return this.hasPermission(action, "contacts", data, location);

@@ -11,14 +11,13 @@ define([
     var DEFAULTS = {
         kind: "ldap",
         name: "",
-        enabled: false,
         host: "ldap://yourdomain.com",
         port: 389,
         timeOut: 10,
         login: "",
         password: "",
-        newUsers: "ignore",
-        existingUsers: "ignore",
+        newUsers: "create",
+        existingUsers: "update",
         missingUsers: "ignore",
         autoSync: false,
         role: "selfservice",
@@ -26,7 +25,8 @@ define([
         base: "ou=team,dc=yourdomain,dc=com",
         loginField: "uid",
         nameField: "cn",
-        emailField: "mail"
+        emailField: "mail",
+        restrictLocations: []
     };
 
     // Allow overriding the ctor during inheritance
@@ -41,7 +41,6 @@ define([
      * @extends Base
      * @property {string} kind                  - The kind
      * @property {string} name                  - The name
-     * @property {boolean} enabled              - Is the usersync active?
      * @property {string} host                  - The url of the host
      * @property {int} port                     - The port number
      * @property {int} timeOut                  - The timeOut in seconds
@@ -68,7 +67,6 @@ define([
 
         this.kind = spec.kind || DEFAULTS.kind;
         this.name = spec.name || DEFAULTS.name;
-        this.enabled = (spec.enabled!=null) ? spec.enabled : DEFAULTS.enabled;
         this.host = spec.host || DEFAULTS.host;
         this.port = spec.port || DEFAULTS.port;
         this.timeOut = spec.timeOut || DEFAULTS.timeOut;
@@ -84,6 +82,7 @@ define([
         this.loginField = spec.loginField || DEFAULTS.loginField;
         this.nameField = spec.nameField || DEFAULTS.nameField;
         this.emailField = spec.emailField || DEFAULTS.emailField;
+        this.restrictLocations = spec.restrictLocations?spec.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
     };
 
     UserSync.prototype = new tmp();
@@ -131,7 +130,6 @@ define([
             (Base.prototype.isEmpty.call(this)) &&
             (this.kind==DEFAULTS.kind) &&
             (this.name==DEFAULTS.name) &&
-            (this.enabled==DEFAULTS.enabled) &&
             (this.host==DEFAULTS.host) &&
             (this.port==DEFAULTS.port) &&
             (this.timeOut==DEFAULTS.timeOut) &&
@@ -146,7 +144,8 @@ define([
             (this.base==DEFAULTS.base) &&
             (this.loginField==DEFAULTS.loginField) &&
             (this.nameField==DEFAULTS.nameField) &&
-            (this.emailField==DEFAULTS.emailField));
+            (this.emailField==DEFAULTS.emailField) &&
+            (this.restrictLocations && this.restrictLocations.length == 0));
     };
 
     /**
@@ -156,12 +155,15 @@ define([
      * @returns {boolean}
      */
     UserSync.prototype.isDirty = function() {
+        return this._isDirtyInfo() || this._isDirtyRestrictLocations();
+    };
+
+    UserSync.prototype._isDirtyInfo = function(){
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
             var kind = this.raw.kind || DEFAULTS.kind;
             var name = this.raw.name || DEFAULTS.name;
-            var enabled = (this.raw.enabled!=null) ? this.raw.enabled : DEFAULTS.enabled;
             var host = this.raw.host || DEFAULTS.host;
             var port = this.raw.port || DEFAULTS.port;
             var timeOut = this.raw.timeOut || DEFAULTS.timeOut;
@@ -180,7 +182,6 @@ define([
             return (
                 (this.kind!=kind) ||
                 (this.name!=name) ||
-                (this.enabled!=enabled) ||
                 (this.host!=host) ||
                 (this.port!=port) ||
                 (this.timeOut!=timeOut) ||
@@ -195,10 +196,23 @@ define([
                 (this.base!=base) ||
                 (this.loginField!=loginField) ||
                 (this.nameField!=nameField) ||
-                (this.emailField!=emailField)
+                (this.emailField!=emailField) ||
+                (this._isDirtyRestrictLocations())
             );
         }
         return isDirty;
+    }
+
+    UserSync.prototype._isDirtyRestrictLocations = function(){
+        if((this.raw)) {
+            var that = this,
+                restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+            
+            // Check if other locations have been selected
+            return this.restrictLocations.filter(function(x){ return restrictLocations.indexOf(x) < 0; }).length > 0 ||
+                    restrictLocations.filter(function(x){ return that.restrictLocations.indexOf(x) < 0; }).length > 0;
+        }
+        return false;
     };
 
     UserSync.prototype._getDefaults = function() {
@@ -246,7 +260,6 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.kind = this.kind || DEFAULTS.kind;
         data.name = this.name || DEFAULTS.name;
-        data.enabled = (this.enabled!=null) ? this.enabled : DEFAULTS.enabled;
         data.host = this.host || DEFAULTS.host;
         data.port = this.port || DEFAULTS.port;
         data.timeOut = this.timeOut || DEFAULTS.timeOut;
@@ -262,6 +275,7 @@ define([
         data.loginField = this.loginField || DEFAULTS.loginField;
         data.nameField = this.nameField || DEFAULTS.nameField;
         data.emailField = this.emailField || DEFAULTS.emailField;
+
         return data;
     };
 
@@ -280,7 +294,6 @@ define([
                 // depending on the fields
                 that.kind = data.kind || DEFAULTS.kind;
                 that.name = data.name || DEFAULTS.name;
-                that.enabled = (data.enabled!=null) ? data.enabled : DEFAULTS.enabled;
                 that.host = data.host || DEFAULTS.host;
                 that.port = data.port || DEFAULTS.port;
                 that.timeOut = data.timeOut || DEFAULTS.timeOut;
@@ -296,11 +309,80 @@ define([
                 that.loginField = data.loginField || DEFAULTS.loginField;
                 that.nameField = data.nameField || DEFAULTS.nameField;
                 that.emailField = data.emailField || DEFAULTS.emailField;
+                that.restrictLocations = data.restrictLocations?data.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
+
                 $.publish('usersync.fromJson', data);
                 return data;
             });
     };
 
-    return UserSync;
-    
+        /**
+     * Restrict user access to specific location(s)
+     * @param locations
+     * @param skipRead
+     * @returns {promise}
+     */
+    UserSync.prototype.setRestrictLocations = function(locations, skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject("Usersync does not exist in database");
+        }
+        return this._doApiCall({method: 'setRestrictLocations', params: { restrictLocations: locations }, skipRead: skipRead});
+    };
+
+    /**
+     * Clear user location(s) access (makes all location accessible for the user)
+     * @param skipRead
+     * @returns {promise}
+     */
+    UserSync.prototype.clearRestrictLocations = function(skipRead) {
+        if (!this.existsInDb()) {
+            return $.Deferred().reject("Usersync does not exist in database");
+        }
+        return this._doApiCall({method: 'clearRestrictLocations', skipRead: skipRead});
+    };
+
+    /**
+     * Updates the usersync
+     * @param skipRead
+     * @returns {*}
+     */
+    UserSync.prototype.update = function(skipRead) {
+        if (this.isEmpty()) {
+            return $.Deferred().reject(new Error("Cannot update to empty usersync"));
+        }
+        if (!this.existsInDb()) {
+            return $.Deferred().reject(new Error("Cannot update usersync without id"));
+        }
+        if (!this.isValid()) {
+            return $.Deferred().reject(new Error("Cannot update, invalid usersync"));
+        }
+
+        var that = this,
+            dfdRestrictLocations = $.Deferred(),
+            dfdInfo = $.Deferred(),
+            params = this._toJson();
+
+        if(this._isDirtyInfo()){
+            dfdInfo = this.ds.update(this.id, params, this._fields).then(function(resp){
+                that._fromJson(resp);
+            });
+        }else{
+            dfdInfo.resolve();
+        }              
+
+        if(this._isDirtyRestrictLocations()){
+            if(this.restrictLocations.length != 0){
+                dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
+            } else{
+                dfdRestrictLocations = this.clearRestrictLocations(true);
+            }
+        }else{
+            dfdRestrictLocations.resolve();
+        }
+
+        return $.when(dfdInfo, dfdRestrictLocations);
+            
+    };
+
+    return UserSync;    
 });

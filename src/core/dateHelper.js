@@ -316,46 +316,54 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      * @param m - the Moment date
      * @param useHours - does the profile use hours?
      * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+     * @param minDate - passing in a minimum start-date, will be different for reservations compared to orders
+     * @param maxDate - passing in a maximum start-date (not used for the moment)
      * @param now - the current moment (just to make testing easier)
      * @returns {moment}
      * @private
      */
-    DateHelper.prototype.makeStartDate = function(m, useHours, dayMode, now) {
-        useHours = (useHours!=null) ? useHours : true;
-        dayMode = (dayMode!=null) ? dayMode : false;
-        now = now || moment();
+    DateHelper.prototype.makeStartDate = function(m, useHours, dayMode, minDate, maxDate, now) {
+        useHours = (useHours!=null) ? useHours : true; // is the account set up to use hours?
+        dayMode = (dayMode!=null) ? dayMode : false; // did the selection come from a calendar fullcalendar day selection?
+        now = now || moment();  // the current time (for unit testing)
 
         if( (useHours) &&
             (!dayMode)) {
             // The account is set up to use hours,
-            // and since dayMode is false,
-            // we assume the hours are picked by the user himself
-            // just do the rounding and we're done
-            return this.roundTimeFrom(m);
-        }
-
-        // When we get here we know that either:
-        // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
-        // or
-        // 2) The account is set up to use days instead of hours
-        //
-        // Which means we still need to see if we can make a smart decision about the hours part
-        var isToday = m.isSame(now, 'day');
-        if (isToday) {
-            var startOfBusinessDay = this._makeStartOfBusinessDay(now);
-
-            // The end date is today
-            // If the start date is before business hours
-            // set the start time to start-of-business hours
-            // no extra rounding needed
-            if (m.isBefore(startOfBusinessDay)) {
-                return startOfBusinessDay;
-            } else {
-                return this.roundTimeFrom(m);
-            }
+            // and the user picked the hours himself (since it's not picked from a dayMode calendar)
+            // We'll just round the from date
+            // if it's before the minDate, just take the minDate instead
+            m = this.roundTimeFrom(m);
         } else {
-            return this._makeStartOfBusinessDay(m);
+            // When we get here we know that either:
+            // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+            // or
+            // 2) The account is set up to use days instead of hours
+            //
+            // Which means we still need to see if we can make a smart decision about the hours part
+            // we'll base this on typical business hours (usually 9 to 5)
+            var isToday = m.isSame(now, 'day'),
+                startOfBusinessDay = this._makeStartOfBusinessDay(m);
+            if (isToday) {
+                // The start date is today
+                // and the current time is still before business hours
+                // we can use the start time to start-of-business hours
+                if (m.isBefore(startOfBusinessDay)) {
+                    m = startOfBusinessDay;
+                } else {
+                    // We're already at the beginning of business hours
+                    // or even already passed it, just try rounding the
+                    // time and see if its before minDate
+                    m = this.roundTimeFrom(m);
+                }
+            } else {
+                // The start date is not today, we can just take the business day start from the date that was passed
+                m = startOfBusinessDay;
+            }
         }
+
+        // Make sure we never return anything before the mindate
+        return ((minDate) && (m.isBefore(minDate))) ? minDate : m;
     };
 
     /**
@@ -366,11 +374,13 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      * @param m - the Moment date
      * @param useHours - does the profile use hours?
      * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+     * @param minDate
+     * @param maxDate
      * @param now - the current moment (just to make testing easier)
      * @returns {moment}
      * @private
      */
-    DateHelper.prototype.makeEndDate = function(m, useHours, dayMode, now) {
+    DateHelper.prototype.makeEndDate = function(m, useHours, dayMode, minDate, maxDate, now) {
         useHours = (useHours!=null) ? useHours : true;
         dayMode = (dayMode!=null) ? dayMode : false;
         now = now || moment();
@@ -381,34 +391,35 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             // and since dayMode is false,
             // we assume the hours are picked by the user himself
             // just do the rounding and we're done
-            return this.roundTimeTo(m);
+            m = this.roundTimeTo(m);
+        } else {
+            // When we get here we know that either:
+            // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+            // or
+            // 2) The account is set up to use days instead of hours
+            //
+            // Which means we still need to see if we can make a smart decision about the hours part
+            var isToday = m.isSame(now, 'day'),
+                endOfBusinessDay = this._makeEndOfBusinessDay(m),
+                endOfDay = this._makeEndOfDay(m);
+            if (isToday) {
+                // The end date is today
+                // and the current date is before business hours
+                // we can use the end time to end-of-business hours
+                if (m.isBefore(endOfBusinessDay)) {
+                    m = endOfBusinessDay;
+                } else {
+                    m = endOfDay;
+                }
+            } else if (m.isAfter(endOfBusinessDay)) {
+                m = endOfDay;
+            } else {
+                m = endOfBusinessDay;
+            }
         }
 
-        // When we get here we know that either:
-        // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
-        // or
-        // 2) The account is set up to use days instead of hours
-        //
-        // Which means we still need to see if we can make a smart decision about the hours part
-        var isToday = m.isSame(now, 'day');
-        if (isToday) {
-            var endOfBusinessDay = this._makeEndOfBusinessDay(now),
-                endOfDay = this._makeEndOfDay(now);
-            // The end date is today
-            // If the end date is before business hours
-            // set the end time to end-of-business hours
-            // no extra rounding needed
-            if (m.isBefore(endOfBusinessDay)) {
-                return endOfBusinessDay;
-            } else {
-                return endOfDay;
-            }
-        } else {
-            // If it's a date in the future,
-            // we can just apply business hours and we're done
-            // no extra rounding needed
-            return this._makeEndOfBusinessDay(m);
-        }
+        // Make sure we never return a date after the max date
+        return ((maxDate) && (m.isAfter(maxDate))) ? maxDate : m;
     };
 
     /**

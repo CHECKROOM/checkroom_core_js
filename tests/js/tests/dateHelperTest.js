@@ -95,53 +95,368 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
 
             // makeEndDate
             // ----
+            test('makeEndDateToday', function() {
+                var m1 = null;
+                var helper = new cr.DateHelper();
+                var now = moment();
+                var dTodayBeforeBusiness = moment().set({hour: 6, minute: 55, second: 0, millisecond: 0});
+                var dTodayCloseToEleven = moment().set({hour: 10, minute: 55, second: 0, millisecond: 0});
+                var dTodayQuarterToEleven = moment().set({hour: 10, minute: 46, second: 0, millisecond: 0});
+                var dTodayAfterEleven = moment().set({hour: 11, minute: 5, second: 0, millisecond: 0});
+                var dTodaySixAtNight = moment().set({hour: 18, minute: 5, second: 0, millisecond: 0});
+
+                // No max dates, use hours = True
+                m1 = helper.makeEndDate(dTodayBeforeBusiness, true, false, null, null, now);
+                equal(m1.format("H:mm"), "7:00");  // should be 7 AM, because we pass hours
+
+                m1 = helper.makeEndDate(dTodayCloseToEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                m1 = helper.makeEndDate(dTodayQuarterToEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "10:45");  // without a min date, this will just do the default rounding 10:45
+
+                m1 = helper.makeEndDate(dTodayAfterEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");  // without a min date, this will just do the default rounding 11:00
+
+                m1 = helper.makeEndDate(dTodaySixAtNight, true, false, null, null, now);
+                equal(m1.format("H:mm"), "18:00");  // without a min date, this will just do the default rounding 11:00
+
+                // With max dates, use hours = True
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayBeforeBusiness, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "7:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayCloseToEleven, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayQuarterToEleven, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "10:45");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayAfterEleven, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodaySixAtNight, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "18:00");
+
+
+                // No max dates, use hours = False
+                m1 = helper.makeEndDate(dTodayBeforeBusiness, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dTodayCloseToEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dTodayQuarterToEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dTodayAfterEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dTodaySixAtNight, false, false, null, null, now);
+                equal(m1.format("H:mm"), "23:45");
+
+                // With max dates, use hours = True
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayBeforeBusiness, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayCloseToEleven, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayQuarterToEleven, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodayAfterEleven, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment().set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dTodaySixAtNight, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "18:00");
+            });
+
             test('makeEndDate', function() {
                 var m1 = null;
                 var helper = new cr.DateHelper();
-                var dAroundNoon = moment(new Date(2013, 11, 13, 11, 55, 30, 111));
-                var dAfterClosing = moment(new Date(2013, 11, 13, 17, 55, 30, 111));
+                var now = moment();
+                var dBeforeBusiness = moment(new Date(2013, 11, 13, 6, 55, 0, 0));
+                var dCloseToEleven = moment(new Date(2013, 11, 13, 10, 55, 0, 0));
+                var dQuarterToEleven = moment(new Date(2013, 11, 13, 10, 46, 0, 0));
+                var dAfterEleven = moment(new Date(2013, 11, 13, 11, 5, 0, 0));
+                var dSixAtNight = moment(new Date(2013, 11, 13, 18, 5, 0, 0));
 
-                // Should round up to noon
-                m1 = helper.makeEndDate(dAroundNoon, true, false);
-                equal(m1.format("LLL"), "December 13, 2013 12:00 PM");
+                // No max dates, use hours = True
+                m1 = helper.makeEndDate(dBeforeBusiness, true, false, null, null, now);
+                equal(m1.format("H:mm"), "7:00");  // should be 7 AM, because we pass hours
 
-                // Should round up to EOB because day mode
-                m1 = helper.makeEndDate(dAroundNoon, true, true);
-                equal(m1.format("LLL"), "December 13, 2013 5:00 PM");
+                m1 = helper.makeEndDate(dCloseToEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");
 
-                // Should just round up
-                m1 = helper.makeEndDate(dAfterClosing, true, false);
-                equal(m1.format("LLL"), "December 13, 2013 6:00 PM");
+                m1 = helper.makeEndDate(dQuarterToEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "10:45");  // without a min date, this will just do the default rounding 10:45
 
-                // Should round up to EOB because day mode and is same day as today
-                m1 = helper.makeEndDate(dAfterClosing, true, true, dAroundNoon);
-                equal(m1.format("LLL"), "December 13, 2013 11:45 PM");
+                m1 = helper.makeEndDate(dAfterEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");  // without a min date, this will just do the default rounding 11:00
+
+                m1 = helper.makeEndDate(dSixAtNight, true, false, null, null, now);
+                equal(m1.format("H:mm"), "18:00");  // without a min date, this will just do the default rounding 11:00
+
+                // With max dates, use hours = True
+                var maxDate = moment(dBeforeBusiness).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dBeforeBusiness, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "7:00");
+
+                var maxDate = moment(dCloseToEleven).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dCloseToEleven, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                var maxDate = moment(dQuarterToEleven).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dQuarterToEleven, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "10:45");
+
+                var maxDate = moment(dAfterEleven).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dAfterEleven, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                var maxDate = moment(dSixAtNight).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dSixAtNight, true, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "18:00");
+
+
+                // No max dates, use hours = False
+                m1 = helper.makeEndDate(dBeforeBusiness, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dCloseToEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dQuarterToEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dAfterEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                m1 = helper.makeEndDate(dSixAtNight, false, false, null, null, now);
+                equal(m1.format("H:mm"), "23:45");
+
+                // With max dates, use hours = True
+                var maxDate = moment(dBeforeBusiness).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dBeforeBusiness, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment(dCloseToEleven).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dCloseToEleven, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment(dQuarterToEleven).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dQuarterToEleven, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment(dAfterEleven).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dAfterEleven, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "17:00");
+
+                var maxDate = moment(dSixAtNight).set({hour:18,minute:0,second:0,millisecond:0});
+                m1 = helper.makeEndDate(dSixAtNight, false, false, null, maxDate, now);
+                equal(m1.format("H:mm"), "18:00");
             });
 
             // makeEndDate
             // ----
+            test('makeStartDateToday', function() {
+                var m1 = null;
+                var helper = new cr.DateHelper();
+                var now = moment();
+                var dTodayBeforeBusiness = moment().set({hour:6,minute:55,second:0,millisecond:0});
+                var dTodayCloseToEleven = moment().set({hour:10,minute:55,second:0,millisecond:0});
+                var dTodayQuarterToEleven = moment().set({hour:10,minute:46,second:0,millisecond:0});
+                var dTodayAfterEleven = moment().set({hour:11,minute:5,second:0,millisecond:0});
+                var dTodaySixAtNight = moment().set({hour:18,minute:5,second:0,millisecond:0});
+
+                //
+                // Do some tests without passing min or max date
+                //
+                m1 = helper.makeStartDate(dTodayBeforeBusiness, true, false, null, null, now);
+                equal(m1.format("H:mm"), "7:00");  // should be 7 AM, because we pass hours
+
+                m1 = helper.makeStartDate(dTodayCloseToEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                m1 = helper.makeStartDate(dTodayQuarterToEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "10:45");  // without a min date, this will just do the default rounding 10:45
+
+                m1 = helper.makeStartDate(dTodayAfterEleven, true, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");  // without a min date, this will just do the default rounding 11:00
+
+                m1 = helper.makeStartDate(dTodaySixAtNight, true, false, null, null, now);
+                equal(m1.format("H:mm"), "18:00");  // without a min date, this will just do the default rounding 11:00
+
+                //
+                // Do some tests WITH passing min date
+                //
+                var minDate = moment().set({hour:9,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayBeforeBusiness, true, false, minDate, null, now);
+                equal(m1.format("H:mm"), "9:15");
+
+                var minDate = moment().set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayCloseToEleven, true, false, minDate, null, now);
+                equal(m1.format("H:mm"), "11:15");
+
+                var minDate = moment().set({hour:11,minute:0,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayQuarterToEleven, true, false, minDate, null, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                var minDate = moment().set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayAfterEleven, true, false, minDate, null, now);
+                equal(m1.format("H:mm"), "11:15");
+
+                var minDate = moment().set({hour:18,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodaySixAtNight, true, false, minDate, null, now);
+                equal(m1.format("H:mm"), "18:15");  // without a min date, this will just do the default rounding 11:00
+
+                // SAME THING BUT WITHOUT HOURS
+
+                //
+                // Do some tests without passing min or max date
+                //
+                m1 = helper.makeStartDate(dTodayBeforeBusiness, false, false, null, null, now);
+                equal(m1.format("H:mm"), "9:00");
+
+                m1 = helper.makeStartDate(dTodayCloseToEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                m1 = helper.makeStartDate(dTodayQuarterToEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "10:45");  // without a min date, this will just do the default rounding 10:45
+
+                m1 = helper.makeStartDate(dTodayAfterEleven, false, false, null, null, now);
+                equal(m1.format("H:mm"), "11:00");  // without a min date, this will just do the default rounding 11:00
+
+                m1 = helper.makeStartDate(dTodaySixAtNight, false, false, null, null, now);
+                equal(m1.format("H:mm"), "18:00");  // without a min date, this will just do the default rounding 11:00
+
+                //
+                // Do some tests WITH passing min date
+                //
+                var minDate = moment().set({hour:9,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayBeforeBusiness, false, false, minDate, null, now);
+                equal(m1.format("H:mm"), "9:15");
+
+                var minDate = moment().set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayCloseToEleven, false, false, minDate, null, now);
+                equal(m1.format("H:mm"), "11:15");
+
+                var minDate = moment().set({hour:11,minute:0,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayQuarterToEleven, false, false, minDate, null, now);
+                equal(m1.format("H:mm"), "11:00");
+
+                var minDate = moment().set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodayAfterEleven, false, false, minDate, null, now);
+                equal(m1.format("H:mm"), "11:15");
+
+                var minDate = moment().set({hour:18,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dTodaySixAtNight, false, false, minDate, null, now);
+                equal(m1.format("H:mm"), "18:15");  // without a min date, this will just do the default rounding 11:00
+            });
+
             test('makeStartDate', function() {
                 var m1 = null;
                 var helper = new cr.DateHelper();
-                var dBeforeBiz = moment(new Date(2013, 11, 13, 6, 55, 30, 111));
-                var dAroundNoon = moment(new Date(2013, 11, 13, 11, 55, 30, 111));
-                var dAfterClosing = moment(new Date(2013, 11, 13, 17, 55, 30, 111));
+                var now = null;
+                var dBeforeBusiness = moment(new Date(2013, 11, 13, 6, 55, 0, 0));
+                var dCloseToEleven = moment(new Date(2013, 11, 13, 10, 55, 0, 0));
+                var dQuarterToEleven = moment(new Date(2013, 11, 13, 10, 46, 0, 0));
+                var dAfterEleven = moment(new Date(2013, 11, 13, 11, 5, 0, 0));
+                var dSixAtNight = moment(new Date(2013, 11, 13, 18, 5, 0, 0));
 
-                // Should round up to noon
-                m1 = helper.makeStartDate(dAroundNoon, true, false);
-                equal(m1.format("LLL"), "December 13, 2013 12:00 PM");
+                //
+                // Do some tests without passing min or max date
+                //
+                m1 = helper.makeStartDate(dBeforeBusiness, true, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 7:00 AM"); // should be 7 AM, because we pass hours
 
-                // Should round up to noon
-                m1 = helper.makeStartDate(dAroundNoon, true, true);
+                m1 = helper.makeStartDate(dCloseToEleven, true, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:00 AM");
+
+                m1 = helper.makeStartDate(dQuarterToEleven, true, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 10:45 AM");  // without a min date, this will just do the default rounding 10:45
+
+                m1 = helper.makeStartDate(dAfterEleven, true, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:00 AM");  // without a min date, this will just do the default rounding 11:00
+
+                m1 = helper.makeStartDate(dSixAtNight, true, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 6:00 PM");  // without a min date, this will just do the default rounding 18:00
+
+                //
+                // Do some tests WITH passing min date
+                //
+                var minDate = moment(dBeforeBusiness).set({hour:9,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dBeforeBusiness, true, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 9:15 AM");
+
+                var minDate = moment(dCloseToEleven).set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dCloseToEleven, true, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:15 AM");
+
+                var minDate = moment(dQuarterToEleven).set({hour:11,minute:0,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dQuarterToEleven, true, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:00 AM");
+
+                var minDate = moment(dAfterEleven).set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dAfterEleven, true, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:15 AM");
+
+                var minDate = moment(dSixAtNight).set({hour:18,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dSixAtNight, true, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 6:15 PM");
+
+                // SAME THING BUT WITHOUT HOURS
+
+                //
+                // Do some tests without passing min or max date
+                //
+                m1 = helper.makeStartDate(dBeforeBusiness, false, false, null, null, now);
                 equal(m1.format("LLL"), "December 13, 2013 9:00 AM");
 
-                // Should round up to 7 am
-                m1 = helper.makeStartDate(dBeforeBiz, true, false);
-                equal(m1.format("LLL"), "December 13, 2013 7:00 AM");
+                m1 = helper.makeStartDate(dCloseToEleven, false, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");  // without a min date, this will take begin of business day
 
-                // Should round up to 9 am
-                m1 = helper.makeStartDate(dBeforeBiz, true, true);
-                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");
+                m1 = helper.makeStartDate(dQuarterToEleven, false, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");  // without a min date, this will take begin of business day
+
+                m1 = helper.makeStartDate(dAfterEleven, false, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");  // without a min date, this will take begin of business day
+
+                m1 = helper.makeStartDate(dSixAtNight, false, false, null, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 9:00 AM");  // without a min date, this will take begin of business day
+
+                //
+                // Do some tests WITH passing min date
+                //
+                var minDate = moment(dBeforeBusiness).set({hour:9,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dBeforeBusiness, false, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 9:15 AM");
+
+                var minDate = moment(dCloseToEleven).set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dCloseToEleven, false, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:15 AM");
+
+                var minDate = moment(dQuarterToEleven).set({hour:11,minute:0,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dQuarterToEleven, false, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:00 AM");
+
+                var minDate = moment(dAfterEleven).set({hour:11,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dAfterEleven, false, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 11:15 AM");
+
+                var minDate = moment(dSixAtNight).set({hour:18,minute:15,second:0,millisecond:0});
+                m1 = helper.makeStartDate(dSixAtNight, false, false, minDate, null, now);
+                equal(m1.format("LLL"), "December 13, 2013 6:15 PM");
             });
 
             // roundTimeUp

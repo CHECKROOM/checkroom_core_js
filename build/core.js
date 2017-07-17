@@ -12206,9 +12206,10 @@ PermissionHandler = function () {
       case 'updateComment':
       case 'removeComment':
       case 'export':
+        return this._useOrders;
       case 'archive':
       case 'undoArchive':
-        return this._useOrders;
+        return this._useOrders && this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && this._canSetFlag;
@@ -12216,7 +12217,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf;
+        return this._usePdf && this._isRootOrAdminOrUser;
       case 'checkinAt':
         return this._useCheckinLocation;
       case 'forceConflictResolving':
@@ -12259,9 +12260,10 @@ PermissionHandler = function () {
       case 'updateComment':
       case 'removeComment':
       case 'export':
+        return this._useReservations;
       case 'archive':
       case 'undoArchive':
-        return this._useReservations;
+        return this._useReservations && this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && this._canSetFlag;
@@ -12269,7 +12271,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf;
+        return this._usePdf && this._isRootOrAdminOrUser;
       }
       break;
     case 'customers':
@@ -12300,7 +12302,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf;
+        return this._usePdf && this._isRootOrAdminOrUser;
       }
       break;
     case 'users':
@@ -12381,7 +12383,6 @@ PermissionHandler = function () {
       default:
         return false;
       case 'read':
-        return true;
       case 'create':
       case 'update':
       case 'delete':
@@ -12574,7 +12575,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     // - status: open
     // - to date: is in the future
     // - items: all are available
-    if (this.status == 'open' && this.to != null && this.to.isAfter(this.getNow())) {
+    if (this.status == 'open' && (this.contact && this.contact.status == 'active') && this.to != null && this.to.isAfter(this.getNow())) {
       var unavailable = this._getUnavailableItems();
       var len = $.map(unavailable, function (n, i) {
         return i;
@@ -12992,14 +12993,19 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {promise}
    */
   Reservation.prototype.reserveAgain = function (fromDate, toDate, customer, location, skipRead) {
+    var params = {
+      location: location,
+      customer: customer
+    };
+    if (fromDate) {
+      params.fromDate = fromDate;
+    }
+    if (toDate) {
+      params.toDate = toDate;
+    }
     return this._doApiCall({
       method: 'reserveAgain',
-      params: {
-        fromDate: fromDate,
-        toDate: toDate,
-        location: location,
-        customer: customer
-      },
+      params: params,
       skipRead: skipRead
     });
   };

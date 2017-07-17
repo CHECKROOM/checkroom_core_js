@@ -330,9 +330,10 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
+                        return this._useOrders;
                     case "archive":
                     case "undoArchive":
-                        return this._useOrders;
+                        return this._useOrders && this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;
@@ -340,7 +341,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf;
+                        return this._usePdf && this._isRootOrAdminOrUser;
                     case "checkinAt":
                         return this._useCheckinLocation;
                     case "forceConflictResolving":
@@ -385,9 +386,10 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
+                        return this._useReservations;
                     case "archive":
                     case "undoArchive":
-                        return this._useReservations;
+                        return this._useReservations && this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;
@@ -395,7 +397,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf;
+                        return this._usePdf && this._isRootOrAdminOrUser;
                 }
                 break;
             case "customers":
@@ -426,7 +428,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf;
+                        return this._usePdf && this._isRootOrAdminOrUser;
                 }
                 break;
             case "users":
@@ -507,7 +509,6 @@ define([], function () {
                     default:
                         return false;
                     case "read":
-                        return true;
                     case "create":
                     case "update":
                     case "delete":

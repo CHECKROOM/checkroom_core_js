@@ -215,6 +215,8 @@ define([
         // - to date: is in the future
         // - items: all are available
         if( (this.status=="open") &&
+            ((this.contact) &&
+             (this.contact.status == "active")) &&
             (this.to!=null) &&
             (this.to.isAfter(this.getNow()))) {
             var unavailable = this._getUnavailableItems();
@@ -652,11 +654,20 @@ define([
      * @returns {promise}
      */
     Reservation.prototype.reserveAgain = function(fromDate, toDate, customer, location, skipRead) {
-        return this._doApiCall({method: "reserveAgain", params: {
-            fromDate: fromDate,
-            toDate: toDate,
+        var params =  {
             location: location,
-            customer: customer}, skipRead: skipRead});
+            customer: customer
+        };
+
+        if(fromDate){
+            params.fromDate = fromDate;
+        }
+
+        if(toDate){
+            params.toDate = toDate;
+        }
+
+        return this._doApiCall({method: "reserveAgain", params: params, skipRead: skipRead});
     };
 
     /**

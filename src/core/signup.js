@@ -28,7 +28,7 @@ define([
 
         this.firstName = opt.firstName || "";  // between 2 and 25 chars
         this.lastName = opt.lastName || "";  // between 2 and 25 chars
-        this.company = opt.company || "";  // between 3 and 50 chars
+        this.company = opt.company || "";  // between 3 and 46 chars
         this.timezone = opt.timezone || jstz.determine().name();
         this.email = opt.email || "";
         this.login = opt.login || "";
@@ -78,7 +78,7 @@ define([
 
     Signup.prototype.companyIsValid = function() {
         var company = $.trim(this.company);
-        return (company.length>=3) && (company.length<=50);
+        return (company.length>=3) && (company.length<=46);
     };
 
     Signup.prototype.companyExists = function() {

@@ -56,12 +56,12 @@ require([
         webHookTest,
         signupTest) {
 
-        //commonTest.run();
+        commonTest.run();
 
         //orderTransferTest.run();
         //helperTest.run();
         //simpleTest.run();
-        dateHelperTest.run();
+        //dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();

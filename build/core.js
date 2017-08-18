@@ -3502,7 +3502,7 @@ common_slimdown = function () {
       },
       // ul lists
       {
-        regex: /\n[0-9]+\.(.*)/g,
+        regex: /\n[0-9]+\.\s(.*)/g,
         replacement: olList
       },
       // ol lists
@@ -3517,7 +3517,7 @@ common_slimdown = function () {
       },
       // horizontal rule
       {
-        regex: /\n([^\n]+)\n/g,
+        regex: /(?:[^\n]|\n(?! *\n))+/g,
         replacement: para
       },
       // add paragraphs
@@ -3554,11 +3554,12 @@ common_slimdown = function () {
       return text.trim();
     };
     function para(text, line) {
-      var trimmed = line.trim();
+      var trimmed = ('' + text).trimLeft().trimRight();
       if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
-        return '\n' + line + '\n';
+        return trimmed;
       }
-      return '\n<p>' + trimmed + '</p>\n';
+      trimmed = trimmed.replace(/\n/g, '<br />');
+      return '<p>' + trimmed + '</p>';
     }
     function ulList(text, item) {
       return '\n<ul>\n\t<li>' + item.trim() + '</li>\n</ul>';

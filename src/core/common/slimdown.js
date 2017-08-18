@@ -1,3 +1,6 @@
+//Add improved Paragraph/Linebreak parsing
+//See source: https://github.com/Khan/simple-markdown/blob/master/simple-markdown.js
+
 define(function(){
 	/**
 	 * Javascript version of https://gist.github.com/jbroadway/2836900
@@ -36,10 +39,10 @@ define(function(){
 	    {regex: /\:\"(.*?)\"\:/g, replacement: '<q>$1</q>'},                               // quote
 	    {regex: /`(.*?)`/g, replacement: '<code>$1</code>'},                               // inline code
 	    {regex: /\n\*(.*)/g, replacement: ulList},                                         // ul lists
-	    {regex: /\n[0-9]+\.(.*)/g, replacement: olList},                                   // ol lists
+	    {regex: /\n[0-9]+\.\s(.*)/g, replacement: olList},                                 // ol lists
 	    {regex: /\n(&gt;|\>)(.*)/g, replacement: blockquote},                              // blockquotes
 	    {regex: /\n-{5,}/g, replacement: '\n<hr />'},                                      // horizontal rule
-	    {regex: /\n([^\n]+)\n/g, replacement: para},                                       // add paragraphs
+	    {regex: /(?:[^\n]|\n(?! *\n))+/g, replacement: para},                                      // add paragraphs
 	    {regex: /<\/ul>\s?<ul>/g, replacement: ''},                                        // fix extra ul
 	    {regex: /<\/ol>\s?<ol>/g, replacement: ''},                                        // fix extra ol
 	    {regex: /<\/blockquote><blockquote>/g, replacement: '\n'}                          // fix extra blockquote
@@ -62,11 +65,14 @@ define(function(){
 	  };
 
 	  function para (text, line) {
-	    var trimmed = line.trim();
+	  	var trimmed = ("" + text).trimLeft().trimRight();
 	    if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
-	      return '\n' + line + '\n';
+	      return trimmed;
 	    }
-	    return '\n<p>' + trimmed + '</p>\n';
+
+	    trimmed = trimmed.replace(/\n/g,"<br />");
+
+	    return '<p>' + trimmed + '</p>';
 	  }
 
 	  function ulList (text, item) {

@@ -248,6 +248,7 @@ define([
      * @returns {boolean}
      */
     User.prototype.canDeactivate = function() {
+        // TODO: We should also check if we're not deactivating the last or only user
         return (this.active) && (this.archived==null) && (!this.isOwner);
     };
 
@@ -256,6 +257,7 @@ define([
      * @returns {boolean}
      */
     User.prototype.canArchive = function() {
+        // TODO: We should also check if we're not deactivating the last or only user
         return (this.archived==null) && (!this.isOwner);
     };
 

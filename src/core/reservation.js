@@ -348,7 +348,9 @@ define([
                                 kind: kind,
                                 item: item._id,
                                 itemName: item.name,
-                                doc: conflict.conflictsWith
+                                doc: conflict.conflictsWith,
+                                fromDate: conflict.fromDate,
+                                toDate: conflict.toDate
                             }));
                         } else {
                             if( (showStatusConflicts) &&

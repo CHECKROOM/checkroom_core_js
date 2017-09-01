@@ -846,7 +846,7 @@ define([
             // It requires some more parameters to be set
             params.onlyUnbooked = (onlyUnbooked!=null) ? onlyUnbooked : true;
             params.fromDate = this.from;
-            params.toDate = this.to;
+            params.toDate = this.to || this.due; //need due date for orders!!!!!
             params._limit = params._limit || 20;
             params._skip = params._skip || 0;
             if( (skipList) &&

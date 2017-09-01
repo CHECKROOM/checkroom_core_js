@@ -11143,7 +11143,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       // It requires some more parameters to be set
       params.onlyUnbooked = onlyUnbooked != null ? onlyUnbooked : true;
       params.fromDate = this.from;
-      params.toDate = this.to;
+      params.toDate = this.to || this.due;
+      //need due date for orders!!!!!
       params._limit = params._limit || 20;
       params._skip = params._skip || 0;
       if (skipList && skipList.length) {
@@ -11787,9 +11788,11 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @param itemIds
    * @param location
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {promise}
    */
-  Order.prototype.checkin = function (itemIds, location, skipRead) {
+  Order.prototype.checkin = function (itemIds, location, skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'checkin',
       params: {
@@ -11797,6 +11800,22 @@ Order = function ($, api, Transaction, Conflict, common) {
         location: location
       },
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422) {
+          if (err.opt && err.opt.detail.indexOf('order has status closed') != -1) {
+            return that.get();
+          } else if (err.opt && err.opt.detail.indexOf('already checked in or used somewhere else') != -1) {
+            return that.get();
+          }
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -11804,12 +11823,28 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @method
    * @name Order#checkout
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {promise}
    */
-  Order.prototype.checkout = function (skipRead) {
+  Order.prototype.checkout = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'checkout',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422) {
+          if (err.opt && err.opt.detail.indexOf('order has status open') != -1) {
+            return that.get();
+          }
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -11819,10 +11854,25 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @param skipRead
    * @returns {promise}
    */
-  Order.prototype.undoCheckout = function (skipRead) {
+  Order.prototype.undoCheckout = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'undoCheckout',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422) {
+          if (err.opt && err.opt.detail.indexOf('order has status creating') != -1) {
+            return that.get();
+          }
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -12728,7 +12778,9 @@ Reservation = function ($, api, Transaction, Conflict) {
               kind: kind,
               item: item._id,
               itemName: item.name,
-              doc: conflict.conflictsWith
+              doc: conflict.conflictsWith,
+              fromDate: conflict.fromDate,
+              toDate: conflict.toDate
             }));
           } else {
             if (showStatusConflicts && item.status == 'expired') {
@@ -12941,12 +12993,26 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @method
    * @name Reservation#reserve
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.reserve = function (skipRead) {
+  Reservation.prototype.reserve = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'reserve',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -12954,12 +13020,26 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @method
    * @name Reservation#undoReserve
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.undoReserve = function (skipRead) {
+  Reservation.prototype.undoReserve = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'undoReserve',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status creating') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -12969,23 +13049,54 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @param skipRead
    * @returns {*}
    */
-  Reservation.prototype.cancel = function (skipRead) {
+  Reservation.prototype.cancel = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'cancel',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
    * Turns an open reservation into an order (which still needs to be checked out)
    * @method
    * @name Reservation#makeOrder
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.makeOrder = function () {
+  Reservation.prototype.makeOrder = function (skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'makeOrder',
       skipRead: true
-    });  // response is an Order object!!
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status closed') != -1)) {
+          return that.get().then(function (resp) {
+            var orderId = that._getId(resp.order);
+            // need to return fake order object
+            return { _id: orderId };
+          });
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
   };
   /**
    * Switch reservation to order
@@ -14155,7 +14266,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       // It requires some more parameters to be set
       params.onlyUnbooked = onlyUnbooked != null ? onlyUnbooked : true;
       params.fromDate = this.from;
-      params.toDate = this.to;
+      params.toDate = this.to || this.due;
+      //need due date for orders!!!!!
       params._limit = params._limit || 20;
       params._skip = params._skip || 0;
       if (skipList && skipList.length) {
@@ -14633,7 +14745,8 @@ UserSync = function ($, Base, common) {
     loginField: 'uid',
     nameField: 'cn',
     emailField: 'mail',
-    restrictLocations: []
+    restrictLocations: [],
+    timezone: 'Etc/GMT'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14685,6 +14798,7 @@ UserSync = function ($, Base, common) {
     this.nameField = spec.nameField || DEFAULTS.nameField;
     this.emailField = spec.emailField || DEFAULTS.emailField;
     this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
+    this.timezone = spec.timezone || DEFAULTS.timezone;
   };
   UserSync.prototype = new tmp();
   UserSync.prototype.constructor = UserSync;
@@ -14721,7 +14835,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -14752,7 +14866,8 @@ UserSync = function ($, Base, common) {
       var loginField = this.raw.loginField || DEFAULTS.loginField;
       var nameField = this.raw.nameField || DEFAULTS.nameField;
       var emailField = this.raw.emailField || DEFAULTS.emailField;
-      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this._isDirtyRestrictLocations();
+      var timezone = this.raw.timezone || DEFAULTS.timezone;
+      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this._isDirtyRestrictLocations();
     }
     return isDirty;
   };
@@ -14824,6 +14939,7 @@ UserSync = function ($, Base, common) {
     data.loginField = this.loginField || DEFAULTS.loginField;
     data.nameField = this.nameField || DEFAULTS.nameField;
     data.emailField = this.emailField || DEFAULTS.emailField;
+    data.timezone = this.timezone || DEFAULTS.timezone;
     return data;
   };
   /**
@@ -14856,6 +14972,7 @@ UserSync = function ($, Base, common) {
       that.nameField = data.nameField || DEFAULTS.nameField;
       that.emailField = data.emailField || DEFAULTS.emailField;
       that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
+      that.timezone = data.timezone || DEFAULTS.timezone;
       $.publish('usersync.fromJson', data);
       return data;
     });
@@ -14923,6 +15040,15 @@ UserSync = function ($, Base, common) {
       dfdRestrictLocations.resolve();
     }
     return $.when(dfdInfo, dfdRestrictLocations);
+  };
+  UserSync.prototype.create = function (skipRead) {
+    if (this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
+    }
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot create empty document'));
+    }
+    return this._create(skipRead);
   };
   return UserSync;
 }(jquery, base, common);

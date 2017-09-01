@@ -61,13 +61,13 @@ require([
         //orderTransferTest.run();
         //helperTest.run();
         //simpleTest.run();
-        dateHelperTest.run();
+        //dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();
         //itemTest.run();
         //keyValueTest.run();
-        //orderTest.run();
+        orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

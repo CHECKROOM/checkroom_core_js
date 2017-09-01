@@ -6,7 +6,8 @@
 define([
     'jquery',
     'base',
-    'common'],  /** @lends UserSync */ function ($, Base, common) {
+    'common'
+],  /** @lends UserSync */ function ($, Base, common) {
 
     var DEFAULTS = {
         kind: "ldap",
@@ -26,7 +27,8 @@ define([
         loginField: "uid",
         nameField: "cn",
         emailField: "mail",
-        restrictLocations: []
+        restrictLocations: [],
+        timezone: "Etc/GMT"
     };
 
     // Allow overriding the ctor during inheritance
@@ -83,6 +85,7 @@ define([
         this.nameField = spec.nameField || DEFAULTS.nameField;
         this.emailField = spec.emailField || DEFAULTS.emailField;
         this.restrictLocations = spec.restrictLocations?spec.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
+        this.timezone = spec.timezone || DEFAULTS.timezone;
     };
 
     UserSync.prototype = new tmp();
@@ -145,6 +148,7 @@ define([
             (this.loginField==DEFAULTS.loginField) &&
             (this.nameField==DEFAULTS.nameField) &&
             (this.emailField==DEFAULTS.emailField) &&
+            (this.timezone==DEFAULTS.timezone) &&
             (this.restrictLocations && this.restrictLocations.length == 0));
     };
 
@@ -179,6 +183,8 @@ define([
             var loginField = this.raw.loginField || DEFAULTS.loginField;
             var nameField = this.raw.nameField || DEFAULTS.nameField;
             var emailField = this.raw.emailField || DEFAULTS.emailField;
+            var timezone = this.raw.timezone || DEFAULTS.timezone;
+
             return (
                 (this.kind!=kind) ||
                 (this.name!=name) ||
@@ -197,6 +203,7 @@ define([
                 (this.loginField!=loginField) ||
                 (this.nameField!=nameField) ||
                 (this.emailField!=emailField) ||
+                (this.timezone!=timezone) ||
                 (this._isDirtyRestrictLocations())
             );
         }
@@ -275,6 +282,7 @@ define([
         data.loginField = this.loginField || DEFAULTS.loginField;
         data.nameField = this.nameField || DEFAULTS.nameField;
         data.emailField = this.emailField || DEFAULTS.emailField;
+        data.timezone = this.timezone || DEFAULTS.timezone;
 
         return data;
     };
@@ -310,6 +318,7 @@ define([
                 that.nameField = data.nameField || DEFAULTS.nameField;
                 that.emailField = data.emailField || DEFAULTS.emailField;
                 that.restrictLocations = data.restrictLocations?data.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
+                that.timezone = data.timezone || DEFAULTS.timezone;
 
                 $.publish('usersync.fromJson', data);
                 return data;
@@ -382,6 +391,16 @@ define([
 
         return $.when(dfdInfo, dfdRestrictLocations);
             
+    };
+
+    UserSync.prototype.create = function (skipRead) {
+        if (this.existsInDb()) {
+          return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
+        }
+        if (this.isEmpty()) {
+          return $.Deferred().reject(new Error('Cannot create empty document'));
+        }
+        return this._create(skipRead);
     };
 
     return UserSync;    

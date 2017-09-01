@@ -167,6 +167,23 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
         return dfd; 
     };
 
+    helper.getNewCreatingOrder = function(ds, dsItems, due, location, contact, items){
+        var order = new cr.Order({
+            ds: ds,
+            dsItems: dsItems,
+            autoCleanup: true,
+            location: location._id,
+            contact: contact._id,
+            due: due
+        });
+        var dfd = $.Deferred();
+        order.addItems(items).then(function(){
+            dfd.resolve(order);
+        });     
+
+        return dfd; 
+    };
+
     helper.getNewOpenReservation = function(ds, dsItems, from, to, location, contact, items){
         var reservation = new cr.Reservation({
             ds: ds,

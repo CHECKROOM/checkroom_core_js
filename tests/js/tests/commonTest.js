@@ -37,7 +37,7 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                 equal(common.isValidBarcode("     "), false);
                 equal(common.isValidBarcode("12345$"), false); // VT: Technically, a $ is a valid symbol in a code39 barcode
                 equal(common.isValidBarcode("NOT8NOT8"), false); // Not 8 long, although it is actually a valid barcode, it would clash with our qrcode
-                equal(common.isValidBarcode("12345678901234"), false);  // Too long
+                equal(common.isValidBarcode("12345678901234567890123"), false);  // 23 chars too long (max 22 chars)
 
                 equal(common.isValidBarcode("1234-ABCD"), true);
                 equal(common.isValidBarcode("ABC123"), true);
@@ -49,7 +49,11 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
               var sd = new Slimdown();
               equal(sd.render("* One\n* Two\n* Three"), "<ul>\n\t<li>One</li>\n\n\t<li>Two</li>\n\n\t<li>Three</li>\n</ul>");
               equal(sd.render("**bold**"), "<p><strong>bold</strong></p>");
+              equal(sd.render("1.8ghz\n1.5gb"), "<p>1.8ghz<br />1.5gb</p>");
+              equal(sd.render("1.8ghz\n1.5gb\n\ntest\ntest"), "<p>1.8ghz<br />1.5gb</p>\n<p>test<br />test</p>");
+              equal(sd.render("4GB RAM\n250 GB SSD\n1.8ghz i5\n1.5gb Video card"), "<p>4GB RAM<br />250 GB SSD<br />1.8ghz i5<br />1.5gb Video card</p>");
             });
+
 
             test("getCategorySummary", function(assert){
                 equal(common.getCategoryNameFromKey('cheqroom.types.item.heavy_equipment.drills.vertical_drills'), 'vertical drills', 'getCategoryNameFromKey');

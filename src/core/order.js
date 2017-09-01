@@ -593,10 +593,31 @@ define([
      * @param itemIds
      * @param location
      * @param skipRead
+     * @param skipErrorHandling
      * @returns {promise}
      */
-    Order.prototype.checkin = function(itemIds, location, skipRead) {
-        return this._doApiCall({method: "checkin", params: {items: itemIds, location: location}, skipRead: skipRead});
+    Order.prototype.checkin = function(itemIds, location, skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "checkin", params: {items: itemIds, location: location}, skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422)){
+                        if(err.opt && err.opt.detail.indexOf('order has status closed') != -1){
+                            return that.get();
+                        }else if(err.opt && err.opt.detail.indexOf('already checked in or used somewhere else') != -1){ 
+                            return that.get();
+                        }
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**
@@ -604,10 +625,29 @@ define([
      * @method
      * @name Order#checkout
      * @param skipRead
+     * @param skipErrorHandling
      * @returns {promise}
      */
-    Order.prototype.checkout = function(skipRead) {
-        return this._doApiCall({method: "checkout", skipRead: skipRead});
+    Order.prototype.checkout = function(skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "checkout", skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422)){
+                        if(err.opt && err.opt.detail.indexOf('order has status open') != -1){
+                            return that.get();
+                        }
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**
@@ -617,8 +657,26 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Order.prototype.undoCheckout = function(skipRead) {
-        return this._doApiCall({method: "undoCheckout", skipRead: skipRead});
+    Order.prototype.undoCheckout = function(skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "undoCheckout", skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422)){
+                        if(err.opt && err.opt.detail.indexOf('order has status creating') != -1){
+                            return that.get();
+                        }
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**

@@ -2,7 +2,7 @@
  * @copyright CHECKROOM NV 2015
  */
 "use strict";
-define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
+define(['settings', 'helper', 'cheqroom-core', 'moment'], function(settings, helper, cr, moment) {
 
         var run = function() {
 
@@ -307,6 +307,115 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                     // ----
                     $.when(helper.getAnyContact(), helper.getAnyLocation())
                         .then(function(contact, location) {
+                            asyncTest("Reservation - 422 handling reserve/undoReserve/cancel", function() {
+                                var r = getNewReservation({
+                                    from: moment().add(1, 'day'),
+                                    to: moment().add(2, 'day'),
+                                    location: location._id,
+                                    contact: contact._id
+                                });
+                               
+
+                                r.searchItems({}, true, true)
+                                    .then(function(resp) {
+                                        r.addItems([resp.docs[0]._id]).then(function(){
+                                            r.reserve(true).then(function(){
+                                                ok(r.status=="creating");
+
+                                                // 422 handling should handle this double reserve 
+                                                // without throwing error
+                                                r.reserve().then(function(){
+                                                    ok(r.status=="open");
+
+                                                    r.reserve(false, true).then(function(){
+                                                        ok(false);
+                                                    }, function(){
+                                                        ok(true);
+
+
+                                                        r.undoReserve(true).then(function(){
+                                                            r.undoReserve().then(function(){
+                                                                ok(true);
+
+                                                                r.undoReserve(false, true).then(function(){
+                                                                    ok(false);
+                                                                }, function(){
+                                                                    ok(true);
+                                                                    
+                                                                    r.reserve().then(function(){
+                                                                        r.cancel(true).then(function(){
+                                                                            r.cancel().then(function(){
+                                                                                ok(true);
+
+                                                                                r.cancel(false, true).then(function(){
+                                                                                    ok(false)
+                                                                                }, function(){
+                                                                                    ok(true)
+                                                                                }).always(function(){
+                                                                                    start();
+                                                                                })
+                                                                            }, function(){
+                                                                                ok(false);
+                                                                            })
+                                                                        })
+                                                                    })
+
+                                                                });
+
+                                                            }, function(){
+                                                                ok(false);
+                                                            });
+                                                        });
+                                                    });
+                                                }, function(){
+                                                    ok(false);
+                                                });                                                
+                                            });
+                                        });                                        
+                                    });
+                            });
+
+                            asyncTest("Reservation - 422 handling makeOrder", function() {
+                                var r = getNewReservation({
+                                    from: moment().add(1, 'day'),
+                                    to: moment().add(2, 'day'),
+                                    location: location._id,
+                                    contact: contact._id
+                                });
+                               
+
+                                r.searchItems({}, true, true)
+                                    .then(function(resp) {
+                                        r.addItems([resp.docs[0]._id]).then(function(){
+                                            r.reserve().then(function(){
+                                                ok(r.status=="open");
+
+                                                r.makeOrder().then(function(resp){
+                                                    ok(true);
+
+                                                    r.makeOrder().then(function(){
+                                                        ok(true);
+
+                                                        r.makeOrder(true).then(function(){
+                                                            ok(false);
+                                                        }, function(){
+                                                            ok(true);
+                                                        }).always(function(){
+                                                            start();
+                                                        });
+                                                    }, function(){
+                                                        ok(false);
+                                                    })
+
+                                                    
+                                                }, function(){
+                                                    ok(false);
+                                                })                                               
+                                            });
+                                        });                                        
+                                    });
+                            });
+                            
 
                             asyncTest("Reservation - reserve, undoReserve, cancel", function() {
                                 var r = getNewReservation();

@@ -344,6 +344,8 @@ define([], function () {
                         return this._usePdf && this._isRootOrAdminOrUser;
                     case "checkinAt":
                         return this._useCheckinLocation;
+                    case "forceCheckListCheckin":
+                        return this.profile.forceCheckListCheckin;
                     case "forceConflictResolving":
                         return false; // this.profile.forceConflictResolving;
                 }

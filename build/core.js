@@ -5418,7 +5418,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     // Create a Field object for each field definition
     for (var i = 0; i < fieldDefs.length; i++) {
       fieldDef = fieldDefs[i];
-      fieldValue = that.fields[fieldDef.name];
+      fieldValue = that.fields[fieldDef.name] || '';
       if (limit == null || limit > fields.length) {
         fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
       }
@@ -6300,7 +6300,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     // Create a Field object for each field definition
     for (var i = 0; i < fieldDefs.length; i++) {
       fieldDef = fieldDefs[i];
-      fieldValue = that.fields[fieldDef.name];
+      fieldValue = that.fields[fieldDef.name] || '';
       if (limit == null || limit > fields.length) {
         fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
       }
@@ -6682,6 +6682,7 @@ user = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canDeactivate = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.active && this.archived == null && !this.isOwner;
   };
   /**
@@ -6689,6 +6690,7 @@ user = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canArchive = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.archived == null && !this.isOwner;
   };
   /**
@@ -7556,10 +7558,7 @@ DateHelper = function ($, moment) {
       date = moment(date);
     }
     now = now || this.getNow();
-    format = format || this._momentFormat;
-    var diff = now.diff(date, 'days');
-    var str = Math.abs(diff) < 7 ? date.calendar() : date.format(format);
-    return str.replace('AM', 'am').replace('PM', 'pm').split(' at ');
+    return date.calendar().replace('AM', 'am').replace('PM', 'pm').split(' at ');
   };
   /**
    * Returns a number of friendly date ranges with a name
@@ -10034,10 +10033,7 @@ dateHelper = function ($, moment) {
       date = moment(date);
     }
     now = now || this.getNow();
-    format = format || this._momentFormat;
-    var diff = now.diff(date, 'days');
-    var str = Math.abs(diff) < 7 ? date.calendar() : date.format(format);
-    return str.replace('AM', 'am').replace('PM', 'pm').split(' at ');
+    return date.calendar().replace('AM', 'am').replace('PM', 'pm').split(' at ');
   };
   /**
    * Returns a number of friendly date ranges with a name
@@ -11545,7 +11541,7 @@ Order = function ($, api, Transaction, Conflict, common) {
     // but have items and / or due date can have conflicts
     if (this.status == 'creating' && this.items.length > 0) {
       // Get some conflicts we can already calculate on the client side
-      conflicts = this._getClientConflicts();
+      conflicts = this._getClientCo_getClientConflictsnflicts();
       // If we have a due date,
       // check if it conflicts with any reservations
       if (this.due) {
@@ -12309,6 +12305,8 @@ PermissionHandler = function () {
         return this._usePdf && this._isRootOrAdminOrUser;
       case 'checkinAt':
         return this._useCheckinLocation;
+      case 'forceCheckListCheckin':
+        return this.profile.forceCheckListCheckin;
       case 'forceConflictResolving':
         return false;  // this.profile.forceConflictResolving;
       }
@@ -14544,6 +14542,7 @@ User = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canDeactivate = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.active && this.archived == null && !this.isOwner;
   };
   /**
@@ -14551,6 +14550,7 @@ User = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canArchive = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.archived == null && !this.isOwner;
   };
   /**

@@ -157,10 +157,8 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             date = moment(date);
         }
         now = now || this.getNow();
-        format = format || this._momentFormat;
-        var diff = now.diff(date, 'days');
-        var str = (Math.abs(diff) < 7) ? date.calendar() : date.format(format);
-        return str
+                    
+        return date.calendar() 
             .replace("AM", "am")
             .replace("PM", "pm")
             .split(" at ");

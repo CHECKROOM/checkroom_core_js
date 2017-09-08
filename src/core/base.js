@@ -402,7 +402,7 @@ define([
         // Create a Field object for each field definition
         for (var i=0;i<fieldDefs.length;i++) {
             fieldDef = fieldDefs[i];
-            fieldValue = that.fields[fieldDef.name];
+            fieldValue = that.fields[fieldDef.name] || "";
 
             if( (limit==null) ||
                 (limit>fields.length)) {

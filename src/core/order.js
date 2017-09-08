@@ -307,7 +307,7 @@ define([
             (this.items.length>0)) {
 
             // Get some conflicts we can already calculate on the client side
-            conflicts = this._getClientCo_getClientConflictsnflicts();
+            conflicts = this._getClientConflicts();
 
             // If we have a due date,
             // check if it conflicts with any reservations

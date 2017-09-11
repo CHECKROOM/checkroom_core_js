@@ -10951,9 +10951,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       params: { items: items },
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
-      });
+      return that._ensureTransactionDeleted();
     });
   };
   /**
@@ -10973,9 +10971,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'clearItems',
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
-      });
+      return that._ensureTransactionDeleted();
     });
   };
   /**
@@ -14076,9 +14072,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       params: { items: items },
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
-      });
+      return that._ensureTransactionDeleted();
     });
   };
   /**
@@ -14098,9 +14092,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'clearItems',
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
-      });
+      return that._ensureTransactionDeleted();
     });
   };
   /**

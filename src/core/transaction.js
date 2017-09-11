@@ -634,9 +634,7 @@ define([
             skipRead: skipRead
         })
             .then(function(data) {
-                return that._ensureTransactionDeleted().then(function(){
-                    return (skipRead==true) ? data : that._fromJson(data);
-                });
+                return that._ensureTransactionDeleted();
             });
     };
 
@@ -659,9 +657,7 @@ define([
             skipRead: skipRead
         })
             .then(function(data) {
-                return that._ensureTransactionDeleted().then(function(){
-                    return (skipRead==true) ? data : that._fromJson(data);
-                });
+                return that._ensureTransactionDeleted();
             });
     };
 

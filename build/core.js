@@ -10951,7 +10951,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       params: { items: items },
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted();
+      return that._ensureTransactionDeleted().then(function () {
+        return data;
+      });
     });
   };
   /**
@@ -10971,7 +10973,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'clearItems',
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted();
+      return that._ensureTransactionDeleted().then(function () {
+        return data;
+      });
     });
   };
   /**
@@ -14072,7 +14076,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       params: { items: items },
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted();
+      return that._ensureTransactionDeleted().then(function () {
+        return data;
+      });
     });
   };
   /**
@@ -14092,7 +14098,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       method: 'clearItems',
       skipRead: skipRead
     }).then(function (data) {
-      return that._ensureTransactionDeleted();
+      return that._ensureTransactionDeleted().then(function () {
+        return data;
+      });
     });
   };
   /**

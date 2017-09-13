@@ -281,7 +281,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "takeApart":
-                        return this.profile.canTakeApartKits;
+                        return false; //this._useKits && this.profile.canTakeApartKits;
                     // Modules
                     // Modules
                     case "reserve":
@@ -341,11 +341,11 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf && this._isRootOrAdminOrUser;
+                        return this._useOrders && this._usePdf && this._isRootOrAdminOrUser;
                     case "checkinAt":
-                        return this._useCheckinLocation;
+                        return this._useOrders && this._useCheckinLocation;
                     case "forceCheckListCheckin":
-                        return this.profile.forceCheckListCheckin;
+                        return this._useOrders && this.profile.forceCheckListCheckin;
                     case "forceConflictResolving":
                         return false; // this.profile.forceConflictResolving;
                 }
@@ -399,7 +399,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf && this._isRootOrAdminOrUser;
+                        return this._useReservations && this._usePdf && this._isRootOrAdminOrUser;
                 }
                 break;
             case "customers":
@@ -465,6 +465,7 @@ define([], function () {
                     case "create":
                     case "update":
                     case "delete":
+                    case "archive":
                         return this._isRootOrAdmin;
                 }
                 break;

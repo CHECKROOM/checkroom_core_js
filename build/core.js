@@ -970,7 +970,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.length != 8 && barCode.match(/^[A-Z0-9\-]{4,22}$/i) != null;
+    return barCode && barCode.match(/^[A-Z0-9\-]{4,22}$/i) != null;
   },
   /**
    * isValidQRCode

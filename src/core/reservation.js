@@ -285,6 +285,7 @@ define([
         that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
         that.due = null;
         that.order = data.order || null;
+        that.repeatId = data.repeatId || null;
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {

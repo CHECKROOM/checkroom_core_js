@@ -5452,6 +5452,14 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     }
     return true;
   };
+  /**
+   * Update fields of a document
+   * @name Base#updateFields
+   * @returns {promise}
+   */
+  Base.prototype.updateFields = function () {
+    return this._updateFields();
+  };
   // Implementation
   // ----
   /**
@@ -6333,6 +6341,14 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
       }
     }
     return true;
+  };
+  /**
+   * Update fields of a document
+   * @name Base#updateFields
+   * @returns {promise}
+   */
+  Base.prototype.updateFields = function () {
+    return this._updateFields();
   };
   // Implementation
   // ----
@@ -12725,6 +12741,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.to = data.toDate == null || data.toDate == 'null' ? null : data.toDate;
     that.due = null;
     that.order = data.order || null;
+    that.repeatId = data.repeatId || null;
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
       return data;

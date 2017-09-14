@@ -442,6 +442,15 @@ define([
         return true;
     };
 
+      /**
+     * Update fields of a document
+     * @name Base#updateFields
+     * @returns {promise}
+     */
+    Base.prototype.updateFields = function () {
+        return this._updateFields();
+    };
+
     // Implementation
     // ----
 

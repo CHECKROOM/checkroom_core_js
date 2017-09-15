@@ -1,6 +1,9 @@
 //Add improved Paragraph/Linebreak parsing
 //See source: https://github.com/Khan/simple-markdown/blob/master/simple-markdown.js
 
+//Add autolinking of url
+http://kotsf.com/gdarchive/4/
+
 define(function(){
 	/**
 	 * Javascript version of https://gist.github.com/jbroadway/2836900
@@ -30,7 +33,7 @@ define(function(){
 
 	  // Rules
 	  this.rules =  [
-	    {regex: /(#+)(.*)/g, replacement: header},                                         // headers
+	    {regex: /(#{1,6})\s(.*)/g, replacement: header},                                   // headers
 	    {regex: /!\[([^\[]+)\]\(([^\)]+)\)/g, replacement: '<img src=\'$2\' alt=\'$1\'>'}, // image
 	    {regex: /\[([^\[]+)\]\(([^\)]+)\)/g, replacement: '<a href=\'$2\'>$1</a>'},        // hyperlink
 	    {regex: /(\*\*|__)(.*?)\1/g, replacement: '<strong>$2</strong>'},                  // bold
@@ -58,6 +61,9 @@ define(function(){
 	  // Render some Markdown into HTML.
 	  this.render = function (text) {
 	    text = '\n' + text + '\n';
+
+	    text = autolink(text);
+
 	    this.rules.forEach(function (rule) {
 	      text = text.replace(rule.regex, rule.replacement);
 	    });
@@ -90,6 +96,29 @@ define(function(){
 	  function header (text, chars, content) {
 	    var level = chars.length;
 	    return '<h' + level + '>' + content.trim() + '</h' + level + '>';
+	  }
+
+	  function autolink(text){
+	  	var urls = text.match(/(\(?https?:\/\/[-A-Za-z0-9+&@#\/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#\/%=~_()|])(">|<\/a>|\)|\])?/gm);
+
+	  	if(urls == null) return text;
+
+	  	var cleanedUrls = {};
+	  	for(var i=0;i<urls.length;i++){
+	  		var url = urls[i];
+	  		
+	  		// ignore urls that are part of a markdown link already
+	  		if(url.lastIndexOf("]") != -1 || url.lastIndexOf(")") != -1) break;
+
+	  		// already replaced this url
+	  		if(cleanedUrls[url]) break;
+
+	  		cleanedUrls[url] = url;
+
+	  		text = text.replace(url, '[' + url + '](' + url + ')');
+	  	}	
+
+	  	return text;  		
 	  }
 	}
 

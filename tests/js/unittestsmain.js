@@ -56,7 +56,7 @@ require([
         webHookTest,
         signupTest) {
 
-        //commonTest.run();
+        commonTest.run();
 
         //orderTransferTest.run();
         //helperTest.run();
@@ -67,7 +67,7 @@ require([
         //kitTest.run();
         //itemTest.run();
         //keyValueTest.run();
-        orderTest.run();
+        //orderTest.run();
         //reservationTest.run();
         //userTest.run();
         //availabilityTest.run();

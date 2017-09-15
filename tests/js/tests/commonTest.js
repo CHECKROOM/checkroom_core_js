@@ -52,6 +52,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
               equal(sd.render("1.8ghz\n1.5gb"), "<p>1.8ghz<br />1.5gb</p>");
               equal(sd.render("1.8ghz\n1.5gb\n\ntest\ntest"), "<p>1.8ghz<br />1.5gb</p>\n<p>test<br />test</p>");
               equal(sd.render("4GB RAM\n250 GB SSD\n1.8ghz i5\n1.5gb Video card"), "<p>4GB RAM<br />250 GB SSD<br />1.8ghz i5<br />1.5gb Video card</p>");
+              equal(sd.render("Included with PS 4 Pro #7\nhttps://app.cheqroom.com/#items/iaQf4tJdU2EztGxzcEqdmc\n# test\n# h1\n## h2"), "<p>Included with PS 4 Pro #7<br /><a href='https://app.cheqroom.com/#items/iaQf4tJdU2EztGxzcEqdmc'>https://app.cheqroom.com/#items/iaQf4tJdU2EztGxzcEqdmc</a><br /><h1>test</h1><br /><h1>h1</h1><br /><h2>h2</h2></p>")
+              equal(sd.render("[my custom link](http://www.google.com)"), "<p><a href='http://www.google.com'>my custom link</a></p>")
             });
 
 

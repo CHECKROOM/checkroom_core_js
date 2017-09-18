@@ -1881,7 +1881,7 @@ common_image = function ($) {
      */
     getImageUrl: function (ds, pk, size, bustCache) {
       var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-      if (size) {
+      if (size && size != 'orig') {
         url += '&size=' + size;
       }
       if (bustCache) {
@@ -3437,6 +3437,17 @@ common_utils = function ($) {
     } else {
       return [];
     }
+  };
+  /**
+   * getFriendlyFileName
+   * @memberOf utils
+   * @name  utils#getFriendlyFileName
+   * @method
+   * @param  {string} name
+   * @return {string}
+   */
+  utils.getFriendlyFileName = function (name) {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   };
   return utils;
 }(jquery);
@@ -6958,7 +6969,7 @@ helper = function ($, defaultSettings, common) {
        */
       getImageUrl: function (ds, pk, size, bustCache) {
         var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-        if (size) {
+        if (size && size != 'orig') {
           url += '&size=' + size;
         }
         if (bustCache) {

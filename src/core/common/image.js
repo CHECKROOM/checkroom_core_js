@@ -164,7 +164,8 @@ define(['jquery'], function ($) {
          */
         getImageUrl: function(ds, pk, size, bustCache) {
             var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-            if (size) {
+            
+            if (size && size != "orig") {
                 url += '&size=' + size;
             }
             if  (bustCache) {

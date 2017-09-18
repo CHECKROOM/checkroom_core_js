@@ -59,7 +59,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              */
             getImageUrl: function(ds, pk, size, bustCache) {
                 var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-                if (size) {
+                if (size && size != 'orig') {
                     url += '&size=' + size;
                 }
                 if (bustCache) {

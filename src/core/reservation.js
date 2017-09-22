@@ -286,6 +286,7 @@ define([
         that.due = null;
         that.order = data.order || null;
         that.repeatId = data.repeatId || null;
+        that.repeatFrequency = data.repeatFrequency || "";
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
@@ -639,12 +640,44 @@ define([
      * Cancels the booked reservation and sets the status to `cancelled`
      * @method
      * @name Reservation#cancel
+     * @param message
      * @param skipRead
+     * @param skipErrorHandling
      * @returns {*}
      */
-    Reservation.prototype.cancel = function(skipRead, skipErrorHandling) {
+    Reservation.prototype.cancel = function(message, skipRead, skipErrorHandling) {
         var that = this;
-        return this._doApiCall({method: "cancel", skipRead: skipRead})
+        return this._doApiCall({method: "cancel", params:{ message: message || "" }, skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
+    };
+
+    /**
+     * Cancels repeated reservations and sets the status to `cancelled`
+     * @method
+     * @name Reservation#cancelRepeat
+     * @param message
+     * @param skipRead
+     * @param skipErrorHandling
+     * @returns {*}
+     */
+    Reservation.prototype.cancelRepeat = function(message, skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "cancelRepeat", params:{ message: message || "" }, skipRead: skipRead})
             .then(function(resp){ 
                 return resp; 
             },function(err){

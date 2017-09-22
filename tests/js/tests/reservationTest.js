@@ -343,11 +343,11 @@ define(['settings', 'helper', 'cheqroom-core', 'moment'], function(settings, hel
                                                                     ok(true);
                                                                     
                                                                     r.reserve().then(function(){
-                                                                        r.cancel(true).then(function(){
+                                                                        r.cancel("", true).then(function(){
                                                                             r.cancel().then(function(){
                                                                                 ok(true);
 
-                                                                                r.cancel(false, true).then(function(){
+                                                                                r.cancel("", false, true).then(function(){
                                                                                     ok(false)
                                                                                 }, function(){
                                                                                     ok(true)

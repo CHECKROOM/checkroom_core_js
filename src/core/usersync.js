@@ -28,7 +28,8 @@ define([
         nameField: "cn",
         emailField: "mail",
         restrictLocations: [],
-        timezone: "Etc/GMT"
+        timezone: "Etc/GMT",
+        hostCert: 'ldap_tls_demand'
     };
 
     // Allow overriding the ctor during inheritance
@@ -86,6 +87,7 @@ define([
         this.emailField = spec.emailField || DEFAULTS.emailField;
         this.restrictLocations = spec.restrictLocations?spec.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
         this.timezone = spec.timezone || DEFAULTS.timezone;
+        this.hostCert = spec.hostCert || DEFAULTS.hostCert;
     };
 
     UserSync.prototype = new tmp();
@@ -149,6 +151,7 @@ define([
             (this.nameField==DEFAULTS.nameField) &&
             (this.emailField==DEFAULTS.emailField) &&
             (this.timezone==DEFAULTS.timezone) &&
+            (this.hostCert==DEFAULTS.hostCert) &&
             (this.restrictLocations && this.restrictLocations.length == 0));
     };
 
@@ -184,6 +187,7 @@ define([
             var nameField = this.raw.nameField || DEFAULTS.nameField;
             var emailField = this.raw.emailField || DEFAULTS.emailField;
             var timezone = this.raw.timezone || DEFAULTS.timezone;
+            var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
 
             return (
                 (this.kind!=kind) ||
@@ -204,6 +208,7 @@ define([
                 (this.nameField!=nameField) ||
                 (this.emailField!=emailField) ||
                 (this.timezone!=timezone) ||
+                (this.hostCert!=hostCert) ||
                 (this._isDirtyRestrictLocations())
             );
         }
@@ -283,6 +288,7 @@ define([
         data.nameField = this.nameField || DEFAULTS.nameField;
         data.emailField = this.emailField || DEFAULTS.emailField;
         data.timezone = this.timezone || DEFAULTS.timezone;
+        data.hostCert = this.hostCert || DEFAULTS.hostCert;
 
         return data;
     };
@@ -319,6 +325,7 @@ define([
                 that.emailField = data.emailField || DEFAULTS.emailField;
                 that.restrictLocations = data.restrictLocations?data.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
                 that.timezone = data.timezone || DEFAULTS.timezone;
+                this.hostCert = data.hostCert || DEFAULTS.hostCert;
 
                 $.publish('usersync.fromJson', data);
                 return data;

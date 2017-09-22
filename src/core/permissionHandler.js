@@ -20,22 +20,23 @@ define([], function () {
         this._isRootOrAdminOrUser =   (user.role == "root") || (user.role == "admin") || (user.role == "user");
         this._isSelfService =         (user.role == "selfservice");
         this._useWebHooks =           (limits.allowWebHooks);
-        this._useOrders =             (limits.allowOrders) &&           (profile.useOrders);
-        this._useReservations =       (limits.allowReservations) &&     (profile.useReservations);
+        this._useOrders =             (limits.allowOrders) &&               (profile.useOrders);
+        this._useReservations =       (limits.allowReservations) &&         (profile.useReservations);
         this._usePdf =                (limits.allowGeneratePdf);
-        this._useKits =               (limits.allowKits) &&             (profile.useKits);
-        this._useCustody =            (limits.allowCustody) &&          (profile.useCustody);
-        this._useGeo =                                                  (profile.useGeo);
-        this._useSelfService =        (limits.allowSelfService) &&      (profile.useSelfService);
-        this._useCheckinLocation =    (this._useOrders) &&              (profile.orderCheckinLocation);
-        this._usePublicSelfService =  (limits.allowSelfService) &&      (profile.usePublicSelfService);
-        this._useOrderTransfers =     (limits.allowOrderTransfers) &&   (profile.useOrderTransfers);
-        this._useSendMessage =        (limits.allowSendMessage) &&      (profile.useSendMessage);
-        this._useUserSync =           (limits.allowUserSync) &&         (profile.useUserSync);
+        this._useKits =               (limits.allowKits) &&                 (profile.useKits);
+        this._useCustody =            (limits.allowCustody) &&              (profile.useCustody);
+        this._useGeo =                                                      (profile.useGeo);
+        this._useSelfService =        (limits.allowSelfService) &&          (profile.useSelfService);
+        this._useCheckinLocation =    (this._useOrders) &&                  (profile.orderCheckinLocation);
+        this._usePublicSelfService =  (limits.allowSelfService) &&          (profile.usePublicSelfService);
+        this._useOrderTransfers =     (limits.allowOrderTransfers) &&       (profile.useOrderTransfers);
+        this._useSendMessage =        (limits.allowSendMessage) &&          (profile.useSendMessage);
+        this._useUserSync =           (limits.allowUserSync) &&             (profile.useUserSync);
         this._useFlags =              (profile.useFlags);
         this._useGeo =                (profile.useGeo);
-        this._useRestrictLocations =  (limits.allowRestrictLocations) && (profile.useRestrictLocations);
-        this._useReporting =          (limits.allowReporting) &&        (profile.useReporting);
+        this._useRestrictLocations =  (limits.allowRestrictLocations) &&    (profile.useRestrictLocations);
+        this._useReporting =          (limits.allowReporting) &&            (profile.useReporting);
+        this._useDepreciations =      (limits.allowDepreciations) &&        (profile.useDepreciations);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -102,6 +103,10 @@ define([], function () {
 
     PermissionHandler.prototype.hasItemGeoPermission = function() {
         return this._useGeo;
+    };
+
+    PermissionHandler.prototype.hasItemDepreciationPermission = function() {
+        return this._useDepreciations;
     };
 
     PermissionHandler.prototype.hasUserSyncPermission = function(){

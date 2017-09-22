@@ -1293,6 +1293,38 @@ common_reservation = {
     }
   },
   /**
+   * getFriendlyReservationFrequency
+   *
+   * @memberOf common
+   * @name  common#getFriendlyReservationFrequency
+   * @method
+   * 
+   * @param  {string} frequency 
+   * @return {string}        
+   */
+  getFriendlyReservationFrequency: function (frequency) {
+    switch (frequency) {
+    case 'every_day':
+      return 'Repeats every day';
+    case 'every_weekday':
+      return 'Repeats every weekday';
+    case 'every_week':
+      return 'Repeats every week';
+    case 'every_2_weeks':
+      return 'Repeats every 2 weeks';
+    case 'every_month':
+      return 'Repeats every month';
+    case 'every_2_months':
+      return 'Repeats every 2 months';
+    case 'every_3_months':
+      return 'Repeats every 3 months';
+    case 'every_6_months':
+      return 'Repeats every 6 months';
+    default:
+      return 'Repeating reservation';
+    }
+  },
+  /**
    * isReservationOverdue
    *
    * @memberOf common
@@ -4658,12 +4690,14 @@ Attachment = function ($) {
   var IMAGES = [
     'jpg',
     'jpeg',
-    'png'
+    'png',
+    'gif'
   ];
   var PREVIEWS = [
     'jpg',
     'jpeg',
     'png',
+    'gif',
     'doc',
     'docx',
     'pdf'
@@ -4729,7 +4763,7 @@ Attachment = function ($) {
    */
   Attachment.prototype.getExt = function (fileName) {
     fileName = fileName || this.fileName;
-    return EXT.exec(fileName)[1] || '';
+    return (EXT.exec(fileName)[1] || '').toLowerCase();
   };
   /**
    * Gets a friendly file size
@@ -4875,12 +4909,14 @@ attachment = function ($) {
   var IMAGES = [
     'jpg',
     'jpeg',
-    'png'
+    'png',
+    'gif'
   ];
   var PREVIEWS = [
     'jpg',
     'jpeg',
     'png',
+    'gif',
     'doc',
     'docx',
     'pdf'
@@ -4946,7 +4982,7 @@ attachment = function ($) {
    */
   Attachment.prototype.getExt = function (fileName) {
     fileName = fileName || this.fileName;
-    return EXT.exec(fileName)[1] || '';
+    return (EXT.exec(fileName)[1] || '').toLowerCase();
   };
   /**
    * Gets a friendly file size
@@ -12097,6 +12133,7 @@ PermissionHandler = function () {
     this._useGeo = profile.useGeo;
     this._useRestrictLocations = limits.allowRestrictLocations && profile.useRestrictLocations;
     this._useReporting = limits.allowReporting && profile.useReporting;
+    this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -12145,6 +12182,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasItemGeoPermission = function () {
     return this._useGeo;
+  };
+  PermissionHandler.prototype.hasItemDepreciationPermission = function () {
+    return this._useDepreciations;
   };
   PermissionHandler.prototype.hasUserSyncPermission = function () {
     return this.hasAccountUserSyncPermission('read');
@@ -12776,6 +12816,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.due = null;
     that.order = data.order || null;
     that.repeatId = data.repeatId || null;
+    that.repeatFrequency = data.repeatFrequency || '';
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
       return data;
@@ -13095,13 +13136,45 @@ Reservation = function ($, api, Transaction, Conflict) {
    * Cancels the booked reservation and sets the status to `cancelled`
    * @method
    * @name Reservation#cancel
+   * @param message
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.cancel = function (skipRead, skipErrorHandling) {
+  Reservation.prototype.cancel = function (message, skipRead, skipErrorHandling) {
     var that = this;
     return this._doApiCall({
       method: 'cancel',
+      params: { message: message || '' },
+      skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
+  };
+  /**
+   * Cancels repeated reservations and sets the status to `cancelled`
+   * @method
+   * @name Reservation#cancelRepeat
+   * @param message
+   * @param skipRead
+   * @param skipErrorHandling
+   * @returns {*}
+   */
+  Reservation.prototype.cancelRepeat = function (message, skipRead, skipErrorHandling) {
+    var that = this;
+    return this._doApiCall({
+      method: 'cancelRepeat',
+      params: { message: message || '' },
       skipRead: skipRead
     }).then(function (resp) {
       return resp;
@@ -14797,7 +14870,8 @@ UserSync = function ($, Base, common) {
     nameField: 'cn',
     emailField: 'mail',
     restrictLocations: [],
-    timezone: 'Etc/GMT'
+    timezone: 'Etc/GMT',
+    hostCert: 'ldap_tls_demand'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14850,6 +14924,7 @@ UserSync = function ($, Base, common) {
     this.emailField = spec.emailField || DEFAULTS.emailField;
     this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.timezone = spec.timezone || DEFAULTS.timezone;
+    this.hostCert = spec.hostCert || DEFAULTS.hostCert;
   };
   UserSync.prototype = new tmp();
   UserSync.prototype.constructor = UserSync;
@@ -14886,7 +14961,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -14918,7 +14993,8 @@ UserSync = function ($, Base, common) {
       var nameField = this.raw.nameField || DEFAULTS.nameField;
       var emailField = this.raw.emailField || DEFAULTS.emailField;
       var timezone = this.raw.timezone || DEFAULTS.timezone;
-      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this._isDirtyRestrictLocations();
+      var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
+      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this._isDirtyRestrictLocations();
     }
     return isDirty;
   };
@@ -14991,6 +15067,7 @@ UserSync = function ($, Base, common) {
     data.nameField = this.nameField || DEFAULTS.nameField;
     data.emailField = this.emailField || DEFAULTS.emailField;
     data.timezone = this.timezone || DEFAULTS.timezone;
+    data.hostCert = this.hostCert || DEFAULTS.hostCert;
     return data;
   };
   /**
@@ -15024,6 +15101,7 @@ UserSync = function ($, Base, common) {
       that.emailField = data.emailField || DEFAULTS.emailField;
       that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       that.timezone = data.timezone || DEFAULTS.timezone;
+      this.hostCert = data.hostCert || DEFAULTS.hostCert;
       $.publish('usersync.fromJson', data);
       return data;
     });

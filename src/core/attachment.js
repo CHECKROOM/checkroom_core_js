@@ -7,8 +7,8 @@
 define(['jquery'], /** Attachment */ function ($) {
 
     var EXT = /(?:\.([^.]+))?$/;
-    var IMAGES = ['jpg', 'jpeg', 'png'];
-    var PREVIEWS = ['jpg', 'jpeg', 'png', 'doc', 'docx', 'pdf'];
+    var IMAGES = ['jpg', 'jpeg', 'png', 'gif'];
+    var PREVIEWS = ['jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'pdf'];
     var DEFAULTS = {
         fileName: '',
         fileSize: 0,
@@ -74,7 +74,7 @@ define(['jquery'], /** Attachment */ function ($) {
      */
     Attachment.prototype.getExt = function(fileName) {
         fileName = fileName || this.fileName;
-        return EXT.exec(fileName)[1] || "";
+        return (EXT.exec(fileName)[1] || "").toLowerCase();
     };
 
     /**

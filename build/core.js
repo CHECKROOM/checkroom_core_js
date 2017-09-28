@@ -8704,6 +8704,7 @@ Item = function ($, common, Base) {
       warrantyDate: null,
       purchaseDate: null,
       purchasePrice: null,
+      residualValue: null,
       location: '',
       category: '',
       geo: [
@@ -8759,6 +8760,7 @@ Item = function ($, common, Base) {
     this.warrantyDate = spec.warrantyDate || DEFAULTS.warrantyDate;
     this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
     this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
+    this.residualValue = spec.residualValue || DEFAULTS.residualValue;
     this.codes = spec.codes || DEFAULTS.codes;
     this.location = spec.location || DEFAULTS.location;
     // location._id
@@ -8798,7 +8800,7 @@ Item = function ($, common, Base) {
    */
   Item.prototype.isEmpty = function () {
     // Checks for: name, status, brand, model, purchaseDate, purchasePrice, codes, location, category
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.brand == DEFAULTS.brand && this.model == DEFAULTS.model && this.warrantyDate == DEFAULTS.warrantyDate && this.purchaseDate == DEFAULTS.purchaseDate && this.purchasePrice == DEFAULTS.purchasePrice && this.codes.length == 0 && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.brand == DEFAULTS.brand && this.model == DEFAULTS.model && this.warrantyDate == DEFAULTS.warrantyDate && this.purchaseDate == DEFAULTS.purchaseDate && this.purchasePrice == DEFAULTS.purchasePrice && this.residualValue == DEFAULTS.residualValue && this.codes.length == 0 && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
   };
   /**
    * Checks if the item is dirty and needs saving
@@ -8806,7 +8808,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyResidualValue() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -8822,6 +8824,7 @@ Item = function ($, common, Base) {
     data.warrantyDate = this.warrantyDate || DEFAULTS.warrantyDate;
     data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
     data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
+    data.residualValue = this.residualValue || DEFAULTS.residualValue;
     data.category = this.category || DEFAULTS.category;
     data.location = this.location || DEFAULTS.location;
     data.catalog = this.catalog || DEFAULTS.catalog;
@@ -8845,6 +8848,7 @@ Item = function ($, common, Base) {
       that.warrantyDate = data.warrantyDate || DEFAULTS.warrantyDate;
       that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
       that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
+      that.residualValue = data.residualValue || DEFAULTS.residualValue;
       that.codes = data.codes || DEFAULTS.codes;
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
@@ -8911,6 +8915,9 @@ Item = function ($, common, Base) {
   };
   Item.prototype._isDirtyPurchasePrice = function () {
     return this._isDirtyProperty('purchasePrice');
+  };
+  Item.prototype._isDirtyResidualValue = function () {
+    return this._isDirtyProperty('residualValue');
   };
   Item.prototype._isDirtyLocation = function () {
     if (this.raw && this.status != 'in_custody') {
@@ -9016,8 +9023,8 @@ Item = function ($, common, Base) {
       } else {
         dfdFlags.resolve();
       }
-      if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice()) {
-        dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice);
+      if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice() || that._isDirtyResidualValue()) {
+        dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice, that.residualValue);
       } else {
         dfdBasic.resolve();
       }
@@ -9267,7 +9274,7 @@ Item = function ($, common, Base) {
    * @param skipRead
    * @returns {promise}
    */
-  Item.prototype.updateBasicFields = function (name, brand, model, warrantyDate, purchaseDate, purchasePrice, skipRead) {
+  Item.prototype.updateBasicFields = function (name, brand, model, warrantyDate, purchaseDate, purchasePrice, residualValue, skipRead) {
     var that = this, params = {};
     if (name != null && name != this.raw.name) {
       params['name'] = name;
@@ -9302,6 +9309,9 @@ Item = function ($, common, Base) {
     }
     if (purchasePrice != null && purchasePrice != this.raw.purchasePrice) {
       params['purchasePrice'] = purchasePrice;
+    }
+    if (residualValue != null && residualValue != this.raw.residualValue) {
+      params['residualValue'] = residualValue;
     }
     // Remove values of null during create
     // Avoids: 422 Unprocessable Entity
@@ -9425,6 +9435,16 @@ Item = function ($, common, Base) {
       params: { customer: customerId },
       skipRead: skipRead
     });
+  };
+  /**
+   * Get a list depreciations 
+   * 
+   * @name Item#getDepreciation
+   * @param frequancy
+   * @returns {promise}
+   */
+  Item.prototype.getDepreciation = function (frequency) {
+    return this.ds.call(this.id, 'getDepreciation', { frequency: frequency || 'quarterly' });
   };
   return Item;
 }(jquery, common, base);
@@ -12184,7 +12204,7 @@ PermissionHandler = function () {
     return this._useGeo;
   };
   PermissionHandler.prototype.hasItemDepreciationPermission = function () {
-    return this._useDepreciations;
+    return this._isRootOrAdmin && this._useDepreciations;
   };
   PermissionHandler.prototype.hasUserSyncPermission = function () {
     return this.hasAccountUserSyncPermission('read');
@@ -15188,7 +15208,7 @@ WebHook = function ($, common, api, Document) {
     name: '',
     address: '',
     topic: '',
-    hookFields: '*, location.*, items.*, customer.*',
+    hookFields: '*, location.*, items.*, customer.*,by.name,by.email',
     // avoid clash with Document.fields
     format: '',
     created: null,

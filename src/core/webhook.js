@@ -15,7 +15,7 @@ define([
         name: "",
         address: "",
         topic: "",
-        hookFields: "*, location.*, items.*, customer.*",  // avoid clash with Document.fields
+        hookFields: "*, location.*, items.*, customer.*,by.name,by.email",  // avoid clash with Document.fields
         format: "",
         created: null,
         modified: null,

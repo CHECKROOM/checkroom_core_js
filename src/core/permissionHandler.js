@@ -106,7 +106,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasItemDepreciationPermission = function() {
-        return this._useDepreciations;
+        return this._isRootOrAdmin && this._useDepreciations;
     };
 
     PermissionHandler.prototype.hasUserSyncPermission = function(){

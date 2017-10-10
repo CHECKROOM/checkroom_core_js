@@ -12534,6 +12534,7 @@ PermissionHandler = function () {
       case 'create':
       case 'update':
       case 'delete':
+      case 'archive':
         return this._isRootOrAdmin;
       }
       break;

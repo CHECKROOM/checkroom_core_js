@@ -9138,7 +9138,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.canGoToCheckout = function () {
-    return common.itemCanGoToCheckout(this);
+    return common.itemCanGoToCheckout(this) && !$.isEmptyObject(this.order);
   };
   /**
    * Checks if an item can be checked in (based on status)
@@ -15215,7 +15215,8 @@ WebHook = function ($, common, api, Document) {
     modified: null,
     enabled: true,
     log10: [],
-    fails: 0
+    fails: 0,
+    minutes: 0
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -15236,6 +15237,7 @@ WebHook = function ($, common, api, Document) {
    * @property {boolean} enabled      whether or not the webhook is enabled
    * @property {array} log10          the last 10 logs of the webhook
    * @property {int} fails            the number of consequtive fails
+   * @property {int} minutes          only for due and overdue webhooks, non-negative
    * @constructor
    * @extends Document
    */
@@ -15251,6 +15253,7 @@ WebHook = function ($, common, api, Document) {
     this.enabled = spec.enabled != null ? spec.enabled == true : DEFAULTS.enabled;
     this.log10 = spec.log10 || DEFAULTS.log10.slice();
     this.fails = spec.fails || DEFAULTS.fails;
+    this.minutes = spec.minutes || DEFAULTS.minutes;
   };
   WebHook.prototype = new tmp();
   WebHook.prototype.constructor = WebHook;
@@ -15310,7 +15313,7 @@ WebHook = function ($, common, api, Document) {
   WebHook.prototype.isDirty = function () {
     var isDirty = Document.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name || this.address != this.raw.address || this.topic != this.raw.topic || this.enabled != this.raw.enabled;
+      isDirty = this.name != this.raw.name || this.address != this.raw.address || this.topic != this.raw.topic || this.enabled != this.raw.enabled || this.minutes != this.raw.minutes;
     }
     return isDirty;
   };
@@ -15339,8 +15342,8 @@ WebHook = function ($, common, api, Document) {
     data.address = this.address;
     data.topic = this.topic;
     data.fields = this.hookFields;
-    data.modified = this.modified;
     data.enabled = this.enabled;
+    data.minutes = this.minutes;
     // don't write out fields for:
     // - created_at
     // - log10, log
@@ -15369,6 +15372,7 @@ WebHook = function ($, common, api, Document) {
       that.enabled = data.enabled != null ? data.enabled == true : DEFAULTS.enabled;
       that.log10 = data.log10 || DEFAULTS.log10.slice();
       that.fails = data.nr_consecutive_fails || DEFAULTS.fails;
+      that.minutes = data.minutes || DEFAULTS.minutes;
       return data;
     });
   };

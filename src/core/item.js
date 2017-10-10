@@ -551,7 +551,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canGoToCheckout = function() {
-        return common.itemCanGoToCheckout(this);
+        return common.itemCanGoToCheckout(this) && !$.isEmptyObject(this.order);
     };
 
     /**

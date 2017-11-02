@@ -325,7 +325,7 @@ define([
                 that.emailField = data.emailField || DEFAULTS.emailField;
                 that.restrictLocations = data.restrictLocations?data.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
                 that.timezone = data.timezone || DEFAULTS.timezone;
-                this.hostCert = data.hostCert || DEFAULTS.hostCert;
+                that.hostCert = data.hostCert || DEFAULTS.hostCert;
 
                 $.publish('usersync.fromJson', data);
                 return data;

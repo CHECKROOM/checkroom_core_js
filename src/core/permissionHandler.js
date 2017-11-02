@@ -90,7 +90,7 @@ define([], function () {
 
     
     PermissionHandler.prototype.hasItemPermission = function(action, data, location) {
-        return this.hasPermission(action, "items", data, location);
+        return this.hasPermission(action || "read", "items", data, location);
     };
 
     PermissionHandler.prototype.hasItemCustodyPermission = function() {
@@ -126,7 +126,7 @@ define([], function () {
     };
     
     PermissionHandler.prototype.hasContactPermission = function(action, data, location) {
-        return this.hasPermission(action, "contacts", data, location);
+        return this.hasPermission(action || "read", "contacts", data, location);
     };
 
     PermissionHandler.prototype.hasContactReadOtherPermission = function(action, data, location) {

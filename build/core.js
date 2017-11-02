@@ -354,15 +354,24 @@ api = function ($, jsonp, moment) {
     this.urlAuth = spec.urlAuth || '';
     this.ajax = spec.ajax;
     this.version = spec.version;
+    this.platform = spec.platform;
+    this.device = spec.device;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
+    var params = {
       user: userId,
       password: password,
       auth_v: 2,
       _v: this.version
-    });
+    };
+    if (this.platform) {
+      params.platform = this.platform;
+    }
+    if (this.device) {
+      params.device = this.device;
+    }
+    var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
       if (resp.status == 'OK') {
@@ -405,6 +414,8 @@ api = function ($, jsonp, moment) {
     this.urlAuth = spec.urlAuth || '';
     this.ajax = spec.ajax;
     this.version = spec.version;
+    this.platform = spec.platform;
+    this.device = spec.device;
   };
   /**
    * The call to authenticate a user with userid an dpassword
@@ -416,12 +427,19 @@ api = function ($, jsonp, moment) {
    */
   api.ApiAuthV2.prototype.authenticate = function (userId, password) {
     system.log('ApiAuthV2: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
+    var params = {
       user: userId,
       password: password,
       auth_v: 2,
       _v: this.version
-    });
+    };
+    if (this.platform) {
+      params.platform = this.platform;
+    }
+    if (this.device) {
+      params.device = this.device;
+    }
+    var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
       // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
@@ -9743,6 +9761,14 @@ Kit = function ($, Base, common) {
             itemStatus: item.status
           });
           break;
+        case 'in_custody':
+          conflicts.push({
+            kind: 'custody',
+            item: item._id,
+            itemName: item.name,
+            itemStatus: item.status
+          });
+          break;
         }
       });
     }
@@ -12106,7 +12132,7 @@ PermissionHandler = function () {
     return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
   };
   PermissionHandler.prototype.hasItemPermission = function (action, data, location) {
-    return this.hasPermission(action, 'items', data, location);
+    return this.hasPermission(action || 'read', 'items', data, location);
   };
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
     return this._useCustody;
@@ -12133,7 +12159,7 @@ PermissionHandler = function () {
     return this.hasPermission(action || 'read', 'kits', data, location);
   };
   PermissionHandler.prototype.hasContactPermission = function (action, data, location) {
-    return this.hasPermission(action, 'contacts', data, location);
+    return this.hasPermission(action || 'read', 'contacts', data, location);
   };
   PermissionHandler.prototype.hasContactReadOtherPermission = function (action, data, location) {
     return !this._isSelfService;
@@ -15036,7 +15062,7 @@ UserSync = function ($, Base, common) {
       that.emailField = data.emailField || DEFAULTS.emailField;
       that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       that.timezone = data.timezone || DEFAULTS.timezone;
-      this.hostCert = data.hostCert || DEFAULTS.hostCert;
+      that.hostCert = data.hostCert || DEFAULTS.hostCert;
       $.publish('usersync.fromJson', data);
       return data;
     });

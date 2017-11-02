@@ -331,11 +331,27 @@ define([
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
         this.version = spec.version;
+        this.platform = spec.platform;
+        this.device = spec.device;
     };
 
     api.ApiAuth.prototype.authenticate = function(userId, password) {
         system.log('ApiAuth: authenticate '+userId);
-        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
+
+        var params = {
+            user: userId, 
+            password: password, 
+            auth_v: 2, 
+            _v: this.version
+        };
+        if(this.platform){
+            params.platform = this.platform;
+        }
+        if(this.device){
+            params.device = this.device;
+        }
+
+        var url = this.urlAuth + '?' + $.param(params);
         var dfd = $.Deferred();
         this.ajax.get(url, 30000)
             .done(function(resp) {
@@ -382,6 +398,8 @@ define([
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
         this.version = spec.version;
+        this.platform = spec.platform;
+        this.device = spec.device;
     };
 
     /**
@@ -394,7 +412,21 @@ define([
      */
     api.ApiAuthV2.prototype.authenticate = function(userId, password) {
         system.log('ApiAuthV2: authenticate '+userId);
-        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
+
+        var params = {
+            user: userId, 
+            password: password, 
+            auth_v: 2, 
+            _v: this.version
+        };
+        if(this.platform){
+            params.platform = this.platform;
+        }
+        if(this.device){
+            params.device = this.device;
+        }
+
+        var url = this.urlAuth + '?' + $.param(params);
         var dfd = $.Deferred();
         this.ajax.get(url, 30000)
             .done(function(resp) {

@@ -407,6 +407,14 @@ define([
                             itemStatus: item.status
                         });
                         break;
+                    case "in_custody":
+                        conflicts.push({
+                            kind: "custody",
+                            item: item._id,
+                            itemName: item.name,                            
+                            itemStatus: item.status
+                        });
+                        break;
                 }
             });
         }

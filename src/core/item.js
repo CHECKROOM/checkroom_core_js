@@ -407,9 +407,9 @@ define([
 
                 if (that._isDirtyFlag()) {
                     if ((that.flag=="") || (that.flag==null)) {
+                        dfdFlags = that.clearFlag();
+                    } else {                        
                         dfdFlags = that.setFlag(that.flag);
-                    } else {
-                        dfdFlags = that.clearFlag(that.flag);
                     }
                 } else {
                     dfdFlags.resolve();

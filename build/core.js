@@ -362,7 +362,6 @@ api = function ($, jsonp, moment) {
     var params = {
       user: userId,
       password: password,
-      auth_v: 2,
       _v: this.version
     };
     if (this.platform) {
@@ -384,86 +383,8 @@ api = function ($, jsonp, moment) {
     });
     return dfd.promise();
   };
-  //*************
-  // ApiAuth
-  //*************
-  /**
-   * @name ApiAuthV2
-   * @param {object}  spec
-   * @param {string}  spec.urlAuth          - the api url to use when authenticating
-   * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
-   * @constructor
-   * @memberof api
-   * @example
-   * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-   * var userName = "";
-   * var password = "";
-   *
-   * var ajax = new cr.api.ApiAjax({useJsonp: true});
-   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
-   * var authUser = null;
-   *
-   * auth.authenticate(userName, password)
-   *     .done(function(data) {
-   *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-   *     });
-   *
-   */
-  api.ApiAuthV2 = function (spec) {
-    spec = spec || {};
-    this.urlAuth = spec.urlAuth || '';
-    this.ajax = spec.ajax;
-    this.version = spec.version;
-    this.platform = spec.platform;
-    this.device = spec.device;
-  };
-  /**
-   * The call to authenticate a user with userid an dpassword
-   * @method
-   * @name ApiAuthV2#authenticate
-   * @param userId
-   * @param password
-   * @returns {object}
-   */
-  api.ApiAuthV2.prototype.authenticate = function (userId, password) {
-    system.log('ApiAuthV2: authenticate ' + userId);
-    var params = {
-      user: userId,
-      password: password,
-      auth_v: 2,
-      _v: this.version
-    };
-    if (this.platform) {
-      params.platform = this.platform;
-    }
-    if (this.device) {
-      params.device = this.device;
-    }
-    var url = this.urlAuth + '?' + $.param(params);
-    var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
-      // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
-      // TODO: Handle case for password incorrect, no rights or subscription expired
-      if (resp.status == 'OK') {
-        dfd.resolve(resp.data);
-      } else {
-        // When account expired, /authenticate will respond with
-        //{"status": "ERROR",
-        // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
-        // "data": {...}}
-        var error = null;
-        if (resp.message && resp.message.indexOf('expired') > 0) {
-          error = new api.ApiPaymentRequired(resp.message);
-        } else {
-          error = new Error('Your username or password is not correct');
-        }
-        dfd.reject(error);
-      }
-    }).fail(function (err) {
-      dfd.reject(err);
-    });
-    return dfd.promise();
-  };
+  // Deprecated ApiAuthV2, use ApiAuth
+  api.ApiAuthV2 = api.ApiAuth;
   //*************
   // ApiAnonymous
   // Communicates with the API without having token authentication
@@ -8948,9 +8869,9 @@ Item = function ($, common, Base) {
       }
       if (that._isDirtyFlag()) {
         if (that.flag == '' || that.flag == null) {
-          dfdFlags = that.setFlag(that.flag);
+          dfdFlags = that.clearFlag();
         } else {
-          dfdFlags = that.clearFlag(that.flag);
+          dfdFlags = that.setFlag(that.flag);
         }
       } else {
         dfdFlags.resolve();

@@ -42,7 +42,7 @@ define(['common/image'], function (imageHelper) {
 	};
 
 	that.contactCanDelete = function(contact) {
-		return (!that.contactGetUserId(contact));
+		return (!that.contactGetUserSync(contact));
 	};
 
 

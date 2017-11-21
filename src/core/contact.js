@@ -151,10 +151,7 @@ define([
      * @returns {boolean}
      */
     Contact.prototype.canDelete = function() {
-        var that = this;
-        return Base.prototype.canDelete.call(this).then(function(resp){
-            return resp.result && common.contactCanDelete(that);
-        });
+        return common.contactCanDelete(this);
     };
 
     /**

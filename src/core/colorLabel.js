@@ -8,7 +8,8 @@ define(['jquery'], /** ColorLabel */ function ($) {
     var DEFAULTS = {
         id: null,
         name: '',
-        color: 'Gold'
+        color: 'Gold',
+        readonly: false
     };
 
     /**
@@ -25,6 +26,7 @@ define(['jquery'], /** ColorLabel */ function ($) {
         this.id = spec.id || DEFAULTS.id;
         this.name = spec.name || DEFAULTS.name;
         this.color = spec.color || DEFAULTS.color;
+        this.readonly = spec.readonly || DEFAULTS.readonly;
     };
 
     /**

@@ -26,7 +26,8 @@ define([
         itemLabels: [],
         kitLabels: [],
         customerLabels: [],
-        bookingLabels: [],
+        reservationLabels: [],
+        orderLabels: [],
         cancelled: null
     };
 
@@ -53,7 +54,8 @@ define([
      * @property {array} itemLabels         the groups item labels
      * @property {array} kitLabels          the groups kit labels
      * @property {array} customerLabels     the groups customer labels
-     * @property {array} bookingLabels      the groups booking labels
+     * @property {array} reservationLabels  the groups reservation labels
+     * @property {array} orderLabels        the groups order labels
      * @constructor
      * @extends Document
      */
@@ -75,7 +77,8 @@ define([
         this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
         this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
         this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
-        this.bookingLabels = spec.bookingLabels || DEFAULTS.bookingLabels.slice();
+        this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+        this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
     };
 
     Group.prototype = new tmp();
@@ -499,8 +502,16 @@ define([
          var obj = null,
             that = this;
 
-        $.each(['itemLabels', 'kitLabels', 'customerLabels', 'bookingLabels'], function(i, labelsKey){
+        $.each(['itemLabels', 'kitLabels', 'customerLabels', 'reservationLabels', 'orderLabels'], function(i, labelsKey){
             that[labelsKey] = DEFAULTS[labelsKey].slice();
+            
+            if(labelsKey == "orderLabels"){
+                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "SlateGray" }, options));
+            }
+            if(labelsKey == "reservationLabels"){
+                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "LimeGreen" }, options));
+            }
+
             if( (data[labelsKey]) &&
                 (data[labelsKey].length>0)) {
                 $.each(data[labelsKey], function(i, label) {

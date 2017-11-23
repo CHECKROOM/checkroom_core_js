@@ -4192,7 +4192,8 @@ colorLabel = function ($) {
   var DEFAULTS = {
     id: null,
     name: '',
-    color: 'Gold'
+    color: 'Gold',
+    readonly: false
   };
   /**
    * @name  ColorLabel
@@ -4206,6 +4207,7 @@ colorLabel = function ($) {
     this.id = spec.id || DEFAULTS.id;
     this.name = spec.name || DEFAULTS.name;
     this.color = spec.color || DEFAULTS.color;
+    this.readonly = spec.readonly || DEFAULTS.readonly;
   };
   /**
    * isDirty
@@ -8299,7 +8301,8 @@ Group = function ($, common, api, Document) {
     itemLabels: [],
     kitLabels: [],
     customerLabels: [],
-    bookingLabels: [],
+    reservationLabels: [],
+    orderLabels: [],
     cancelled: null
   };
   // Allow overriding the ctor during inheritance
@@ -8325,7 +8328,8 @@ Group = function ($, common, api, Document) {
    * @property {array} itemLabels         the groups item labels
    * @property {array} kitLabels          the groups kit labels
    * @property {array} customerLabels     the groups customer labels
-   * @property {array} bookingLabels      the groups booking labels
+   * @property {array} reservationLabels  the groups reservation labels
+   * @property {array} orderLabels        the groups order labels
    * @constructor
    * @extends Document
    */
@@ -8346,7 +8350,8 @@ Group = function ($, common, api, Document) {
     this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
     this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
     this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
-    this.bookingLabels = spec.bookingLabels || DEFAULTS.bookingLabels.slice();
+    this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+    this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
   };
   Group.prototype = new tmp();
   Group.prototype.constructor = Group;
@@ -8741,9 +8746,24 @@ Group = function ($, common, api, Document) {
       'itemLabels',
       'kitLabels',
       'customerLabels',
-      'bookingLabels'
+      'reservationLabels',
+      'orderLabels'
     ], function (i, labelsKey) {
       that[labelsKey] = DEFAULTS[labelsKey].slice();
+      if (labelsKey == 'orderLabels') {
+        that[labelsKey].push(that._getColorLabel({
+          readonly: true,
+          name: 'Unlabeled',
+          color: 'SlateGray'
+        }, options));
+      }
+      if (labelsKey == 'reservationLabels') {
+        that[labelsKey].push(that._getColorLabel({
+          readonly: true,
+          name: 'Unlabeled',
+          color: 'LimeGreen'
+        }, options));
+      }
       if (data[labelsKey] && data[labelsKey].length > 0) {
         $.each(data[labelsKey], function (i, label) {
           obj = that._getColorLabel(label, options);
@@ -15619,7 +15639,8 @@ ColorLabel = function ($) {
   var DEFAULTS = {
     id: null,
     name: '',
-    color: 'Gold'
+    color: 'Gold',
+    readonly: false
   };
   /**
    * @name  ColorLabel
@@ -15633,6 +15654,7 @@ ColorLabel = function ($) {
     this.id = spec.id || DEFAULTS.id;
     this.name = spec.name || DEFAULTS.name;
     this.color = spec.color || DEFAULTS.color;
+    this.readonly = spec.readonly || DEFAULTS.readonly;
   };
   /**
    * isDirty

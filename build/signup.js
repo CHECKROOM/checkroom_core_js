@@ -2476,6 +2476,11 @@ signup = function ($, jstz, api, settings, inflection, validation, clientStorage
       return $.Deferred().resolve(true);
     }
   };
+  Signup.prototype.isInvited = function () {
+    return this.ds.call('checkInvited', { email: this.email }).then(function (resp) {
+      return resp.result;
+    });
+  };
   Signup.prototype.passwordIsValid = function () {
     return validation.isValidPassword($.trim(this.password));
   };

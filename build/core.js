@@ -356,9 +356,11 @@ api = function ($, jsonp, moment) {
     this.version = spec.version;
     this.platform = spec.platform;
     this.device = spec.device;
+    this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
+    var that = this;
     var params = {
       user: userId,
       password: password,
@@ -373,7 +375,16 @@ api = function ($, jsonp, moment) {
     var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
-      if (resp.status == 'OK') {
+      // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+      // 
+      // REMARK
+      // - web app allows owners to still login on expired/cancelled account
+      // - mobile doesn't allow expired logins also not for owners
+      if (resp.status == 'OK' && ([
+          'expired',
+          'cancelled_expired',
+          'archived'
+        ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
         dfd.resolve(resp.data);
       } else {
         dfd.reject(resp);
@@ -4193,7 +4204,8 @@ colorLabel = function ($) {
     id: null,
     name: '',
     color: 'Gold',
-    readonly: false
+    readonly: false,
+    selected: false
   };
   /**
    * @name  ColorLabel
@@ -4208,10 +4220,11 @@ colorLabel = function ($) {
     this.name = spec.name || DEFAULTS.name;
     this.color = spec.color || DEFAULTS.color;
     this.readonly = spec.readonly || DEFAULTS.readonly;
+    this.selected = spec.selected || DEFAULTS.selected;
   };
   /**
    * isDirty
-   * @name  Field#isDirty
+   * @name  ColorLabel#isDirty
    * @method
    * @returns {boolean}
    */
@@ -4220,12 +4233,41 @@ colorLabel = function ($) {
   };
   /**
    * isValid
-   * @name  Field#isValid
+   * @name  ColorLabel#isValid
    * @method
    * @returns {boolean}
    */
   ColorLabel.prototype.isValid = function () {
     return this.name && this.name.length > 0;
+  };
+  /**
+   * _fromJson
+   * @name  ColorLabel#_fromJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._fromJson = function (data) {
+    this.id = data.id || DEFAULTS.id;
+    this.name = data.name || DEFAULTS.name;
+    this.color = data.color || DEFAULTS.color;
+    this.selected = data.selected || DEFAULTS.selected;
+    this.readonly = data.readonly || DEFAULTS.readonly;
+    return $.Deferred().resolve();
+  };
+  /**
+   * _toJson
+   * @name  ColorLabel#_toJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._toJson = function () {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      selected: this.selected,
+      readonly: this.readonly
+    };
   };
   return ColorLabel;
 }(jquery);
@@ -7059,7 +7101,9 @@ helper = function ($, defaultSettings, common) {
         }
         return url;
       },
-      getICalUrl: function (urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+      getICalUrl: function (urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+        orderLabels = orderLabels || [];
+        reservationLabels = reservationLabels || [];
         var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/locations/call/ical', parts = [];
         if (locationId) {
           parts.push('locations[]=' + locationId);
@@ -7067,11 +7111,31 @@ helper = function ($, defaultSettings, common) {
         if (customerId) {
           parts.push('customer=' + customerId);
         }
-        if (!showOrders) {
-          parts.push('skipOpenOrders=true');
-        }
-        if (!showReservations) {
+        var selectedReservationLabels = reservationLabels.filter(function (lbl) {
+          return lbl.selected;
+        }).map(function (lbl) {
+          return lbl.id || '';
+        });
+        if (selectedReservationLabels.length == 0) {
           parts.push('skipOpenReservations=true');
+        } else {
+          // Only pass reservationLabels if user has made a custom selection
+          if (selectedReservationLabels.length != reservationLabels.length) {
+            parts.push($.param({ 'reservationLabels': selectedReservationLabels }));
+          }
+        }
+        var selectedOrderLabels = orderLabels.filter(function (lbl) {
+          return lbl.selected;
+        }).map(function (lbl) {
+          return lbl.id || '';
+        });
+        if (selectedOrderLabels.length == 0) {
+          parts.push('skipOpenOrders=true');
+        } else {
+          // Only pass orderLabels if user has made a custom selection
+          if (selectedOrderLabels.length != orderLabels.length) {
+            parts.push($.param({ 'orderLabels': selectedOrderLabels }));
+          }
         }
         return parts.length > 0 ? url + '?' + parts.join('&') : url;
       },
@@ -15640,7 +15704,8 @@ ColorLabel = function ($) {
     id: null,
     name: '',
     color: 'Gold',
-    readonly: false
+    readonly: false,
+    selected: false
   };
   /**
    * @name  ColorLabel
@@ -15655,10 +15720,11 @@ ColorLabel = function ($) {
     this.name = spec.name || DEFAULTS.name;
     this.color = spec.color || DEFAULTS.color;
     this.readonly = spec.readonly || DEFAULTS.readonly;
+    this.selected = spec.selected || DEFAULTS.selected;
   };
   /**
    * isDirty
-   * @name  Field#isDirty
+   * @name  ColorLabel#isDirty
    * @method
    * @returns {boolean}
    */
@@ -15667,12 +15733,41 @@ ColorLabel = function ($) {
   };
   /**
    * isValid
-   * @name  Field#isValid
+   * @name  ColorLabel#isValid
    * @method
    * @returns {boolean}
    */
   ColorLabel.prototype.isValid = function () {
     return this.name && this.name.length > 0;
+  };
+  /**
+   * _fromJson
+   * @name  ColorLabel#_fromJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._fromJson = function (data) {
+    this.id = data.id || DEFAULTS.id;
+    this.name = data.name || DEFAULTS.name;
+    this.color = data.color || DEFAULTS.color;
+    this.selected = data.selected || DEFAULTS.selected;
+    this.readonly = data.readonly || DEFAULTS.readonly;
+    return $.Deferred().resolve();
+  };
+  /**
+   * _toJson
+   * @name  ColorLabel#_toJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._toJson = function () {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      selected: this.selected,
+      readonly: this.readonly
+    };
   };
   return ColorLabel;
 }(jquery);

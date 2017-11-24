@@ -67,7 +67,10 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 return url;
             },
-            getICalUrl: function(urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+            getICalUrl: function(urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+                orderLabels = orderLabels || [];
+                reservationLabels = reservationLabels || [];
+
                 var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
                     parts = [];
 
@@ -77,12 +80,26 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 if (customerId) {
                     parts.push("customer=" + customerId);
                 }
-                if (!showOrders) {
-                    parts.push("skipOpenOrders=true");
-                }
-                if (!showReservations) {
+
+                var selectedReservationLabels = reservationLabels.filter(function(lbl){ return lbl.selected; }).map(function(lbl){ return lbl.id || ""; });
+                if (selectedReservationLabels.length == 0) {
                     parts.push("skipOpenReservations=true");
+                }else{
+                    // Only pass reservationLabels if user has made a custom selection
+                    if(selectedReservationLabels.length != reservationLabels.length){
+                        parts.push($.param({ "reservationLabels": selectedReservationLabels }));
+                    }
                 }
+
+                var selectedOrderLabels = orderLabels.filter(function(lbl){ return lbl.selected; }).map(function(lbl){ return lbl.id || ""; });
+                if (selectedOrderLabels.length == 0) {
+                    parts.push("skipOpenOrders=true");
+                }else{
+                    // Only pass orderLabels if user has made a custom selection
+                    if(selectedOrderLabels.length != orderLabels.length){
+                        parts.push($.param({ "orderLabels": selectedOrderLabels }));
+                    }
+                }                              
 
                 return (parts.length>0) ? url + "?" + parts.join("&") : url;
             },

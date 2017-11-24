@@ -9,7 +9,8 @@ define(['jquery'], /** ColorLabel */ function ($) {
         id: null,
         name: '',
         color: 'Gold',
-        readonly: false
+        readonly: false,
+        selected: false
     };
 
     /**
@@ -27,11 +28,12 @@ define(['jquery'], /** ColorLabel */ function ($) {
         this.name = spec.name || DEFAULTS.name;
         this.color = spec.color || DEFAULTS.color;
         this.readonly = spec.readonly || DEFAULTS.readonly;
+        this.selected = spec.selected || DEFAULTS.selected;
     };
 
     /**
      * isDirty
-     * @name  Field#isDirty
+     * @name  ColorLabel#isDirty
      * @method
      * @returns {boolean}
      */
@@ -42,12 +44,44 @@ define(['jquery'], /** ColorLabel */ function ($) {
 
      /**
      * isValid
-     * @name  Field#isValid
+     * @name  ColorLabel#isValid
      * @method
      * @returns {boolean}
      */
     ColorLabel.prototype.isValid = function() {
         return this.name && this.name.length > 0;
+    };
+
+    /**
+     * _fromJson
+     * @name  ColorLabel#_fromJson
+     * @method
+     * @returns {boolean}
+     */
+    ColorLabel.prototype._fromJson = function(data){
+        this.id = data.id || DEFAULTS.id;
+        this.name = data.name || DEFAULTS.name;
+        this.color = data.color || DEFAULTS.color;
+        this.selected = data.selected || DEFAULTS.selected;
+        this.readonly = data.readonly || DEFAULTS.readonly;
+
+        return $.Deferred().resolve();
+    };
+
+    /**
+     * _toJson
+     * @name  ColorLabel#_toJson
+     * @method
+     * @returns {boolean}
+     */
+    ColorLabel.prototype._toJson = function(){
+        return {
+            id: this.id,
+            name: this.name,
+            color: this.color,
+            selected: this.selected,
+            readonly: this.readonly
+        };
     };
  
     return ColorLabel;

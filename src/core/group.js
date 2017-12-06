@@ -23,6 +23,11 @@ define([
         customerFields: [],
         orderFields: [],
         reservationFields: [],
+        itemLabels: [],
+        kitLabels: [],
+        customerLabels: [],
+        reservationLabels: [],
+        orderLabels: [],
         cancelled: null
     };
 
@@ -46,6 +51,11 @@ define([
      * @property {array} customerFields     the groups customer fields
      * @property {array} reservationFields  the groups reservation fields
      * @property {array} orderFields        the groups order fields
+     * @property {array} itemLabels         the groups item labels
+     * @property {array} kitLabels          the groups kit labels
+     * @property {array} customerLabels     the groups customer labels
+     * @property {array} reservationLabels  the groups reservation labels
+     * @property {array} orderLabels        the groups order labels
      * @constructor
      * @extends Document
      */
@@ -64,6 +74,11 @@ define([
         this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
         this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
         this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
+        this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
+        this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
+        this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
+        this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+        this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
     };
 
     Group.prototype = new tmp();
@@ -215,6 +230,71 @@ define([
                 collection: collection,
                 oldPos: oldPos,
                 newPos: newPos
+            }
+        });
+    };
+
+    /**
+     * Add document label
+     * @param collection (items, kits, customers, reservations, orders)
+     * @param labelColor
+     * @param labelName
+     * @param skipRead
+     * @returns {promise}
+     */
+    Group.prototype.createLabel = function(collection, labelColor, labelName, skipRead) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "createLabel",
+            skipRead: skipRead,
+            params: {
+                collection: collection,
+                labelColor: labelColor,
+                labelName: labelName
+            }
+        });
+    };
+
+    /**
+     * Updates document label
+     * @param collection (items, kits, customers, reservations, orders)
+     * @param labelId
+     * @param labelColor
+     * @param labelName
+     * @param skipRead
+     * @returns {promise}
+     */
+    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, skipRead) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "updateLabel",
+            skipRead: skipRead,
+            params: {
+                collection: collection,
+                labelId: labelId,
+                labelColor: labelColor,
+                labelName: labelName
+            }
+        });
+    };
+
+     /**
+     * Removes document label
+     * @param collection (items, kits, customers, reservations, orders)
+     * @param labelId
+     * @param labelColor
+     * @param labelName
+     * @param skipRead
+     * @returns {promise}
+     */
+    Group.prototype.deleteLabel = function(collection, labelId, skipRead) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "deleteLabel",
+            skipRead: skipRead,
+            params: {
+                collection: collection,
+                labelId: labelId
             }
         });
     };
@@ -406,9 +486,44 @@ define([
                 that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
                 that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
                 that.cancelled = data.cancelled || DEFAULTS.cancelled;
-                
-                return data;
+                    
+                return that._fromColorLabelsJson(data, options);                
             });
+    };
+
+    /**
+     * _fromColorLabelsJson: reads the document labels
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Group.prototype._fromColorLabelsJson = function(data, options) {
+         var obj = null,
+            that = this;
+
+        $.each(['itemLabels', 'kitLabels', 'customerLabels', 'reservationLabels', 'orderLabels'], function(i, labelsKey){
+            that[labelsKey] = DEFAULTS[labelsKey].slice();
+            
+            if(labelsKey == "orderLabels"){
+                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "SlateGray" }, options));
+            }
+            if(labelsKey == "reservationLabels"){
+                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "LimeGreen" }, options));
+            }
+
+            if( (data[labelsKey]) &&
+                (data[labelsKey].length>0)) {
+                $.each(data[labelsKey], function(i, label) {
+                    obj = that._getColorLabel(label, options);
+                    if (obj) {
+                        that[labelsKey].push(obj);
+                    }
+                });
+            }
+        });
+
+        return $.Deferred().resolve(data);
     };
 
     return Group;

@@ -10,7 +10,7 @@ factory($, moment, jsonp, pubsub);
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, core;
+var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, core;
 api = function ($, jsonp, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -356,9 +356,11 @@ api = function ($, jsonp, moment) {
     this.version = spec.version;
     this.platform = spec.platform;
     this.device = spec.device;
+    this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
+    var that = this;
     var params = {
       user: userId,
       password: password,
@@ -373,7 +375,16 @@ api = function ($, jsonp, moment) {
     var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
-      if (resp.status == 'OK') {
+      // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+      // 
+      // REMARK
+      // - web app allows owners to still login on expired/cancelled account
+      // - mobile doesn't allow expired logins also not for owners
+      if (resp.status == 'OK' && ([
+          'expired',
+          'cancelled_expired',
+          'archived'
+        ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
         dfd.resolve(resp.data);
       } else {
         dfd.reject(resp);
@@ -4188,7 +4199,79 @@ common = function ($, code, order, reservation, item, conflicts, keyvalues, imag
    */
   return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
 }(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction);
-document = function ($, common, api) {
+colorLabel = function ($) {
+  var DEFAULTS = {
+    id: null,
+    name: '',
+    color: 'Gold',
+    readonly: false,
+    selected: false
+  };
+  /**
+   * @name  ColorLabel
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var ColorLabel = function (spec) {
+    spec = spec || {};
+    this.raw = $.extend({}, DEFAULTS, spec);
+    this.id = spec.id || DEFAULTS.id;
+    this.name = spec.name || DEFAULTS.name;
+    this.color = spec.color || DEFAULTS.color;
+    this.readonly = spec.readonly || DEFAULTS.readonly;
+    this.selected = spec.selected || DEFAULTS.selected;
+  };
+  /**
+   * isDirty
+   * @name  ColorLabel#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isDirty = function () {
+    return this.raw.name != this.name || this.raw.color != this.color;
+  };
+  /**
+   * isValid
+   * @name  ColorLabel#isValid
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isValid = function () {
+    return this.name && this.name.length > 0;
+  };
+  /**
+   * _fromJson
+   * @name  ColorLabel#_fromJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._fromJson = function (data) {
+    this.id = data.id || DEFAULTS.id;
+    this.name = data.name || DEFAULTS.name;
+    this.color = data.color || DEFAULTS.color;
+    this.selected = data.selected || DEFAULTS.selected;
+    this.readonly = data.readonly || DEFAULTS.readonly;
+    return $.Deferred().resolve();
+  };
+  /**
+   * _toJson
+   * @name  ColorLabel#_toJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._toJson = function () {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      selected: this.selected,
+      readonly: this.readonly
+    };
+  };
+  return ColorLabel;
+}(jquery);
+document = function ($, common, api, ColorLabel) {
   // Some constant values
   var DEFAULTS = { id: '' };
   /**
@@ -4510,8 +4593,12 @@ document = function ($, common, api) {
     spec.timeOut = spec.timeOut || 30000;
     return this._doApiCall(spec);
   };
+  Document.prototype._getColorLabel = function (data, options) {
+    var spec = $.extend({}, options || {}, data);
+    return new ColorLabel(spec);
+  };
   return Document;
-}(jquery, common, api);
+}(jquery, common, api, colorLabel);
 Availability = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
@@ -5068,6 +5155,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     modified: null,
     cover: null,
     flag: null,
+    label: null,
     fields: {},
     comments: [],
     attachments: [],
@@ -5111,7 +5199,9 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     // attachments array
     this.cover = spec.cover || DEFAULTS.cover;
     // cover attachment id, default null
-    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
+    // barcodes array
+    this.label = spec.label || DEFAULTS.label;  // color label
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -5410,6 +5500,33 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
   };
   /**
+   * Sets the label of an item
+   * @name Base#setLabel
+   * @param labelId
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setLabel = function (labelId, skipRead) {
+    return this._doApiCall({
+      method: 'setLabel',
+      params: { labelId: labelId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the label of an item
+   * @name Base#clearLabel
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearLabel = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearLabel',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
    * Returns a list of Field objects
    * @param fieldDefs         array of field definitions
    * @param onlyFormFields    should return only form fields
@@ -5540,6 +5657,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       that.barcodes = data.barcodes || DEFAULTS.barcodes;
+      that.label = data.label || DEFAULTS.label;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -5958,6 +6076,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     modified: null,
     cover: null,
     flag: null,
+    label: null,
     fields: {},
     comments: [],
     attachments: [],
@@ -6001,7 +6120,9 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     // attachments array
     this.cover = spec.cover || DEFAULTS.cover;
     // cover attachment id, default null
-    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
+    // barcodes array
+    this.label = spec.label || DEFAULTS.label;  // color label
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -6300,6 +6421,33 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
   };
   /**
+   * Sets the label of an item
+   * @name Base#setLabel
+   * @param labelId
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setLabel = function (labelId, skipRead) {
+    return this._doApiCall({
+      method: 'setLabel',
+      params: { labelId: labelId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the label of an item
+   * @name Base#clearLabel
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearLabel = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearLabel',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
    * Returns a list of Field objects
    * @param fieldDefs         array of field definitions
    * @param onlyFormFields    should return only form fields
@@ -6430,6 +6578,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       that.barcodes = data.barcodes || DEFAULTS.barcodes;
+      that.label = data.label || DEFAULTS.label;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -6952,7 +7101,9 @@ helper = function ($, defaultSettings, common) {
         }
         return url;
       },
-      getICalUrl: function (urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+      getICalUrl: function (urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+        orderLabels = orderLabels || [];
+        reservationLabels = reservationLabels || [];
         var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/locations/call/ical', parts = [];
         if (locationId) {
           parts.push('locations[]=' + locationId);
@@ -6960,11 +7111,31 @@ helper = function ($, defaultSettings, common) {
         if (customerId) {
           parts.push('customer=' + customerId);
         }
-        if (!showOrders) {
-          parts.push('skipOpenOrders=true');
-        }
-        if (!showReservations) {
+        var selectedReservationLabels = reservationLabels.filter(function (lbl) {
+          return lbl.selected;
+        }).map(function (lbl) {
+          return lbl.id || '';
+        });
+        if (selectedReservationLabels.length == 0) {
           parts.push('skipOpenReservations=true');
+        } else {
+          // Only pass reservationLabels if user has made a custom selection
+          if (selectedReservationLabels.length != reservationLabels.length) {
+            parts.push($.param({ 'reservationLabels': selectedReservationLabels }));
+          }
+        }
+        var selectedOrderLabels = orderLabels.filter(function (lbl) {
+          return lbl.selected;
+        }).map(function (lbl) {
+          return lbl.id || '';
+        });
+        if (selectedOrderLabels.length == 0) {
+          parts.push('skipOpenOrders=true');
+        } else {
+          // Only pass orderLabels if user has made a custom selection
+          if (selectedOrderLabels.length != orderLabels.length) {
+            parts.push($.param({ 'orderLabels': selectedOrderLabels }));
+          }
         }
         return parts.length > 0 ? url + '?' + parts.join('&') : url;
       },
@@ -7845,7 +8016,7 @@ DateHelper = function ($, moment) {
   };
   return DateHelper;
 }(jquery, moment);
-Document = function ($, common, api) {
+Document = function ($, common, api, ColorLabel) {
   // Some constant values
   var DEFAULTS = { id: '' };
   /**
@@ -8167,8 +8338,12 @@ Document = function ($, common, api) {
     spec.timeOut = spec.timeOut || 30000;
     return this._doApiCall(spec);
   };
+  Document.prototype._getColorLabel = function (data, options) {
+    var spec = $.extend({}, options || {}, data);
+    return new ColorLabel(spec);
+  };
   return Document;
-}(jquery, common, api);
+}(jquery, common, api, colorLabel);
 Group = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
@@ -8184,6 +8359,11 @@ Group = function ($, common, api, Document) {
     customerFields: [],
     orderFields: [],
     reservationFields: [],
+    itemLabels: [],
+    kitLabels: [],
+    customerLabels: [],
+    reservationLabels: [],
+    orderLabels: [],
     cancelled: null
   };
   // Allow overriding the ctor during inheritance
@@ -8206,6 +8386,11 @@ Group = function ($, common, api, Document) {
    * @property {array} customerFields     the groups customer fields
    * @property {array} reservationFields  the groups reservation fields
    * @property {array} orderFields        the groups order fields
+   * @property {array} itemLabels         the groups item labels
+   * @property {array} kitLabels          the groups kit labels
+   * @property {array} customerLabels     the groups customer labels
+   * @property {array} reservationLabels  the groups reservation labels
+   * @property {array} orderLabels        the groups order labels
    * @constructor
    * @extends Document
    */
@@ -8223,6 +8408,11 @@ Group = function ($, common, api, Document) {
     this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
     this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
     this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
+    this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
+    this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
+    this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
+    this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+    this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
   };
   Group.prototype = new tmp();
   Group.prototype.constructor = Group;
@@ -8367,6 +8557,68 @@ Group = function ($, common, api, Document) {
         collection: collection,
         oldPos: oldPos,
         newPos: newPos
+      }
+    });
+  };
+  /**
+   * Add document label
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param labelColor
+   * @param labelName
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.createLabel = function (collection, labelColor, labelName, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'createLabel',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        labelColor: labelColor,
+        labelName: labelName
+      }
+    });
+  };
+  /**
+   * Updates document label
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param labelId
+   * @param labelColor
+   * @param labelName
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'updateLabel',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        labelId: labelId,
+        labelColor: labelColor,
+        labelName: labelName
+      }
+    });
+  };
+  /**
+   * Removes document label
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param labelId
+   * @param labelColor
+   * @param labelName
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.deleteLabel = function (collection, labelId, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'deleteLabel',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        labelId: labelId
       }
     });
   };
@@ -8539,8 +8791,50 @@ Group = function ($, common, api, Document) {
       that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
       that.cancelled = data.cancelled || DEFAULTS.cancelled;
-      return data;
+      return that._fromColorLabelsJson(data, options);
     });
+  };
+  /**
+   * _fromColorLabelsJson: reads the document labels
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Group.prototype._fromColorLabelsJson = function (data, options) {
+    var obj = null, that = this;
+    $.each([
+      'itemLabels',
+      'kitLabels',
+      'customerLabels',
+      'reservationLabels',
+      'orderLabels'
+    ], function (i, labelsKey) {
+      that[labelsKey] = DEFAULTS[labelsKey].slice();
+      if (labelsKey == 'orderLabels') {
+        that[labelsKey].push(that._getColorLabel({
+          readonly: true,
+          name: 'Unlabeled',
+          color: 'SlateGray'
+        }, options));
+      }
+      if (labelsKey == 'reservationLabels') {
+        that[labelsKey].push(that._getColorLabel({
+          readonly: true,
+          name: 'Unlabeled',
+          color: 'LimeGreen'
+        }, options));
+      }
+      if (data[labelsKey] && data[labelsKey].length > 0) {
+        $.each(data[labelsKey], function (i, label) {
+          obj = that._getColorLabel(label, options);
+          if (obj) {
+            that[labelsKey].push(obj);
+          }
+        });
+      }
+    });
+    return $.Deferred().resolve(data);
   };
   return Group;
 }(jquery, common, api, document);
@@ -15402,7 +15696,79 @@ OrderTransfer = function ($, Base) {
   };
   return OrderTransfer;
 }(jquery, base);
-core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer) {
+ColorLabel = function ($) {
+  var DEFAULTS = {
+    id: null,
+    name: '',
+    color: 'Gold',
+    readonly: false,
+    selected: false
+  };
+  /**
+   * @name  ColorLabel
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var ColorLabel = function (spec) {
+    spec = spec || {};
+    this.raw = $.extend({}, DEFAULTS, spec);
+    this.id = spec.id || DEFAULTS.id;
+    this.name = spec.name || DEFAULTS.name;
+    this.color = spec.color || DEFAULTS.color;
+    this.readonly = spec.readonly || DEFAULTS.readonly;
+    this.selected = spec.selected || DEFAULTS.selected;
+  };
+  /**
+   * isDirty
+   * @name  ColorLabel#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isDirty = function () {
+    return this.raw.name != this.name || this.raw.color != this.color;
+  };
+  /**
+   * isValid
+   * @name  ColorLabel#isValid
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isValid = function () {
+    return this.name && this.name.length > 0;
+  };
+  /**
+   * _fromJson
+   * @name  ColorLabel#_fromJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._fromJson = function (data) {
+    this.id = data.id || DEFAULTS.id;
+    this.name = data.name || DEFAULTS.name;
+    this.color = data.color || DEFAULTS.color;
+    this.selected = data.selected || DEFAULTS.selected;
+    this.readonly = data.readonly || DEFAULTS.readonly;
+    return $.Deferred().resolve();
+  };
+  /**
+   * _toJson
+   * @name  ColorLabel#_toJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._toJson = function () {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      selected: this.selected,
+      readonly: this.readonly
+    };
+  };
+  return ColorLabel;
+}(jquery);
+core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel) {
   var core = {};
   // namespaces
   core.api = api;
@@ -15431,7 +15797,8 @@ core = function (api, Availability, Attachment, Base, Category, Comment, Conflic
   core.WebHook = WebHook;
   core.OrderTransfer = OrderTransfer;
   core.Helper = Helper;
+  core.ColorLabel = ColorLabel;
   return core;
-}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer);
+}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel);
 return core;
 }))

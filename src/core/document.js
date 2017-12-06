@@ -7,7 +7,8 @@
 define([
     'jquery',
     'common',
-    'api'], /** @lends Document */function ($, common, api) {
+    'api',
+    'colorLabel'], /** @lends Document */function ($, common, api, ColorLabel) {
 
     // Some constant values
     var DEFAULTS = {
@@ -367,6 +368,11 @@ define([
     Document.prototype._doApiLongCall = function(spec) {
         spec.timeOut = spec.timeOut || 30000;
         return this._doApiCall(spec);
+    };
+
+    Document.prototype._getColorLabel = function(data, options) {
+        var spec = $.extend({}, options || {}, data);
+        return new ColorLabel(spec);
     };
 
     return Document;

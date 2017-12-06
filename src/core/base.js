@@ -20,6 +20,7 @@ define([
         modified: null,
         cover: null,
         flag: null,
+        label: null,
         fields: {},
         comments: [],
         attachments: [],
@@ -58,6 +59,7 @@ define([
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
         this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
         this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();             // barcodes array
+        this.label = spec.label || DEFAULTS.label;                              // color label
     };
 
     Base.prototype = new tmp();
@@ -380,6 +382,35 @@ define([
         });
     };
 
+     /**
+     * Sets the label of an item
+     * @name Base#setLabel
+     * @param labelId
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.setLabel = function(labelId, skipRead){
+        return this._doApiCall({
+            method: 'setLabel',
+            params: { labelId: labelId },
+            skipRead: skipRead
+        });
+    };
+
+    /**
+     * Clears the label of an item
+     * @name Base#clearLabel
+     * @param skipRead
+     * @returns {promise}
+     */
+    Base.prototype.clearLabel = function (skipRead) {
+        return this._doApiCall({
+            method: 'clearLabel',
+            params: {},
+            skipRead: skipRead
+        });
+    };
+
     /**
      * Returns a list of Field objects
      * @param fieldDefs         array of field definitions
@@ -531,6 +562,7 @@ define([
                 that.fields = (data.fields!=null) ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
                 that.modified = data.modified || DEFAULTS.modified;
                 that.barcodes = data.barcodes || DEFAULTS.barcodes;
+                that.label = data.label || DEFAULTS.label;
 
                 return that._fromCommentsJson(data, options)
                     .then(function() {
@@ -624,5 +656,4 @@ define([
     };
 
     return Base;
-
 });

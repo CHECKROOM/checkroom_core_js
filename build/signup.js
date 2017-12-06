@@ -356,9 +356,11 @@ api = function ($, jsonp, moment) {
     this.version = spec.version;
     this.platform = spec.platform;
     this.device = spec.device;
+    this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
+    var that = this;
     var params = {
       user: userId,
       password: password,
@@ -373,7 +375,16 @@ api = function ($, jsonp, moment) {
     var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
-      if (resp.status == 'OK') {
+      // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+      // 
+      // REMARK
+      // - web app allows owners to still login on expired/cancelled account
+      // - mobile doesn't allow expired logins also not for owners
+      if (resp.status == 'OK' && ([
+          'expired',
+          'cancelled_expired',
+          'archived'
+        ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
         dfd.resolve(resp.data);
       } else {
         dfd.reject(resp);

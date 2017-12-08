@@ -593,11 +593,20 @@ define([
      * @param pks
      * @returns {promise}
      */
-    api.ApiDataSource.prototype.deleteMultiple = function(pks) {
+    api.ApiDataSource.prototype.deleteMultiple = function(pks, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
         var cmd = "deleteMultiple";
-        var url = this.getBaseUrl() + pks.join(',') + '/delete';
-        return this._ajaxGet(cmd, url);
+        var url = this.getBaseUrl() + '/delete';
+
+        var p = { pk: pks };
+        var geturl = url + '?' + this.getParams(p);
+
+        if( (usePost) || 
+            (geturl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p);
+        } else {
+            return this._ajaxGet(cmd, geturl);
+        }
     };
 
     /**

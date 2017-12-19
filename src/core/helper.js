@@ -87,7 +87,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }else{
                     // Only pass reservationLabels if user has made a custom selection
                     if(selectedReservationLabels.length != reservationLabels.length){
-                        parts.push($.param({ "reservationLabels": selectedReservationLabels }));
+                        parts.push($.param({ "rlab": selectedReservationLabels }));
                     }
                 }
 
@@ -97,7 +97,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }else{
                     // Only pass orderLabels if user has made a custom selection
                     if(selectedOrderLabels.length != orderLabels.length){
-                        parts.push($.param({ "orderLabels": selectedOrderLabels }));
+                        parts.push($.param({ "olab": selectedOrderLabels }));
                     }
                 }                              
 

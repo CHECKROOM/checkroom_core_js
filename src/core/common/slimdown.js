@@ -2,7 +2,7 @@
 //See source: https://github.com/Khan/simple-markdown/blob/master/simple-markdown.js
 
 //Add autolinking of url
-http://kotsf.com/gdarchive/4/
+//http://kotsf.com/gdarchive/4/
 
 define(function(){
 	/**

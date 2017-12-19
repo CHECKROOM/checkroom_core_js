@@ -45,20 +45,31 @@ define([], function () {
             case "selfservice":
                 this._canSetFlag = profile.selfServiceCanSetFlag;
                 this._canClearFlag = profile.selfServiceCanClearFlag;
+                this._canSetLabel = profile.selfServiceCanSetLabel;
+                this._canClearLabel = profile.selfServiceCanClearLabel;
+                this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
+                this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
                 break;
             case "user":
                 this._canSetFlag = profile.userCanSetFlag;
                 this._canClearFlag = profile.userCanClearFlag;
+                this._canSetLabel = profile.userCanSetLabel;
+                this._canClearLabel = profile.userCanClearLabel;
+                this._canReadOrders = this._useOrders;
+                this._canCreateOrders = this._useOrders;
                 break;
             default:
                 this._canSetFlag = true;
                 this._canClearFlag = true;
+                this._canSetLabel = true;
+                this._canClearLabel = true;
+                this._canReadOrders = this._useOrders;
+                this._canCreateOrders = this._useOrders;
                 break;
         }
 
         if (this._isSelfService) {
             // Override some permissions for selfservice users
-            this._useOrders = this._useOrders && this._useSelfService && profile.selfServiceCanOrder;
             this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
             this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
         }
@@ -119,6 +130,10 @@ define([], function () {
     
     PermissionHandler.prototype.hasReportingPermission = function() {
         return this._isRootOrAdmin && this._useReporting;
+    };
+
+    PermissionHandler.prototype.hasLabelPermission = function() {
+        return this._canSetLabel && this._canClearLabel;
     };
 
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
@@ -246,7 +261,7 @@ define([], function () {
                     case "reserve":
                         return this._useReservations;
                     case "checkout":
-                        return this._useOrders;
+                        return this._canCreateOrders;
                     case "takeCustody":
                     case "releaseCustody":
                         return this._useCustody;
@@ -292,7 +307,7 @@ define([], function () {
                     case "reserve":
                         return this._useReservations;
                     case "checkout":
-                        return this._useOrders;
+                        return this._canCreateOrders;
                     case "takeCustody":
                     case "releaseCustody":
                         return this._useCustody;
@@ -312,9 +327,11 @@ define([], function () {
 
                     // CRUD
                     case "create":
-                    case "read":
                     case "update":
                     case "delete":
+                        return this._canCreateOrders;
+                    case "read":
+                        return this._canReadOrders;                    
                     // Order specific actions
                     case "setCustomer":
                     case "clearCustomer":
@@ -324,18 +341,19 @@ define([], function () {
                     case "removeItems":
                     case "swapItems":
                     case "undoCheckout":
-                    case "checkin":
                     case "checkout":
-                    // Generic actions
+                    case "checkin":
                     case "setFields":
                     case "setField":
                     case "clearField":
+                        return this._canCreateOrders;
+                    // Generic actions
                     case "addAttachment":
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
                     case "export":
-                        return this._useOrders;
+                        return this._useOrders;           
                     case "archive":
                     case "undoArchive":
                         return this._useOrders && this._isRootOrAdmin;
@@ -348,7 +366,7 @@ define([], function () {
                     case "generateDocument":
                         return this._usePdf && this._isRootOrAdminOrUser;
                     case "checkinAt":
-                        return this._useCheckinLocation;
+                        return this._canCreateOrders && this._useCheckinLocation;
                     case "forceCheckListCheckin":
                         return this.profile.forceCheckListCheckin;
                     case "forceConflictResolving":
@@ -381,7 +399,6 @@ define([], function () {
                     case "cancel":
                     case "undoCancel":
                     case "switchToOrder":
-                    case "makeOrder":
                     case "reserveAgain":
                     case "reserveRepeat":
                     // Generic actions
@@ -394,6 +411,8 @@ define([], function () {
                     case "removeComment":
                     case "export":
                         return this._useReservations;
+                    case "makeOrder":
+                        return this._canCreateOrders;
                     case "archive":
                     case "undoArchive":
                         return this._useReservations && this._isRootOrAdmin;

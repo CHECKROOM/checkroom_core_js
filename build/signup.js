@@ -339,7 +339,7 @@ api = function ($, jsonp, moment) {
   };
   api.ApiUser.prototype.isValid = function () {
     system.log('ApiUser: isValid');
-    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
+    return this.userId != null && this.userId.length > 0 && (this.userToken != null && this.userToken.length > 0);
   };
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
@@ -590,11 +590,17 @@ api = function ($, jsonp, moment) {
    * @param pks
    * @returns {promise}
    */
-  api.ApiDataSource.prototype.deleteMultiple = function (pks) {
+  api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost) {
     system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
     var cmd = 'deleteMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + '/delete';
-    return this._ajaxGet(cmd, url);
+    var url = this.getBaseUrl() + 'delete';
+    var p = { pk: pks };
+    var geturl = url + '?' + this.getParams(p);
+    if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p);
+    } else {
+      return this._ajaxGet(cmd, geturl);
+    }
   };
   /**
    * Updates a document by its primary key and a params objects

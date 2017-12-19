@@ -513,13 +513,13 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
 
             // getFriendlyFromTo
             // ----
-            /*test('getFriendlyFromTo', function() {
+            test('getFriendlyFromTo', function() {
                 var helper = new cr.DateHelper();
-                var nowstr = "2015-06-24T16:15:00+00:00";
-                var now = helper.fixDates(nowstr);
+                //var nowstr = "2015-06-24T16:15:00+00:00";
+                //var now = helper.fixDates(nowstr);
                 var res = "";
 
-                $.each([1,2,3,4,7,8,14,21,31,100], function(i, val) {
+                /*$.each([1,2,3,4,7,8,14,21,31,100], function(i, val) {
                     console.log(val);
                     var from = moment(now).add(-1*val, "days");
                     var to = moment(now).add(1, "days").add(4, "hours");
@@ -535,9 +535,20 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
                     res = helper.getFriendlyFromTo(from, to, true, now);
                     console.log(res.text);
                     console.log("");
-                });
+                });*/
+                
+                var now = moment();
 
-            });*/
+                var getFriendlyDate = function(date, useHours){
+                    var parts = date.calendar().split(" at ");
+                    return parts[0] + (useHours?" " + parts[1].toLowerCase() : "");
+                }
+
+                equal(helper.getFriendlyFromTo(null, null, true, moment()).text, "No from date set - No to date set");
+                 equal(helper.getFriendlyFromTo(moment(), null, true, moment()).text, getFriendlyDate(moment(), true) + " - No to date set");
+                equal(helper.getFriendlyFromTo(moment(), moment().add(5, "days"), true, moment()).text, getFriendlyDate(moment(), true) + " - " + getFriendlyDate(moment().add(5, "days"), true));
+                equal(helper.getFriendlyFromTo(moment(), moment().add(5, "days"), false, moment()).text, getFriendlyDate(moment(), false) + " - " + getFriendlyDate(moment().add(5, "days"), false));
+            });
 
         };
 

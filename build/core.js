@@ -10,7 +10,7 @@ factory($, moment, jsonp, pubsub);
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, core;
+var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
 api = function ($, jsonp, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -339,7 +339,7 @@ api = function ($, jsonp, moment) {
   };
   api.ApiUser.prototype.isValid = function () {
     system.log('ApiUser: isValid');
-    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
+    return this.userId != null && this.userId.length > 0 && (this.userToken != null && this.userToken.length > 0);
   };
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
@@ -590,11 +590,17 @@ api = function ($, jsonp, moment) {
    * @param pks
    * @returns {promise}
    */
-  api.ApiDataSource.prototype.deleteMultiple = function (pks) {
+  api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost) {
     system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
     var cmd = 'deleteMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + '/delete';
-    return this._ajaxGet(cmd, url);
+    var url = this.getBaseUrl() + 'delete';
+    var p = { pk: pks };
+    var geturl = url + '?' + this.getParams(p);
+    if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p);
+    } else {
+      return this._ajaxGet(cmd, geturl);
+    }
   };
   /**
    * Updates a document by its primary key and a params objects
@@ -1787,6 +1793,19 @@ common_image = function ($) {
      * @return {string} base64 image url    
      */
     getMaintenanceAvatar: function (size) {
+      return this.getIconAvatar(size, 'f0ad');
+    },
+    /**
+     * Returns an icon avatar image from FontAwesome collection
+     *
+     * @memberOf  common
+     * @name  common#getIconAvatar
+     * @method
+     * 
+     * @param  {string} size Possible values XS,S,M,L,XL
+     * @return {string} base64 image url    
+     */
+    getIconAvatar: function (size, value) {
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -1812,7 +1831,7 @@ common_image = function ($) {
       context.font = canvasWidth / 2 + 'px FontAwesome';
       context.textAlign = 'center';
       context.fillStyle = '#aaa';
-      context.fillText(String.fromCharCode('0xf0ad'), canvasCssWidth / 2, canvasCssHeight / 1.5);
+      context.fillText(String.fromCharCode('0x' + value), canvasCssWidth / 2, canvasCssHeight / 1.5);
       return $canvas.get(0).toDataURL();
     },
     getTextImage: function (text, size, fontColorHex, backgroundColorHex) {
@@ -3433,178 +3452,174 @@ common_utils = function ($) {
   };
   return utils;
 }(jquery);
-//Add improved Paragraph/Linebreak parsing
-//See source: https://github.com/Khan/simple-markdown/blob/master/simple-markdown.js
-//Add autolinking of url
-http:
-  common_slimdown = function () {
-    /**
-    * Javascript version of https://gist.github.com/jbroadway/2836900
-    *
-    * Slimdown - A very basic regex-based Markdown parser. Supports the
-    * following elements (and can be extended via Slimdown::add_rule()):
-    *
-    * - Headers
-    * - Links
-    * - Bold
-    * - Emphasis
-    * - Deletions
-    * - Quotes
-    * - Inline code
-    * - Blockquotes
-    * - Ordered/unordered lists
-    * - Horizontal rules
-    *
-    * Author: Johnny Broadway <johnny@johnnybroadway.com>
-    * Website: https://gist.github.com/jbroadway/2836900
-    * License: MIT
-    *
-    * @global
-    * @name  Slimdown
-    */
-    var Slimdown = function () {
-      // Rules
-      this.rules = [
-        {
-          regex: /(#{1,6})\s(.*)/g,
-          replacement: header
-        },
-        // headers
-        {
-          regex: /!\[([^\[]+)\]\(([^\)]+)\)/g,
-          replacement: '<img src=\'$2\' alt=\'$1\'>'
-        },
-        // image
-        {
-          regex: /\[([^\[]+)\]\(([^\)]+)\)/g,
-          replacement: '<a href=\'$2\'>$1</a>'
-        },
-        // hyperlink
-        {
-          regex: /(\*\*|__)(.*?)\1/g,
-          replacement: '<strong>$2</strong>'
-        },
-        // bold
-        {
-          regex: /(\*|_)(.*?)\1/g,
-          replacement: '<em>$2</em>'
-        },
-        // emphasis
-        {
-          regex: /\~\~(.*?)\~\~/g,
-          replacement: '<del>$1</del>'
-        },
-        // del
-        {
-          regex: /\:\"(.*?)\"\:/g,
-          replacement: '<q>$1</q>'
-        },
-        // quote
-        {
-          regex: /`(.*?)`/g,
-          replacement: '<code>$1</code>'
-        },
-        // inline code
-        {
-          regex: /\n\*(.*)/g,
-          replacement: ulList
-        },
-        // ul lists
-        {
-          regex: /\n[0-9]+\.\s(.*)/g,
-          replacement: olList
-        },
-        // ol lists
-        {
-          regex: /\n(&gt;|\>)(.*)/g,
-          replacement: blockquote
-        },
-        // blockquotes
-        {
-          regex: /\n-{5,}/g,
-          replacement: '\n<hr />'
-        },
-        // horizontal rule
-        {
-          regex: /(?:[^\n]|\n(?! *\n))+/g,
-          replacement: para
-        },
-        // add paragraphs
-        {
-          regex: /<\/ul>\s?<ul>/g,
-          replacement: ''
-        },
-        // fix extra ul
-        {
-          regex: /<\/ol>\s?<ol>/g,
-          replacement: ''
-        },
-        // fix extra ol
-        {
-          regex: /<\/blockquote><blockquote>/g,
-          replacement: '\n'
-        }  // fix extra blockquote
-      ];
-      // Add a rule.
-      this.addRule = function (regex, replacement) {
-        regex.global = true;
-        regex.multiline = false;
-        this.rules.push({
-          regex: regex,
-          replacement: replacement
-        });
-      };
-      // Render some Markdown into HTML.
-      this.render = function (text) {
-        text = '\n' + text + '\n';
-        text = autolink(text);
-        this.rules.forEach(function (rule) {
-          text = text.replace(rule.regex, rule.replacement);
-        });
-        return text.trim();
-      };
-      function para(text, line) {
-        var trimmed = ('' + text).trimLeft().trimRight();
-        if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
-          return trimmed;
-        }
-        trimmed = trimmed.replace(/\n/g, '<br />');
-        return '<p>' + trimmed + '</p>';
-      }
-      function ulList(text, item) {
-        return '\n<ul>\n\t<li>' + item.trim() + '</li>\n</ul>';
-      }
-      function olList(text, item) {
-        return '\n<ol>\n\t<li>' + item.trim() + '</li>\n</ol>';
-      }
-      function blockquote(text, tmp, item) {
-        return '\n<blockquote>' + item.trim() + '</blockquote>';
-      }
-      function header(text, chars, content) {
-        var level = chars.length;
-        return '<h' + level + '>' + content.trim() + '</h' + level + '>';
-      }
-      function autolink(text) {
-        var urls = text.match(/(\(?https?:\/\/[-A-Za-z0-9+&@#\/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#\/%=~_()|])(">|<\/a>|\)|\])?/gm);
-        if (urls == null)
-          return text;
-        var cleanedUrls = {};
-        for (var i = 0; i < urls.length; i++) {
-          var url = urls[i];
-          // ignore urls that are part of a markdown link already
-          if (url.lastIndexOf(']') != -1 || url.lastIndexOf(')') != -1)
-            break;
-          // already replaced this url
-          if (cleanedUrls[url])
-            break;
-          cleanedUrls[url] = url;
-          text = text.replace(url, '[' + url + '](' + url + ')');
-        }
-        return text;
-      }
+common_slimdown = function () {
+  /**
+  * Javascript version of https://gist.github.com/jbroadway/2836900
+  *
+  * Slimdown - A very basic regex-based Markdown parser. Supports the
+  * following elements (and can be extended via Slimdown::add_rule()):
+  *
+  * - Headers
+  * - Links
+  * - Bold
+  * - Emphasis
+  * - Deletions
+  * - Quotes
+  * - Inline code
+  * - Blockquotes
+  * - Ordered/unordered lists
+  * - Horizontal rules
+  *
+  * Author: Johnny Broadway <johnny@johnnybroadway.com>
+  * Website: https://gist.github.com/jbroadway/2836900
+  * License: MIT
+  *
+  * @global
+  * @name  Slimdown
+  */
+  var Slimdown = function () {
+    // Rules
+    this.rules = [
+      {
+        regex: /(#{1,6})\s(.*)/g,
+        replacement: header
+      },
+      // headers
+      {
+        regex: /!\[([^\[]+)\]\(([^\)]+)\)/g,
+        replacement: '<img src=\'$2\' alt=\'$1\'>'
+      },
+      // image
+      {
+        regex: /\[([^\[]+)\]\(([^\)]+)\)/g,
+        replacement: '<a href=\'$2\'>$1</a>'
+      },
+      // hyperlink
+      {
+        regex: /(\*\*|__)(.*?)\1/g,
+        replacement: '<strong>$2</strong>'
+      },
+      // bold
+      {
+        regex: /(\*|_)(.*?)\1/g,
+        replacement: '<em>$2</em>'
+      },
+      // emphasis
+      {
+        regex: /\~\~(.*?)\~\~/g,
+        replacement: '<del>$1</del>'
+      },
+      // del
+      {
+        regex: /\:\"(.*?)\"\:/g,
+        replacement: '<q>$1</q>'
+      },
+      // quote
+      {
+        regex: /`(.*?)`/g,
+        replacement: '<code>$1</code>'
+      },
+      // inline code
+      {
+        regex: /\n\*(.*)/g,
+        replacement: ulList
+      },
+      // ul lists
+      {
+        regex: /\n[0-9]+\.\s(.*)/g,
+        replacement: olList
+      },
+      // ol lists
+      {
+        regex: /\n(&gt;|\>)(.*)/g,
+        replacement: blockquote
+      },
+      // blockquotes
+      {
+        regex: /\n-{5,}/g,
+        replacement: '\n<hr />'
+      },
+      // horizontal rule
+      {
+        regex: /(?:[^\n]|\n(?! *\n))+/g,
+        replacement: para
+      },
+      // add paragraphs
+      {
+        regex: /<\/ul>\s?<ul>/g,
+        replacement: ''
+      },
+      // fix extra ul
+      {
+        regex: /<\/ol>\s?<ol>/g,
+        replacement: ''
+      },
+      // fix extra ol
+      {
+        regex: /<\/blockquote><blockquote>/g,
+        replacement: '\n'
+      }  // fix extra blockquote
+    ];
+    // Add a rule.
+    this.addRule = function (regex, replacement) {
+      regex.global = true;
+      regex.multiline = false;
+      this.rules.push({
+        regex: regex,
+        replacement: replacement
+      });
     };
-    window.Slimdown = Slimdown;
-  }();
+    // Render some Markdown into HTML.
+    this.render = function (text) {
+      text = '\n' + text + '\n';
+      text = autolink(text);
+      this.rules.forEach(function (rule) {
+        text = text.replace(rule.regex, rule.replacement);
+      });
+      return text.trim();
+    };
+    function para(text, line) {
+      var trimmed = ('' + text).trimLeft().trimRight();
+      if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
+        return trimmed;
+      }
+      trimmed = trimmed.replace(/\n/g, '<br />');
+      return '<p>' + trimmed + '</p>';
+    }
+    function ulList(text, item) {
+      return '\n<ul>\n\t<li>' + item.trim() + '</li>\n</ul>';
+    }
+    function olList(text, item) {
+      return '\n<ol>\n\t<li>' + item.trim() + '</li>\n</ol>';
+    }
+    function blockquote(text, tmp, item) {
+      return '\n<blockquote>' + item.trim() + '</blockquote>';
+    }
+    function header(text, chars, content) {
+      var level = chars.length;
+      return '<h' + level + '>' + content.trim() + '</h' + level + '>';
+    }
+    function autolink(text) {
+      var urls = text.match(/(\(?https?:\/\/[-A-Za-z0-9+&@#\/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#\/%=~_()|])(">|<\/a>|\)|\])?/gm);
+      if (urls == null)
+        return text;
+      var cleanedUrls = {};
+      for (var i = 0; i < urls.length; i++) {
+        var url = urls[i];
+        // ignore urls that are part of a markdown link already
+        if (url.lastIndexOf(']') != -1 || url.lastIndexOf(')') != -1)
+          break;
+        // already replaced this url
+        if (cleanedUrls[url])
+          break;
+        cleanedUrls[url] = url;
+        text = text.replace(url, '[' + url + '](' + url + ')');
+      }
+      return text;
+    }
+  };
+  window.Slimdown = Slimdown;
+}();
 common_kit = function ($, itemHelpers) {
   var that = {};
   /**
@@ -4193,12 +4208,23 @@ common_transaction = function (moment, keyValues) {
   };
   return that;
 }(moment, common_keyValues);
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction) {
+common_queue = function () {
+  $.fn.ajaxQueue = function () {
+    var previous = new $.Deferred().resolve();
+    return function (fn, fail) {
+      if (typeof fn !== 'function') {
+        throw 'must be a function';
+      }
+      return previous = previous.then(fn, fail || fn);
+    };
+  };
+}();
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue) {
   /**
    * Return common object with different helper methods
    */
   return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue);
 colorLabel = function ($) {
   var DEFAULTS = {
     id: null,
@@ -7121,7 +7147,7 @@ helper = function ($, defaultSettings, common) {
         } else {
           // Only pass reservationLabels if user has made a custom selection
           if (selectedReservationLabels.length != reservationLabels.length) {
-            parts.push($.param({ 'reservationLabels': selectedReservationLabels }));
+            parts.push($.param({ 'rlab': selectedReservationLabels }));
           }
         }
         var selectedOrderLabels = orderLabels.filter(function (lbl) {
@@ -7134,7 +7160,7 @@ helper = function ($, defaultSettings, common) {
         } else {
           // Only pass orderLabels if user has made a custom selection
           if (selectedOrderLabels.length != orderLabels.length) {
-            parts.push($.param({ 'orderLabels': selectedOrderLabels }));
+            parts.push($.param({ 'olab': selectedOrderLabels }));
           }
         }
         return parts.length > 0 ? url + '?' + parts.join('&') : url;
@@ -7748,11 +7774,11 @@ DateHelper = function ($, moment) {
   DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
     now = now || this.getNow();
     var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from.diff(to, 'days'),
-        fromDate: fromParts[0],
-        fromTime: useHours ? fromParts[1] : '',
-        toDate: toParts[0],
-        toTime: useHours ? toParts[1] : ''
+        dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+        fromDate: from ? fromParts[0] : 'No from date set',
+        fromTime: useHours && from != null ? fromParts[1] : '',
+        toDate: to ? toParts[0] : 'No to date set',
+        toTime: useHours && to != null ? toParts[1] : ''
       };
     result.fromText = result.fromDate;
     result.toText = result.toDate;
@@ -10374,11 +10400,11 @@ dateHelper = function ($, moment) {
   DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
     now = now || this.getNow();
     var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from.diff(to, 'days'),
-        fromDate: fromParts[0],
-        fromTime: useHours ? fromParts[1] : '',
-        toDate: toParts[0],
-        toTime: useHours ? toParts[1] : ''
+        dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+        fromDate: from ? fromParts[0] : 'No from date set',
+        fromTime: useHours && from != null ? fromParts[1] : '',
+        toDate: to ? toParts[0] : 'No to date set',
+        toTime: useHours && to != null ? toParts[1] : ''
       };
     result.fromText = result.fromDate;
     result.toText = result.toDate;
@@ -12312,19 +12338,30 @@ PermissionHandler = function () {
     case 'selfservice':
       this._canSetFlag = profile.selfServiceCanSetFlag;
       this._canClearFlag = profile.selfServiceCanClearFlag;
+      this._canSetLabel = profile.selfServiceCanSetLabel;
+      this._canClearLabel = profile.selfServiceCanClearLabel;
+      this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
+      this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
       break;
     case 'user':
       this._canSetFlag = profile.userCanSetFlag;
       this._canClearFlag = profile.userCanClearFlag;
+      this._canSetLabel = profile.userCanSetLabel;
+      this._canClearLabel = profile.userCanClearLabel;
+      this._canReadOrders = this._useOrders;
+      this._canCreateOrders = this._useOrders;
       break;
     default:
       this._canSetFlag = true;
       this._canClearFlag = true;
+      this._canSetLabel = true;
+      this._canClearLabel = true;
+      this._canReadOrders = this._useOrders;
+      this._canCreateOrders = this._useOrders;
       break;
     }
     if (this._isSelfService) {
       // Override some permissions for selfservice users
-      this._useOrders = this._useOrders && this._useSelfService && profile.selfServiceCanOrder;
       this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
       this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
     }
@@ -12366,6 +12403,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasReportingPermission = function () {
     return this._isRootOrAdmin && this._useReporting;
+  };
+  PermissionHandler.prototype.hasLabelPermission = function () {
+    return this._canSetLabel && this._canClearLabel;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -12466,7 +12506,7 @@ PermissionHandler = function () {
       case 'reserve':
         return this._useReservations;
       case 'checkout':
-        return this._useOrders;
+        return this._canCreateOrders;
       case 'takeCustody':
       case 'releaseCustody':
         return this._useCustody;
@@ -12512,7 +12552,7 @@ PermissionHandler = function () {
       case 'reserve':
         return this._useReservations;
       case 'checkout':
-        return this._useOrders;
+        return this._canCreateOrders;
       case 'takeCustody':
       case 'releaseCustody':
         return this._useCustody;
@@ -12530,9 +12570,11 @@ PermissionHandler = function () {
       // TODO: Add items to open check-out
       // CRUD
       case 'create':
-      case 'read':
       case 'update':
       case 'delete':
+        return this._canCreateOrders;
+      case 'read':
+        return this._canReadOrders;
       // Order specific actions
       case 'setCustomer':
       case 'clearCustomer':
@@ -12542,12 +12584,13 @@ PermissionHandler = function () {
       case 'removeItems':
       case 'swapItems':
       case 'undoCheckout':
-      case 'checkin':
       case 'checkout':
-      // Generic actions
+      case 'checkin':
       case 'setFields':
       case 'setField':
       case 'clearField':
+        return this._canCreateOrders;
+      // Generic actions
       case 'addAttachment':
       case 'addComment':
       case 'updateComment':
@@ -12566,7 +12609,7 @@ PermissionHandler = function () {
       case 'generateDocument':
         return this._usePdf && this._isRootOrAdminOrUser;
       case 'checkinAt':
-        return this._useCheckinLocation;
+        return this._canCreateOrders && this._useCheckinLocation;
       case 'forceCheckListCheckin':
         return this.profile.forceCheckListCheckin;
       case 'forceConflictResolving':
@@ -12597,7 +12640,6 @@ PermissionHandler = function () {
       case 'cancel':
       case 'undoCancel':
       case 'switchToOrder':
-      case 'makeOrder':
       case 'reserveAgain':
       case 'reserveRepeat':
       // Generic actions
@@ -12610,6 +12652,8 @@ PermissionHandler = function () {
       case 'removeComment':
       case 'export':
         return this._useReservations;
+      case 'makeOrder':
+        return this._canCreateOrders;
       case 'archive':
       case 'undoArchive':
         return this._useReservations && this._isRootOrAdmin;
@@ -15768,7 +15812,67 @@ ColorLabel = function ($) {
   };
   return ColorLabel;
 }(jquery);
-core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel) {
+Field = function ($) {
+  var DEFAULTS = {
+    name: null,
+    value: null,
+    required: false,
+    unit: '',
+    kind: 'string',
+    form: false,
+    editor: null,
+    description: ''
+  };
+  /**
+   * @name  Field
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var Field = function (spec) {
+    spec = spec || {};
+    this.raw = spec;
+    this.name = spec.name || DEFAULTS.name;
+    this.value = spec.value || DEFAULTS.value;
+    this.required = spec.required || DEFAULTS.required;
+    this.unit = spec.unit || DEFAULTS.unit;
+    this.kind = spec.kind || DEFAULTS.kind;
+    this.form = spec.form || DEFAULTS.form;
+    this.editor = spec.editor || DEFAULTS.editor;
+    this.description = spec.description || DEFAULTS.description;
+  };
+  /**
+   * isValid
+   * @name  Field#isValid
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isValid = function () {
+    if (!this.required)
+      return true;
+    return $.trim(this.value) != '';
+  };
+  /**
+   * isDirty
+   * @name  Field#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isDirty = function () {
+    return this.raw.value != this.value;
+  };
+  /**
+   * isEmpty
+   * @name  Field#isEmpty
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isEmpty = function () {
+    return $.trim(this.value) == '';
+  };
+  return Field;
+}(jquery);
+core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
   var core = {};
   // namespaces
   core.api = api;
@@ -15798,7 +15902,8 @@ core = function (api, Availability, Attachment, Base, Category, Comment, Conflic
   core.OrderTransfer = OrderTransfer;
   core.Helper = Helper;
   core.ColorLabel = ColorLabel;
+  core.Field = Field;
   return core;
-}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel);
+}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field);
 return core;
 }))

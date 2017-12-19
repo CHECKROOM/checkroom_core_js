@@ -309,11 +309,7 @@ define([
 
     api.ApiUser.prototype.isValid = function() {
         system.log('ApiUser: isValid');
-        return (
-        (this.userId) &&
-        (this.userId.length>0) &&
-        (this.userToken) &&
-        (this.userToken.length>0));
+        return (this.userId != null && this.userId.length>0) && (this.userToken != null && this.userToken.length>0);
     };
 
     api.ApiUser.prototype._reset = function() {
@@ -596,7 +592,7 @@ define([
     api.ApiDataSource.prototype.deleteMultiple = function(pks, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
         var cmd = "deleteMultiple";
-        var url = this.getBaseUrl() + '/delete';
+        var url = this.getBaseUrl() + 'delete';
 
         var p = { pk: pks };
         var geturl = url + '?' + this.getParams(p);

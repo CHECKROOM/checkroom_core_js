@@ -29,7 +29,8 @@ define([
     'WebHook',
     'common',
     'OrderTransfer',
-    'ColorLabel'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel) {
+    'ColorLabel',
+    'Field'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
 
     var core = {};
 
@@ -62,6 +63,7 @@ define([
     core.OrderTransfer = OrderTransfer;
     core.Helper = Helper;
     core.ColorLabel = ColorLabel;
+    core.Field = Field;
 
     return core;
 });

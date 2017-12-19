@@ -251,11 +251,11 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             fromParts = this.getFriendlyDateParts(from, now, format),
             toParts = this.getFriendlyDateParts(to, now, format),
             result = {
-                dayDiff: from.diff(to, 'days'),
-                fromDate: fromParts[0],
-                fromTime: (useHours) ? fromParts[1] : "",
-                toDate: toParts[0],
-                toTime: (useHours) ? toParts[1] : ""
+                dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+                fromDate: from ? fromParts[0] : "No from date set",
+                fromTime: (useHours && from != null) ? fromParts[1] : "",
+                toDate: to ? toParts[0] : "No to date set",
+                toTime: (useHours && to != null) ? toParts[1] : ""
             };
 
         result.fromText = result.fromDate;

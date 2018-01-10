@@ -31,7 +31,7 @@ module.exports = function(grunt){
             compile: {
                 options: {
                     baseUrl: "src/core",
-                    out: "build/<%= pkg.name %>.js",
+                    out: "build/core.js",
                     include: ['../core'],
                     exclude:['jquery', 'moment'],
                     paths:{
@@ -90,8 +90,8 @@ module.exports = function(grunt){
                 }
             },
             build: {
-                src: 'build/<%= pkg.name %>.js',
-                dest: 'build/<%= pkg.name %>.min.js'
+                src: 'build/core.js',
+                dest: 'build/core.min.js'
             },
             signup:{
                 src: 'build/signup.js',

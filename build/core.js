@@ -1,16 +1,16 @@
 (function (factory) {
 if (typeof define === 'function' && define.amd) {
-define(['jquery', 'moment', 'jquery-pubsub'], factory);
+define(['jquery', 'moment'], factory);
 } else {
-factory($, moment, pubsub);
+factory($, moment);
 }
-}(function (jquery, moment, jquery_pubsub) {/**
+}(function (jquery, moment) {/**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
 api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -4165,7 +4165,7 @@ common_transaction = function (moment, keyValues) {
   };
   return that;
 }(moment, common_keyValues);
-common_queue = function () {
+common_queue = function ($) {
   $.fn.ajaxQueue = function () {
     var previous = new $.Deferred().resolve();
     return function (fn, fail) {
@@ -4175,13 +4175,25 @@ common_queue = function () {
       return previous = previous.then(fn, fail || fn);
     };
   };
-}();
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue) {
+}(jquery);
+common_pubsub = function ($) {
+  var o = $({});
+  $.subscribe = function () {
+    o.on.apply(o, arguments);
+  };
+  $.unsubscribe = function () {
+    o.off.apply(o, arguments);
+  };
+  $.publish = function () {
+    o.trigger.apply(o, arguments);
+  };
+}(jquery);
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub) {
   /**
    * Return common object with different helper methods
    */
   return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub);
 colorLabel = function ($) {
   var DEFAULTS = {
     id: null,

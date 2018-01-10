@@ -1,17 +1,17 @@
 (function (factory) {
 if (typeof define === 'function' && define.amd) {
-define(['jquery', 'moment', 'jstz', 'jquery-jsonp', 'jquery-pubsub'], factory);
+define(['jquery', 'moment', 'jstz', 'jquery-pubsub'], factory);
 } else {
-factory($, moment, jstz, jsonp, pubsub);
+factory($, moment, jstz, pubsub);
 }
-}(function (jquery, moment, jstz, jquery_jsonp, jquery_pubsub) {/**
+}(function (jquery, moment, jstz, jquery_pubsub) {/**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
 var api, settings, common_inflection, common_validation, common_clientStorage, common_utils, signup;
-api = function ($, jsonp, moment) {
+api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
   //system.log fallback
@@ -101,25 +101,20 @@ api = function ($, jsonp, moment) {
    * The ajax communication object which makes the request to the API
    * @name ApiAjax
    * @param {object} spec
-   * @param {boolean} spec.useJsonp
    * @constructor
    * @memberof api
    */
   api.ApiAjax = function (spec) {
     spec = spec || {};
-    this.useJsonp = spec.useJsonp != null ? spec.useJsonp : true;
     this.timeOut = spec.timeOut || 10000;
     this.responseInTz = true;
   };
   api.ApiAjax.prototype.get = function (url, timeOut) {
     system.log('ApiAjax: get ' + url);
-    return this.useJsonp ? this._getJsonp(url, timeOut) : this._getAjax(url, timeOut);
+    return this._getAjax(url, timeOut);
   };
   api.ApiAjax.prototype.post = function (url, data, timeOut) {
     system.log('ApiAjax: post ' + url);
-    if (this.useJsonp) {
-      throw 'ApiAjax cannot post while useJsonp is true';
-    }
     return this._postAjax(url, data, timeOut);
   };
   // Implementation
@@ -219,34 +214,6 @@ api = function ($, jsonp, moment) {
       },
       error: function (x, t, m) {
         return that._handleAjaxError(dfd, x, t, m, opt);
-      }
-    });
-    // Extend promise with abort method
-    // to abort xhr request if needed
-    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-    var promise = dfd.promise();
-    promise.abort = function () {
-      xhr.abort();
-    };
-    return promise;
-  };
-  api.ApiAjax.prototype._getJsonp = function (url, timeOut, opt) {
-    var dfd = $.Deferred();
-    var that = this;
-    var xhr = $.jsonp({
-      url: url,
-      type: 'GET',
-      timeout: timeOut || this.timeOut,
-      dataType: ' jsonp',
-      callbackParameter: 'callback',
-      success: function (data, textStatus, xOptions) {
-        return that._handleAjaxSuccess(dfd, data);
-      },
-      error: function (xOptions, textStatus) {
-        // JSONP doesn't support HTTP status codes
-        // https://github.com/jaubourg/jquery-jsonp/issues/37
-        // so we can only return a simple error
-        dfd.reject(new api.ApiError(null, opt));
       }
     });
     // Extend promise with abort method
@@ -492,12 +459,7 @@ api = function ($, jsonp, moment) {
     this._ajaxGet(cmd, url).done(function (data) {
       dfd.resolve(data);
     }).fail(function (error) {
-      // This doesn't work when not in JSONP mode!!
-      // Since all errors are generic api.ApiErrors
-      // In jsonp mode, if a GET fails, assume it didn't exist
-      if (that.ajax.useJsonp) {
-        dfd.resolve(null);
-      } else if (error instanceof api.ApiNotFound) {
+      if (error instanceof api.ApiNotFound) {
         dfd.resolve(null);
       } else {
         dfd.reject(error);
@@ -539,12 +501,7 @@ api = function ($, jsonp, moment) {
     this.get(pk, fields).done(function (data) {
       dfd.resolve(data);
     }).fail(function (err) {
-      if (that.ajax.useJsonp) {
-        // In Jsonp mode, we cannot get other error messages than 500
-        // We'll assume that it doesn't exist when we get an error
-        // Jsonp is not really meant to run in production environment
-        dfd.resolve(null);
-      } else if (err instanceof api.ApiNotFound) {
+      if (err instanceof api.ApiNotFound) {
         dfd.resolve(null);
       } else {
         dfd.reject(err);
@@ -879,7 +836,7 @@ api = function ($, jsonp, moment) {
     });
   };
   return api;
-}(jquery, jquery_jsonp, moment);
+}(jquery, moment);
 settings = { amazonBucket: 'app' };
 common_inflection = function () {
   /**

@@ -164,10 +164,9 @@ define([], function () {
     };
 
     
-    PermissionHandler.prototype.hasWebhooksPermission = function(action, data, location) {
-        return this.hasPermission(action, "webhooks", data, location);
+    PermissionHandler.prototype.hasNotificationPermission = function(action, data, location){
+         return this.hasPermission(action, "notifications", data, location);
     };
-
     
     PermissionHandler.prototype.hasUserPermission = function(action, data, location) {
         return this.hasPermission(action, "users", data, location);
@@ -505,6 +504,17 @@ define([], function () {
                     case "testConnection":
                     case "syncUsers":
                         return this._useUserSync && this._isRootOrAdmin;
+                }
+                break;
+            case "notifications":
+                switch (action) {
+                    default:
+                        return false;
+                    case "read":
+                    case "create":
+                    case "update":
+                    case "delete":
+                        return this._isRootOrAdmin;
                 }
                 break;
             case "webhooks":

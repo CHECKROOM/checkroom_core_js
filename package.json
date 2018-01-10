@@ -1,13 +1,17 @@
 {
-  "name": "core",
+  "name": "cheqroom-core",
   "version": "1.1.0",
-  "description": "helper js api and models",
-  "main": "main.js",
+  "description": "A JavaScript wrapper around the CHEQROOM REST API",
+  "main": "build/core.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "CHEQROOM",
   "license": "ISC",
+  "dependencies":{
+    "jquery": "^1.9.1",
+    "moment": "^2.9.0"
+  },
   "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-contrib-clean": "^0.6.0",

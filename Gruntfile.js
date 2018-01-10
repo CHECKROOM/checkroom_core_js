@@ -33,11 +33,10 @@ module.exports = function(grunt){
                     baseUrl: "src/core",
                     out: "build/<%= pkg.name %>.js",
                     include: ['../core'],
-                    exclude:['jquery', 'jquery-pubsub', 'moment'],
+                    exclude:['jquery', 'moment'],
                     paths:{
                         "jquery": "empty:",
-                        "moment": "empty:",
-                        "jquery-pubsub": "empty:"
+                        "moment": "empty:"
                     },
                     optimize: "none",
                     onModuleBundleComplete: function (data) {
@@ -48,7 +47,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, pubsub);\n}\n}(function (jquery, moment, jquery_pubsub) {",
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\nfactory($, moment);\n}\n}(function (jquery, moment) {",
                                 "end": '\nreturn core;\n}))'
                             },
                         }));
@@ -63,7 +62,6 @@ module.exports = function(grunt){
                     exclude:['jquery', 'jstz', 'moment'],
                     paths:{
                         "jquery": "empty:",
-                        "jquery-pubsub": "empty:",
                         "jstz": "empty:",
                         "moment": "empty:"
                     },
@@ -76,7 +74,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jstz, pubsub);\n}\n}(function (jquery, moment, jstz, jquery_pubsub) {",
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz'], factory);\n} else {\nfactory($, moment, jstz);\n}\n}(function (jquery, moment, jstz) {",
                                 "end": '\nreturn signup;\n}))'
                             },
                         }));

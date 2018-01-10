@@ -26,7 +26,8 @@ define([
     'common/clientStorage',
     'common/document',
     'common/transaction',
-    'common/queue'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue) {
+    'common/queue',
+    'common/pubsub'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub) {
      /**
      * Return common object with different helper methods
      */

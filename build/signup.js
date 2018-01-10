@@ -1,10 +1,10 @@
 (function (factory) {
 if (typeof define === 'function' && define.amd) {
-define(['jquery', 'moment', 'jstz', 'jquery-pubsub'], factory);
+define(['jquery', 'moment', 'jstz'], factory);
 } else {
-factory($, moment, jstz, pubsub);
+factory($, moment, jstz);
 }
-}(function (jquery, moment, jstz, jquery_pubsub) {/**
+}(function (jquery, moment, jstz) {/**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
  * @namespace api

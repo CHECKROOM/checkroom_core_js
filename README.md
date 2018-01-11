@@ -2,28 +2,19 @@
 
 A JavaScript wrapper around the CHEQROOM REST API
 
-## Repo
-
-https://github.com/CHECKROOM/checkroom_core_js
-
 ## Docs
 http://checkroom.github.io/checkroom_core_js/
 
-## Installation
+## Install
 
-Install `sudo npm install` required npm packages
+```
+npm install cheqroom-core
+```
 
-## Build instructions
-
-Call `grunt` to build and run the tests
-
-Call `grunt docs` to rebuild the documentation
-
-Call `grunt gh-pages` to publish the documentation
-
-## Sample code
+## Usage
 
 ```javascript
+var cr = require('cheqroom-core');
 
 //
 // Authenticating via username and password
@@ -111,7 +102,6 @@ contact.get()
             });
     });
 
-```
 
 //
 // Query operators
@@ -145,6 +135,16 @@ istartswith – string field starts with value (case insensitive)
 endswith – string field ends with value
 iendswith – string field ends with value (case insensitive)
 match – performs an $elemMatch so you can match an entire document within an array
+
+```
+
+## Build instructions
+
+Call `grunt` to build and run the tests
+
+Call `grunt docs` to rebuild the documentation
+
+Call `grunt gh-pages` to publish the documentation
 
 - - -
 

@@ -196,7 +196,7 @@ define([
         var dateHelper = this._getDateHelper();
         var now = dateHelper.getNow();
         var next = dateHelper.roundTimeTo(now);
-        return next.add(365, "day"); // TODO: Is this a sensible date?
+        return next.add(2, "years");
     };
 
     /**
@@ -392,6 +392,16 @@ define([
         return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
     };
 
+    Transaction.prototype._getUniqueItemIds = function(ids){
+        ids = ids || [];
+
+        //https://stackoverflow.com/questions/38373364/the-best-way-to-remove-duplicate-strings-in-an-array
+        return ids.reduce(function(p,c,i,a){
+          if (p.indexOf(c) == -1) p.push(c);
+          return p;
+        }, []);
+    }
+
     // Setters
     // ----
 
@@ -585,11 +595,15 @@ define([
      */
     Transaction.prototype.addItems = function(items, skipRead) {
         var that = this;
+
+        //Remove duplicate item ids
+        items = that._getUniqueItemIds(items);
+
         return this._ensureTransactionExists(skipRead)
             .then(function() {
                 return that._doApiCall({
                     method: 'addItems',
-                    params: {items: items},
+                    params: {items: items },
                     skipRead: skipRead
                 });
             });
@@ -605,11 +619,15 @@ define([
      * @returns {promise}
      */
     Transaction.prototype.removeItems = function(items, skipRead) {
+        var that = this;
+
         if (!this.existsInDb()) {
             return $.Deferred().reject(new Error("Cannot removeItems from document without id"));
         }
 
-        var that = this;
+        //Remove duplicate item ids
+        items = that._getUniqueItemIds(items);
+
         return this._doApiCall({
             method: 'removeItems',
             params: {items: items},
@@ -617,7 +635,7 @@ define([
         })
             .then(function(data) {
                 return that._ensureTransactionDeleted().then(function(){
-                    return (skipRead==true) ? data : that._fromJson(data);
+                    return data;
                 });
             });
     };
@@ -642,7 +660,7 @@ define([
         })
             .then(function(data) {
                 return that._ensureTransactionDeleted().then(function(){
-                    return (skipRead==true) ? data : that._fromJson(data);
+                    return data;
                 });
             });
     };
@@ -828,7 +846,7 @@ define([
             // It requires some more parameters to be set
             params.onlyUnbooked = (onlyUnbooked!=null) ? onlyUnbooked : true;
             params.fromDate = this.from;
-            params.toDate = this.to;
+            params.toDate = this.to || this.due; //need due date for orders!!!!!
             params._limit = params._limit || 20;
             params._skip = params._skip || 0;
             if( (skipList) &&

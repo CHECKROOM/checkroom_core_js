@@ -75,6 +75,96 @@ define(['settings', 'helper', 'moment', 'cheqroom-core'], function(settings, hel
                     )
                         .done(function(contact, location, category) {
 
+                            asyncTest("Order - 422 handling checkin", function(){
+                                helper.getNewItem(dsItems, category, location, "qunit item").done(function(item){
+                                    var due = moment().add(5, "days");
+
+                                    helper.getNewOpenOrder(ds, dsItems, due, location, contact, [item.id]).done(function(order){
+
+                                        order.checkin().then(function(){
+                                            ok(true);
+
+                                            order.checkin().then(function(){
+                                                ok(true);
+
+                                                order.checkin([item.id], location._id, false, true).then(function(){
+                                                    ok(false);
+                                                }, function(){
+                                                    ok(true);
+                                                }).always(function(){
+                                                    start();
+                                                })
+                                            }, function(){
+                                                ok(false);
+                                            })
+
+                                        }, function(){
+                                            ok(false);
+                                        });                                                                              
+                                    })
+                                });                               
+                            });
+
+                            asyncTest("Order - 422 handling checkout", function(){
+                                helper.getNewItem(dsItems, category, location, "qunit item").done(function(item){
+                                    var due = moment().add(5, "days");
+
+                                    helper.getNewCreatingOrder(ds, dsItems, due, location, contact, [item.id]).done(function(order){
+
+                                        order.checkout().then(function(){
+                                            ok(true);
+
+                                            order.checkout().then(function(){
+                                                ok(true);
+
+                                                order.checkout(false, true).then(function(){
+                                                    ok(false);
+                                                }, function(){
+                                                    ok(true);
+                                                }).always(function(){
+                                                    start();
+                                                })
+                                            }, function(){
+                                                ok(false);
+                                            })
+
+                                        }, function(){
+                                            ok(false);
+                                        });                                                                              
+                                    })
+                                });                               
+                            });
+
+                            asyncTest("Order - 422 handling undoCheckout", function(){
+                                helper.getNewItem(dsItems, category, location, "qunit item").done(function(item){
+                                    var due = moment().add(5, "days");
+
+                                    helper.getNewOpenOrder(ds, dsItems, due, location, contact, [item.id]).done(function(order){
+
+                                        order.undoCheckout().then(function(){
+                                            ok(true);
+
+                                            order.undoCheckout().then(function(){
+                                                ok(true);
+
+                                                order.undoCheckout(false, true).then(function(){
+                                                    ok(false);
+                                                }, function(){
+                                                    ok(true);
+                                                }).always(function(){
+                                                    start();
+                                                })
+                                            }, function(){
+                                                ok(false);
+                                            })
+
+                                        }, function(){
+                                            ok(false);
+                                        });                                                                              
+                                    })
+                                });                               
+                            });
+
                             /*asyncTest("create Order object -- with location and contact objects set", function() {
                                 var order = new cr.Order({
                                     ds: ds,

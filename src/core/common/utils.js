@@ -95,7 +95,7 @@ define(['jquery'], function ($) {
      */
     utils.badgeify = function(count) {
         if (count>100) {
-            return "100+";
+            return "99+";
         } else if (count>10) {
             return "10+";
         } else if (count>0) {
@@ -163,6 +163,18 @@ define(['jquery'], function ($) {
             return [];
         }
     };
+
+    /**
+     * getFriendlyFileName
+     * @memberOf utils
+     * @name  utils#getFriendlyFileName
+     * @method
+     * @param  {string} name
+     * @return {string}
+     */
+    utils.getFriendlyFileName = function(name){
+        return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    }
 
     return utils;
 

@@ -59,7 +59,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              */
             getImageUrl: function(ds, pk, size, bustCache) {
                 var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-                if (size) {
+                if (size && size != 'orig') {
                     url += '&size=' + size;
                 }
                 if (bustCache) {
@@ -67,7 +67,10 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 return url;
             },
-            getICalUrl: function(urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+            getICalUrl: function(urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+                orderLabels = orderLabels || [];
+                reservationLabels = reservationLabels || [];
+
                 var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
                     parts = [];
 
@@ -77,12 +80,26 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 if (customerId) {
                     parts.push("customer=" + customerId);
                 }
-                if (!showOrders) {
-                    parts.push("skipOpenOrders=true");
-                }
-                if (!showReservations) {
+
+                var selectedReservationLabels = reservationLabels.filter(function(lbl){ return lbl.selected; }).map(function(lbl){ return lbl.id || ""; });
+                if (selectedReservationLabels.length == 0) {
                     parts.push("skipOpenReservations=true");
+                }else{
+                    // Only pass reservationLabels if user has made a custom selection
+                    if(selectedReservationLabels.length != reservationLabels.length){
+                        parts.push($.param({ "rlab": selectedReservationLabels }));
+                    }
                 }
+
+                var selectedOrderLabels = orderLabels.filter(function(lbl){ return lbl.selected; }).map(function(lbl){ return lbl.id || ""; });
+                if (selectedOrderLabels.length == 0) {
+                    parts.push("skipOpenOrders=true");
+                }else{
+                    // Only pass orderLabels if user has made a custom selection
+                    if(selectedOrderLabels.length != orderLabels.length){
+                        parts.push($.param({ "olab": selectedOrderLabels }));
+                    }
+                }                              
 
                 return (parts.length>0) ? url + "?" + parts.join("&") : url;
             },
@@ -181,95 +198,6 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 if(statTypeValue === undefined) throw "Stat value doesn't exist";
 
                 return statTypeValue;      
-            },
-            /**
-             * getAccessRights returns access rights based on the user role, profile settings 
-             * and account limits
-             *
-             * Deprecated: Use PermissionHandler instead
-             *
-             * @memberOf helper
-             * @method
-             * @name  helper#getAccessRights 
-             * 
-             * @param  role   
-             * @param  profile 
-             * @param  limits
-             * @return {object}       
-             */
-            getAccessRights: function(role, profile, limits) {
-                var isRootOrAdmin =         (role == "root") || (role == "admin");
-                var isRootOrAdminOrUser =   (role == "root") || (role == "admin") || (role == "user");
-                var useOrders = (limits.allowOrders) && (profile.useOrders);
-                var useReservations = (limits.allowReservations) && (profile.useReservations);
-                var useOrderAgreements = (limits.allowGeneratePdf) && (profile.useOrderAgreements);
-                var useWebHooks = (limits.allowWebHooks);
-                var useKits = (limits.allowKits) && (profile.useKits);
-                var useCustody = (limits.allowCustody) && (profile.useCustody);
-                var useOrderTransfers = (limits.allowOrderTransfers) && (profile.useOrderTransfers);
-
-                return {
-                    contacts: {
-                        create: isRootOrAdminOrUser,
-                        remove: isRootOrAdminOrUser,
-                        update: true,
-                        archive: isRootOrAdminOrUser
-                    },
-                    items: {
-                        create: isRootOrAdmin,
-                        remove: isRootOrAdmin,
-                        update: isRootOrAdmin,
-                        updateFlag: isRootOrAdmin,
-                        updateLocation: isRootOrAdmin,
-                        updateGeo: true
-                    },
-                    orders: {
-                        create: useOrders,
-                        remove: useOrders,
-                        update: useOrders,
-                        updateContact: (role != "selfservice"),
-                        updateLocation: useOrders,
-                        generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
-                        transferOrder: useOrders && useOrderTransfers,
-                        archive: useOrders && isRootOrAdminOrUser
-                    },
-                    reservations: {
-                        create: useReservations,
-                        remove: useReservations,
-                        update: useReservations,
-                        updateContact: useReservations && (role != "selfservice"),
-                        updateLocation: useReservations,
-                        archive: useReservations && isRootOrAdminOrUser
-                    },
-                    locations: {
-                        create: isRootOrAdmin,
-                        remove: isRootOrAdmin,
-                        update: isRootOrAdmin
-                    },
-                    users: {
-                        create: isRootOrAdmin,
-                        remove: isRootOrAdmin,
-                        update: isRootOrAdmin,
-                        updateOther: isRootOrAdmin,
-                        updateOwn: true
-                    },
-                    webHooks: {
-                        create: useWebHooks && isRootOrAdmin,
-                        remove: useWebHooks && isRootOrAdmin,
-                        update: useWebHooks && isRootOrAdmin
-                    },
-                    stickers: {
-                        print: isRootOrAdmin,
-                        buy: isRootOrAdmin
-                    },
-                    categories: {
-                        create: isRootOrAdmin,
-                        update: isRootOrAdmin
-                    },
-                    account: {
-                        update: isRootOrAdmin
-                    }
-                }
             },
             /**
              * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 

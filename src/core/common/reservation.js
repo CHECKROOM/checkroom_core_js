@@ -41,6 +41,30 @@ define(function () {
                 default: return 'Unknown';
             }
         },
+        /**
+         * getFriendlyReservationFrequency
+         *
+         * @memberOf common
+         * @name  common#getFriendlyReservationFrequency
+         * @method
+         * 
+         * @param  {string} frequency 
+         * @return {string}        
+         */
+        getFriendlyReservationFrequency: function(frequency) {
+            switch(frequency) {
+                case 'every_day': return 'Repeats every day';
+                case 'every_weekday': return 'Repeats every weekday';
+                case 'every_week': return 'Repeats every week';
+                case 'every_2_weeks': return 'Repeats every 2 weeks';
+                case 'every_month': return "Repeats every month";
+                case 'every_2_months': return "Repeats every 2 months";
+                case 'every_3_months': return "Repeats every 3 months";
+                case 'every_6_months': return "Repeats every 6 months";
+                default: return 'Repeating reservation';
+            }
+        },
+
          /**
          * isReservationOverdue
          *
@@ -54,7 +78,7 @@ define(function () {
          */
         isReservationOverdue: function(reservation, now) {
             now = now || moment();
-            return (reservation.status=="open") && (now.isAfter(reservation.fromDate));
+            return (reservation.status=="open") && (now.isAfter(reservation.fromDate || reservation.from));
         },
         /**
          * isReservationInThePast

@@ -16,6 +16,8 @@ define(['jquery'], function ($) {
          * @return {string}	base64 image url    
          */
         getAvatarInitial: function (name, size) {
+            name = name || "Unknown";
+
             var sizes = {
                 "XS": 32,    
                 "S": 64,
@@ -71,6 +73,19 @@ define(['jquery'], function ($) {
          * @return {string} base64 image url    
          */
         getMaintenanceAvatar: function(size){
+            return this.getIconAvatar(size, "f0ad");
+        },
+        /**
+         * Returns an icon avatar image from FontAwesome collection
+         *
+         * @memberOf  common
+         * @name  common#getIconAvatar
+         * @method
+         * 
+         * @param  {string} size Possible values XS,S,M,L,XL
+         * @return {string} base64 image url    
+         */
+        getIconAvatar: function(size, value){
             var sizes = {
                 "XS": 32,    
                 "S": 64,
@@ -103,7 +118,7 @@ define(['jquery'], function ($) {
             context.font = canvasWidth / 2 + "px FontAwesome";
             context.textAlign = "center";
             context.fillStyle = "#aaa";
-            context.fillText(String.fromCharCode("0xf0ad"), canvasCssWidth / 2, canvasCssHeight / 1.5);
+            context.fillText(String.fromCharCode("0x" + value), canvasCssWidth / 2, canvasCssHeight / 1.5);
 
             return $canvas.get(0).toDataURL();
         },
@@ -162,7 +177,8 @@ define(['jquery'], function ($) {
          */
         getImageUrl: function(ds, pk, size, bustCache) {
             var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-            if (size) {
+            
+            if (size && size != "orig") {
                 url += '&size=' + size;
             }
             if  (bustCache) {

@@ -20,20 +20,23 @@ define([], function () {
         this._isRootOrAdminOrUser =   (user.role == "root") || (user.role == "admin") || (user.role == "user");
         this._isSelfService =         (user.role == "selfservice");
         this._useWebHooks =           (limits.allowWebHooks);
-        this._useOrders =             (limits.allowOrders) &&           (profile.useOrders);
-        this._useReservations =       (limits.allowReservations) &&     (profile.useReservations);
+        this._useOrders =             (limits.allowOrders) &&               (profile.useOrders);
+        this._useReservations =       (limits.allowReservations) &&         (profile.useReservations);
         this._usePdf =                (limits.allowGeneratePdf);
-        this._useKits =               (limits.allowKits) &&             (profile.useKits);
-        this._useCustody =            (limits.allowCustody) &&          (profile.useCustody);
-        this._useGeo =                                                  (profile.useGeo);
-        this._useSelfService =        (limits.allowSelfService) &&      (profile.useSelfService);
-        this._useCheckinLocation =    (this._useOrders) &&              (profile.orderCheckinLocation);
-        this._usePublicSelfService =  (limits.allowSelfService) &&      (profile.usePublicSelfService);
-        this._useOrderTransfers =     (limits.allowOrderTransfers) &&   (profile.useOrderTransfers);
-        this._useSendMessage =        (limits.allowSendMessage) &&      (profile.useSendMessage);
-        this._useUserSync =           (limits.allowUserSync) &&         (profile.useUserSync);
+        this._useKits =               (limits.allowKits) &&                 (profile.useKits);
+        this._useCustody =            (limits.allowCustody) &&              (profile.useCustody);
+        this._useGeo =                                                      (profile.useGeo);
+        this._useSelfService =        (limits.allowSelfService) &&          (profile.useSelfService);
+        this._useCheckinLocation =    (this._useOrders) &&                  (profile.orderCheckinLocation);
+        this._usePublicSelfService =  (limits.allowSelfService) &&          (profile.usePublicSelfService);
+        this._useOrderTransfers =     (limits.allowOrderTransfers) &&       (profile.useOrderTransfers);
+        this._useSendMessage =        (limits.allowSendMessage) &&          (profile.useSendMessage);
+        this._useUserSync =           (limits.allowUserSync) &&             (profile.useUserSync);
         this._useFlags =              (profile.useFlags);
         this._useGeo =                (profile.useGeo);
+        this._useRestrictLocations =  (limits.allowRestrictLocations) &&    (profile.useRestrictLocations);
+        this._useReporting =          (limits.allowReporting) &&            (profile.useReporting);
+        this._useDepreciations =      (limits.allowDepreciations) &&        (profile.useDepreciations);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -42,20 +45,31 @@ define([], function () {
             case "selfservice":
                 this._canSetFlag = profile.selfServiceCanSetFlag;
                 this._canClearFlag = profile.selfServiceCanClearFlag;
+                this._canSetLabel = profile.selfServiceCanSetLabel;
+                this._canClearLabel = profile.selfServiceCanClearLabel;
+                this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
+                this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
                 break;
             case "user":
                 this._canSetFlag = profile.userCanSetFlag;
                 this._canClearFlag = profile.userCanClearFlag;
+                this._canSetLabel = profile.userCanSetLabel;
+                this._canClearLabel = profile.userCanClearLabel;
+                this._canReadOrders = this._useOrders;
+                this._canCreateOrders = this._useOrders;
                 break;
             default:
                 this._canSetFlag = true;
                 this._canClearFlag = true;
+                this._canSetLabel = true;
+                this._canClearLabel = true;
+                this._canReadOrders = this._useOrders;
+                this._canCreateOrders = this._useOrders;
                 break;
         }
 
         if (this._isSelfService) {
             // Override some permissions for selfservice users
-            this._useOrders = this._useOrders && this._useSelfService && profile.selfServiceCanOrder;
             this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
             this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
         }
@@ -87,7 +101,7 @@ define([], function () {
 
     
     PermissionHandler.prototype.hasItemPermission = function(action, data, location) {
-        return this.hasPermission(action, "items", data, location);
+        return this.hasPermission(action || "read", "items", data, location);
     };
 
     PermissionHandler.prototype.hasItemCustodyPermission = function() {
@@ -102,18 +116,32 @@ define([], function () {
         return this._useGeo;
     };
 
-    PermissionHandler.prototype.hasItemGeoPermission = function(){
-        return this._useGeo;
+    PermissionHandler.prototype.hasItemDepreciationPermission = function() {
+        return this._isRootOrAdmin && this._useDepreciations;
     };
 
+    PermissionHandler.prototype.hasUserSyncPermission = function(){
+        return this.hasAccountUserSyncPermission("read");
+    };
+
+    PermissionHandler.prototype.hasSelfservicePermission = function(){
+        return this._useSelfService;
+    };
     
+    PermissionHandler.prototype.hasReportingPermission = function() {
+        return this._isRootOrAdmin && this._useReporting;
+    };
+
+    PermissionHandler.prototype.hasLabelPermission = function() {
+        return this._canSetLabel && this._canClearLabel;
+    };
+
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
         return this.hasPermission(action || "read", "kits", data, location);
     };
-
     
     PermissionHandler.prototype.hasContactPermission = function(action, data, location) {
-        return this.hasPermission(action, "contacts", data, location);
+        return this.hasPermission(action || "read", "contacts", data, location);
     };
 
     PermissionHandler.prototype.hasContactReadOtherPermission = function(action, data, location) {
@@ -136,10 +164,9 @@ define([], function () {
     };
 
     
-    PermissionHandler.prototype.hasWebhooksPermission = function(action, data, location) {
-        return this.hasPermission(action, "webhooks", data, location);
+    PermissionHandler.prototype.hasNotificationPermission = function(action, data, location){
+         return this.hasPermission(action, "notifications", data, location);
     };
-
     
     PermissionHandler.prototype.hasUserPermission = function(action, data, location) {
         return this.hasPermission(action, "users", data, location);
@@ -150,11 +177,13 @@ define([], function () {
         return this.hasPermission(action, "locations", data, location);
     };
 
+    PermissionHandler.prototype.hasRestrictLocationPermission = function(){
+        return this._useRestrictLocations; 
+    };
     
     PermissionHandler.prototype.hasWebhookPermission = function(action, data, location) {
         return this.hasPermission(action, "webhooks", data, location);
     };
-
     
     PermissionHandler.prototype.hasAccountPermission = function(action, data, location) {
         return this.hasPermission(action, "account", data, location);
@@ -231,7 +260,7 @@ define([], function () {
                     case "reserve":
                         return this._useReservations;
                     case "checkout":
-                        return this._useOrders;
+                        return this._canCreateOrders;
                     case "takeCustody":
                     case "releaseCustody":
                         return this._useCustody;
@@ -277,7 +306,7 @@ define([], function () {
                     case "reserve":
                         return this._useReservations;
                     case "checkout":
-                        return this._useOrders;
+                        return this._canCreateOrders;
                     case "takeCustody":
                     case "releaseCustody":
                         return this._useCustody;
@@ -297,9 +326,11 @@ define([], function () {
 
                     // CRUD
                     case "create":
-                    case "read":
                     case "update":
                     case "delete":
+                        return this._canCreateOrders;
+                    case "read":
+                        return this._canReadOrders;                    
                     // Order specific actions
                     case "setCustomer":
                     case "clearCustomer":
@@ -309,20 +340,22 @@ define([], function () {
                     case "removeItems":
                     case "swapItems":
                     case "undoCheckout":
-                    case "checkin":
                     case "checkout":
-                    // Generic actions
+                    case "checkin":
                     case "setFields":
                     case "setField":
                     case "clearField":
+                        return this._canCreateOrders;
+                    // Generic actions
                     case "addAttachment":
                     case "addComment":
                     case "updateComment":
                     case "removeComment":
                     case "export":
+                        return this._useOrders;           
                     case "archive":
                     case "undoArchive":
-                        return this._useOrders;
+                        return this._useOrders && this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;
@@ -330,9 +363,11 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf;
+                        return this._usePdf && this._isRootOrAdminOrUser;
                     case "checkinAt":
-                        return this._useCheckinLocation;
+                        return this._canCreateOrders && this._useCheckinLocation;
+                    case "forceCheckListCheckin":
+                        return this.profile.forceCheckListCheckin;
                     case "forceConflictResolving":
                         return false; // this.profile.forceConflictResolving;
                 }
@@ -363,7 +398,6 @@ define([], function () {
                     case "cancel":
                     case "undoCancel":
                     case "switchToOrder":
-                    case "makeOrder":
                     case "reserveAgain":
                     case "reserveRepeat":
                     // Generic actions
@@ -375,9 +409,12 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
+                        return this._useReservations;
+                    case "makeOrder":
+                        return this._canCreateOrders;
                     case "archive":
                     case "undoArchive":
-                        return this._useReservations;
+                        return this._useReservations && this._isRootOrAdmin;
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;
@@ -385,7 +422,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf;
+                        return this._usePdf && this._isRootOrAdminOrUser;
                 }
                 break;
             case "customers":
@@ -416,7 +453,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf;
+                        return this._usePdf && this._isRootOrAdminOrUser;
                 }
                 break;
             case "users":
@@ -451,6 +488,7 @@ define([], function () {
                     case "create":
                     case "update":
                     case "delete":
+                    case "archive":
                         return this._isRootOrAdmin;
                 }
                 break;
@@ -466,6 +504,17 @@ define([], function () {
                     case "testConnection":
                     case "syncUsers":
                         return this._useUserSync && this._isRootOrAdmin;
+                }
+                break;
+            case "notifications":
+                switch (action) {
+                    default:
+                        return false;
+                    case "read":
+                    case "create":
+                    case "update":
+                    case "delete":
+                        return this._isRootOrAdmin;
                 }
                 break;
             case "webhooks":
@@ -497,7 +546,6 @@ define([], function () {
                     default:
                         return false;
                     case "read":
-                        return true;
                     case "create":
                     case "update":
                     case "delete":

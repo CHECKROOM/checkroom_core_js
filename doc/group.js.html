@@ -101,6 +101,8 @@
             
                 <li data-name="common#getCheqRoomRedirectUrlQR"><a href="common.html#getCheqRoomRedirectUrlQR">getCheqRoomRedirectUrlQR</a></li>
             
+                <li data-name="common#getContactImageCDNUrl"><a href="common.html#getContactImageCDNUrl">getContactImageCDNUrl</a></li>
+            
                 <li data-name="common#getContactImageUrl"><a href="common.html#getContactImageUrl">getContactImageUrl</a></li>
             
                 <li data-name="common#getDocumentIds"><a href="common.html#getDocumentIds">getDocumentIds</a></li>
@@ -125,6 +127,8 @@
             
                 <li data-name="common#getFriendlyReservationDuration"><a href="common.html#getFriendlyReservationDuration">getFriendlyReservationDuration</a></li>
             
+                <li data-name="common#getFriendlyReservationFrequency"><a href="common.html#getFriendlyReservationFrequency">getFriendlyReservationFrequency</a></li>
+            
                 <li data-name="common#getFriendlyReservationStatus"><a href="common.html#getFriendlyReservationStatus">getFriendlyReservationStatus</a></li>
             
                 <li data-name="common#getFriendlyTemplateCss"><a href="common.html#getFriendlyTemplateCss">getFriendlyTemplateCss</a></li>
@@ -132,6 +136,8 @@
                 <li data-name="common#getFriendlyTemplateSize"><a href="common.html#getFriendlyTemplateSize">getFriendlyTemplateSize</a></li>
             
                 <li data-name="common#getFriendlyTemplateStatus"><a href="common.html#getFriendlyTemplateStatus">getFriendlyTemplateStatus</a></li>
+            
+                <li data-name="common#getIconAvatar"><a href="common.html#getIconAvatar">getIconAvatar</a></li>
             
                 <li data-name="common#getImageCDNUrl"><a href="common.html#getImageCDNUrl">getImageCDNUrl</a></li>
             
@@ -168,6 +174,8 @@
                 <li data-name="common#getReservationDuration"><a href="common.html#getReservationDuration">getReservationDuration</a></li>
             
                 <li data-name="common#getTransactionSummary"><a href="common.html#getTransactionSummary">getTransactionSummary</a></li>
+            
+                <li data-name="common#getUserImageCDNUrl"><a href="common.html#getUserImageCDNUrl">getUserImageCDNUrl</a></li>
             
                 <li data-name="common#getUserImageUrl"><a href="common.html#getUserImageUrl">getUserImageUrl</a></li>
             
@@ -249,25 +257,6 @@
         <li class="item" data-name="api.ApiAnonymous">
             <span class="title">
                 <a href="api.ApiAnonymous.html">api.ApiAnonymous</a>
-                
-            </span>
-            <ul class="members itemMembers">
-            
-            </ul>
-            <ul class="typedefs itemMembers">
-            
-            </ul>
-            <ul class="methods itemMembers">
-            
-            </ul>
-            <ul class="events itemMembers">
-            
-            </ul>
-        </li>
-    
-        <li class="item" data-name="api.ApiAuthV2">
-            <span class="title">
-                <a href="api.ApiAuthV2.html">api.ApiAuthV2</a>
                 
             </span>
             <ul class="members itemMembers">
@@ -411,9 +400,15 @@
             
                 <li data-name="Base#clearFlag"><a href="Base.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Base#clearLabel"><a href="Base.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
             
                 <li data-name="Base#setFlag"><a href="Base.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Base#setLabel"><a href="Base.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Base#updateFields"><a href="Base.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -518,6 +513,35 @@
             </ul>
         </li>
     
+        <li class="item" data-name="ColorLabel">
+            <span class="title">
+                <a href="ColorLabel.html">ColorLabel</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="ColorLabel#_fromJson"><a href="ColorLabel.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="ColorLabel#_toJson"><a href="ColorLabel.html#_toJson">_toJson</a></li>
+            
+                <li data-name="ColorLabel#isDirty"><a href="ColorLabel.html#isDirty">isDirty</a></li>
+            
+                <li data-name="ColorLabel#isValid"><a href="ColorLabel.html#isValid">isValid</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
         <li class="item" data-name="Comment">
             <span class="title">
                 <a href="Comment.html">Comment</a>
@@ -583,11 +607,17 @@
             
                 <li data-name="Contact#clearFlag"><a href="Contact.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Contact#clearLabel"><a href="Contact.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
             
                 <li data-name="Contact#setFlag"><a href="Contact.html#setFlag">setFlag</a></li>
             
+                <li data-name="Contact#setLabel"><a href="Contact.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Contact#undoArchive"><a href="Contact.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Contact#updateFields"><a href="Contact.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -869,11 +899,15 @@
             
                 <li data-name="Item#clearFlag"><a href="Item.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Item#clearLabel"><a href="Item.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Item#duplicate"><a href="Item.html#duplicate">duplicate</a></li>
             
                 <li data-name="Item#expire"><a href="Item.html#expire">expire</a></li>
             
                 <li data-name="Item#getAvailabilities"><a href="Item.html#getAvailabilities">getAvailabilities</a></li>
+            
+                <li data-name="Item#getDepreciation"><a href="Item.html#getDepreciation">getDepreciation</a></li>
             
                 <li data-name="Item#getLastNumber"><a href="Item.html#getLastNumber">getLastNumber</a></li>
             
@@ -889,6 +923,8 @@
             
                 <li data-name="Item#setFlag"><a href="Item.html#setFlag">setFlag</a></li>
             
+                <li data-name="Item#setLabel"><a href="Item.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Item#takeCustody"><a href="Item.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Item#transferCustody"><a href="Item.html#transferCustody">transferCustody</a></li>
@@ -896,6 +932,8 @@
                 <li data-name="Item#undoExpire"><a href="Item.html#undoExpire">undoExpire</a></li>
             
                 <li data-name="Item#updateBasicFields"><a href="Item.html#updateBasicFields">updateBasicFields</a></li>
+            
+                <li data-name="Item#updateFields"><a href="Item.html#updateFields">updateFields</a></li>
             
                 <li data-name="Item#updateGeo"><a href="Item.html#updateGeo">updateGeo</a></li>
             
@@ -974,6 +1012,8 @@
             
                 <li data-name="Kit#clearFlag"><a href="Kit.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Kit#clearLabel"><a href="Kit.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Kit#duplicate"><a href="Kit.html#duplicate">duplicate</a></li>
             
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
@@ -986,9 +1026,13 @@
             
                 <li data-name="Kit#setFlag"><a href="Kit.html#setFlag">setFlag</a></li>
             
+                <li data-name="Kit#setLabel"><a href="Kit.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Kit#takeCustody"><a href="Kit.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Kit#transferCustody"><a href="Kit.html#transferCustody">transferCustody</a></li>
+            
+                <li data-name="Kit#updateFields"><a href="Kit.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1071,7 +1115,13 @@
             
                 <li data-name="Location#clearFlag"><a href="Location.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Location#clearLabel"><a href="Location.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Location#setFlag"><a href="Location.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Location#setLabel"><a href="Location.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Location#updateFields"><a href="Location.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1152,11 +1202,17 @@
             
                 <li data-name="Order#clearFlag"><a href="Order.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Order#clearLabel"><a href="Order.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Order#isValidDueDate"><a href="Order.html#isValidDueDate">isValidDueDate</a></li>
             
                 <li data-name="Order#setFlag"><a href="Order.html#setFlag">setFlag</a></li>
             
+                <li data-name="Order#setLabel"><a href="Order.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Order#undoArchive"><a href="Order.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Order#updateFields"><a href="Order.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1317,6 +1373,8 @@
             
                 <li data-name="OrderTransfer#clearFlag"><a href="OrderTransfer.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="OrderTransfer#clearLabel"><a href="OrderTransfer.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="OrderTransfer#isDirty"><a href="OrderTransfer.html#isDirty">isDirty</a></li>
             
                 <li data-name="OrderTransfer#isEmpty"><a href="OrderTransfer.html#isEmpty">isEmpty</a></li>
@@ -1327,9 +1385,13 @@
             
                 <li data-name="OrderTransfer#setFlag"><a href="OrderTransfer.html#setFlag">setFlag</a></li>
             
+                <li data-name="OrderTransfer#setLabel"><a href="OrderTransfer.html#setLabel">setLabel</a></li>
+            
                 <li data-name="OrderTransfer#start"><a href="OrderTransfer.html#start">start</a></li>
             
                 <li data-name="OrderTransfer#undoStart"><a href="OrderTransfer.html#undoStart">undoStart</a></li>
+            
+                <li data-name="OrderTransfer#updateFields"><a href="OrderTransfer.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1425,9 +1487,15 @@
             
                 <li data-name="Reservation#clearFlag"><a href="Reservation.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Reservation#clearLabel"><a href="Reservation.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Reservation#setFlag"><a href="Reservation.html#setFlag">setFlag</a></li>
             
+                <li data-name="Reservation#setLabel"><a href="Reservation.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Reservation#undoArchive"><a href="Reservation.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Reservation#updateFields"><a href="Reservation.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1448,6 +1516,8 @@
                 <li data-name="Reservation#canCancel"><a href="Reservation.html#canCancel">canCancel</a></li>
             
                 <li data-name="Reservation#cancel"><a href="Reservation.html#cancel">cancel</a></li>
+            
+                <li data-name="Reservation#cancelRepeat"><a href="Reservation.html#cancelRepeat">cancelRepeat</a></li>
             
                 <li data-name="Reservation#canDelete"><a href="Reservation.html#canDelete">canDelete</a></li>
             
@@ -1673,9 +1743,15 @@
             
                 <li data-name="Transaction#clearFlag"><a href="Transaction.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Transaction#clearLabel"><a href="Transaction.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Transaction#setFlag"><a href="Transaction.html#setFlag">setFlag</a></li>
             
+                <li data-name="Transaction#setLabel"><a href="Transaction.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Transaction#undoArchive"><a href="Transaction.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Transaction#updateFields"><a href="Transaction.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1800,7 +1876,13 @@
             
                 <li data-name="User#clearFlag"><a href="User.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="User#clearLabel"><a href="User.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="User#setFlag"><a href="User.html#setFlag">setFlag</a></li>
+            
+                <li data-name="User#setLabel"><a href="User.html#setLabel">setLabel</a></li>
+            
+                <li data-name="User#updateFields"><a href="User.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1873,13 +1955,19 @@
             
                 <li data-name="UserSync#clearFlag"><a href="UserSync.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="UserSync#clearLabel"><a href="UserSync.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="UserSync#clone"><a href="UserSync.html#clone">clone</a></li>
             
                 <li data-name="UserSync#setFlag"><a href="UserSync.html#setFlag">setFlag</a></li>
             
+                <li data-name="UserSync#setLabel"><a href="UserSync.html#setLabel">setLabel</a></li>
+            
                 <li data-name="UserSync#syncUsers"><a href="UserSync.html#syncUsers">syncUsers</a></li>
             
                 <li data-name="UserSync#testConnection"><a href="UserSync.html#testConnection">testConnection</a></li>
+            
+                <li data-name="UserSync#updateFields"><a href="UserSync.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -2023,6 +2111,11 @@ define([
         customerFields: [],
         orderFields: [],
         reservationFields: [],
+        itemLabels: [],
+        kitLabels: [],
+        customerLabels: [],
+        reservationLabels: [],
+        orderLabels: [],
         cancelled: null
     };
 
@@ -2046,6 +2139,11 @@ define([
      * @property {array} customerFields     the groups customer fields
      * @property {array} reservationFields  the groups reservation fields
      * @property {array} orderFields        the groups order fields
+     * @property {array} itemLabels         the groups item labels
+     * @property {array} kitLabels          the groups kit labels
+     * @property {array} customerLabels     the groups customer labels
+     * @property {array} reservationLabels  the groups reservation labels
+     * @property {array} orderLabels        the groups order labels
      * @constructor
      * @extends Document
      */
@@ -2064,6 +2162,11 @@ define([
         this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
         this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
         this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
+        this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
+        this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
+        this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
+        this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+        this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
     };
 
     Group.prototype = new tmp();
@@ -2215,6 +2318,71 @@ define([
                 collection: collection,
                 oldPos: oldPos,
                 newPos: newPos
+            }
+        });
+    };
+
+    /**
+     * Add document label
+     * @param collection (items, kits, customers, reservations, orders)
+     * @param labelColor
+     * @param labelName
+     * @param skipRead
+     * @returns {promise}
+     */
+    Group.prototype.createLabel = function(collection, labelColor, labelName, skipRead) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "createLabel",
+            skipRead: skipRead,
+            params: {
+                collection: collection,
+                labelColor: labelColor,
+                labelName: labelName
+            }
+        });
+    };
+
+    /**
+     * Updates document label
+     * @param collection (items, kits, customers, reservations, orders)
+     * @param labelId
+     * @param labelColor
+     * @param labelName
+     * @param skipRead
+     * @returns {promise}
+     */
+    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, skipRead) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "updateLabel",
+            skipRead: skipRead,
+            params: {
+                collection: collection,
+                labelId: labelId,
+                labelColor: labelColor,
+                labelName: labelName
+            }
+        });
+    };
+
+     /**
+     * Removes document label
+     * @param collection (items, kits, customers, reservations, orders)
+     * @param labelId
+     * @param labelColor
+     * @param labelName
+     * @param skipRead
+     * @returns {promise}
+     */
+    Group.prototype.deleteLabel = function(collection, labelId, skipRead) {
+        return this._doApiCall({
+            pk: this.id,
+            method: "deleteLabel",
+            skipRead: skipRead,
+            params: {
+                collection: collection,
+                labelId: labelId
             }
         });
     };
@@ -2406,9 +2574,44 @@ define([
                 that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
                 that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
                 that.cancelled = data.cancelled || DEFAULTS.cancelled;
-                
-                return data;
+                    
+                return that._fromColorLabelsJson(data, options);                
             });
+    };
+
+    /**
+     * _fromColorLabelsJson: reads the document labels
+     * @param data
+     * @param options
+     * @returns {*}
+     * @private
+     */
+    Group.prototype._fromColorLabelsJson = function(data, options) {
+         var obj = null,
+            that = this;
+
+        $.each(['itemLabels', 'kitLabels', 'customerLabels', 'reservationLabels', 'orderLabels'], function(i, labelsKey){
+            that[labelsKey] = DEFAULTS[labelsKey].slice();
+            
+            if(labelsKey == "orderLabels"){
+                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "SlateGray" }, options));
+            }
+            if(labelsKey == "reservationLabels"){
+                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "LimeGreen" }, options));
+            }
+
+            if( (data[labelsKey]) &&
+                (data[labelsKey].length>0)) {
+                $.each(data[labelsKey], function(i, label) {
+                    obj = that._getColorLabel(label, options);
+                    if (obj) {
+                        that[labelsKey].push(obj);
+                    }
+                });
+            }
+        });
+
+        return $.Deferred().resolve(data);
     };
 
     return Group;
@@ -2426,7 +2629,7 @@ define([
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon May 29 2017 15:56:36 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Wed Jan 10 2018 10:41:37 GMT+0100 (CET)
         </footer>
     </div>
 </div>

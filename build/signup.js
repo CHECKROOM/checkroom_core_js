@@ -1,17 +1,17 @@
 (function (factory) {
 if (typeof define === 'function' && define.amd) {
-define(['jquery', 'moment', 'jstz', 'jquery-jsonp', 'jquery-pubsub'], factory);
+define(['jquery', 'moment', 'jstz'], factory);
 } else {
-factory($, moment, jstz, jsonp, pubsub);
+factory($, moment, jstz);
 }
-}(function (jquery, moment, jstz, jquery_jsonp, jquery_pubsub) {/**
+}(function (jquery, moment, jstz) {/**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
-var api, settings, common_inflection, common_validation, common_utils, signup;
-api = function ($, jsonp, moment) {
+var api, settings, common_inflection, common_validation, common_clientStorage, common_utils, signup;
+api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
   //system.log fallback
@@ -101,25 +101,20 @@ api = function ($, jsonp, moment) {
    * The ajax communication object which makes the request to the API
    * @name ApiAjax
    * @param {object} spec
-   * @param {boolean} spec.useJsonp
    * @constructor
    * @memberof api
    */
   api.ApiAjax = function (spec) {
     spec = spec || {};
-    this.useJsonp = spec.useJsonp != null ? spec.useJsonp : true;
     this.timeOut = spec.timeOut || 10000;
     this.responseInTz = true;
   };
   api.ApiAjax.prototype.get = function (url, timeOut) {
     system.log('ApiAjax: get ' + url);
-    return this.useJsonp ? this._getJsonp(url, timeOut) : this._getAjax(url, timeOut);
+    return this._getAjax(url, timeOut);
   };
   api.ApiAjax.prototype.post = function (url, data, timeOut) {
     system.log('ApiAjax: post ' + url);
-    if (this.useJsonp) {
-      throw 'ApiAjax cannot post while useJsonp is true';
-    }
     return this._postAjax(url, data, timeOut);
   };
   // Implementation
@@ -230,34 +225,6 @@ api = function ($, jsonp, moment) {
     };
     return promise;
   };
-  api.ApiAjax.prototype._getJsonp = function (url, timeOut, opt) {
-    var dfd = $.Deferred();
-    var that = this;
-    var xhr = $.jsonp({
-      url: url,
-      type: 'GET',
-      timeout: timeOut || this.timeOut,
-      dataType: ' jsonp',
-      callbackParameter: 'callback',
-      success: function (data, textStatus, xOptions) {
-        return that._handleAjaxSuccess(dfd, data);
-      },
-      error: function (xOptions, textStatus) {
-        // JSONP doesn't support HTTP status codes
-        // https://github.com/jaubourg/jquery-jsonp/issues/37
-        // so we can only return a simple error
-        dfd.reject(new api.ApiError(null, opt));
-      }
-    });
-    // Extend promise with abort method
-    // to abort xhr request if needed
-    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-    var promise = dfd.promise();
-    promise.abort = function () {
-      xhr.abort();
-    };
-    return promise;
-  };
   api.ApiAjax.prototype._prepareDict = function (data) {
     // Makes sure all values from the dict are serializable and understandable for json
     if (!data) {
@@ -339,7 +306,7 @@ api = function ($, jsonp, moment) {
   };
   api.ApiUser.prototype.isValid = function () {
     system.log('ApiUser: isValid');
-    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
+    return this.userId != null && this.userId.length > 0 && (this.userToken != null && this.userToken.length > 0);
   };
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
@@ -354,18 +321,37 @@ api = function ($, jsonp, moment) {
     this.urlAuth = spec.urlAuth || '';
     this.ajax = spec.ajax;
     this.version = spec.version;
+    this.platform = spec.platform;
+    this.device = spec.device;
+    this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
+    var that = this;
+    var params = {
       user: userId,
       password: password,
-      auth_v: 2,
       _v: this.version
-    });
+    };
+    if (this.platform) {
+      params.platform = this.platform;
+    }
+    if (this.device) {
+      params.device = this.device;
+    }
+    var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
-      if (resp.status == 'OK') {
+      // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+      // 
+      // REMARK
+      // - web app allows owners to still login on expired/cancelled account
+      // - mobile doesn't allow expired logins also not for owners
+      if (resp.status == 'OK' && ([
+          'expired',
+          'cancelled_expired',
+          'archived'
+        ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
         dfd.resolve(resp.data);
       } else {
         dfd.reject(resp);
@@ -375,77 +361,8 @@ api = function ($, jsonp, moment) {
     });
     return dfd.promise();
   };
-  //*************
-  // ApiAuth
-  //*************
-  /**
-   * @name ApiAuthV2
-   * @param {object}  spec
-   * @param {string}  spec.urlAuth          - the api url to use when authenticating
-   * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
-   * @constructor
-   * @memberof api
-   * @example
-   * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-   * var userName = "";
-   * var password = "";
-   *
-   * var ajax = new cr.api.ApiAjax({useJsonp: true});
-   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
-   * var authUser = null;
-   *
-   * auth.authenticate(userName, password)
-   *     .done(function(data) {
-   *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-   *     });
-   *
-   */
-  api.ApiAuthV2 = function (spec) {
-    spec = spec || {};
-    this.urlAuth = spec.urlAuth || '';
-    this.ajax = spec.ajax;
-    this.version = spec.version;
-  };
-  /**
-   * The call to authenticate a user with userid an dpassword
-   * @method
-   * @name ApiAuthV2#authenticate
-   * @param userId
-   * @param password
-   * @returns {object}
-   */
-  api.ApiAuthV2.prototype.authenticate = function (userId, password) {
-    system.log('ApiAuthV2: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
-      user: userId,
-      password: password,
-      auth_v: 2,
-      _v: this.version
-    });
-    var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
-      // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
-      // TODO: Handle case for password incorrect, no rights or subscription expired
-      if (resp.status == 'OK') {
-        dfd.resolve(resp.data);
-      } else {
-        // When account expired, /authenticate will respond with
-        //{"status": "ERROR",
-        // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
-        // "data": {...}}
-        var error = null;
-        if (resp.message && resp.message.indexOf('expired') > 0) {
-          error = new api.ApiPaymentRequired(resp.message);
-        } else {
-          error = new Error('Your username or password is not correct');
-        }
-        dfd.reject(error);
-      }
-    }).fail(function (err) {
-      dfd.reject(err);
-    });
-    return dfd.promise();
-  };
+  // Deprecated ApiAuthV2, use ApiAuth
+  api.ApiAuthV2 = api.ApiAuth;
   //*************
   // ApiAnonymous
   // Communicates with the API without having token authentication
@@ -484,7 +401,7 @@ api = function ($, jsonp, moment) {
     return this.ajax.get(url, timeOut, opt);
   };
   /**
-   * Makes a long call (timeout 30s) to the API which doesn't require a token
+   * Makes a long call (timeout 60s) to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#longCall
    * @param method
@@ -494,7 +411,7 @@ api = function ($, jsonp, moment) {
    */
   api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 30000, opt);
+    return this.call(method, params, 60000, opt);
   };
   //*************
   // ApiDataSource
@@ -542,12 +459,7 @@ api = function ($, jsonp, moment) {
     this._ajaxGet(cmd, url).done(function (data) {
       dfd.resolve(data);
     }).fail(function (error) {
-      // This doesn't work when not in JSONP mode!!
-      // Since all errors are generic api.ApiErrors
-      // In jsonp mode, if a GET fails, assume it didn't exist
-      if (that.ajax.useJsonp) {
-        dfd.resolve(null);
-      } else if (error instanceof api.ApiNotFound) {
+      if (error instanceof api.ApiNotFound) {
         dfd.resolve(null);
       } else {
         dfd.reject(error);
@@ -589,12 +501,7 @@ api = function ($, jsonp, moment) {
     this.get(pk, fields).done(function (data) {
       dfd.resolve(data);
     }).fail(function (err) {
-      if (that.ajax.useJsonp) {
-        // In Jsonp mode, we cannot get other error messages than 500
-        // We'll assume that it doesn't exist when we get an error
-        // Jsonp is not really meant to run in production environment
-        dfd.resolve(null);
-      } else if (err instanceof api.ApiNotFound) {
+      if (err instanceof api.ApiNotFound) {
         dfd.resolve(null);
       } else {
         dfd.reject(err);
@@ -640,11 +547,17 @@ api = function ($, jsonp, moment) {
    * @param pks
    * @returns {promise}
    */
-  api.ApiDataSource.prototype.deleteMultiple = function (pks) {
+  api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost) {
     system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
     var cmd = 'deleteMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + '/delete';
-    return this._ajaxGet(cmd, url);
+    var url = this.getBaseUrl() + 'delete';
+    var p = { pk: pks };
+    var geturl = url + '?' + this.getParams(p);
+    if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p);
+    } else {
+      return this._ajaxGet(cmd, geturl);
+    }
   };
   /**
    * Updates a document by its primary key and a params objects
@@ -829,7 +742,7 @@ api = function ($, jsonp, moment) {
     }
   };
   /**
-   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+   * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
    * @method
    * @name ApiDataSource#longCall
    * @param pk
@@ -840,7 +753,7 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-    return this.call(pk, method, params, fields, 30000, usePost);
+    return this.call(pk, method, params, fields, 60000, usePost);
   };
   /**
    * Gets the base url for all calls to this collection
@@ -923,7 +836,7 @@ api = function ($, jsonp, moment) {
     });
   };
   return api;
-}(jquery, jquery_jsonp, moment);
+}(jquery, moment);
 settings = { amazonBucket: 'app' };
 common_inflection = function () {
   /**
@@ -2006,6 +1919,18 @@ common_inflection = function () {
       str = padString + str;
     return str;
   };
+  // trimLeft/trimRight polyfill
+  //https://gist.github.com/eliperelman/1036520
+  if (!String.prototype.trimLeft) {
+    String.prototype.trimLeft = function () {
+      return this.replace(/^\s+/, '');
+    };
+  }
+  if (!String.prototype.trimRight) {
+    String.prototype.trimRight = function () {
+      return this.replace(/\s+$/, '');
+    };
+  }
   /**
   * NUMBER EXTENSIONS
   */
@@ -2210,6 +2135,59 @@ common_validation = {
     return password.length >= 4 && hasDigit;
   }
 };
+common_clientStorage = function () {
+  var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
+  var _data = {};
+  /**
+   * Override default localStorage.setItem
+   * Try to set an object for a key in local storage
+   * 
+   * @param {string} k
+   * @param {object|string} v
+   * @return {bool}
+   */
+  Storage.prototype.setItem = function (k, v) {
+    try {
+      setItem.apply(this, [
+        k,
+        v
+      ]);
+    } catch (e) {
+      _data[k] = String(v);
+    }
+    return true;
+  };
+  /**
+   * Override default localStorage.getItem
+   * Try to get an object for a key in local storage
+   * 
+   * @param {string} k
+   * @return {object|string|null}
+   */
+  Storage.prototype.getItem = function (k) {
+    try {
+      return getItem.apply(this, [k]);
+    } catch (e) {
+      return _data.hasOwnProperty(k) ? _data[k] : undefined;
+    }
+    return null;
+  };
+  /**
+   * Override default localStorage.removeItem
+   * Try to remove an object for a key in local storage
+   * 
+   * @param {string} k
+   * @return {object|string|null}
+   */
+  Storage.prototype.removeItem = function (k) {
+    try {
+      removeItem.apply(this, [k]);
+    } catch (e) {
+      delete _data[k];
+    }
+    return true;
+  };
+}();
 common_utils = function ($) {
   var utils = {};
   /**
@@ -2292,7 +2270,7 @@ common_utils = function ($) {
    */
   utils.badgeify = function (count) {
     if (count > 100) {
-      return '100+';
+      return '99+';
     } else if (count > 10) {
       return '10+';
     } else if (count > 0) {
@@ -2350,9 +2328,20 @@ common_utils = function ($) {
       return [];
     }
   };
+  /**
+   * getFriendlyFileName
+   * @memberOf utils
+   * @name  utils#getFriendlyFileName
+   * @method
+   * @param  {string} name
+   * @return {string}
+   */
+  utils.getFriendlyFileName = function (name) {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  };
   return utils;
 }(jquery);
-signup = function ($, jstz, api, settings, inflection, validation, utils) {
+signup = function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {
   var DEFAULT_PLAN = '1215_cr_90';
   var DEFAULT_PERIOD = 'yearly';
   var DEFAULT_SOURCE = 'attempt';
@@ -2368,7 +2357,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
     this.lastName = opt.lastName || '';
     // between 2 and 25 chars
     this.company = opt.company || '';
-    // between 3 and 50 chars
+    // between 3 and 46 chars
     this.timezone = opt.timezone || jstz.determine().name();
     this.email = opt.email || '';
     this.login = opt.login || '';
@@ -2423,7 +2412,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
   };
   Signup.prototype.companyIsValid = function () {
     var company = $.trim(this.company);
-    return company.length >= 3 && company.length <= 50;
+    return company.length >= 3 && company.length <= 46;
   };
   Signup.prototype.companyExists = function () {
     var account = this.getGroupId();
@@ -2461,6 +2450,11 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
       return $.Deferred().resolve(true);
     }
   };
+  Signup.prototype.checkInvited = function () {
+    return this.ds.call('checkInvited', { email: this.email }).then(function (resp) {
+      return resp;
+    });
+  };
   Signup.prototype.passwordIsValid = function () {
     return validation.isValidPassword($.trim(this.password));
   };
@@ -2480,7 +2474,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
   // ----
   Signup.prototype.getGroupId = function () {
     var company = $.trim(this.company);
-    return company.OnlyAlphaNumSpaceAndUnderscore();
+    return company.replace(/[\.-\s]/g, '_').OnlyAlphaNumSpaceAndUnderscore();
   };
   Signup.prototype.getFullName = function () {
     var firstName = $.trim(this.firstName);
@@ -2601,7 +2595,7 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), plan = utils.getUrlParam('plan', DEFAULT_PLAN), period = utils.getUrlParam('period', DEFAULT_PERIOD), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
@@ -2609,6 +2603,15 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
     }
     if (login.length == 0 && firstName.length > 0 && lastName.length > 0) {
       login = utils.getLoginName(firstName, lastName);
+    }
+    // Don't allow signup to deprecated plans
+    if ([
+        'starter',
+        'basic',
+        'professional',
+        'enterprise'
+      ].indexOf(plan) != -1) {
+      plan = DEFAULT_PLAN;
     }
     return new Signup($.extend({
       name: name,
@@ -2626,6 +2629,6 @@ signup = function ($, jstz, api, settings, inflection, validation, utils) {
     }, opt), settings);
   };
   return Signup;
-}(jquery, jstz, api, settings, common_inflection, common_validation, common_utils);
+}(jquery, jstz, api, settings, common_inflection, common_validation, common_clientStorage, common_utils);
 return signup;
 }))

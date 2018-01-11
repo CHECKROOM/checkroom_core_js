@@ -1,17 +1,17 @@
 (function (factory) {
 if (typeof define === 'function' && define.amd) {
-define(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);
+define(['jquery', 'moment'], factory);
 } else {
-factory($, moment, jsonp, pubsub);
+factory($, moment);
 }
-}(function (jquery, moment, jquery_jsonp, jquery_pubsub) {/**
+}(function (jquery, moment) {/**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
  * @namespace api
  * @copyright CHECKROOM NV 2015
  */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, core;
-api = function ($, jsonp, moment) {
+var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
   //system.log fallback
@@ -101,25 +101,20 @@ api = function ($, jsonp, moment) {
    * The ajax communication object which makes the request to the API
    * @name ApiAjax
    * @param {object} spec
-   * @param {boolean} spec.useJsonp
    * @constructor
    * @memberof api
    */
   api.ApiAjax = function (spec) {
     spec = spec || {};
-    this.useJsonp = spec.useJsonp != null ? spec.useJsonp : true;
     this.timeOut = spec.timeOut || 10000;
     this.responseInTz = true;
   };
   api.ApiAjax.prototype.get = function (url, timeOut) {
     system.log('ApiAjax: get ' + url);
-    return this.useJsonp ? this._getJsonp(url, timeOut) : this._getAjax(url, timeOut);
+    return this._getAjax(url, timeOut);
   };
   api.ApiAjax.prototype.post = function (url, data, timeOut) {
     system.log('ApiAjax: post ' + url);
-    if (this.useJsonp) {
-      throw 'ApiAjax cannot post while useJsonp is true';
-    }
     return this._postAjax(url, data, timeOut);
   };
   // Implementation
@@ -230,34 +225,6 @@ api = function ($, jsonp, moment) {
     };
     return promise;
   };
-  api.ApiAjax.prototype._getJsonp = function (url, timeOut, opt) {
-    var dfd = $.Deferred();
-    var that = this;
-    var xhr = $.jsonp({
-      url: url,
-      type: 'GET',
-      timeout: timeOut || this.timeOut,
-      dataType: ' jsonp',
-      callbackParameter: 'callback',
-      success: function (data, textStatus, xOptions) {
-        return that._handleAjaxSuccess(dfd, data);
-      },
-      error: function (xOptions, textStatus) {
-        // JSONP doesn't support HTTP status codes
-        // https://github.com/jaubourg/jquery-jsonp/issues/37
-        // so we can only return a simple error
-        dfd.reject(new api.ApiError(null, opt));
-      }
-    });
-    // Extend promise with abort method
-    // to abort xhr request if needed
-    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-    var promise = dfd.promise();
-    promise.abort = function () {
-      xhr.abort();
-    };
-    return promise;
-  };
   api.ApiAjax.prototype._prepareDict = function (data) {
     // Makes sure all values from the dict are serializable and understandable for json
     if (!data) {
@@ -339,7 +306,7 @@ api = function ($, jsonp, moment) {
   };
   api.ApiUser.prototype.isValid = function () {
     system.log('ApiUser: isValid');
-    return this.userId && this.userId.length > 0 && this.userToken && this.userToken.length > 0;
+    return this.userId != null && this.userId.length > 0 && (this.userToken != null && this.userToken.length > 0);
   };
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
@@ -354,18 +321,37 @@ api = function ($, jsonp, moment) {
     this.urlAuth = spec.urlAuth || '';
     this.ajax = spec.ajax;
     this.version = spec.version;
+    this.platform = spec.platform;
+    this.device = spec.device;
+    this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
     system.log('ApiAuth: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
+    var that = this;
+    var params = {
       user: userId,
       password: password,
-      auth_v: 2,
       _v: this.version
-    });
+    };
+    if (this.platform) {
+      params.platform = this.platform;
+    }
+    if (this.device) {
+      params.device = this.device;
+    }
+    var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
     this.ajax.get(url, 30000).done(function (resp) {
-      if (resp.status == 'OK') {
+      // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+      // 
+      // REMARK
+      // - web app allows owners to still login on expired/cancelled account
+      // - mobile doesn't allow expired logins also not for owners
+      if (resp.status == 'OK' && ([
+          'expired',
+          'cancelled_expired',
+          'archived'
+        ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
         dfd.resolve(resp.data);
       } else {
         dfd.reject(resp);
@@ -375,77 +361,8 @@ api = function ($, jsonp, moment) {
     });
     return dfd.promise();
   };
-  //*************
-  // ApiAuth
-  //*************
-  /**
-   * @name ApiAuthV2
-   * @param {object}  spec
-   * @param {string}  spec.urlAuth          - the api url to use when authenticating
-   * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
-   * @constructor
-   * @memberof api
-   * @example
-   * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-   * var userName = "";
-   * var password = "";
-   *
-   * var ajax = new cr.api.ApiAjax({useJsonp: true});
-   * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
-   * var authUser = null;
-   *
-   * auth.authenticate(userName, password)
-   *     .done(function(data) {
-   *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-   *     });
-   *
-   */
-  api.ApiAuthV2 = function (spec) {
-    spec = spec || {};
-    this.urlAuth = spec.urlAuth || '';
-    this.ajax = spec.ajax;
-    this.version = spec.version;
-  };
-  /**
-   * The call to authenticate a user with userid an dpassword
-   * @method
-   * @name ApiAuthV2#authenticate
-   * @param userId
-   * @param password
-   * @returns {object}
-   */
-  api.ApiAuthV2.prototype.authenticate = function (userId, password) {
-    system.log('ApiAuthV2: authenticate ' + userId);
-    var url = this.urlAuth + '?' + $.param({
-      user: userId,
-      password: password,
-      auth_v: 2,
-      _v: this.version
-    });
-    var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
-      // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
-      // TODO: Handle case for password incorrect, no rights or subscription expired
-      if (resp.status == 'OK') {
-        dfd.resolve(resp.data);
-      } else {
-        // When account expired, /authenticate will respond with
-        //{"status": "ERROR",
-        // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
-        // "data": {...}}
-        var error = null;
-        if (resp.message && resp.message.indexOf('expired') > 0) {
-          error = new api.ApiPaymentRequired(resp.message);
-        } else {
-          error = new Error('Your username or password is not correct');
-        }
-        dfd.reject(error);
-      }
-    }).fail(function (err) {
-      dfd.reject(err);
-    });
-    return dfd.promise();
-  };
+  // Deprecated ApiAuthV2, use ApiAuth
+  api.ApiAuthV2 = api.ApiAuth;
   //*************
   // ApiAnonymous
   // Communicates with the API without having token authentication
@@ -484,7 +401,7 @@ api = function ($, jsonp, moment) {
     return this.ajax.get(url, timeOut, opt);
   };
   /**
-   * Makes a long call (timeout 30s) to the API which doesn't require a token
+   * Makes a long call (timeout 60s) to the API which doesn't require a token
    * @method
    * @name ApiAnonymous#longCall
    * @param method
@@ -494,7 +411,7 @@ api = function ($, jsonp, moment) {
    */
   api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 30000, opt);
+    return this.call(method, params, 60000, opt);
   };
   //*************
   // ApiDataSource
@@ -542,12 +459,7 @@ api = function ($, jsonp, moment) {
     this._ajaxGet(cmd, url).done(function (data) {
       dfd.resolve(data);
     }).fail(function (error) {
-      // This doesn't work when not in JSONP mode!!
-      // Since all errors are generic api.ApiErrors
-      // In jsonp mode, if a GET fails, assume it didn't exist
-      if (that.ajax.useJsonp) {
-        dfd.resolve(null);
-      } else if (error instanceof api.ApiNotFound) {
+      if (error instanceof api.ApiNotFound) {
         dfd.resolve(null);
       } else {
         dfd.reject(error);
@@ -589,12 +501,7 @@ api = function ($, jsonp, moment) {
     this.get(pk, fields).done(function (data) {
       dfd.resolve(data);
     }).fail(function (err) {
-      if (that.ajax.useJsonp) {
-        // In Jsonp mode, we cannot get other error messages than 500
-        // We'll assume that it doesn't exist when we get an error
-        // Jsonp is not really meant to run in production environment
-        dfd.resolve(null);
-      } else if (err instanceof api.ApiNotFound) {
+      if (err instanceof api.ApiNotFound) {
         dfd.resolve(null);
       } else {
         dfd.reject(err);
@@ -640,11 +547,17 @@ api = function ($, jsonp, moment) {
    * @param pks
    * @returns {promise}
    */
-  api.ApiDataSource.prototype.deleteMultiple = function (pks) {
+  api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost) {
     system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
     var cmd = 'deleteMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + '/delete';
-    return this._ajaxGet(cmd, url);
+    var url = this.getBaseUrl() + 'delete';
+    var p = { pk: pks };
+    var geturl = url + '?' + this.getParams(p);
+    if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this._ajaxPost(cmd, url, p);
+    } else {
+      return this._ajaxGet(cmd, geturl);
+    }
   };
   /**
    * Updates a document by its primary key and a params objects
@@ -829,7 +742,7 @@ api = function ($, jsonp, moment) {
     }
   };
   /**
-   * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+   * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
    * @method
    * @name ApiDataSource#longCall
    * @param pk
@@ -840,7 +753,7 @@ api = function ($, jsonp, moment) {
    * @returns {promise}
    */
   api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-    return this.call(pk, method, params, fields, 30000, usePost);
+    return this.call(pk, method, params, fields, 60000, usePost);
   };
   /**
    * Gets the base url for all calls to this collection
@@ -923,7 +836,7 @@ api = function ($, jsonp, moment) {
     });
   };
   return api;
-}(jquery, jquery_jsonp, moment);
+}(jquery, moment);
 settings = { amazonBucket: 'app' };
 common_code = {
   /**
@@ -970,7 +883,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.length != 8 && barCode.match(/^[A-Z0-9\-]{4,13}$/i) != null;
+    return barCode && barCode.match(/^[A-Z0-9\-]{4,22}$/i) != null;
   },
   /**
    * isValidQRCode
@@ -1293,6 +1206,38 @@ common_reservation = {
     }
   },
   /**
+   * getFriendlyReservationFrequency
+   *
+   * @memberOf common
+   * @name  common#getFriendlyReservationFrequency
+   * @method
+   * 
+   * @param  {string} frequency 
+   * @return {string}        
+   */
+  getFriendlyReservationFrequency: function (frequency) {
+    switch (frequency) {
+    case 'every_day':
+      return 'Repeats every day';
+    case 'every_weekday':
+      return 'Repeats every weekday';
+    case 'every_week':
+      return 'Repeats every week';
+    case 'every_2_weeks':
+      return 'Repeats every 2 weeks';
+    case 'every_month':
+      return 'Repeats every month';
+    case 'every_2_months':
+      return 'Repeats every 2 months';
+    case 'every_3_months':
+      return 'Repeats every 3 months';
+    case 'every_6_months':
+      return 'Repeats every 6 months';
+    default:
+      return 'Repeating reservation';
+    }
+  },
+  /**
    * isReservationOverdue
    *
    * @memberOf common
@@ -1305,7 +1250,7 @@ common_reservation = {
    */
   isReservationOverdue: function (reservation, now) {
     now = now || moment();
-    return reservation.status == 'open' && now.isAfter(reservation.fromDate);
+    return reservation.status == 'open' && now.isAfter(reservation.fromDate || reservation.from);
   },
   /**
    * isReservationInThePast
@@ -1743,6 +1688,7 @@ common_image = function ($) {
      * @return {string}	base64 image url    
      */
     getAvatarInitial: function (name, size) {
+      name = name || 'Unknown';
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -1804,6 +1750,19 @@ common_image = function ($) {
      * @return {string} base64 image url    
      */
     getMaintenanceAvatar: function (size) {
+      return this.getIconAvatar(size, 'f0ad');
+    },
+    /**
+     * Returns an icon avatar image from FontAwesome collection
+     *
+     * @memberOf  common
+     * @name  common#getIconAvatar
+     * @method
+     * 
+     * @param  {string} size Possible values XS,S,M,L,XL
+     * @return {string} base64 image url    
+     */
+    getIconAvatar: function (size, value) {
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -1829,7 +1788,7 @@ common_image = function ($) {
       context.font = canvasWidth / 2 + 'px FontAwesome';
       context.textAlign = 'center';
       context.fillStyle = '#aaa';
-      context.fillText(String.fromCharCode('0xf0ad'), canvasCssWidth / 2, canvasCssHeight / 1.5);
+      context.fillText(String.fromCharCode('0x' + value), canvasCssWidth / 2, canvasCssHeight / 1.5);
       return $canvas.get(0).toDataURL();
     },
     getTextImage: function (text, size, fontColorHex, backgroundColorHex) {
@@ -1880,7 +1839,7 @@ common_image = function ($) {
      */
     getImageUrl: function (ds, pk, size, bustCache) {
       var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-      if (size) {
+      if (size && size != 'orig') {
         url += '&size=' + size;
       }
       if (bustCache) {
@@ -3081,6 +3040,18 @@ common_inflection = function () {
       str = padString + str;
     return str;
   };
+  // trimLeft/trimRight polyfill
+  //https://gist.github.com/eliperelman/1036520
+  if (!String.prototype.trimLeft) {
+    String.prototype.trimLeft = function () {
+      return this.replace(/^\s+/, '');
+    };
+  }
+  if (!String.prototype.trimRight) {
+    String.prototype.trimRight = function () {
+      return this.replace(/\s+$/, '');
+    };
+  }
   /**
   * NUMBER EXTENSIONS
   */
@@ -3367,7 +3338,7 @@ common_utils = function ($) {
    */
   utils.badgeify = function (count) {
     if (count > 100) {
-      return '100+';
+      return '99+';
     } else if (count > 10) {
       return '10+';
     } else if (count > 0) {
@@ -3425,6 +3396,17 @@ common_utils = function ($) {
       return [];
     }
   };
+  /**
+   * getFriendlyFileName
+   * @memberOf utils
+   * @name  utils#getFriendlyFileName
+   * @method
+   * @param  {string} name
+   * @return {string}
+   */
+  utils.getFriendlyFileName = function (name) {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  };
   return utils;
 }(jquery);
 common_slimdown = function () {
@@ -3456,7 +3438,7 @@ common_slimdown = function () {
     // Rules
     this.rules = [
       {
-        regex: /(#+)(.*)/g,
+        regex: /(#{1,6})\s(.*)/g,
         replacement: header
       },
       // headers
@@ -3501,7 +3483,7 @@ common_slimdown = function () {
       },
       // ul lists
       {
-        regex: /\n[0-9]+\.(.*)/g,
+        regex: /\n[0-9]+\.\s(.*)/g,
         replacement: olList
       },
       // ol lists
@@ -3516,7 +3498,7 @@ common_slimdown = function () {
       },
       // horizontal rule
       {
-        regex: /\n([^\n]+)\n/g,
+        regex: /(?:[^\n]|\n(?! *\n))+/g,
         replacement: para
       },
       // add paragraphs
@@ -3547,17 +3529,19 @@ common_slimdown = function () {
     // Render some Markdown into HTML.
     this.render = function (text) {
       text = '\n' + text + '\n';
+      text = autolink(text);
       this.rules.forEach(function (rule) {
         text = text.replace(rule.regex, rule.replacement);
       });
       return text.trim();
     };
     function para(text, line) {
-      var trimmed = line.trim();
+      var trimmed = ('' + text).trimLeft().trimRight();
       if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
-        return '\n' + line + '\n';
+        return trimmed;
       }
-      return '\n<p>' + trimmed + '</p>\n';
+      trimmed = trimmed.replace(/\n/g, '<br />');
+      return '<p>' + trimmed + '</p>';
     }
     function ulList(text, item) {
       return '\n<ul>\n\t<li>' + item.trim() + '</li>\n</ul>';
@@ -3571,6 +3555,24 @@ common_slimdown = function () {
     function header(text, chars, content) {
       var level = chars.length;
       return '<h' + level + '>' + content.trim() + '</h' + level + '>';
+    }
+    function autolink(text) {
+      var urls = text.match(/(\(?https?:\/\/[-A-Za-z0-9+&@#\/%?=~_()|!:,.;]*[-A-Za-z0-9+&@#\/%=~_()|])(">|<\/a>|\)|\])?/gm);
+      if (urls == null)
+        return text;
+      var cleanedUrls = {};
+      for (var i = 0; i < urls.length; i++) {
+        var url = urls[i];
+        // ignore urls that are part of a markdown link already
+        if (url.lastIndexOf(']') != -1 || url.lastIndexOf(')') != -1)
+          break;
+        // already replaced this url
+        if (cleanedUrls[url])
+          break;
+        cleanedUrls[url] = url;
+        text = text.replace(url, '[' + url + '](' + url + ')');
+      }
+      return text;
     }
   };
   window.Slimdown = Slimdown;
@@ -3763,7 +3765,7 @@ common_contact = function (imageHelper) {
     return contact.status == 'archived' && !that.contactGetUserSync(contact);
   };
   that.contactCanDelete = function (contact) {
-    return !that.contactGetUserId(contact);
+    return !that.contactGetUserSync(contact);
   };
   /**
   * getContactImageUrl
@@ -3785,6 +3787,26 @@ common_contact = function (imageHelper) {
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
+  /**
+  * getContactImageCDNUrl
+  *
+  * @memberOf common
+  * @name  common#getContactImageCDNUrl
+  * @method
+  *
+  * @param  cr.Contact or contact object
+  * @return {string} image path or base64 image
+  */
+  that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
+    // Show avatar initials
+    return imageHelper.getAvatarInitial(contact.name, size);
+  };
   return that;
 }(common_image);
 common_user = function (imageHelper) {
@@ -3803,6 +3825,23 @@ common_user = function (imageHelper) {
       // Show profile picture of user?
       if (user && user.picture)
         return imageHelper.getImageUrl(ds, user.picture, size, bustCache);
+      // Show avatar initials
+      return imageHelper.getAvatarInitial(user.name, size);
+    },
+    /**
+     * getUserImageCDNUrl 
+     *
+     * @memberOf common
+     * @name  common#getUserImageCDNUrl
+     * @method
+     * 
+     * @param  cr.User or user object
+     * @return {string} image path or base64 image        
+     */
+    getUserImageCDNUrl: function (settings, groupid, user, size, bustCache) {
+      // Show profile picture of user?
+      if (user && user.picture)
+        return imageHelper.getImageCDNUrl(settings, groupid, user.picture, size, bustCache);
       // Show avatar initials
       return imageHelper.getAvatarInitial(user.name, size);
     }
@@ -3900,6 +3939,7 @@ common_template = function (moment) {
 }(moment);
 common_clientStorage = function () {
   var setItem = localStorage.setItem, getItem = localStorage.getItem, removeItem = localStorage.removeItem;
+  var _data = {};
   /**
    * Override default localStorage.setItem
    * Try to set an object for a key in local storage
@@ -3915,8 +3955,7 @@ common_clientStorage = function () {
         v
       ]);
     } catch (e) {
-      //console.log(e);
-      return false;
+      _data[k] = String(v);
     }
     return true;
   };
@@ -3931,6 +3970,7 @@ common_clientStorage = function () {
     try {
       return getItem.apply(this, [k]);
     } catch (e) {
+      return _data.hasOwnProperty(k) ? _data[k] : undefined;
     }
     return null;
   };
@@ -3945,8 +3985,7 @@ common_clientStorage = function () {
     try {
       removeItem.apply(this, [k]);
     } catch (e) {
-      //console.log(e);
-      return false;
+      delete _data[k];
     }
     return true;
   };
@@ -4126,13 +4165,108 @@ common_transaction = function (moment, keyValues) {
   };
   return that;
 }(moment, common_keyValues);
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction) {
+common_queue = function ($) {
+  $.fn.ajaxQueue = function () {
+    var previous = new $.Deferred().resolve();
+    return function (fn, fail) {
+      if (typeof fn !== 'function') {
+        throw 'must be a function';
+      }
+      return previous = previous.then(fn, fail || fn);
+    };
+  };
+}(jquery);
+common_pubsub = function ($) {
+  var o = $({});
+  $.subscribe = function () {
+    o.on.apply(o, arguments);
+  };
+  $.unsubscribe = function () {
+    o.off.apply(o, arguments);
+  };
+  $.publish = function () {
+    o.trigger.apply(o, arguments);
+  };
+}(jquery);
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub) {
   /**
    * Return common object with different helper methods
    */
   return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction);
-document = function ($, common, api) {
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub);
+colorLabel = function ($) {
+  var DEFAULTS = {
+    id: null,
+    name: '',
+    color: 'Gold',
+    readonly: false,
+    selected: false
+  };
+  /**
+   * @name  ColorLabel
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var ColorLabel = function (spec) {
+    spec = spec || {};
+    this.raw = $.extend({}, DEFAULTS, spec);
+    this.id = spec.id || DEFAULTS.id;
+    this.name = spec.name || DEFAULTS.name;
+    this.color = spec.color || DEFAULTS.color;
+    this.readonly = spec.readonly || DEFAULTS.readonly;
+    this.selected = spec.selected || DEFAULTS.selected;
+  };
+  /**
+   * isDirty
+   * @name  ColorLabel#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isDirty = function () {
+    return this.raw.name != this.name || this.raw.color != this.color;
+  };
+  /**
+   * isValid
+   * @name  ColorLabel#isValid
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isValid = function () {
+    return this.name && this.name.length > 0;
+  };
+  /**
+   * _fromJson
+   * @name  ColorLabel#_fromJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._fromJson = function (data) {
+    this.id = data.id || DEFAULTS.id;
+    this.name = data.name || DEFAULTS.name;
+    this.color = data.color || DEFAULTS.color;
+    this.selected = data.selected || DEFAULTS.selected;
+    this.readonly = data.readonly || DEFAULTS.readonly;
+    return $.Deferred().resolve();
+  };
+  /**
+   * _toJson
+   * @name  ColorLabel#_toJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._toJson = function () {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      selected: this.selected,
+      readonly: this.readonly
+    };
+  };
+  return ColorLabel;
+}(jquery);
+document = function ($, common, api, ColorLabel) {
   // Some constant values
   var DEFAULTS = { id: '' };
   /**
@@ -4454,8 +4588,12 @@ document = function ($, common, api) {
     spec.timeOut = spec.timeOut || 30000;
     return this._doApiCall(spec);
   };
+  Document.prototype._getColorLabel = function (data, options) {
+    var spec = $.extend({}, options || {}, data);
+    return new ColorLabel(spec);
+  };
   return Document;
-}(jquery, common, api);
+}(jquery, common, api, colorLabel);
 Availability = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
@@ -4573,12 +4711,14 @@ Attachment = function ($) {
   var IMAGES = [
     'jpg',
     'jpeg',
-    'png'
+    'png',
+    'gif'
   ];
   var PREVIEWS = [
     'jpg',
     'jpeg',
     'png',
+    'gif',
     'doc',
     'docx',
     'pdf'
@@ -4644,7 +4784,7 @@ Attachment = function ($) {
    */
   Attachment.prototype.getExt = function (fileName) {
     fileName = fileName || this.fileName;
-    return EXT.exec(fileName)[1] || '';
+    return (EXT.exec(fileName)[1] || '').toLowerCase();
   };
   /**
    * Gets a friendly file size
@@ -4790,12 +4930,14 @@ attachment = function ($) {
   var IMAGES = [
     'jpg',
     'jpeg',
-    'png'
+    'png',
+    'gif'
   ];
   var PREVIEWS = [
     'jpg',
     'jpeg',
     'png',
+    'gif',
     'doc',
     'docx',
     'pdf'
@@ -4861,7 +5003,7 @@ attachment = function ($) {
    */
   Attachment.prototype.getExt = function (fileName) {
     fileName = fileName || this.fileName;
-    return EXT.exec(fileName)[1] || '';
+    return (EXT.exec(fileName)[1] || '').toLowerCase();
   };
   /**
    * Gets a friendly file size
@@ -5008,6 +5150,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     modified: null,
     cover: null,
     flag: null,
+    label: null,
     fields: {},
     comments: [],
     attachments: [],
@@ -5051,7 +5194,9 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     // attachments array
     this.cover = spec.cover || DEFAULTS.cover;
     // cover attachment id, default null
-    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
+    // barcodes array
+    this.label = spec.label || DEFAULTS.label;  // color label
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -5350,6 +5495,33 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
   };
   /**
+   * Sets the label of an item
+   * @name Base#setLabel
+   * @param labelId
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setLabel = function (labelId, skipRead) {
+    return this._doApiCall({
+      method: 'setLabel',
+      params: { labelId: labelId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the label of an item
+   * @name Base#clearLabel
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearLabel = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearLabel',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
    * Returns a list of Field objects
    * @param fieldDefs         array of field definitions
    * @param onlyFormFields    should return only form fields
@@ -5367,7 +5539,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     // Create a Field object for each field definition
     for (var i = 0; i < fieldDefs.length; i++) {
       fieldDef = fieldDefs[i];
-      fieldValue = that.fields[fieldDef.name];
+      fieldValue = that.fields[fieldDef.name] || '';
       if (limit == null || limit > fields.length) {
         fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
       }
@@ -5400,6 +5572,14 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
       }
     }
     return true;
+  };
+  /**
+   * Update fields of a document
+   * @name Base#updateFields
+   * @returns {promise}
+   */
+  Base.prototype.updateFields = function () {
+    return this._updateFields();
   };
   // Implementation
   // ----
@@ -5472,6 +5652,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       that.barcodes = data.barcodes || DEFAULTS.barcodes;
+      that.label = data.label || DEFAULTS.label;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -5890,6 +6071,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     modified: null,
     cover: null,
     flag: null,
+    label: null,
     fields: {},
     comments: [],
     attachments: [],
@@ -5933,7 +6115,9 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     // attachments array
     this.cover = spec.cover || DEFAULTS.cover;
     // cover attachment id, default null
-    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();  // barcodes array
+    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
+    // barcodes array
+    this.label = spec.label || DEFAULTS.label;  // color label
   };
   Base.prototype = new tmp();
   Base.prototype.constructor = Base;
@@ -6232,6 +6416,33 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
   };
   /**
+   * Sets the label of an item
+   * @name Base#setLabel
+   * @param labelId
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.setLabel = function (labelId, skipRead) {
+    return this._doApiCall({
+      method: 'setLabel',
+      params: { labelId: labelId },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears the label of an item
+   * @name Base#clearLabel
+   * @param skipRead
+   * @returns {promise}
+   */
+  Base.prototype.clearLabel = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearLabel',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
    * Returns a list of Field objects
    * @param fieldDefs         array of field definitions
    * @param onlyFormFields    should return only form fields
@@ -6249,7 +6460,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     // Create a Field object for each field definition
     for (var i = 0; i < fieldDefs.length; i++) {
       fieldDef = fieldDefs[i];
-      fieldValue = that.fields[fieldDef.name];
+      fieldValue = that.fields[fieldDef.name] || '';
       if (limit == null || limit > fields.length) {
         fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
       }
@@ -6282,6 +6493,14 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
       }
     }
     return true;
+  };
+  /**
+   * Update fields of a document
+   * @name Base#updateFields
+   * @returns {promise}
+   */
+  Base.prototype.updateFields = function () {
+    return this._updateFields();
   };
   // Implementation
   // ----
@@ -6354,6 +6573,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
       that.modified = data.modified || DEFAULTS.modified;
       that.barcodes = data.barcodes || DEFAULTS.barcodes;
+      that.label = data.label || DEFAULTS.label;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -6440,7 +6660,8 @@ user = function ($, Base, common) {
     // user, admin
     active: true,
     isOwner: false,
-    archived: null
+    archived: null,
+    restrictLocations: []
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -6474,6 +6695,7 @@ user = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
+    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -6532,7 +6754,29 @@ user = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
+  };
+  User.prototype._isDirtyInfo = function () {
+    if (this.raw) {
+      var name = this.raw.name || DEFAULTS.name;
+      var role = this.raw.role || DEFAULTS.role;
+      var email = this.raw.email || DEFAULTS.email;
+      var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
+      return this.name != name || this.email != email || this.role != role || this.active != active;
+    }
+    return false;
+  };
+  User.prototype._isDirtyRestrictLocations = function () {
+    if (this.raw) {
+      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+      // Check if other locations have been selected
+      return this.restrictLocations.filter(function (x) {
+        return restrictLocations.indexOf(x) < 0;
+      }).length > 0 || restrictLocations.filter(function (x) {
+        return that.restrictLocations.indexOf(x) < 0;
+      }).length > 0;
+    }
+    return false;
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -6542,14 +6786,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    if (!isDirty && this.raw) {
-      var name = this.raw.name || DEFAULTS.name;
-      var role = this.raw.role || DEFAULTS.role;
-      var email = this.raw.email || DEFAULTS.email;
-      var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.role != role || this.active != active;
-    }
-    return isDirty;
+    return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
   };
   /**
    * Gets a url for a user avatar
@@ -6614,6 +6851,7 @@ user = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canDeactivate = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.active && this.archived == null && !this.isOwner;
   };
   /**
@@ -6621,6 +6859,7 @@ user = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canArchive = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.archived == null && !this.isOwner;
   };
   /**
@@ -6694,6 +6933,68 @@ user = function ($, Base, common) {
     });
   };
   /**
+   * Restrict user access to specific location(s)
+   * @param locations
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.setRestrictLocations = function (locations, skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'setRestrictLocations',
+      params: { restrictLocations: locations },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clear user location(s) access (makes all location accessible for the user)
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.clearRestrictLocations = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'clearRestrictLocations',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Updates the user
+   * @param skipRead
+   * @returns {*}
+   */
+  User.prototype.update = function (skipRead) {
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot update to empty user'));
+    }
+    if (!this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot update user without id'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot update, invalid user'));
+    }
+    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred();
+    if (this._isDirtyInfo()) {
+      dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
+    } else {
+      dfdInfo.resolve();
+    }
+    if (this._isDirtyRestrictLocations()) {
+      if (this.restrictLocations.length != 0) {
+        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
+      } else {
+        dfdRestrictLocations = this.clearRestrictLocations(true);
+      }
+    } else {
+      dfdRestrictLocations.resolve();
+    }
+    return $.when(dfdInfo, dfdRestrictLocations);
+  };
+  /**
    * Writes the user to a json object
    * @param options
    * @returns {object}
@@ -6727,6 +7028,7 @@ user = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
+      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });
@@ -6786,7 +7088,7 @@ helper = function ($, defaultSettings, common) {
        */
       getImageUrl: function (ds, pk, size, bustCache) {
         var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
-        if (size) {
+        if (size && size != 'orig') {
           url += '&size=' + size;
         }
         if (bustCache) {
@@ -6794,7 +7096,9 @@ helper = function ($, defaultSettings, common) {
         }
         return url;
       },
-      getICalUrl: function (urlApi, userId, userPublicKey, showOrders, showReservations, customerId, locationId) {
+      getICalUrl: function (urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+        orderLabels = orderLabels || [];
+        reservationLabels = reservationLabels || [];
         var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/locations/call/ical', parts = [];
         if (locationId) {
           parts.push('locations[]=' + locationId);
@@ -6802,11 +7106,31 @@ helper = function ($, defaultSettings, common) {
         if (customerId) {
           parts.push('customer=' + customerId);
         }
-        if (!showOrders) {
-          parts.push('skipOpenOrders=true');
-        }
-        if (!showReservations) {
+        var selectedReservationLabels = reservationLabels.filter(function (lbl) {
+          return lbl.selected;
+        }).map(function (lbl) {
+          return lbl.id || '';
+        });
+        if (selectedReservationLabels.length == 0) {
           parts.push('skipOpenReservations=true');
+        } else {
+          // Only pass reservationLabels if user has made a custom selection
+          if (selectedReservationLabels.length != reservationLabels.length) {
+            parts.push($.param({ 'rlab': selectedReservationLabels }));
+          }
+        }
+        var selectedOrderLabels = orderLabels.filter(function (lbl) {
+          return lbl.selected;
+        }).map(function (lbl) {
+          return lbl.id || '';
+        });
+        if (selectedOrderLabels.length == 0) {
+          parts.push('skipOpenOrders=true');
+        } else {
+          // Only pass orderLabels if user has made a custom selection
+          if (selectedOrderLabels.length != orderLabels.length) {
+            parts.push($.param({ 'olab': selectedOrderLabels }));
+          }
         }
         return parts.length > 0 ? url + '?' + parts.join('&') : url;
       },
@@ -6900,92 +7224,6 @@ helper = function ($, defaultSettings, common) {
         if (statTypeValue === undefined)
           throw 'Stat value doesn\'t exist';
         return statTypeValue;
-      },
-      /**
-       * getAccessRights returns access rights based on the user role, profile settings 
-       * and account limits
-       *
-       * Deprecated: Use PermissionHandler instead
-       *
-       * @memberOf helper
-       * @method
-       * @name  helper#getAccessRights 
-       * 
-       * @param  role   
-       * @param  profile 
-       * @param  limits
-       * @return {object}       
-       */
-      getAccessRights: function (role, profile, limits) {
-        var isRootOrAdmin = role == 'root' || role == 'admin';
-        var isRootOrAdminOrUser = role == 'root' || role == 'admin' || role == 'user';
-        var useOrders = limits.allowOrders && profile.useOrders;
-        var useReservations = limits.allowReservations && profile.useReservations;
-        var useOrderAgreements = limits.allowGeneratePdf && profile.useOrderAgreements;
-        var useWebHooks = limits.allowWebHooks;
-        var useKits = limits.allowKits && profile.useKits;
-        var useCustody = limits.allowCustody && profile.useCustody;
-        var useOrderTransfers = limits.allowOrderTransfers && profile.useOrderTransfers;
-        return {
-          contacts: {
-            create: isRootOrAdminOrUser,
-            remove: isRootOrAdminOrUser,
-            update: true,
-            archive: isRootOrAdminOrUser
-          },
-          items: {
-            create: isRootOrAdmin,
-            remove: isRootOrAdmin,
-            update: isRootOrAdmin,
-            updateFlag: isRootOrAdmin,
-            updateLocation: isRootOrAdmin,
-            updateGeo: true
-          },
-          orders: {
-            create: useOrders,
-            remove: useOrders,
-            update: useOrders,
-            updateContact: role != 'selfservice',
-            updateLocation: useOrders,
-            generatePdf: useOrders && useOrderAgreements && isRootOrAdminOrUser,
-            transferOrder: useOrders && useOrderTransfers,
-            archive: useOrders && isRootOrAdminOrUser
-          },
-          reservations: {
-            create: useReservations,
-            remove: useReservations,
-            update: useReservations,
-            updateContact: useReservations && role != 'selfservice',
-            updateLocation: useReservations,
-            archive: useReservations && isRootOrAdminOrUser
-          },
-          locations: {
-            create: isRootOrAdmin,
-            remove: isRootOrAdmin,
-            update: isRootOrAdmin
-          },
-          users: {
-            create: isRootOrAdmin,
-            remove: isRootOrAdmin,
-            update: isRootOrAdmin,
-            updateOther: isRootOrAdmin,
-            updateOwn: true
-          },
-          webHooks: {
-            create: useWebHooks && isRootOrAdmin,
-            remove: useWebHooks && isRootOrAdmin,
-            update: useWebHooks && isRootOrAdmin
-          },
-          stickers: {
-            print: isRootOrAdmin,
-            buy: isRootOrAdmin
-          },
-          categories: {
-            create: isRootOrAdmin,
-            update: isRootOrAdmin
-          },
-          account: { update: isRootOrAdmin }
-        };
       },
       /**
        * ensureValue, returns specific prop value of object or if you pass a string it returns that exact string 
@@ -7153,10 +7391,7 @@ Contact = function ($, Base, common, User, Helper) {
    * @returns {boolean}
    */
   Contact.prototype.canDelete = function () {
-    var that = this;
-    return Base.prototype.canDelete.call(this).then(function (resp) {
-      return resp.result && common.contactCanDelete(that);
-    });
+    return common.contactCanDelete(this);
   };
   /**
    * Archive a contact
@@ -7349,7 +7584,7 @@ DateHelper = function ($, moment) {
    roundMinutes = IntField(default=15)
    roundType = StringField(default="nearest", choices=ROUND_TYPE)  # nearest, longer, shorter
    */
-  var INCREMENT = 15;
+  var INCREMENT = 15, START_OF_DAY_HRS = 9, END_OF_DAY_HRS = 17;
   /**
    * @name  DateHelper
    * @class
@@ -7361,6 +7596,8 @@ DateHelper = function ($, moment) {
     this.roundMinutes = spec.roundMinutes || INCREMENT;
     this.timeFormat24 = spec.timeFormat24 ? spec.timeFormat24 : false;
     this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
+    this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
+    this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
   };
   /**
    * @name parseDate
@@ -7423,10 +7660,7 @@ DateHelper = function ($, moment) {
       date = moment(date);
     }
     now = now || this.getNow();
-    format = format || this._momentFormat;
-    var diff = now.diff(date, 'days');
-    var str = Math.abs(diff) < 7 ? date.calendar() : date.format(format);
-    return str.replace('AM', 'am').replace('PM', 'pm').split(' at ');
+    return date.calendar().replace('AM', 'am').replace('PM', 'pm').split(' at ');
   };
   /**
    * Returns a number of friendly date ranges with a name
@@ -7509,11 +7743,11 @@ DateHelper = function ($, moment) {
   DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
     now = now || this.getNow();
     var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from.diff(to, 'days'),
-        fromDate: fromParts[0],
-        fromTime: useHours ? fromParts[1] : '',
-        toDate: toParts[0],
-        toTime: useHours ? toParts[1] : ''
+        dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+        fromDate: from ? fromParts[0] : 'No from date set',
+        fromTime: useHours && from != null ? fromParts[1] : '',
+        toDate: to ? toParts[0] : 'No to date set',
+        toTime: useHours && to != null ? toParts[1] : ''
       };
     result.fromText = result.fromDate;
     result.toText = result.toDate;
@@ -7556,6 +7790,112 @@ DateHelper = function ($, moment) {
       fromText: mFrom.calendar().replace(' at ', ' '),
       toText: mTo.calendar().replace(' at ', ' ')
     };
+  };
+  /**
+   * makeStartDate helps making an start date for a transaction, usually a reservation
+   * It will do the standard rounding
+   * But also, if you're using dates instead of datetimes,
+   * it will try to make smart decisions about which hours to use
+   * @param m - the Moment date
+   * @param useHours - does the profile use hours?
+   * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+   * @param minDate - passing in a minimum start-date, will be different for reservations compared to orders
+   * @param maxDate - passing in a maximum start-date (not used for the moment)
+   * @param now - the current moment (just to make testing easier)
+   * @returns {moment}
+   * @private
+   */
+  DateHelper.prototype.makeStartDate = function (m, useHours, dayMode, minDate, maxDate, now) {
+    useHours = useHours != null ? useHours : true;
+    // is the account set up to use hours?
+    dayMode = dayMode != null ? dayMode : false;
+    // did the selection come from a calendar fullcalendar day selection?
+    now = now || moment();
+    // the current time (for unit testing)
+    if (useHours && !dayMode) {
+      // The account is set up to use hours,
+      // and the user picked the hours himself (since it's not picked from a dayMode calendar)
+      // We'll just round the from date
+      // if it's before the minDate, just take the minDate instead
+      m = this.roundTimeFrom(m);
+    } else {
+      // When we get here we know that either:
+      // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+      // or
+      // 2) The account is set up to use days instead of hours
+      //
+      // Which means we still need to see if we can make a smart decision about the hours part
+      // we'll base this on typical business hours (usually 9 to 5)
+      var isToday = m.isSame(now, 'day'), startOfBusinessDay = this._makeStartOfBusinessDay(m);
+      if (isToday) {
+        // The start date is today
+        // and the current time is still before business hours
+        // we can use the start time to start-of-business hours
+        if (m.isBefore(startOfBusinessDay)) {
+          m = startOfBusinessDay;
+        } else {
+          // We're already at the beginning of business hours
+          // or even already passed it, just try rounding the
+          // time and see if its before minDate
+          m = this.roundTimeFrom(m);
+        }
+      } else {
+        // The start date is not today, we can just take the business day start from the date that was passed
+        m = startOfBusinessDay;
+      }
+    }
+    // Make sure we never return anything before the mindate
+    return minDate && m.isBefore(minDate) ? minDate : m;
+  };
+  /**
+   * makeEndDate helps making an end date for a transaction
+   * It will do the standard rounding
+   * But also, if you're using dates instead of datetimes,
+   * it will try to make smart decisions about which hours to use
+   * @param m - the Moment date
+   * @param useHours - does the profile use hours?
+   * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+   * @param minDate
+   * @param maxDate
+   * @param now - the current moment (just to make testing easier)
+   * @returns {moment}
+   * @private
+   */
+  DateHelper.prototype.makeEndDate = function (m, useHours, dayMode, minDate, maxDate, now) {
+    useHours = useHours != null ? useHours : true;
+    dayMode = dayMode != null ? dayMode : false;
+    now = now || moment();
+    if (useHours && !dayMode) {
+      // The account is set up to use hours,
+      // and since dayMode is false,
+      // we assume the hours are picked by the user himself
+      // just do the rounding and we're done
+      m = this.roundTimeTo(m);
+    } else {
+      // When we get here we know that either:
+      // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+      // or
+      // 2) The account is set up to use days instead of hours
+      //
+      // Which means we still need to see if we can make a smart decision about the hours part
+      var isToday = m.isSame(now, 'day'), endOfBusinessDay = this._makeEndOfBusinessDay(m), endOfDay = this._makeEndOfDay(m);
+      if (isToday) {
+        // The end date is today
+        // and the current date is before business hours
+        // we can use the end time to end-of-business hours
+        if (m.isBefore(endOfBusinessDay)) {
+          m = endOfBusinessDay;
+        } else {
+          m = endOfDay;
+        }
+      } else if (m.isAfter(endOfBusinessDay)) {
+        m = endOfDay;
+      } else {
+        m = endOfBusinessDay;
+      }
+    }
+    // Make sure we never return a date after the max date
+    return maxDate && m.isAfter(maxDate) ? maxDate : m;
   };
   /**
    * [getFriendlyDateText]
@@ -7660,9 +8000,18 @@ DateHelper = function ($, moment) {
       break;
     }
   };
+  DateHelper.prototype._makeStartOfBusinessDay = function (m) {
+    return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+  };
+  DateHelper.prototype._makeEndOfBusinessDay = function (m) {
+    return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+  };
+  DateHelper.prototype._makeEndOfDay = function (m) {
+    return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
+  };
   return DateHelper;
 }(jquery, moment);
-Document = function ($, common, api) {
+Document = function ($, common, api, ColorLabel) {
   // Some constant values
   var DEFAULTS = { id: '' };
   /**
@@ -7984,8 +8333,12 @@ Document = function ($, common, api) {
     spec.timeOut = spec.timeOut || 30000;
     return this._doApiCall(spec);
   };
+  Document.prototype._getColorLabel = function (data, options) {
+    var spec = $.extend({}, options || {}, data);
+    return new ColorLabel(spec);
+  };
   return Document;
-}(jquery, common, api);
+}(jquery, common, api, colorLabel);
 Group = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
@@ -8001,6 +8354,11 @@ Group = function ($, common, api, Document) {
     customerFields: [],
     orderFields: [],
     reservationFields: [],
+    itemLabels: [],
+    kitLabels: [],
+    customerLabels: [],
+    reservationLabels: [],
+    orderLabels: [],
     cancelled: null
   };
   // Allow overriding the ctor during inheritance
@@ -8023,6 +8381,11 @@ Group = function ($, common, api, Document) {
    * @property {array} customerFields     the groups customer fields
    * @property {array} reservationFields  the groups reservation fields
    * @property {array} orderFields        the groups order fields
+   * @property {array} itemLabels         the groups item labels
+   * @property {array} kitLabels          the groups kit labels
+   * @property {array} customerLabels     the groups customer labels
+   * @property {array} reservationLabels  the groups reservation labels
+   * @property {array} orderLabels        the groups order labels
    * @constructor
    * @extends Document
    */
@@ -8040,6 +8403,11 @@ Group = function ($, common, api, Document) {
     this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
     this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
     this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
+    this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
+    this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
+    this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
+    this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+    this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
   };
   Group.prototype = new tmp();
   Group.prototype.constructor = Group;
@@ -8184,6 +8552,68 @@ Group = function ($, common, api, Document) {
         collection: collection,
         oldPos: oldPos,
         newPos: newPos
+      }
+    });
+  };
+  /**
+   * Add document label
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param labelColor
+   * @param labelName
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.createLabel = function (collection, labelColor, labelName, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'createLabel',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        labelColor: labelColor,
+        labelName: labelName
+      }
+    });
+  };
+  /**
+   * Updates document label
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param labelId
+   * @param labelColor
+   * @param labelName
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'updateLabel',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        labelId: labelId,
+        labelColor: labelColor,
+        labelName: labelName
+      }
+    });
+  };
+  /**
+   * Removes document label
+   * @param collection (items, kits, customers, reservations, orders)
+   * @param labelId
+   * @param labelColor
+   * @param labelName
+   * @param skipRead
+   * @returns {promise}
+   */
+  Group.prototype.deleteLabel = function (collection, labelId, skipRead) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'deleteLabel',
+      skipRead: skipRead,
+      params: {
+        collection: collection,
+        labelId: labelId
       }
     });
   };
@@ -8356,8 +8786,50 @@ Group = function ($, common, api, Document) {
       that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
       that.cancelled = data.cancelled || DEFAULTS.cancelled;
-      return data;
+      return that._fromColorLabelsJson(data, options);
     });
+  };
+  /**
+   * _fromColorLabelsJson: reads the document labels
+   * @param data
+   * @param options
+   * @returns {*}
+   * @private
+   */
+  Group.prototype._fromColorLabelsJson = function (data, options) {
+    var obj = null, that = this;
+    $.each([
+      'itemLabels',
+      'kitLabels',
+      'customerLabels',
+      'reservationLabels',
+      'orderLabels'
+    ], function (i, labelsKey) {
+      that[labelsKey] = DEFAULTS[labelsKey].slice();
+      if (labelsKey == 'orderLabels') {
+        that[labelsKey].push(that._getColorLabel({
+          readonly: true,
+          name: 'Unlabeled',
+          color: 'SlateGray'
+        }, options));
+      }
+      if (labelsKey == 'reservationLabels') {
+        that[labelsKey].push(that._getColorLabel({
+          readonly: true,
+          name: 'Unlabeled',
+          color: 'LimeGreen'
+        }, options));
+      }
+      if (data[labelsKey] && data[labelsKey].length > 0) {
+        $.each(data[labelsKey], function (i, label) {
+          obj = that._getColorLabel(label, options);
+          if (obj) {
+            that[labelsKey].push(obj);
+          }
+        });
+      }
+    });
+    return $.Deferred().resolve(data);
   };
   return Group;
 }(jquery, common, api, document);
@@ -8371,6 +8843,7 @@ Item = function ($, common, Base) {
       warrantyDate: null,
       purchaseDate: null,
       purchasePrice: null,
+      residualValue: null,
       location: '',
       category: '',
       geo: [
@@ -8426,6 +8899,7 @@ Item = function ($, common, Base) {
     this.warrantyDate = spec.warrantyDate || DEFAULTS.warrantyDate;
     this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
     this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
+    this.residualValue = spec.residualValue || DEFAULTS.residualValue;
     this.codes = spec.codes || DEFAULTS.codes;
     this.location = spec.location || DEFAULTS.location;
     // location._id
@@ -8465,7 +8939,7 @@ Item = function ($, common, Base) {
    */
   Item.prototype.isEmpty = function () {
     // Checks for: name, status, brand, model, purchaseDate, purchasePrice, codes, location, category
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.brand == DEFAULTS.brand && this.model == DEFAULTS.model && this.warrantyDate == DEFAULTS.warrantyDate && this.purchaseDate == DEFAULTS.purchaseDate && this.purchasePrice == DEFAULTS.purchasePrice && this.codes.length == 0 && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.status == DEFAULTS.status && this.brand == DEFAULTS.brand && this.model == DEFAULTS.model && this.warrantyDate == DEFAULTS.warrantyDate && this.purchaseDate == DEFAULTS.purchaseDate && this.purchasePrice == DEFAULTS.purchasePrice && this.residualValue == DEFAULTS.residualValue && this.codes.length == 0 && this.location == DEFAULTS.location && this.category == DEFAULTS.category;
   };
   /**
    * Checks if the item is dirty and needs saving
@@ -8473,7 +8947,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyResidualValue() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -8489,6 +8963,7 @@ Item = function ($, common, Base) {
     data.warrantyDate = this.warrantyDate || DEFAULTS.warrantyDate;
     data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
     data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
+    data.residualValue = this.residualValue || DEFAULTS.residualValue;
     data.category = this.category || DEFAULTS.category;
     data.location = this.location || DEFAULTS.location;
     data.catalog = this.catalog || DEFAULTS.catalog;
@@ -8512,6 +8987,7 @@ Item = function ($, common, Base) {
       that.warrantyDate = data.warrantyDate || DEFAULTS.warrantyDate;
       that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
       that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
+      that.residualValue = data.residualValue || DEFAULTS.residualValue;
       that.codes = data.codes || DEFAULTS.codes;
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
@@ -8578,6 +9054,9 @@ Item = function ($, common, Base) {
   };
   Item.prototype._isDirtyPurchasePrice = function () {
     return this._isDirtyProperty('purchasePrice');
+  };
+  Item.prototype._isDirtyResidualValue = function () {
+    return this._isDirtyProperty('residualValue');
   };
   Item.prototype._isDirtyLocation = function () {
     if (this.raw && this.status != 'in_custody') {
@@ -8676,15 +9155,15 @@ Item = function ($, common, Base) {
       }
       if (that._isDirtyFlag()) {
         if (that.flag == '' || that.flag == null) {
-          dfdFlags = that.setFlag(that.flag);
+          dfdFlags = that.clearFlag();
         } else {
-          dfdFlags = that.clearFlag(that.flag);
+          dfdFlags = that.setFlag(that.flag);
         }
       } else {
         dfdFlags.resolve();
       }
-      if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice()) {
-        dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice);
+      if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice() || that._isDirtyResidualValue()) {
+        dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice, that.residualValue);
       } else {
         dfdBasic.resolve();
       }
@@ -8798,7 +9277,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.canGoToCheckout = function () {
-    return common.itemCanGoToCheckout(this);
+    return common.itemCanGoToCheckout(this) && !$.isEmptyObject(this.order);
   };
   /**
    * Checks if an item can be checked in (based on status)
@@ -8934,7 +9413,7 @@ Item = function ($, common, Base) {
    * @param skipRead
    * @returns {promise}
    */
-  Item.prototype.updateBasicFields = function (name, brand, model, warrantyDate, purchaseDate, purchasePrice, skipRead) {
+  Item.prototype.updateBasicFields = function (name, brand, model, warrantyDate, purchaseDate, purchasePrice, residualValue, skipRead) {
     var that = this, params = {};
     if (name != null && name != this.raw.name) {
       params['name'] = name;
@@ -8945,14 +9424,33 @@ Item = function ($, common, Base) {
     if (model != null && model != this.raw.model) {
       params['model'] = model;
     }
-    if (warrantyDate != null && !warrantyDate.isSame(this.raw.warrantyDate)) {
-      params['warrantyDate'] = warrantyDate;
+    if (warrantyDate != null) {
+      // Update date or clear date?
+      if (typeof warrantyDate === 'object' && warrantyDate.isValid()) {
+        // Only update if date changed
+        if (!warrantyDate.isSame(this.raw.warrantyDate)) {
+          params['warrantyDate'] = warrantyDate;
+        }
+      } else {
+        params['warrantyDate'] = '';
+      }
     }
-    if (purchaseDate != null && !purchaseDate.isSame(this.raw.purchaseDate)) {
-      params['purchaseDate'] = purchaseDate;
+    if (purchaseDate != null) {
+      // Update date or clear date
+      if (typeof purchaseDate === 'object' && purchaseDate.isValid()) {
+        // Only update if date changed
+        if (!purchaseDate.isSame(this.raw.purchaseDate)) {
+          params['purchaseDate'] = purchaseDate;
+        }
+      } else {
+        params['purchaseDate'] = '';
+      }
     }
     if (purchasePrice != null && purchasePrice != this.raw.purchasePrice) {
       params['purchasePrice'] = purchasePrice;
+    }
+    if (residualValue != null && residualValue != this.raw.residualValue) {
+      params['residualValue'] = residualValue;
     }
     // Remove values of null during create
     // Avoids: 422 Unprocessable Entity
@@ -9076,6 +9574,16 @@ Item = function ($, common, Base) {
       params: { customer: customerId },
       skipRead: skipRead
     });
+  };
+  /**
+   * Get a list depreciations 
+   * 
+   * @name Item#getDepreciation
+   * @param frequancy
+   * @returns {promise}
+   */
+  Item.prototype.getDepreciation = function (frequency) {
+    return this.ds.call(this.id, 'getDepreciation', { frequency: frequency || 'quarterly' });
   };
   return Item;
 }(jquery, common, base);
@@ -9460,6 +9968,14 @@ Kit = function ($, Base, common) {
             itemStatus: item.status
           });
           break;
+        case 'in_custody':
+          conflicts.push({
+            kind: 'custody',
+            item: item._id,
+            itemName: item.name,
+            itemStatus: item.status
+          });
+          break;
         }
       });
     }
@@ -9694,7 +10210,7 @@ dateHelper = function ($, moment) {
    roundMinutes = IntField(default=15)
    roundType = StringField(default="nearest", choices=ROUND_TYPE)  # nearest, longer, shorter
    */
-  var INCREMENT = 15;
+  var INCREMENT = 15, START_OF_DAY_HRS = 9, END_OF_DAY_HRS = 17;
   /**
    * @name  DateHelper
    * @class
@@ -9706,6 +10222,8 @@ dateHelper = function ($, moment) {
     this.roundMinutes = spec.roundMinutes || INCREMENT;
     this.timeFormat24 = spec.timeFormat24 ? spec.timeFormat24 : false;
     this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
+    this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
+    this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
   };
   /**
    * @name parseDate
@@ -9768,10 +10286,7 @@ dateHelper = function ($, moment) {
       date = moment(date);
     }
     now = now || this.getNow();
-    format = format || this._momentFormat;
-    var diff = now.diff(date, 'days');
-    var str = Math.abs(diff) < 7 ? date.calendar() : date.format(format);
-    return str.replace('AM', 'am').replace('PM', 'pm').split(' at ');
+    return date.calendar().replace('AM', 'am').replace('PM', 'pm').split(' at ');
   };
   /**
    * Returns a number of friendly date ranges with a name
@@ -9854,11 +10369,11 @@ dateHelper = function ($, moment) {
   DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
     now = now || this.getNow();
     var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from.diff(to, 'days'),
-        fromDate: fromParts[0],
-        fromTime: useHours ? fromParts[1] : '',
-        toDate: toParts[0],
-        toTime: useHours ? toParts[1] : ''
+        dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+        fromDate: from ? fromParts[0] : 'No from date set',
+        fromTime: useHours && from != null ? fromParts[1] : '',
+        toDate: to ? toParts[0] : 'No to date set',
+        toTime: useHours && to != null ? toParts[1] : ''
       };
     result.fromText = result.fromDate;
     result.toText = result.toDate;
@@ -9901,6 +10416,112 @@ dateHelper = function ($, moment) {
       fromText: mFrom.calendar().replace(' at ', ' '),
       toText: mTo.calendar().replace(' at ', ' ')
     };
+  };
+  /**
+   * makeStartDate helps making an start date for a transaction, usually a reservation
+   * It will do the standard rounding
+   * But also, if you're using dates instead of datetimes,
+   * it will try to make smart decisions about which hours to use
+   * @param m - the Moment date
+   * @param useHours - does the profile use hours?
+   * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+   * @param minDate - passing in a minimum start-date, will be different for reservations compared to orders
+   * @param maxDate - passing in a maximum start-date (not used for the moment)
+   * @param now - the current moment (just to make testing easier)
+   * @returns {moment}
+   * @private
+   */
+  DateHelper.prototype.makeStartDate = function (m, useHours, dayMode, minDate, maxDate, now) {
+    useHours = useHours != null ? useHours : true;
+    // is the account set up to use hours?
+    dayMode = dayMode != null ? dayMode : false;
+    // did the selection come from a calendar fullcalendar day selection?
+    now = now || moment();
+    // the current time (for unit testing)
+    if (useHours && !dayMode) {
+      // The account is set up to use hours,
+      // and the user picked the hours himself (since it's not picked from a dayMode calendar)
+      // We'll just round the from date
+      // if it's before the minDate, just take the minDate instead
+      m = this.roundTimeFrom(m);
+    } else {
+      // When we get here we know that either:
+      // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+      // or
+      // 2) The account is set up to use days instead of hours
+      //
+      // Which means we still need to see if we can make a smart decision about the hours part
+      // we'll base this on typical business hours (usually 9 to 5)
+      var isToday = m.isSame(now, 'day'), startOfBusinessDay = this._makeStartOfBusinessDay(m);
+      if (isToday) {
+        // The start date is today
+        // and the current time is still before business hours
+        // we can use the start time to start-of-business hours
+        if (m.isBefore(startOfBusinessDay)) {
+          m = startOfBusinessDay;
+        } else {
+          // We're already at the beginning of business hours
+          // or even already passed it, just try rounding the
+          // time and see if its before minDate
+          m = this.roundTimeFrom(m);
+        }
+      } else {
+        // The start date is not today, we can just take the business day start from the date that was passed
+        m = startOfBusinessDay;
+      }
+    }
+    // Make sure we never return anything before the mindate
+    return minDate && m.isBefore(minDate) ? minDate : m;
+  };
+  /**
+   * makeEndDate helps making an end date for a transaction
+   * It will do the standard rounding
+   * But also, if you're using dates instead of datetimes,
+   * it will try to make smart decisions about which hours to use
+   * @param m - the Moment date
+   * @param useHours - does the profile use hours?
+   * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+   * @param minDate
+   * @param maxDate
+   * @param now - the current moment (just to make testing easier)
+   * @returns {moment}
+   * @private
+   */
+  DateHelper.prototype.makeEndDate = function (m, useHours, dayMode, minDate, maxDate, now) {
+    useHours = useHours != null ? useHours : true;
+    dayMode = dayMode != null ? dayMode : false;
+    now = now || moment();
+    if (useHours && !dayMode) {
+      // The account is set up to use hours,
+      // and since dayMode is false,
+      // we assume the hours are picked by the user himself
+      // just do the rounding and we're done
+      m = this.roundTimeTo(m);
+    } else {
+      // When we get here we know that either:
+      // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+      // or
+      // 2) The account is set up to use days instead of hours
+      //
+      // Which means we still need to see if we can make a smart decision about the hours part
+      var isToday = m.isSame(now, 'day'), endOfBusinessDay = this._makeEndOfBusinessDay(m), endOfDay = this._makeEndOfDay(m);
+      if (isToday) {
+        // The end date is today
+        // and the current date is before business hours
+        // we can use the end time to end-of-business hours
+        if (m.isBefore(endOfBusinessDay)) {
+          m = endOfBusinessDay;
+        } else {
+          m = endOfDay;
+        }
+      } else if (m.isAfter(endOfBusinessDay)) {
+        m = endOfDay;
+      } else {
+        m = endOfBusinessDay;
+      }
+    }
+    // Make sure we never return a date after the max date
+    return maxDate && m.isAfter(maxDate) ? maxDate : m;
   };
   /**
    * [getFriendlyDateText]
@@ -10004,6 +10625,15 @@ dateHelper = function ($, moment) {
     default:
       break;
     }
+  };
+  DateHelper.prototype._makeStartOfBusinessDay = function (m) {
+    return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+  };
+  DateHelper.prototype._makeEndOfBusinessDay = function (m) {
+    return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+  };
+  DateHelper.prototype._makeEndOfDay = function (m) {
+    return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
   };
   return DateHelper;
 }(jquery, moment);
@@ -10183,7 +10813,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var dateHelper = this._getDateHelper();
     var now = dateHelper.getNow();
     var next = dateHelper.roundTimeTo(now);
-    return next.add(365, 'day');  // TODO: Is this a sensible date?
+    return next.add(2, 'years');
   };
   /**
    * suggestEndDate, makes a new moment() object with a suggested end date,
@@ -10340,6 +10970,15 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
   };
   Transaction.prototype._checkToDateBetweenMinMax = function (d) {
     return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
+  };
+  Transaction.prototype._getUniqueItemIds = function (ids) {
+    ids = ids || [];
+    //https://stackoverflow.com/questions/38373364/the-best-way-to-remove-duplicate-strings-in-an-array
+    return ids.reduce(function (p, c, i, a) {
+      if (p.indexOf(c) == -1)
+        p.push(c);
+      return p;
+    }, []);
   };
   // Setters
   // ----
@@ -10534,6 +11173,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.addItems = function (items, skipRead) {
     var that = this;
+    //Remove duplicate item ids
+    items = that._getUniqueItemIds(items);
     return this._ensureTransactionExists(skipRead).then(function () {
       return that._doApiCall({
         method: 'addItems',
@@ -10552,17 +11193,19 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.removeItems = function (items, skipRead) {
+    var that = this;
     if (!this.existsInDb()) {
       return $.Deferred().reject(new Error('Cannot removeItems from document without id'));
     }
-    var that = this;
+    //Remove duplicate item ids
+    items = that._getUniqueItemIds(items);
     return this._doApiCall({
       method: 'removeItems',
       params: { items: items },
       skipRead: skipRead
     }).then(function (data) {
       return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
+        return data;
       });
     });
   };
@@ -10584,7 +11227,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       skipRead: skipRead
     }).then(function (data) {
       return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
+        return data;
       });
     });
   };
@@ -10749,7 +11392,8 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       // It requires some more parameters to be set
       params.onlyUnbooked = onlyUnbooked != null ? onlyUnbooked : true;
       params.fromDate = this.from;
-      params.toDate = this.to;
+      params.toDate = this.to || this.due;
+      //need due date for orders!!!!!
       params._limit = params._limit || 20;
       params._skip = params._skip || 0;
       if (skipList && skipList.length) {
@@ -11036,9 +11680,9 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @return {Boolean} 
    */
   Order.prototype.isValidDueDate = function () {
-    var due = this.due, now = this.getNow(), status = this.status;
-    if (status == 'creating') {
-      return due != null && due.isAfter(now);
+    var due = this.due, status = this.status, nextTimeSlot = this.getNextTimeSlot(), maxDueDate = this.getMaxDateDue();
+    if (status == 'creating' || status == 'open') {
+      return due != null && (due.isSame(nextTimeSlot) || due.isAfter(nextTimeSlot));
     }
     return true;
   };
@@ -11393,9 +12037,11 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @param itemIds
    * @param location
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {promise}
    */
-  Order.prototype.checkin = function (itemIds, location, skipRead) {
+  Order.prototype.checkin = function (itemIds, location, skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'checkin',
       params: {
@@ -11403,6 +12049,22 @@ Order = function ($, api, Transaction, Conflict, common) {
         location: location
       },
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422) {
+          if (err.opt && err.opt.detail.indexOf('order has status closed') != -1) {
+            return that.get();
+          } else if (err.opt && err.opt.detail.indexOf('already checked in or used somewhere else') != -1) {
+            return that.get();
+          }
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -11410,12 +12072,28 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @method
    * @name Order#checkout
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {promise}
    */
-  Order.prototype.checkout = function (skipRead) {
+  Order.prototype.checkout = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'checkout',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422) {
+          if (err.opt && err.opt.detail.indexOf('order has status open') != -1) {
+            return that.get();
+          }
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -11425,10 +12103,25 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @param skipRead
    * @returns {promise}
    */
-  Order.prototype.undoCheckout = function (skipRead) {
+  Order.prototype.undoCheckout = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'undoCheckout',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422) {
+          if (err.opt && err.opt.detail.indexOf('order has status creating') != -1) {
+            return that.get();
+          }
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -11438,10 +12131,14 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @return {promise}
    */
   Order.prototype.canExtend = function (due) {
-    //return this._doApiCall({ method: "canExtend", params: { due: due }, skipRead: true });
-    // TODO CHANGE THIS
-    // Currently always allow order to be extended
-    return $.Deferred().resolve({ result: true });
+    // We can only extend orders which are open
+    // and for which their due date will be
+    // at least 1 timeslot from now
+    var can = true;
+    if (this.status != 'open' || due.isBefore(this.getNextTimeSlot())) {
+      can = false;
+    }
+    return $.Deferred().resolve({ result: can });
   };
   /**
    * Extends order due date
@@ -11450,10 +12147,17 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @return {promise}
    */
   Order.prototype.extend = function (due, skipRead) {
-    return this._doApiCall({
-      method: 'extend',
-      params: { due: due },
-      skipRead: skipRead
+    var that = this;
+    return this.canExtend(due).then(function (resp) {
+      if (resp && resp.result == true) {
+        return that._doApiCall({
+          method: 'extend',
+          params: { due: due },
+          skipRead: skipRead
+        });
+      } else {
+        return $.Deferred().reject('Cannot extend order to given date because it has conflicts.', resp);
+      }
     });
   };
   /**
@@ -11594,25 +12298,39 @@ PermissionHandler = function () {
     this._useUserSync = limits.allowUserSync && profile.useUserSync;
     this._useFlags = profile.useFlags;
     this._useGeo = profile.useGeo;
+    this._useRestrictLocations = limits.allowRestrictLocations && profile.useRestrictLocations;
+    this._useReporting = limits.allowReporting && profile.useReporting;
+    this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
     case 'selfservice':
       this._canSetFlag = profile.selfServiceCanSetFlag;
       this._canClearFlag = profile.selfServiceCanClearFlag;
+      this._canSetLabel = profile.selfServiceCanSetLabel;
+      this._canClearLabel = profile.selfServiceCanClearLabel;
+      this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
+      this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
       break;
     case 'user':
       this._canSetFlag = profile.userCanSetFlag;
       this._canClearFlag = profile.userCanClearFlag;
+      this._canSetLabel = profile.userCanSetLabel;
+      this._canClearLabel = profile.userCanClearLabel;
+      this._canReadOrders = this._useOrders;
+      this._canCreateOrders = this._useOrders;
       break;
     default:
       this._canSetFlag = true;
       this._canClearFlag = true;
+      this._canSetLabel = true;
+      this._canClearLabel = true;
+      this._canReadOrders = this._useOrders;
+      this._canCreateOrders = this._useOrders;
       break;
     }
     if (this._isSelfService) {
       // Override some permissions for selfservice users
-      this._useOrders = this._useOrders && this._useSelfService && profile.selfServiceCanOrder;
       this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
       this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
     }
@@ -11632,7 +12350,7 @@ PermissionHandler = function () {
     return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
   };
   PermissionHandler.prototype.hasItemPermission = function (action, data, location) {
-    return this.hasPermission(action, 'items', data, location);
+    return this.hasPermission(action || 'read', 'items', data, location);
   };
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
     return this._useCustody;
@@ -11643,14 +12361,26 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasItemGeoPermission = function () {
     return this._useGeo;
   };
-  PermissionHandler.prototype.hasItemGeoPermission = function () {
-    return this._useGeo;
+  PermissionHandler.prototype.hasItemDepreciationPermission = function () {
+    return this._isRootOrAdmin && this._useDepreciations;
+  };
+  PermissionHandler.prototype.hasUserSyncPermission = function () {
+    return this.hasAccountUserSyncPermission('read');
+  };
+  PermissionHandler.prototype.hasSelfservicePermission = function () {
+    return this._useSelfService;
+  };
+  PermissionHandler.prototype.hasReportingPermission = function () {
+    return this._isRootOrAdmin && this._useReporting;
+  };
+  PermissionHandler.prototype.hasLabelPermission = function () {
+    return this._canSetLabel && this._canClearLabel;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
   };
   PermissionHandler.prototype.hasContactPermission = function (action, data, location) {
-    return this.hasPermission(action, 'contacts', data, location);
+    return this.hasPermission(action || 'read', 'contacts', data, location);
   };
   PermissionHandler.prototype.hasContactReadOtherPermission = function (action, data, location) {
     return !this._isSelfService;
@@ -11664,14 +12394,17 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasCategoriesPermission = function (action, data, location) {
     return this.hasPermission(action, 'categories', data, location);
   };
-  PermissionHandler.prototype.hasWebhooksPermission = function (action, data, location) {
-    return this.hasPermission(action, 'webhooks', data, location);
+  PermissionHandler.prototype.hasNotificationPermission = function (action, data, location) {
+    return this.hasPermission(action, 'notifications', data, location);
   };
   PermissionHandler.prototype.hasUserPermission = function (action, data, location) {
     return this.hasPermission(action, 'users', data, location);
   };
   PermissionHandler.prototype.hasLocationPermission = function (action, data, location) {
     return this.hasPermission(action, 'locations', data, location);
+  };
+  PermissionHandler.prototype.hasRestrictLocationPermission = function () {
+    return this._useRestrictLocations;
   };
   PermissionHandler.prototype.hasWebhookPermission = function (action, data, location) {
     return this.hasPermission(action, 'webhooks', data, location);
@@ -11742,7 +12475,7 @@ PermissionHandler = function () {
       case 'reserve':
         return this._useReservations;
       case 'checkout':
-        return this._useOrders;
+        return this._canCreateOrders;
       case 'takeCustody':
       case 'releaseCustody':
         return this._useCustody;
@@ -11788,7 +12521,7 @@ PermissionHandler = function () {
       case 'reserve':
         return this._useReservations;
       case 'checkout':
-        return this._useOrders;
+        return this._canCreateOrders;
       case 'takeCustody':
       case 'releaseCustody':
         return this._useCustody;
@@ -11806,9 +12539,11 @@ PermissionHandler = function () {
       // TODO: Add items to open check-out
       // CRUD
       case 'create':
-      case 'read':
       case 'update':
       case 'delete':
+        return this._canCreateOrders;
+      case 'read':
+        return this._canReadOrders;
       // Order specific actions
       case 'setCustomer':
       case 'clearCustomer':
@@ -11818,20 +12553,22 @@ PermissionHandler = function () {
       case 'removeItems':
       case 'swapItems':
       case 'undoCheckout':
-      case 'checkin':
       case 'checkout':
-      // Generic actions
+      case 'checkin':
       case 'setFields':
       case 'setField':
       case 'clearField':
+        return this._canCreateOrders;
+      // Generic actions
       case 'addAttachment':
       case 'addComment':
       case 'updateComment':
       case 'removeComment':
       case 'export':
+        return this._useOrders;
       case 'archive':
       case 'undoArchive':
-        return this._useOrders;
+        return this._useOrders && this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && this._canSetFlag;
@@ -11839,9 +12576,11 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf;
+        return this._usePdf && this._isRootOrAdminOrUser;
       case 'checkinAt':
-        return this._useCheckinLocation;
+        return this._canCreateOrders && this._useCheckinLocation;
+      case 'forceCheckListCheckin':
+        return this.profile.forceCheckListCheckin;
       case 'forceConflictResolving':
         return false;  // this.profile.forceConflictResolving;
       }
@@ -11870,7 +12609,6 @@ PermissionHandler = function () {
       case 'cancel':
       case 'undoCancel':
       case 'switchToOrder':
-      case 'makeOrder':
       case 'reserveAgain':
       case 'reserveRepeat':
       // Generic actions
@@ -11882,9 +12620,12 @@ PermissionHandler = function () {
       case 'updateComment':
       case 'removeComment':
       case 'export':
+        return this._useReservations;
+      case 'makeOrder':
+        return this._canCreateOrders;
       case 'archive':
       case 'undoArchive':
-        return this._useReservations;
+        return this._useReservations && this._isRootOrAdmin;
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && this._canSetFlag;
@@ -11892,7 +12633,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf;
+        return this._usePdf && this._isRootOrAdminOrUser;
       }
       break;
     case 'customers':
@@ -11923,7 +12664,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf;
+        return this._usePdf && this._isRootOrAdminOrUser;
       }
       break;
     case 'users':
@@ -11958,6 +12699,7 @@ PermissionHandler = function () {
       case 'create':
       case 'update':
       case 'delete':
+      case 'archive':
         return this._isRootOrAdmin;
       }
       break;
@@ -11973,6 +12715,17 @@ PermissionHandler = function () {
       case 'testConnection':
       case 'syncUsers':
         return this._useUserSync && this._isRootOrAdmin;
+      }
+      break;
+    case 'notifications':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+      case 'create':
+      case 'update':
+      case 'delete':
+        return this._isRootOrAdmin;
       }
       break;
     case 'webhooks':
@@ -12004,7 +12757,6 @@ PermissionHandler = function () {
       default:
         return false;
       case 'read':
-        return true;
       case 'create':
       case 'update':
       case 'delete':
@@ -12108,9 +12860,9 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @return {Boolean}
    */
   Reservation.prototype.isValidToDate = function () {
-    var from = this.from, to = this.to, status = this.status;
+    var from = this.from, to = this.to, status = this.status, now = this.getNow();
     if (status == 'creating' || status == 'open') {
-      return to != null && to.isAfter(from);
+      return to != null && to.isAfter(from) && to.isAfter(now);
     }
     return true;
   };
@@ -12197,7 +12949,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     // - status: open
     // - to date: is in the future
     // - items: all are available
-    if (this.status == 'open' && this.to != null && this.to.isAfter(this.getNow())) {
+    if (this.status == 'open' && (this.contact && this.contact.status == 'active') && this.to != null && this.to.isAfter(this.getNow())) {
       var unavailable = this._getUnavailableItems();
       var len = $.map(unavailable, function (n, i) {
         return i;
@@ -12260,8 +13012,11 @@ Reservation = function ($, api, Transaction, Conflict) {
     that.to = data.toDate == null || data.toDate == 'null' ? null : data.toDate;
     that.due = null;
     that.order = data.order || null;
+    that.repeatId = data.repeatId || null;
+    that.repeatFrequency = data.repeatFrequency || '';
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
+      return data;
     });
   };
   //
@@ -12279,14 +13034,17 @@ Reservation = function ($, api, Transaction, Conflict) {
   Reservation.prototype._getConflicts = function () {
     var that = this, conflicts = [], conflict = null;
     // Reservations can only have conflicts
-    // when we have a (location OR (from AND to)) AND at least 1 item
+    // when status open OR creating and we have a (location OR (from AND to)) AND at least 1 item 
     // So we'll only hit the server if there are possible conflicts.
     //
     // However, some conflicts only start making sense when the reservation fields filled in
     // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
-    if (this.items && this.items.length && (this.location || this.from && this.to)) {
+    if ([
+        'creating',
+        'open'
+      ].indexOf(this.status) != -1 && this.items && this.items.length && (this.location || this.from && this.to)) {
       var locId = this.location ? this._getId(this.location) : null;
-      var showOrderConflicts = this.from && this.to;
+      var showOrderConflicts = this.from && this.to && this.status == 'open';
       var showLocationConflicts = locId != null;
       var showStatusConflicts = true;
       // always show conflicts for expired, custody
@@ -12307,7 +13065,9 @@ Reservation = function ($, api, Transaction, Conflict) {
               kind: kind,
               item: item._id,
               itemName: item.name,
-              doc: conflict.conflictsWith
+              doc: conflict.conflictsWith,
+              fromDate: conflict.fromDate,
+              toDate: conflict.toDate
             }));
           } else {
             if (showStatusConflicts && item.status == 'expired') {
@@ -12520,12 +13280,26 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @method
    * @name Reservation#reserve
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.reserve = function (skipRead) {
+  Reservation.prototype.reserve = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'reserve',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
@@ -12533,38 +13307,115 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @method
    * @name Reservation#undoReserve
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.undoReserve = function (skipRead) {
+  Reservation.prototype.undoReserve = function (skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'undoReserve',
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status creating') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
    * Cancels the booked reservation and sets the status to `cancelled`
    * @method
    * @name Reservation#cancel
+   * @param message
    * @param skipRead
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.cancel = function (skipRead) {
+  Reservation.prototype.cancel = function (message, skipRead, skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'cancel',
+      params: { message: message || '' },
       skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
+  };
+  /**
+   * Cancels repeated reservations and sets the status to `cancelled`
+   * @method
+   * @name Reservation#cancelRepeat
+   * @param message
+   * @param skipRead
+   * @param skipErrorHandling
+   * @returns {*}
+   */
+  Reservation.prototype.cancelRepeat = function (message, skipRead, skipErrorHandling) {
+    var that = this;
+    return this._doApiCall({
+      method: 'cancelRepeat',
+      params: { message: message || '' },
+      skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
     });
   };
   /**
    * Turns an open reservation into an order (which still needs to be checked out)
    * @method
    * @name Reservation#makeOrder
+   * @param skipErrorHandling
    * @returns {*}
    */
-  Reservation.prototype.makeOrder = function () {
+  Reservation.prototype.makeOrder = function (skipErrorHandling) {
+    var that = this;
     return this._doApiCall({
       method: 'makeOrder',
       skipRead: true
-    });  // response is an Order object!!
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status closed') != -1)) {
+          return that.get().then(function (resp) {
+            var orderId = that._getId(resp.order);
+            // need to return fake order object
+            return { _id: orderId };
+          });
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
   };
   /**
    * Switch reservation to order
@@ -12611,14 +13462,19 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {promise}
    */
   Reservation.prototype.reserveAgain = function (fromDate, toDate, customer, location, skipRead) {
+    var params = {
+      location: location,
+      customer: customer
+    };
+    if (fromDate) {
+      params.fromDate = fromDate;
+    }
+    if (toDate) {
+      params.toDate = toDate;
+    }
     return this._doApiCall({
       method: 'reserveAgain',
-      params: {
-        fromDate: fromDate,
-        toDate: toDate,
-        location: location,
-        customer: customer
-      },
+      params: params,
       skipRead: skipRead
     });
   };
@@ -13150,7 +14006,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var dateHelper = this._getDateHelper();
     var now = dateHelper.getNow();
     var next = dateHelper.roundTimeTo(now);
-    return next.add(365, 'day');  // TODO: Is this a sensible date?
+    return next.add(2, 'years');
   };
   /**
    * suggestEndDate, makes a new moment() object with a suggested end date,
@@ -13307,6 +14163,15 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
   };
   Transaction.prototype._checkToDateBetweenMinMax = function (d) {
     return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
+  };
+  Transaction.prototype._getUniqueItemIds = function (ids) {
+    ids = ids || [];
+    //https://stackoverflow.com/questions/38373364/the-best-way-to-remove-duplicate-strings-in-an-array
+    return ids.reduce(function (p, c, i, a) {
+      if (p.indexOf(c) == -1)
+        p.push(c);
+      return p;
+    }, []);
   };
   // Setters
   // ----
@@ -13501,6 +14366,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.addItems = function (items, skipRead) {
     var that = this;
+    //Remove duplicate item ids
+    items = that._getUniqueItemIds(items);
     return this._ensureTransactionExists(skipRead).then(function () {
       return that._doApiCall({
         method: 'addItems',
@@ -13519,17 +14386,19 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {promise}
    */
   Transaction.prototype.removeItems = function (items, skipRead) {
+    var that = this;
     if (!this.existsInDb()) {
       return $.Deferred().reject(new Error('Cannot removeItems from document without id'));
     }
-    var that = this;
+    //Remove duplicate item ids
+    items = that._getUniqueItemIds(items);
     return this._doApiCall({
       method: 'removeItems',
       params: { items: items },
       skipRead: skipRead
     }).then(function (data) {
       return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
+        return data;
       });
     });
   };
@@ -13551,7 +14420,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       skipRead: skipRead
     }).then(function (data) {
       return that._ensureTransactionDeleted().then(function () {
-        return skipRead == true ? data : that._fromJson(data);
+        return data;
       });
     });
   };
@@ -13716,7 +14585,8 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       // It requires some more parameters to be set
       params.onlyUnbooked = onlyUnbooked != null ? onlyUnbooked : true;
       params.fromDate = this.from;
-      params.toDate = this.to;
+      params.toDate = this.to || this.due;
+      //need due date for orders!!!!!
       params._limit = params._limit || 20;
       params._skip = params._skip || 0;
       if (skipList && skipList.length) {
@@ -13802,7 +14672,8 @@ User = function ($, Base, common) {
     // user, admin
     active: true,
     isOwner: false,
-    archived: null
+    archived: null,
+    restrictLocations: []
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -13836,6 +14707,7 @@ User = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
+    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -13894,7 +14766,29 @@ User = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
+  };
+  User.prototype._isDirtyInfo = function () {
+    if (this.raw) {
+      var name = this.raw.name || DEFAULTS.name;
+      var role = this.raw.role || DEFAULTS.role;
+      var email = this.raw.email || DEFAULTS.email;
+      var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
+      return this.name != name || this.email != email || this.role != role || this.active != active;
+    }
+    return false;
+  };
+  User.prototype._isDirtyRestrictLocations = function () {
+    if (this.raw) {
+      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+      // Check if other locations have been selected
+      return this.restrictLocations.filter(function (x) {
+        return restrictLocations.indexOf(x) < 0;
+      }).length > 0 || restrictLocations.filter(function (x) {
+        return that.restrictLocations.indexOf(x) < 0;
+      }).length > 0;
+    }
+    return false;
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -13904,14 +14798,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    if (!isDirty && this.raw) {
-      var name = this.raw.name || DEFAULTS.name;
-      var role = this.raw.role || DEFAULTS.role;
-      var email = this.raw.email || DEFAULTS.email;
-      var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.role != role || this.active != active;
-    }
-    return isDirty;
+    return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
   };
   /**
    * Gets a url for a user avatar
@@ -13976,6 +14863,7 @@ User = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canDeactivate = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.active && this.archived == null && !this.isOwner;
   };
   /**
@@ -13983,6 +14871,7 @@ User = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.canArchive = function () {
+    // TODO: We should also check if we're not deactivating the last or only user
     return this.archived == null && !this.isOwner;
   };
   /**
@@ -14056,6 +14945,68 @@ User = function ($, Base, common) {
     });
   };
   /**
+   * Restrict user access to specific location(s)
+   * @param locations
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.setRestrictLocations = function (locations, skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'setRestrictLocations',
+      params: { restrictLocations: locations },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clear user location(s) access (makes all location accessible for the user)
+   * @param skipRead
+   * @returns {promise}
+   */
+  User.prototype.clearRestrictLocations = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('User does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'clearRestrictLocations',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Updates the user
+   * @param skipRead
+   * @returns {*}
+   */
+  User.prototype.update = function (skipRead) {
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot update to empty user'));
+    }
+    if (!this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot update user without id'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot update, invalid user'));
+    }
+    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred();
+    if (this._isDirtyInfo()) {
+      dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
+    } else {
+      dfdInfo.resolve();
+    }
+    if (this._isDirtyRestrictLocations()) {
+      if (this.restrictLocations.length != 0) {
+        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
+      } else {
+        dfdRestrictLocations = this.clearRestrictLocations(true);
+      }
+    } else {
+      dfdRestrictLocations.resolve();
+    }
+    return $.when(dfdInfo, dfdRestrictLocations);
+  };
+  /**
    * Writes the user to a json object
    * @param options
    * @returns {object}
@@ -14089,6 +15040,7 @@ User = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
+      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });
@@ -14099,14 +15051,13 @@ UserSync = function ($, Base, common) {
   var DEFAULTS = {
     kind: 'ldap',
     name: '',
-    enabled: false,
     host: 'ldap://yourdomain.com',
     port: 389,
     timeOut: 10,
     login: '',
     password: '',
-    newUsers: 'ignore',
-    existingUsers: 'ignore',
+    newUsers: 'create',
+    existingUsers: 'update',
     missingUsers: 'ignore',
     autoSync: false,
     role: 'selfservice',
@@ -14114,7 +15065,10 @@ UserSync = function ($, Base, common) {
     base: 'ou=team,dc=yourdomain,dc=com',
     loginField: 'uid',
     nameField: 'cn',
-    emailField: 'mail'
+    emailField: 'mail',
+    restrictLocations: [],
+    timezone: 'Etc/GMT',
+    hostCert: 'ldap_tls_demand'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14128,7 +15082,6 @@ UserSync = function ($, Base, common) {
    * @extends Base
    * @property {string} kind                  - The kind
    * @property {string} name                  - The name
-   * @property {boolean} enabled              - Is the usersync active?
    * @property {string} host                  - The url of the host
    * @property {int} port                     - The port number
    * @property {int} timeOut                  - The timeOut in seconds
@@ -14151,7 +15104,6 @@ UserSync = function ($, Base, common) {
     this.helper = spec.helper;
     this.kind = spec.kind || DEFAULTS.kind;
     this.name = spec.name || DEFAULTS.name;
-    this.enabled = spec.enabled != null ? spec.enabled : DEFAULTS.enabled;
     this.host = spec.host || DEFAULTS.host;
     this.port = spec.port || DEFAULTS.port;
     this.timeOut = spec.timeOut || DEFAULTS.timeOut;
@@ -14167,6 +15119,9 @@ UserSync = function ($, Base, common) {
     this.loginField = spec.loginField || DEFAULTS.loginField;
     this.nameField = spec.nameField || DEFAULTS.nameField;
     this.emailField = spec.emailField || DEFAULTS.emailField;
+    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
+    this.timezone = spec.timezone || DEFAULTS.timezone;
+    this.hostCert = spec.hostCert || DEFAULTS.hostCert;
   };
   UserSync.prototype = new tmp();
   UserSync.prototype.constructor = UserSync;
@@ -14203,7 +15158,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.enabled == DEFAULTS.enabled && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField;
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -14212,11 +15167,13 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isDirty = function () {
+    return this._isDirtyInfo() || this._isDirtyRestrictLocations();
+  };
+  UserSync.prototype._isDirtyInfo = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
       var kind = this.raw.kind || DEFAULTS.kind;
       var name = this.raw.name || DEFAULTS.name;
-      var enabled = this.raw.enabled != null ? this.raw.enabled : DEFAULTS.enabled;
       var host = this.raw.host || DEFAULTS.host;
       var port = this.raw.port || DEFAULTS.port;
       var timeOut = this.raw.timeOut || DEFAULTS.timeOut;
@@ -14232,9 +15189,23 @@ UserSync = function ($, Base, common) {
       var loginField = this.raw.loginField || DEFAULTS.loginField;
       var nameField = this.raw.nameField || DEFAULTS.nameField;
       var emailField = this.raw.emailField || DEFAULTS.emailField;
-      return this.kind != kind || this.name != name || this.enabled != enabled || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField;
+      var timezone = this.raw.timezone || DEFAULTS.timezone;
+      var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
+      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this._isDirtyRestrictLocations();
     }
     return isDirty;
+  };
+  UserSync.prototype._isDirtyRestrictLocations = function () {
+    if (this.raw) {
+      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
+      // Check if other locations have been selected
+      return this.restrictLocations.filter(function (x) {
+        return restrictLocations.indexOf(x) < 0;
+      }).length > 0 || restrictLocations.filter(function (x) {
+        return that.restrictLocations.indexOf(x) < 0;
+      }).length > 0;
+    }
+    return false;
   };
   UserSync.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -14277,7 +15248,6 @@ UserSync = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.kind = this.kind || DEFAULTS.kind;
     data.name = this.name || DEFAULTS.name;
-    data.enabled = this.enabled != null ? this.enabled : DEFAULTS.enabled;
     data.host = this.host || DEFAULTS.host;
     data.port = this.port || DEFAULTS.port;
     data.timeOut = this.timeOut || DEFAULTS.timeOut;
@@ -14293,6 +15263,8 @@ UserSync = function ($, Base, common) {
     data.loginField = this.loginField || DEFAULTS.loginField;
     data.nameField = this.nameField || DEFAULTS.nameField;
     data.emailField = this.emailField || DEFAULTS.emailField;
+    data.timezone = this.timezone || DEFAULTS.timezone;
+    data.hostCert = this.hostCert || DEFAULTS.hostCert;
     return data;
   };
   /**
@@ -14309,7 +15281,6 @@ UserSync = function ($, Base, common) {
       // depending on the fields
       that.kind = data.kind || DEFAULTS.kind;
       that.name = data.name || DEFAULTS.name;
-      that.enabled = data.enabled != null ? data.enabled : DEFAULTS.enabled;
       that.host = data.host || DEFAULTS.host;
       that.port = data.port || DEFAULTS.port;
       that.timeOut = data.timeOut || DEFAULTS.timeOut;
@@ -14325,9 +15296,85 @@ UserSync = function ($, Base, common) {
       that.loginField = data.loginField || DEFAULTS.loginField;
       that.nameField = data.nameField || DEFAULTS.nameField;
       that.emailField = data.emailField || DEFAULTS.emailField;
+      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
+      that.timezone = data.timezone || DEFAULTS.timezone;
+      that.hostCert = data.hostCert || DEFAULTS.hostCert;
       $.publish('usersync.fromJson', data);
       return data;
     });
+  };
+  /**
+   * Restrict user access to specific location(s)
+   * @param locations
+   * @param skipRead
+   * @returns {promise}
+   */
+  UserSync.prototype.setRestrictLocations = function (locations, skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('Usersync does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'setRestrictLocations',
+      params: { restrictLocations: locations },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clear user location(s) access (makes all location accessible for the user)
+   * @param skipRead
+   * @returns {promise}
+   */
+  UserSync.prototype.clearRestrictLocations = function (skipRead) {
+    if (!this.existsInDb()) {
+      return $.Deferred().reject('Usersync does not exist in database');
+    }
+    return this._doApiCall({
+      method: 'clearRestrictLocations',
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Updates the usersync
+   * @param skipRead
+   * @returns {*}
+   */
+  UserSync.prototype.update = function (skipRead) {
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot update to empty usersync'));
+    }
+    if (!this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot update usersync without id'));
+    }
+    if (!this.isValid()) {
+      return $.Deferred().reject(new Error('Cannot update, invalid usersync'));
+    }
+    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred(), params = this._toJson();
+    if (this._isDirtyInfo()) {
+      dfdInfo = this.ds.update(this.id, params, this._fields).then(function (resp) {
+        that._fromJson(resp);
+      });
+    } else {
+      dfdInfo.resolve();
+    }
+    if (this._isDirtyRestrictLocations()) {
+      if (this.restrictLocations.length != 0) {
+        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
+      } else {
+        dfdRestrictLocations = this.clearRestrictLocations(true);
+      }
+    } else {
+      dfdRestrictLocations.resolve();
+    }
+    return $.when(dfdInfo, dfdRestrictLocations);
+  };
+  UserSync.prototype.create = function (skipRead) {
+    if (this.existsInDb()) {
+      return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
+    }
+    if (this.isEmpty()) {
+      return $.Deferred().reject(new Error('Cannot create empty document'));
+    }
+    return this._create(skipRead);
   };
   return UserSync;
 }(jquery, base, common);
@@ -14338,14 +15385,15 @@ WebHook = function ($, common, api, Document) {
     name: '',
     address: '',
     topic: '',
-    hookFields: '*, location.*, items.*, customer.*',
+    hookFields: '*, location.*, items.*, customer.*,by.name,by.email',
     // avoid clash with Document.fields
     format: '',
     created: null,
     modified: null,
     enabled: true,
     log10: [],
-    fails: 0
+    fails: 0,
+    minutes: 0
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14366,6 +15414,7 @@ WebHook = function ($, common, api, Document) {
    * @property {boolean} enabled      whether or not the webhook is enabled
    * @property {array} log10          the last 10 logs of the webhook
    * @property {int} fails            the number of consequtive fails
+   * @property {int} minutes          only for due and overdue webhooks, non-negative
    * @constructor
    * @extends Document
    */
@@ -14381,6 +15430,7 @@ WebHook = function ($, common, api, Document) {
     this.enabled = spec.enabled != null ? spec.enabled == true : DEFAULTS.enabled;
     this.log10 = spec.log10 || DEFAULTS.log10.slice();
     this.fails = spec.fails || DEFAULTS.fails;
+    this.minutes = spec.minutes || DEFAULTS.minutes;
   };
   WebHook.prototype = new tmp();
   WebHook.prototype.constructor = WebHook;
@@ -14440,7 +15490,7 @@ WebHook = function ($, common, api, Document) {
   WebHook.prototype.isDirty = function () {
     var isDirty = Document.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name || this.address != this.raw.address || this.topic != this.raw.topic || this.enabled != this.raw.enabled;
+      isDirty = this.name != this.raw.name || this.address != this.raw.address || this.topic != this.raw.topic || this.enabled != this.raw.enabled || this.minutes != this.raw.minutes;
     }
     return isDirty;
   };
@@ -14469,8 +15519,8 @@ WebHook = function ($, common, api, Document) {
     data.address = this.address;
     data.topic = this.topic;
     data.fields = this.hookFields;
-    data.modified = this.modified;
     data.enabled = this.enabled;
+    data.minutes = this.minutes;
     // don't write out fields for:
     // - created_at
     // - log10, log
@@ -14499,6 +15549,7 @@ WebHook = function ($, common, api, Document) {
       that.enabled = data.enabled != null ? data.enabled == true : DEFAULTS.enabled;
       that.log10 = data.log10 || DEFAULTS.log10.slice();
       that.fails = data.nr_consecutive_fails || DEFAULTS.fails;
+      that.minutes = data.minutes || DEFAULTS.minutes;
       return data;
     });
   };
@@ -14669,7 +15720,139 @@ OrderTransfer = function ($, Base) {
   };
   return OrderTransfer;
 }(jquery, base);
-core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer) {
+ColorLabel = function ($) {
+  var DEFAULTS = {
+    id: null,
+    name: '',
+    color: 'Gold',
+    readonly: false,
+    selected: false
+  };
+  /**
+   * @name  ColorLabel
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var ColorLabel = function (spec) {
+    spec = spec || {};
+    this.raw = $.extend({}, DEFAULTS, spec);
+    this.id = spec.id || DEFAULTS.id;
+    this.name = spec.name || DEFAULTS.name;
+    this.color = spec.color || DEFAULTS.color;
+    this.readonly = spec.readonly || DEFAULTS.readonly;
+    this.selected = spec.selected || DEFAULTS.selected;
+  };
+  /**
+   * isDirty
+   * @name  ColorLabel#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isDirty = function () {
+    return this.raw.name != this.name || this.raw.color != this.color;
+  };
+  /**
+   * isValid
+   * @name  ColorLabel#isValid
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype.isValid = function () {
+    return this.name && this.name.length > 0;
+  };
+  /**
+   * _fromJson
+   * @name  ColorLabel#_fromJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._fromJson = function (data) {
+    this.id = data.id || DEFAULTS.id;
+    this.name = data.name || DEFAULTS.name;
+    this.color = data.color || DEFAULTS.color;
+    this.selected = data.selected || DEFAULTS.selected;
+    this.readonly = data.readonly || DEFAULTS.readonly;
+    return $.Deferred().resolve();
+  };
+  /**
+   * _toJson
+   * @name  ColorLabel#_toJson
+   * @method
+   * @returns {boolean}
+   */
+  ColorLabel.prototype._toJson = function () {
+    return {
+      id: this.id,
+      name: this.name,
+      color: this.color,
+      selected: this.selected,
+      readonly: this.readonly
+    };
+  };
+  return ColorLabel;
+}(jquery);
+Field = function ($) {
+  var DEFAULTS = {
+    name: null,
+    value: null,
+    required: false,
+    unit: '',
+    kind: 'string',
+    form: false,
+    editor: null,
+    description: ''
+  };
+  /**
+   * @name  Field
+   * @class
+   * @param spec
+   * @constructor
+   */
+  var Field = function (spec) {
+    spec = spec || {};
+    this.raw = spec;
+    this.name = spec.name || DEFAULTS.name;
+    this.value = spec.value || DEFAULTS.value;
+    this.required = spec.required || DEFAULTS.required;
+    this.unit = spec.unit || DEFAULTS.unit;
+    this.kind = spec.kind || DEFAULTS.kind;
+    this.form = spec.form || DEFAULTS.form;
+    this.editor = spec.editor || DEFAULTS.editor;
+    this.description = spec.description || DEFAULTS.description;
+  };
+  /**
+   * isValid
+   * @name  Field#isValid
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isValid = function () {
+    if (!this.required)
+      return true;
+    return $.trim(this.value) != '';
+  };
+  /**
+   * isDirty
+   * @name  Field#isDirty
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isDirty = function () {
+    return this.raw.value != this.value;
+  };
+  /**
+   * isEmpty
+   * @name  Field#isEmpty
+   * @method
+   * @returns {boolean}
+   */
+  Field.prototype.isEmpty = function () {
+    return $.trim(this.value) == '';
+  };
+  return Field;
+}(jquery);
+core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
   var core = {};
   // namespaces
   core.api = api;
@@ -14698,7 +15881,9 @@ core = function (api, Availability, Attachment, Base, Category, Comment, Conflic
   core.WebHook = WebHook;
   core.OrderTransfer = OrderTransfer;
   core.Helper = Helper;
+  core.ColorLabel = ColorLabel;
+  core.Field = Field;
   return core;
-}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer);
+}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field);
 return core;
 }))

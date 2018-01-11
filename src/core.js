@@ -28,7 +28,9 @@ define([
     'UserSync',
     'WebHook',
     'common',
-    'OrderTransfer'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer) {
+    'OrderTransfer',
+    'ColorLabel',
+    'Field'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
 
     var core = {};
 
@@ -60,6 +62,8 @@ define([
     core.WebHook = WebHook;
     core.OrderTransfer = OrderTransfer;
     core.Helper = Helper;
+    core.ColorLabel = ColorLabel;
+    core.Field = Field;
 
     return core;
 });

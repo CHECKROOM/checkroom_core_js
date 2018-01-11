@@ -11,7 +11,8 @@ define([
     "settings",
     "common/inflection",
     "common/validation",
-    "common/utils"], function ($, jstz, api, settings, inflection, validation, utils) {
+    "common/clientStorage",
+    "common/utils"], function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {
 
     var DEFAULT_PLAN = "1215_cr_90";
     var DEFAULT_PERIOD = "yearly";
@@ -27,7 +28,7 @@ define([
 
         this.firstName = opt.firstName || "";  // between 2 and 25 chars
         this.lastName = opt.lastName || "";  // between 2 and 25 chars
-        this.company = opt.company || "";  // between 3 and 50 chars
+        this.company = opt.company || "";  // between 3 and 46 chars
         this.timezone = opt.timezone || jstz.determine().name();
         this.email = opt.email || "";
         this.login = opt.login || "";
@@ -77,7 +78,7 @@ define([
 
     Signup.prototype.companyIsValid = function() {
         var company = $.trim(this.company);
-        return (company.length>=3) && (company.length<=50);
+        return (company.length>=3) && (company.length<=46);
     };
 
     Signup.prototype.companyExists = function() {
@@ -127,6 +128,13 @@ define([
         }
     };
 
+    Signup.prototype.checkInvited = function(){
+        return this.ds.call('checkInvited', { email: this.email })
+            .then(function(resp){
+                return resp;
+            })
+    };
+
     Signup.prototype.passwordIsValid = function() {
         return validation.isValidPassword($.trim(this.password));
     };
@@ -149,7 +157,7 @@ define([
     // ----
     Signup.prototype.getGroupId = function() {
         var company = $.trim(this.company);
-        return company.OnlyAlphaNumSpaceAndUnderscore();
+        return company.replace(/[\.-\s]/g, '_').OnlyAlphaNumSpaceAndUnderscore();
     };
 
     Signup.prototype.getFullName = function() {
@@ -299,8 +307,8 @@ define([
             lastName = utils.getUrlParam("lastName", "").capitalize(),
             login = utils.getUrlParam("login", "").toLowerCase(),
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
-            plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
+            plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             timezone = utils.getUrlParam("timezone", jstz.determine().name()),
             inviteToken = utils.getUrlParam("code", ""),
             selfserviceToken = utils.getUrlParam("key", "");
@@ -317,6 +325,11 @@ define([
             (firstName.length>0) &&
             (lastName.length>0)) {
             login = utils.getLoginName(firstName, lastName);
+        }
+
+        // Don't allow signup to deprecated plans
+        if(["starter","basic", "professional","enterprise"].indexOf(plan) != -1){
+            plan = DEFAULT_PLAN;
         }
 
         return new Signup($.extend({

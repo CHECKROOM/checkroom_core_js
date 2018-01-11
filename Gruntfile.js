@@ -31,14 +31,12 @@ module.exports = function(grunt){
             compile: {
                 options: {
                     baseUrl: "src/core",
-                    out: "build/<%= pkg.name %>.js",
+                    out: "build/core.js",
                     include: ['../core'],
-                    exclude:['jquery', 'jquery-jsonp', 'jquery-pubsub', 'moment'],
+                    exclude:['jquery', 'moment'],
                     paths:{
                         "jquery": "empty:",
-                        "jquery-jsonp": "empty:",
-                        "moment": "empty:",
-                        "jquery-pubsub": "empty:"
+                        "moment": "empty:"
                     },
                     optimize: "none",
                     onModuleBundleComplete: function (data) {
@@ -49,7 +47,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jquery-jsonp', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jsonp, pubsub);\n}\n}(function (jquery, moment, jquery_jsonp, jquery_pubsub) {",
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\nfactory($, moment);\n}\n}(function (jquery, moment) {",
                                 "end": '\nreturn core;\n}))'
                             },
                         }));
@@ -61,11 +59,9 @@ module.exports = function(grunt){
                     baseUrl: "src/core",
                     out: "build/signup.js",
                     include: ['signup'],
-                    exclude:['jquery', 'jquery-jsonp', 'jquery-pubsub', 'jstz', 'moment'],
+                    exclude:['jquery', 'jstz', 'moment'],
                     paths:{
                         "jquery": "empty:",
-                        "jquery-jsonp": "empty:",
-                        "jquery-pubsub": "empty:",
                         "jstz": "empty:",
                         "moment": "empty:"
                     },
@@ -78,7 +74,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz', 'jquery-jsonp', 'jquery-pubsub'], factory);\n} else {\nfactory($, moment, jstz, jsonp, pubsub);\n}\n}(function (jquery, moment, jstz, jquery_jsonp, jquery_pubsub) {",
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz'], factory);\n} else {\nfactory($, moment, jstz);\n}\n}(function (jquery, moment, jstz) {",
                                 "end": '\nreturn signup;\n}))'
                             },
                         }));
@@ -94,34 +90,12 @@ module.exports = function(grunt){
                 }
             },
             build: {
-                src: 'build/<%= pkg.name %>.js',
-                dest: 'build/<%= pkg.name %>.min.js'
+                src: 'build/core.js',
+                dest: 'build/core.min.js'
             },
             signup:{
                 src: 'build/signup.js',
                 dest: 'build/signup.min.js'
-            }
-        },
-        qunit: {
-            options : {
-                '--web-security' : false,
-                '--local-to-remote-url-access' : true,
-                '--ignore-ssl-errors' : true
-            },
-            all:{
-                options:{
-                    urls:[
-                        'http://localhost:8000/tests/index.html'
-                    ]
-                }
-            }
-        },
-        connect: {
-            server: {
-                options: {
-                    port: 8000,
-                    base: '.'
-                }
             }
         },
         'gh-pages': {
@@ -135,8 +109,6 @@ module.exports = function(grunt){
     // Load the plugins
     grunt.loadNpmTasks('grunt-contrib-requirejs');
     grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.loadNpmTasks('grunt-contrib-qunit');
-    grunt.loadNpmTasks('grunt-contrib-connect');
     grunt.loadNpmTasks('grunt-contrib-clean');
     grunt.loadNpmTasks("grunt-jsdoc");
     grunt.loadNpmTasks('grunt-gh-pages');
@@ -144,12 +116,9 @@ module.exports = function(grunt){
     // this will generate the docs by typing "grunt docs" on the command line
     grunt.registerTask("docs", ["requirejs", "clean:jsdoc","jsdoc"]);
 
-    // this would be run by typing "grunt test" on the command line
-    grunt.registerTask('test', ['connect','qunit']);
-
     // the default task can be run just by typing "grunt" on the command line
-    grunt.registerTask('default', ['requirejs', "uglify", 'connect', 'qunit']);
+    grunt.registerTask('default', ['requirejs', "uglify"]);
 
     // build signup file
-    grunt.registerTask('signup', ['requirejs:compileSignup', "uglify:signup", 'connect', 'qunit']);
+    grunt.registerTask('signup', ['requirejs:compileSignup', "uglify:signup"]);
 }

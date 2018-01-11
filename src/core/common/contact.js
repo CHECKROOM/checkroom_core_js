@@ -42,7 +42,7 @@ define(['common/image'], function (imageHelper) {
 	};
 
 	that.contactCanDelete = function(contact) {
-		return (!that.contactGetUserId(contact));
+		return (!that.contactGetUserSync(contact));
 	};
 
 
@@ -62,6 +62,27 @@ define(['common/image'], function (imageHelper) {
 
 		// Show profile picture of user?
 		if(contact.user && contact.user.picture) return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
+
+		// Show avatar initials
+		return imageHelper.getAvatarInitial(contact.name, size);
+	};
+
+	/**
+	 * getContactImageCDNUrl
+	 *
+	 * @memberOf common
+	 * @name  common#getContactImageCDNUrl
+	 * @method
+	 *
+	 * @param  cr.Contact or contact object
+	 * @return {string} image path or base64 image
+	 */
+	that.getContactImageCDNUrl = function(settings, groupid, contact, size, bustCache) {
+		// Show maintenance avatar?
+		if(contact.kind == "maintenance") return imageHelper.getMaintenanceAvatar(size);
+
+		// Show profile picture of user?
+		if(contact.user && contact.user.picture) return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
 
 		// Show avatar initials
 		return imageHelper.getAvatarInitial(contact.name, size);

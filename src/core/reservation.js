@@ -105,10 +105,11 @@ define([
     Reservation.prototype.isValidToDate = function(){
         var from = this.from,
             to = this.to,
-            status = this.status;
+            status = this.status,
+            now = this.getNow();
 
         if((status == "creating" || status == "open")){
-            return to != null && to.isAfter(from);
+            return to != null && to.isAfter(from) && to.isAfter(now);
         }
 
         return true;
@@ -214,6 +215,8 @@ define([
         // - to date: is in the future
         // - items: all are available
         if( (this.status=="open") &&
+            ((this.contact) &&
+             (this.contact.status == "active")) &&
             (this.to!=null) &&
             (this.to.isAfter(this.getNow()))) {
             var unavailable = this._getUnavailableItems();
@@ -282,10 +285,13 @@ define([
         that.to = ((data.toDate==null) || (data.toDate=="null")) ? null : data.toDate;
         that.due = null;
         that.order = data.order || null;
+        that.repeatId = data.repeatId || null;
+        that.repeatFrequency = data.repeatFrequency || "";
 
         return Transaction.prototype._fromJson.call(this, data, options)
             .then(function() {
                 $.publish("reservation.fromJson", data);
+                return data;
             });
     };
 
@@ -308,17 +314,18 @@ define([
             conflict = null;
 
         // Reservations can only have conflicts
-        // when we have a (location OR (from AND to)) AND at least 1 item
+        // when status open OR creating and we have a (location OR (from AND to)) AND at least 1 item 
         // So we'll only hit the server if there are possible conflicts.
         //
         // However, some conflicts only start making sense when the reservation fields filled in
         // When you don't have any dates set yet, it makes no sense to show "checked out" conflict
-        if( (this.items) &&
+        if( (['creating', 'open'].indexOf(this.status) != -1) &&
+            (this.items) &&
             (this.items.length) &&
             ((this.location) || (this.from && this.to))) {
 
             var locId = this.location ? this._getId(this.location) : null;
-            var showOrderConflicts = (this.from && this.to);
+            var showOrderConflicts = (this.from && this.to && this.status=="open");
             var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
 
@@ -343,7 +350,9 @@ define([
                                 kind: kind,
                                 item: item._id,
                                 itemName: item.name,
-                                doc: conflict.conflictsWith
+                                doc: conflict.conflictsWith,
+                                fromDate: conflict.fromDate,
+                                toDate: conflict.toDate
                             }));
                         } else {
                             if( (showStatusConflicts) &&
@@ -574,10 +583,28 @@ define([
      * @method
      * @name Reservation#reserve
      * @param skipRead
+     * @param skipErrorHandling
      * @returns {*}
      */
-    Reservation.prototype.reserve = function(skipRead) {
-        return this._doApiCall({method: "reserve", skipRead: skipRead});
+    Reservation.prototype.reserve = function(skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "reserve", skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**
@@ -585,31 +612,121 @@ define([
      * @method
      * @name Reservation#undoReserve
      * @param skipRead
+     * @param skipErrorHandling
      * @returns {*}
      */
-    Reservation.prototype.undoReserve = function(skipRead) {
-        return this._doApiCall({method: "undoReserve", skipRead: skipRead});
+    Reservation.prototype.undoReserve = function(skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "undoReserve", skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status creating') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**
      * Cancels the booked reservation and sets the status to `cancelled`
      * @method
      * @name Reservation#cancel
+     * @param message
      * @param skipRead
+     * @param skipErrorHandling
      * @returns {*}
      */
-    Reservation.prototype.cancel = function(skipRead) {
-        return this._doApiCall({method: "cancel", skipRead: skipRead});
+    Reservation.prototype.cancel = function(message, skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "cancel", params:{ message: message || "" }, skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
+    };
+
+    /**
+     * Cancels repeated reservations and sets the status to `cancelled`
+     * @method
+     * @name Reservation#cancelRepeat
+     * @param message
+     * @param skipRead
+     * @param skipErrorHandling
+     * @returns {*}
+     */
+    Reservation.prototype.cancelRepeat = function(message, skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "cancelRepeat", params:{ message: message || "" }, skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**
      * Turns an open reservation into an order (which still needs to be checked out)
      * @method
      * @name Reservation#makeOrder
+     * @param skipErrorHandling
      * @returns {*}
      */
-    Reservation.prototype.makeOrder = function() {
-        return this._doApiCall({method: "makeOrder", skipRead: true});  // response is an Order object!!
+    Reservation.prototype.makeOrder = function(skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "makeOrder", skipRead: true})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status closed') != -1)){
+                        return that.get().then(function(resp){
+                            var orderId = that._getId(resp.order);
+
+                            // need to return fake order object
+                            return { _id: orderId };
+                        });
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
     };
 
     /**
@@ -649,11 +766,20 @@ define([
      * @returns {promise}
      */
     Reservation.prototype.reserveAgain = function(fromDate, toDate, customer, location, skipRead) {
-        return this._doApiCall({method: "reserveAgain", params: {
-            fromDate: fromDate,
-            toDate: toDate,
+        var params =  {
             location: location,
-            customer: customer}, skipRead: skipRead});
+            customer: customer
+        };
+
+        if(fromDate){
+            params.fromDate = fromDate;
+        }
+
+        if(toDate){
+            params.toDate = toDate;
+        }
+
+        return this._doApiCall({method: "reserveAgain", params: params, skipRead: skipRead});
     };
 
     /**

@@ -6,8 +6,7 @@
  */
 define([
     'jquery',
-    'jquery-jsonp',
-    'moment'], function ($, jsonp, moment) {
+    'moment'], function ($, moment) {
     var MAX_QUERYSTRING_LENGTH = 2048;
 
     //TODO change this
@@ -60,27 +59,22 @@ define([
      * The ajax communication object which makes the request to the API
      * @name ApiAjax
      * @param {object} spec
-     * @param {boolean} spec.useJsonp
      * @constructor
      * @memberof api
      */
     api.ApiAjax = function(spec) {
         spec = spec || {};
-        this.useJsonp = (spec.useJsonp!=null) ? spec.useJsonp : true;
         this.timeOut = spec.timeOut || 10000;
         this.responseInTz = true;
     };
 
     api.ApiAjax.prototype.get = function(url, timeOut) {
         system.log('ApiAjax: get '+url);
-        return this.useJsonp ? this._getJsonp(url, timeOut) : this._getAjax(url, timeOut);
+        return this._getAjax(url, timeOut);
     };
 
     api.ApiAjax.prototype.post = function(url, data, timeOut) {
         system.log('ApiAjax: post '+url);
-        if (this.useJsonp) {
-            throw "ApiAjax cannot post while useJsonp is true";
-        }
         return this._postAjax(url, data, timeOut);
     };
 
@@ -187,36 +181,6 @@ define([
         return promise;
     };
 
-    api.ApiAjax.prototype._getJsonp = function(url, timeOut, opt) {
-        var dfd = $.Deferred();
-        var that = this;
-
-        var xhr = $.jsonp({
-            url: url,
-            type: 'GET',
-            timeout: timeOut || this.timeOut,
-            dataType:' jsonp',
-            callbackParameter: 'callback',
-            success: function(data, textStatus, xOptions) {return that._handleAjaxSuccess(dfd, data);},
-            error: function(xOptions, textStatus) {
-                // JSONP doesn't support HTTP status codes
-                // https://github.com/jaubourg/jquery-jsonp/issues/37
-                // so we can only return a simple error
-                dfd.reject(new api.ApiError(null, opt));
-            }
-        });
-
-        // Extend promise with abort method
-        // to abort xhr request if needed
-        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-        var promise = dfd.promise();
-        promise.abort = function(){
-            xhr.abort();
-        };
-
-        return promise;
-    };
-
     api.ApiAjax.prototype._prepareDict = function(data) {
         // Makes sure all values from the dict are serializable and understandable for json
         if (!data) {
@@ -309,11 +273,7 @@ define([
 
     api.ApiUser.prototype.isValid = function() {
         system.log('ApiUser: isValid');
-        return (
-        (this.userId) &&
-        (this.userId.length>0) &&
-        (this.userToken) &&
-        (this.userToken.length>0));
+        return (this.userId != null && this.userId.length>0) && (this.userToken != null && this.userToken.length>0);
     };
 
     api.ApiUser.prototype._reset = function() {
@@ -331,15 +291,38 @@ define([
         this.urlAuth = spec.urlAuth || '';
         this.ajax = spec.ajax;
         this.version = spec.version;
+        this.platform = spec.platform;
+        this.device = spec.device;
+        this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner:true;
     };
 
     api.ApiAuth.prototype.authenticate = function(userId, password) {
         system.log('ApiAuth: authenticate '+userId);
-        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
+
+        var that = this;
+        var params = {
+            user: userId, 
+            password: password, 
+            _v: this.version
+        };
+        if(this.platform){
+            params.platform = this.platform;
+        }
+        if(this.device){
+            params.device = this.device;
+        }
+
+        var url = this.urlAuth + '?' + $.param(params);
         var dfd = $.Deferred();
         this.ajax.get(url, 30000)
             .done(function(resp) {
-                if (resp.status=="OK") {
+                // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+                // 
+                // REMARK
+                // - web app allows owners to still login on expired/cancelled account
+                // - mobile doesn't allow expired logins also not for owners
+                if ((resp.status=="OK") && 
+                    (['expired', 'cancelled_expired', 'archived'].indexOf(resp.subscription) != -1?that.allowAccountOwner:true)) {
                     dfd.resolve(resp.data);
                 } else {
                     dfd.reject(resp);
@@ -351,77 +334,8 @@ define([
         return dfd.promise();
     };
 
-    //*************
-    // ApiAuth
-    //*************
-
-    /**
-     * @name ApiAuthV2
-     * @param {object}  spec
-     * @param {string}  spec.urlAuth          - the api url to use when authenticating
-     * @param {ApiAjax}  spec.ajax            - an ApiAjax object to use
-     * @constructor
-     * @memberof api
-     * @example
-     * var baseUrl = 'https://app.cheqroom.com/api/v2_0';
-     * var userName = "";
-     * var password = "";
-     *
-     * var ajax = new cr.api.ApiAjax({useJsonp: true});
-     * var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate', version: '2.2.9.15'});
-     * var authUser = null;
-     *
-     * auth.authenticate(userName, password)
-     *     .done(function(data) {
-     *         authUser = new cr.api.ApiUser({userId: data.userId, userToken: data.token});
-     *     });
-     *
-     */
-    api.ApiAuthV2 = function(spec) {
-        spec = spec || {};
-        this.urlAuth = spec.urlAuth || '';
-        this.ajax = spec.ajax;
-        this.version = spec.version;
-    };
-
-    /**
-     * The call to authenticate a user with userid an dpassword
-     * @method
-     * @name ApiAuthV2#authenticate
-     * @param userId
-     * @param password
-     * @returns {object}
-     */
-    api.ApiAuthV2.prototype.authenticate = function(userId, password) {
-        system.log('ApiAuthV2: authenticate '+userId);
-        var url = this.urlAuth + '?' + $.param({user: userId, password: password, auth_v: 2, _v: this.version});
-        var dfd = $.Deferred();
-        this.ajax.get(url, 30000)
-            .done(function(resp) {
-                // {"status": "OK", "message": "", "data": {"token": "547909916c092811d3bebcb4", "userid": "heavy"}
-                // TODO: Handle case for password incorrect, no rights or subscription expired
-                if (resp.status=="OK") {
-                    dfd.resolve(resp.data);
-                } else {
-                    // When account expired, /authenticate will respond with
-                    //{"status": "ERROR",
-                    // "message": "Trial subscription expired on 2015-07-03 09:25:30.668000+00:00. ",
-                    // "data": {...}}
-                    var error = null;
-                    if( (resp.message) &&
-                        (resp.message.indexOf("expired")>0)) {
-                        error = new api.ApiPaymentRequired(resp.message);
-                    } else {
-                        error = new Error("Your username or password is not correct");
-                    }
-                    dfd.reject(error);
-                }
-            }).fail(function(err) {
-                dfd.reject(err);
-            });
-
-        return dfd.promise();
-    };
+    // Deprecated ApiAuthV2, use ApiAuth
+    api.ApiAuthV2 = api.ApiAuth;
 
     //*************
     // ApiAnonymous
@@ -470,7 +384,7 @@ define([
     };
 
     /**
-     * Makes a long call (timeout 30s) to the API which doesn't require a token
+     * Makes a long call (timeout 60s) to the API which doesn't require a token
      * @method
      * @name ApiAnonymous#longCall
      * @param method
@@ -480,7 +394,7 @@ define([
      */
     api.ApiAnonymous.prototype.longCall = function(method, params, opt) {
         system.log('ApiAnonymous: longCall ' + method);
-        return this.call(method, params, 30000, opt);
+        return this.call(method, params, 60000, opt);
     };
 
     //*************
@@ -534,12 +448,7 @@ define([
             .done(function(data) {
                 dfd.resolve(data);
             }).fail(function(error) {
-                // This doesn't work when not in JSONP mode!!
-                // Since all errors are generic api.ApiErrors
-                // In jsonp mode, if a GET fails, assume it didn't exist
-                if (that.ajax.useJsonp) {
-                    dfd.resolve(null);
-                } else if (error instanceof api.ApiNotFound) {
+                if (error instanceof api.ApiNotFound) {
                     dfd.resolve(null);
                 } else {
                     dfd.reject(error);
@@ -585,12 +494,7 @@ define([
                 dfd.resolve(data);
             })
             .fail(function(err) {
-                if (that.ajax.useJsonp) {
-                    // In Jsonp mode, we cannot get other error messages than 500
-                    // We'll assume that it doesn't exist when we get an error
-                    // Jsonp is not really meant to run in production environment
-                    dfd.resolve(null);
-                } else if (err instanceof api.ApiNotFound) {
+                if (err instanceof api.ApiNotFound) {
                     dfd.resolve(null);
                 } else {
                     dfd.reject(err);
@@ -639,11 +543,20 @@ define([
      * @param pks
      * @returns {promise}
      */
-    api.ApiDataSource.prototype.deleteMultiple = function(pks) {
+    api.ApiDataSource.prototype.deleteMultiple = function(pks, usePost) {
         system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
         var cmd = "deleteMultiple";
-        var url = this.getBaseUrl() + pks.join(',') + '/delete';
-        return this._ajaxGet(cmd, url);
+        var url = this.getBaseUrl() + 'delete';
+
+        var p = { pk: pks };
+        var geturl = url + '?' + this.getParams(p);
+
+        if( (usePost) || 
+            (geturl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p);
+        } else {
+            return this._ajaxGet(cmd, geturl);
+        }
     };
 
     /**
@@ -855,7 +768,7 @@ define([
     };
 
     /**
-     * Makes a long call (timeout 30s) to a certain method on an object or on the entire collection
+     * Makes a long call (timeout 60s) to a certain method on an object or on the entire collection
      * @method
      * @name ApiDataSource#longCall
      * @param pk
@@ -866,7 +779,7 @@ define([
      * @returns {promise}
      */
     api.ApiDataSource.prototype.longCall = function(pk, method, params, fields, usePost) {
-        return this.call(pk, method, params, fields, 30000, usePost);
+        return this.call(pk, method, params, fields, 60000, usePost);
     };
 
     /**

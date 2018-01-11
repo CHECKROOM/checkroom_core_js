@@ -20,6 +20,7 @@ define([
             warrantyDate: null,
             purchaseDate: null,
             purchasePrice: null,
+            residualValue: null,
             location: "",
             category: "",
             geo: [DEFAULT_LAT,DEFAULT_LONG],
@@ -74,6 +75,7 @@ define([
         this.warrantyDate = spec.warrantyDate || DEFAULTS.warrantyDate;
         this.purchaseDate = spec.purchaseDate || DEFAULTS.purchaseDate;
         this.purchasePrice = spec.purchasePrice || DEFAULTS.purchasePrice;
+        this.residualValue = spec.residualValue || DEFAULTS.residualValue;
         this.codes = spec.codes || DEFAULTS.codes;
         this.location = spec.location || DEFAULTS.location;     // location._id
         this.category = spec.category || DEFAULTS.category;     // category._id
@@ -129,6 +131,7 @@ define([
         (this.warrantyDate==DEFAULTS.warrantyDate) &&
         (this.purchaseDate==DEFAULTS.purchaseDate) &&
         (this.purchasePrice==DEFAULTS.purchasePrice) &&
+        (this.residualValue==DEFAULTS.residualValue) &&
         (this.codes.length==0) &&  // not DEFAULTS.codes? :)
         (this.location==DEFAULTS.location) &&
         (this.category==DEFAULTS.category));
@@ -148,6 +151,7 @@ define([
             this._isDirtyWarrantyDate() ||
             this._isDirtyPurchaseDate() ||
             this._isDirtyPurchasePrice() ||
+            this._isDirtyResidualValue() ||
             this._isDirtyCategory() ||
             this._isDirtyLocation() ||
             this._isDirtyGeo() || 
@@ -170,6 +174,7 @@ define([
         data.warrantyDate = this.warrantyDate || DEFAULTS.warrantyDate;
         data.purchaseDate = this.purchaseDate || DEFAULTS.purchaseDate;
         data.purchasePrice = this.purchasePrice || DEFAULTS.purchasePrice;
+        data.residualValue = this.residualValue || DEFAULTS.residualValue;
         data.category = this.category || DEFAULTS.category;
         data.location = this.location || DEFAULTS.location;
         data.catalog = this.catalog || DEFAULTS.catalog;
@@ -197,6 +202,7 @@ define([
                 that.warrantyDate = data.warrantyDate || DEFAULTS.warrantyDate;
                 that.purchaseDate = data.purchaseDate || DEFAULTS.purchaseDate;
                 that.purchasePrice = data.purchasePrice || DEFAULTS.purchasePrice;
+                that.residualValue = data.residualValue || DEFAULTS.residualValue;
                 that.codes = data.codes || DEFAULTS.codes;
                 that.address = data.address || DEFAULTS.address;
                 that.geo = data.geo || DEFAULTS.geo.slice();
@@ -279,6 +285,10 @@ define([
 
     Item.prototype._isDirtyPurchasePrice = function() {
         return this._isDirtyProperty("purchasePrice");
+    };
+
+    Item.prototype._isDirtyResidualValue = function() {
+        return this._isDirtyProperty("residualValue");
     };
 
     Item.prototype._isDirtyLocation = function() {
@@ -397,9 +407,9 @@ define([
 
                 if (that._isDirtyFlag()) {
                     if ((that.flag=="") || (that.flag==null)) {
+                        dfdFlags = that.clearFlag();
+                    } else {                        
                         dfdFlags = that.setFlag(that.flag);
-                    } else {
-                        dfdFlags = that.clearFlag(that.flag);
                     }
                 } else {
                     dfdFlags.resolve();
@@ -410,8 +420,9 @@ define([
                     (that._isDirtyModel()) ||
                     (that._isDirtyWarrantyDate()) ||
                     (that._isDirtyPurchaseDate()) ||
-                    (that._isDirtyPurchasePrice())) {
-                    dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice);
+                    (that._isDirtyPurchasePrice()) ||
+                    (that._isDirtyResidualValue())) {
+                    dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice, that.residualValue);
                 } else {
                     dfdBasic.resolve();
                 }
@@ -540,7 +551,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canGoToCheckout = function() {
-        return common.itemCanGoToCheckout(this);
+        return common.itemCanGoToCheckout(this) && !$.isEmptyObject(this.order);
     };
 
     /**
@@ -662,7 +673,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.updateBasicFields = function(name, brand, model, warrantyDate, purchaseDate, purchasePrice, skipRead) {
+    Item.prototype.updateBasicFields = function(name, brand, model, warrantyDate, purchaseDate, purchasePrice, residualValue, skipRead) {
         var that = this,
             params = {};
 
@@ -678,17 +689,35 @@ define([
             (model!=this.raw.model)) {
             params["model"] = model;
         }
-        if( (warrantyDate!=null) &&
-            (!warrantyDate.isSame(this.raw.warrantyDate))) {
-            params["warrantyDate"] = warrantyDate;
+        if( (warrantyDate!=null)){
+            // Update date or clear date?
+            if(typeof(warrantyDate) === "object" && warrantyDate.isValid()){
+                // Only update if date changed
+                if(!warrantyDate.isSame(this.raw.warrantyDate)){
+                    params["warrantyDate"] = warrantyDate;
+                }
+            }else{
+                params["warrantyDate"] = "";  
+            }
         }
-        if( (purchaseDate!=null) &&
-            (!purchaseDate.isSame(this.raw.purchaseDate))) {
-            params["purchaseDate"] = purchaseDate;
+        if( (purchaseDate!=null)) {
+            // Update date or clear date
+            if(typeof(purchaseDate) === "object" && purchaseDate.isValid()){
+                // Only update if date changed
+                if(!purchaseDate.isSame(this.raw.purchaseDate)){
+                    params["purchaseDate"] = purchaseDate;
+                }
+            }else{
+                params["purchaseDate"] = "";
+            }
         }
         if( (purchasePrice!=null) &&
             (purchasePrice!=this.raw.purchasePrice)) {
             params["purchasePrice"] = purchasePrice;
+        }
+        if( (residualValue!=null) &&
+            (residualValue!=this.raw.residualValue)) {
+            params["residualValue"] = residualValue;
         }
 
         // Remove values of null during create
@@ -803,6 +832,17 @@ define([
      */
     Item.prototype.transferCustody = function(customerId, skipRead) {
         return this._doApiCall({method: 'transferCustody', params: {customer: customerId}, skipRead: skipRead});
+    };
+
+    /**
+     * Get a list depreciations 
+     * 
+     * @name Item#getDepreciation
+     * @param frequancy
+     * @returns {promise}
+     */
+    Item.prototype.getDepreciation = function(frequency) {
+        return this.ds.call(this.id, 'getDepreciation', {frequency: frequency || "quarterly" });
     };
 
     return Item;

@@ -15,13 +15,14 @@ define([
         name: "",
         address: "",
         topic: "",
-        hookFields: "*, location.*, items.*, customer.*",  // avoid clash with Document.fields
+        hookFields: "*, location.*, items.*, customer.*,by.name,by.email",  // avoid clash with Document.fields
         format: "",
         created: null,
         modified: null,
         enabled: true,
         log10: [],
-        fails: 0
+        fails: 0,
+        minutes: 0
     };
 
     // Allow overriding the ctor during inheritance
@@ -43,6 +44,7 @@ define([
      * @property {boolean} enabled      whether or not the webhook is enabled
      * @property {array} log10          the last 10 logs of the webhook
      * @property {int} fails            the number of consequtive fails
+     * @property {int} minutes          only for due and overdue webhooks, non-negative
      * @constructor
      * @extends Document
      */
@@ -59,6 +61,7 @@ define([
         this.enabled = (spec.enabled!=null) ? (spec.enabled==true) : DEFAULTS.enabled;
         this.log10 = spec.log10 || DEFAULTS.log10.slice();
         this.fails = spec.fails || DEFAULTS.fails;
+        this.minutes = spec.minutes || DEFAULTS.minutes;
     };
 
     WebHook.prototype = new tmp();
@@ -136,7 +139,8 @@ define([
                 (this.name!=this.raw.name)||
                 (this.address!=this.raw.address)||
                 (this.topic!=this.raw.topic)||
-                (this.enabled!=this.raw.enabled)
+                (this.enabled!=this.raw.enabled) ||
+                (this.minutes!=this.raw.minutes)
                 );
         }
         return isDirty;
@@ -170,8 +174,8 @@ define([
         data.address = this.address;
         data.topic = this.topic;
         data.fields = this.hookFields;
-        data.modified = this.modified;
         data.enabled = this.enabled;
+        data.minutes = this.minutes;
         // don't write out fields for:
         // - created_at
         // - log10, log
@@ -200,6 +204,7 @@ define([
                 that.enabled = (data.enabled!=null) ? (data.enabled==true) : DEFAULTS.enabled;
                 that.log10 = data.log10 || DEFAULTS.log10.slice();
                 that.fails = data.nr_consecutive_fails || DEFAULTS.fails;
+                that.minutes = data.minutes || DEFAULTS.minutes;
                 return data;
             });
     };

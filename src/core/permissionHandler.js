@@ -19,7 +19,7 @@ define([], function () {
         this._isRootOrAdmin =         (user.role == "root") || (user.role == "admin");
         this._isRootOrAdminOrUser =   (user.role == "root") || (user.role == "admin") || (user.role == "user");
         this._isSelfService =         (user.role == "selfservice");
-        this._useWebHooks =           (limits.allowWebHooks);
+        this._useWebhooks =           (limits.allowWebhooks) &&             (profile.useWebhooks);
         this._useOrders =             (limits.allowOrders) &&               (profile.useOrders);
         this._useReservations =       (limits.allowReservations) &&         (profile.useReservations);
         this._usePdf =                (limits.allowGeneratePdf);
@@ -37,6 +37,7 @@ define([], function () {
         this._useRestrictLocations =  (limits.allowRestrictLocations) &&    (profile.useRestrictLocations);
         this._useReporting =          (limits.allowReporting) &&            (profile.useReporting);
         this._useDepreciations =      (limits.allowDepreciations) &&        (profile.useDepreciations);
+        this._useNotifications =      (limits.allowNotifications) &&        (profile.useNotifications);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -514,7 +515,7 @@ define([], function () {
                     case "create":
                     case "update":
                     case "delete":
-                        return this._isRootOrAdmin;
+                        return this._useNotifications && this._isRootOrAdmin;
                 }
                 break;
             case "webhooks":
@@ -525,7 +526,7 @@ define([], function () {
                     case "create":
                     case "update":
                     case "delete":
-                        return this._useWebHooks && this._isRootOrAdmin;
+                        return this._useWebhooks && this._isRootOrAdmin;
                 }
                 break;
             case "account":

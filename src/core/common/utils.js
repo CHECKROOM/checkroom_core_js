@@ -184,20 +184,20 @@ define(['jquery'], function ($) {
      * @param {object} kind
      * @return {string}
      */
-     utils.getFriendlyKind = function(kind){
-       var friendlyKind = null;
+    utils.getFriendlyKind = function(kind){
+        var friendlyKind = null;
 
-       if(kind == "string") {
-         friendlyKind = "single line text";
-       }
+        if(kind == "string") {
+            friendlyKind = "single line text";
+        }
 
-       if(kind == "text") {
-         friendlyKind = "multi line text";
-       }
+        if(kind == "text") {
+           friendlyKind = "multi line text";
+        }
 
-       return friendlyKind;
+        return friendlyKind;
      };
 
-    return utils;
+     return utils;
 
 });

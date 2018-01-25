@@ -273,7 +273,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         // Build a text based on the dates and times we have
         if (result.dayDiff==0) {
             if (useHours) {
-                result.text = result.fromText + sep + result.toTime;
+                result.text = result.fromText + sep + result.toText;
             } else {
                 result.text = result.fromText;
             }

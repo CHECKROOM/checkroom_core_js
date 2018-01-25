@@ -2376,6 +2376,24 @@ common_utils = function ($) {
   utils.getFriendlyFileName = function (name) {
     return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   };
+  /**
+   * getFriendlyKind
+   * @memberOf utils
+   * @name  utils#getFriendlyKind
+   * @method
+   * @param {object} kind
+   * @return {string}
+   */
+  utils.getFriendlyKind = function (kind) {
+    var friendlyKind = null;
+    if (kind == 'string') {
+      friendlyKind = 'single line text';
+    }
+    if (kind == 'text') {
+      friendlyKind = 'multi line text';
+    }
+    return friendlyKind;
+  };
   return utils;
 }(jquery);
 signup = function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {

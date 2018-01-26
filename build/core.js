@@ -339,9 +339,8 @@ api = function ($, moment) {
     if (this.device) {
       params.device = this.device;
     }
-    var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
+    this.ajax.post(this.urlAuth, params, 30000).done(function (resp) {
       // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
       // 
       // REMARK

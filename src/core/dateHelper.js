@@ -245,13 +245,19 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      * @returns {}
      */
     DateHelper.prototype.getFriendlyFromTo = function(from, to, useHours, now, separator, format) {
+        if (!moment.isMoment(from)) {
+            from = moment(from);
+        }
+        if (!moment.isMoment(to)) {
+            to = moment(to);
+        }
         now = now || this.getNow();
 
         var sep = separator || " - ",
             fromParts = this.getFriendlyDateParts(from, now, format),
             toParts = this.getFriendlyDateParts(to, now, format),
             result = {
-                dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+                dayDiff: from ? from.clone().startOf('day').diff(to, 'days') : -1,
                 fromDate: from ? fromParts[0] : "No from date set",
                 fromTime: (useHours && from != null) ? fromParts[1] : "",
                 toDate: to ? toParts[0] : "No to date set",

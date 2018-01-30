@@ -1,7 +1,7 @@
 /*
  * Validation helpers
  */
-define(function () {
+define(['moment'], function (moment) {
     return {
         /**
          * isValidEmail
@@ -68,6 +68,36 @@ define(function () {
         isValidPassword: function(password) {
             var hasDigit = password.match(/[0-9]/);
             return (password.length>=4) && (hasDigit);
+        },
+        /**
+         * isNumeric
+         * https://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric
+         * @memberOf common
+         * @name common#isNumeric
+         * @method
+         * @param  {string}     value
+         * @param  {boolean}    onlyInteger
+         * @return {Boolean}    
+         */
+        isNumeric: function(value, onlyInteger){
+            var isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+
+            if(onlyInteger){
+                return '' + value === '' + parseInt(value);
+            }
+
+            return isNumeric;
+        },
+        /**
+         * isValidDate
+         * @memberOf common
+         * @name common#isValidDate
+         * @method
+         * @param  {string}     value
+         * @return {Boolean}    
+         */
+        isValidDate: function(value){
+            return moment(value).isValid();
         }
     };
 });

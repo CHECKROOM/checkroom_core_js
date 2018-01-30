@@ -3225,73 +3225,103 @@ common_inflection = function () {
     }
   };
 }();
-common_validation = {
-  /**
-   * isValidEmail
-   * @memberOf common
-   * @name  common#isValidEmail
-   * @method
-   * @param  {string}  email 
-   * @return {Boolean}       
-   */
-  isValidEmail: function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
-    return re.test(email);
-  },
-  /**
-   * isFreeEmail
-   * @memberOf common
-   * @name common#isFreeEmail
-   * @method
-   * @param email
-   * @returns {boolean}
-   */
-  isFreeEmail: function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-    return !re.test(email);
-  },
-  /**
-   * isValidPhone
-   * @memberOf common
-   * @name  common#isValidPhone
-   * @method
-   * @param  {string}  phone 
-   * @return {Boolean}       
-   */
-  isValidPhone: function (phone) {
-    var isnum = /^\d{9,}$/.test(phone);
-    if (isnum) {
-      return true;
+common_validation = function (moment) {
+  return {
+    /**
+     * isValidEmail
+     * @memberOf common
+     * @name  common#isValidEmail
+     * @method
+     * @param  {string}  email 
+     * @return {Boolean}       
+     */
+    isValidEmail: function (email) {
+      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
+      return re.test(email);
+    },
+    /**
+     * isFreeEmail
+     * @memberOf common
+     * @name common#isFreeEmail
+     * @method
+     * @param email
+     * @returns {boolean}
+     */
+    isFreeEmail: function (email) {
+      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+      return !re.test(email);
+    },
+    /**
+     * isValidPhone
+     * @memberOf common
+     * @name  common#isValidPhone
+     * @method
+     * @param  {string}  phone 
+     * @return {Boolean}       
+     */
+    isValidPhone: function (phone) {
+      var isnum = /^\d{9,}$/.test(phone);
+      if (isnum) {
+        return true;
+      }
+      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+      return m != null && m.length > 0;
+    },
+    /**
+     * isValidURL
+     * @memberOf common
+     * @name common#isValidURL
+     * @method
+     * @param {string}  url
+     * @returns {boolean}
+     */
+    isValidURL: function (url) {
+      // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
+      var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
+      return re.test(url);
+    },
+    /**
+     * isValidPassword
+     * @memberOf common
+     * @name common#isValidPassword
+     * @method
+     * @param password
+     * @returns {boolean}
+     */
+    isValidPassword: function (password) {
+      var hasDigit = password.match(/[0-9]/);
+      return password.length >= 4 && hasDigit;
+    },
+    /**
+     * isNumeric
+     * https://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric
+     * @memberOf common
+     * @name common#isNumeric
+     * @method
+     * @param  {string}     value
+     * @param  {boolean}    onlyInteger
+     * @return {Boolean}    
+     */
+    isNumeric: function (value, onlyInteger) {
+      var isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+      if (onlyInteger) {
+        return '' + value === '' + parseInt(value);
+      }
+      return isNumeric;
+    },
+    /**
+     * isValidDate
+     * @memberOf common
+     * @name common#isValidDate
+     * @method
+     * @param  {string}     value
+     * @return {Boolean}    
+     */
+    isValidDate: function (value) {
+      return moment(value).isValid();
     }
-    var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
-    return m != null && m.length > 0;
-  },
-  /**
-   * isValidURL
-   * @memberOf common
-   * @name common#isValidURL
-   * @method
-   * @param {string}  url
-   * @returns {boolean}
-   */
-  isValidURL: function (url) {
-    // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-    var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
-    return re.test(url);
-  },
-  /**
-   * isValidPassword
-   * @memberOf common
-   * @name common#isValidPassword
-   * @method
-   * @param password
-   * @returns {boolean}
-   */
-  isValidPassword: function (password) {
-    var hasDigit = password.match(/[0-9]/);
-    return password.length >= 4 && hasDigit;
-  }
-};
+  };
+}(moment);
 common_utils = function ($) {
   var utils = {};
   /**
@@ -5137,7 +5167,7 @@ attachment = function ($) {
   };
   return Attachment;
 }(jquery);
-field = function ($) {
+field = function ($, common) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -5173,9 +5203,26 @@ field = function ($) {
    * @returns {boolean}
    */
   Field.prototype.isValid = function () {
-    if (!this.required)
+    var value = $.trim(this.value);
+    // skip if not required and empty
+    if (!this.required && value == '')
       return true;
-    return $.trim(this.value) != '';
+    switch (this.kind) {
+    case 'float':
+    case 'decimal':
+    case 'currency':
+      return common.isNumeric(value);
+    case 'int':
+      return common.isNumeric(value, true);
+    case 'date':
+    case 'datetime':
+      return common.isValidDate(value);
+    default:
+      if (this.editor == 'phone') {
+        return common.isValidPhone(value);
+      }
+      return true;
+    }
   };
   /**
    * isDirty
@@ -5196,7 +5243,7 @@ field = function ($) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery);
+}(jquery, common);
 Base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Some constant values
   var DEFAULTS = {
@@ -15859,7 +15906,7 @@ ColorLabel = function ($) {
   };
   return ColorLabel;
 }(jquery);
-Field = function ($) {
+Field = function ($, common) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -15895,9 +15942,26 @@ Field = function ($) {
    * @returns {boolean}
    */
   Field.prototype.isValid = function () {
-    if (!this.required)
+    var value = $.trim(this.value);
+    // skip if not required and empty
+    if (!this.required && value == '')
       return true;
-    return $.trim(this.value) != '';
+    switch (this.kind) {
+    case 'float':
+    case 'decimal':
+    case 'currency':
+      return common.isNumeric(value);
+    case 'int':
+      return common.isNumeric(value, true);
+    case 'date':
+    case 'datetime':
+      return common.isValidDate(value);
+    default:
+      if (this.editor == 'phone') {
+        return common.isValidPhone(value);
+      }
+      return true;
+    }
   };
   /**
    * isDirty
@@ -15918,7 +15982,7 @@ Field = function ($) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery);
+}(jquery, common);
 core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
   var core = {};
   // namespaces

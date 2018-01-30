@@ -7,7 +7,7 @@ define(['jquery', 'settings', 'cheqroom-core'], function($, settings, cr) {
     var helper = {};
 
     helper.getApiAjax = function() {
-        return new cr.api.ApiAjax({useJsonp: settings.useJsonp});
+        return new cr.api.ApiAjax();
     };
 
     helper.getApiAuth = function() {

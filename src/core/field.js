@@ -3,7 +3,7 @@
  * @module field
  * @copyright CHECKROOM NV 2015
  */
-define(['jquery'], /** Field */ function ($) {
+define(['jquery', 'common'], /** Field */ function ($, common) {
 
     var DEFAULTS = {
         name: null,
@@ -44,8 +44,27 @@ define(['jquery'], /** Field */ function ($) {
      * @returns {boolean}
      */
     Field.prototype.isValid = function() {
-        if(!this.required) return true;
-        return $.trim(this.value) != "";
+        var value = $.trim(this.value);
+
+        // skip if not required and empty
+        if(!this.required && value == "") return true;
+
+        switch(this.kind){
+            case "float":
+            case "decimal":
+            case "currency":
+                return common.isNumeric(value);
+            case "int":
+                return common.isNumeric(value, true);
+            case "date":
+            case "datetime":
+                return common.isValidDate(value);
+            default:
+                if(this.editor == "phone"){
+                    return common.isValidPhone(value);
+                }
+                return true;
+        }     
     };
 
     /**

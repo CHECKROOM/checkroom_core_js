@@ -4287,7 +4287,8 @@ field = function ($, common) {
     kind: 'string',
     form: false,
     editor: null,
-    description: ''
+    description: '',
+    select: []
   };
   /**
    * @name  Field
@@ -4306,6 +4307,7 @@ field = function ($, common) {
     this.form = spec.form || DEFAULTS.form;
     this.editor = spec.editor || DEFAULTS.editor;
     this.description = spec.description || DEFAULTS.description;
+    this.select = spec.select || DEFAULTS.select;
   };
   /**
    * isValid
@@ -4328,6 +4330,8 @@ field = function ($, common) {
     case 'date':
     case 'datetime':
       return common.isValidDate(value);
+    case 'select':
+      return this.value != '';
     default:
       if (this.editor == 'phone') {
         return common.isValidPhone(value);

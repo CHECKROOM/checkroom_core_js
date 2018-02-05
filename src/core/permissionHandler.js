@@ -453,6 +453,8 @@ define([], function () {
                     case "clearFlag":
                         return this._useFlags && this._canClearFlag;
                     // Other
+                    case "printLabel":
+                        return this._isRootOrAdmin;
                     case "generateDocument":
                         return this._usePdf && this._isRootOrAdminOrUser;
                 }

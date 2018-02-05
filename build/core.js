@@ -5176,7 +5176,8 @@ field = function ($, common) {
     kind: 'string',
     form: false,
     editor: null,
-    description: ''
+    description: '',
+    select: []
   };
   /**
    * @name  Field
@@ -5195,6 +5196,7 @@ field = function ($, common) {
     this.form = spec.form || DEFAULTS.form;
     this.editor = spec.editor || DEFAULTS.editor;
     this.description = spec.description || DEFAULTS.description;
+    this.select = spec.select || DEFAULTS.select;
   };
   /**
    * isValid
@@ -5217,6 +5219,8 @@ field = function ($, common) {
     case 'date':
     case 'datetime':
       return common.isValidDate(value);
+    case 'select':
+      return this.value != '';
     default:
       if (this.editor == 'phone') {
         return common.isValidPhone(value);
@@ -8570,10 +8574,11 @@ Group = function ($, common, api, Document) {
    * @param unit
    * @param editor
    * @param description
+   * @param select
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, skipRead) {
+  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, skipRead) {
     return this._doApiCall({
       pk: this.id,
       method: 'createField',
@@ -8586,7 +8591,8 @@ Group = function ($, common, api, Document) {
         form: form,
         unit: unit,
         editor: editor,
-        description: description
+        description: description,
+        select: select
       }
     });
   };
@@ -8602,10 +8608,11 @@ Group = function ($, common, api, Document) {
    * @param unit
    * @param editor
    * @param description
+   * @param select
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, skipRead) {
+  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
     return this._doApiCall({
       pk: this.id,
       method: 'updateField',
@@ -8619,7 +8626,8 @@ Group = function ($, common, api, Document) {
         form: form,
         unit: unit,
         editor: editor,
-        description: description
+        description: description,
+        select: select
       }
     });
   };
@@ -12777,6 +12785,8 @@ PermissionHandler = function () {
       case 'clearFlag':
         return this._useFlags && this._canClearFlag;
       // Other
+      case 'printLabel':
+        return this._isRootOrAdmin;
       case 'generateDocument':
         return this._usePdf && this._isRootOrAdminOrUser;
       }
@@ -15915,7 +15925,8 @@ Field = function ($, common) {
     kind: 'string',
     form: false,
     editor: null,
-    description: ''
+    description: '',
+    select: []
   };
   /**
    * @name  Field
@@ -15934,6 +15945,7 @@ Field = function ($, common) {
     this.form = spec.form || DEFAULTS.form;
     this.editor = spec.editor || DEFAULTS.editor;
     this.description = spec.description || DEFAULTS.description;
+    this.select = spec.select || DEFAULTS.select;
   };
   /**
    * isValid
@@ -15956,6 +15968,8 @@ Field = function ($, common) {
     case 'date':
     case 'datetime':
       return common.isValidDate(value);
+    case 'select':
+      return this.value != '';
     default:
       if (this.editor == 'phone') {
         return common.isValidPhone(value);

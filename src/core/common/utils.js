@@ -185,7 +185,7 @@ define(['jquery'], function ($) {
      * @return {string}
      */
     utils.getFriendlyKind = function(kind){
-        var friendlyKind = null;
+        var friendlyKind = kind;
 
         if(kind == "string") {
             friendlyKind = "single line text";
@@ -193,6 +193,10 @@ define(['jquery'], function ($) {
 
         if(kind == "text") {
            friendlyKind = "multi line text";
+        }
+
+        if(kind == "select") {
+            friendlyKind = "dropdown list"
         }
 
         return friendlyKind;

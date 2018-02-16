@@ -1761,7 +1761,7 @@ common_image = function ($) {
      * @param  {string} size Possible values XS,S,M,L,XL
      * @return {string} base64 image url    
      */
-    getIconAvatar: function (size, value) {
+    getIconAvatar: function (size, value, fontColorHex, backgroundColorHex, fontSize) {
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -1770,6 +1770,12 @@ common_image = function ($) {
         'XL': 512
       };
       var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
+      if (!fontColorHex)
+        fontColorHex = '#aaa';
+      if (!backgroundColorHex)
+        backgroundColorHex = '#f5f5f5';
+      if (!fontSize)
+        fontSize = canvasWidth / 2;
       var $canvas = $('<canvas />').attr({
         width: canvasWidth,
         height: canvasHeight
@@ -1782,11 +1788,11 @@ common_image = function ($) {
         $canvas.css('height', canvasCssHeight);
         context.scale(window.devicePixelRatio, window.devicePixelRatio);
       }
-      context.fillStyle = '#f5f5f5';
+      context.fillStyle = backgroundColorHex;
       context.fillRect(0, 0, canvasWidth, canvasHeight);
-      context.font = canvasWidth / 2 + 'px FontAwesome';
+      context.font = fontSize + 'px FontAwesome';
       context.textAlign = 'center';
-      context.fillStyle = '#aaa';
+      context.fillStyle = fontColorHex;
       context.fillText(String.fromCharCode('0x' + value), canvasCssWidth / 2, canvasCssHeight / 1.5);
       return $canvas.get(0).toDataURL();
     },
@@ -1871,33 +1877,7 @@ common_image = function ($) {
       return url;
     },
     getNoImage: function (size) {
-      var sizes = {
-        'XS': 64,
-        'S': 128,
-        'M': 256,
-        'L': 512,
-        'XL': 1024
-      };
-      var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
-      var $canvas = $('<canvas />').attr({
-        width: canvasWidth,
-        height: canvasHeight
-      });
-      var context = $canvas.get(0).getContext('2d');
-      if (window.devicePixelRatio) {
-        $canvas.attr('width', canvasWidth * window.devicePixelRatio);
-        $canvas.attr('height', canvasHeight * window.devicePixelRatio);
-        $canvas.css('width', canvasCssWidth);
-        $canvas.css('height', canvasCssHeight);
-        context.scale(window.devicePixelRatio, window.devicePixelRatio);
-      }
-      context.fillStyle = 'rgba(255,255,255,0.5)';
-      context.fillRect(0, 0, canvasWidth, canvasHeight);
-      context.font = canvasWidth / 2 + 'px FontAwesome';
-      context.textAlign = 'center';
-      context.fillStyle = 'rgba(0,0,0,0.2)';
-      context.fillText(String.fromCharCode('0xf03e'), canvasCssWidth / 2, canvasCssHeight / 1.5);
-      return $canvas.get(0).toDataURL();
+      return this.getIconAvatar(size, 'f03e', 'rgba(0,0,0,0.2)', 'rgba(255,255,255,0.5)');
     }
   };
 }(jquery);
@@ -3482,12 +3462,15 @@ common_utils = function ($) {
    * @return {string}
    */
   utils.getFriendlyKind = function (kind) {
-    var friendlyKind = null;
+    var friendlyKind = kind;
     if (kind == 'string') {
       friendlyKind = 'single line text';
     }
     if (kind == 'text') {
       friendlyKind = 'multi line text';
+    }
+    if (kind == 'select') {
+      friendlyKind = 'dropdown list';
     }
     return friendlyKind;
   };
@@ -8579,21 +8562,24 @@ Group = function ($, common, api, Document) {
    * @returns {promise}
    */
   Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+    var params = {
+      collection: collection,
+      name: name,
+      kind: kind,
+      required: required,
+      form: form,
+      unit: unit,
+      editor: editor,
+      description: description
+    };
+    if (select && select.length > 0) {
+      params.select = select;
+    }
     return this._doApiCall({
       pk: this.id,
       method: 'createField',
       skipRead: skipRead,
-      params: {
-        collection: collection,
-        name: name,
-        kind: kind,
-        required: required,
-        form: form,
-        unit: unit,
-        editor: editor,
-        description: description,
-        select: select
-      }
+      params: params
     });
   };
   /**
@@ -8613,22 +8599,24 @@ Group = function ($, common, api, Document) {
    * @returns {promise}
    */
   Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+    var params = {
+      collection: collection,
+      name: name,
+      kind: kind,
+      required: required,
+      form: form,
+      unit: unit,
+      editor: editor,
+      description: description
+    };
+    if (select && select.length > 0) {
+      params.select = select;
+    }
     return this._doApiCall({
       pk: this.id,
       method: 'updateField',
       skipRead: skipRead,
-      params: {
-        collection: collection,
-        name: name,
-        newName: newName,
-        kind: kind,
-        required: required,
-        form: form,
-        unit: unit,
-        editor: editor,
-        description: description,
-        select: select
-      }
+      params: params
     });
   };
   /**

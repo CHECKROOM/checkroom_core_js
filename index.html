@@ -101,6 +101,8 @@
             
                 <li data-name="common#getCheqRoomRedirectUrlQR"><a href="common.html#getCheqRoomRedirectUrlQR">getCheqRoomRedirectUrlQR</a></li>
             
+                <li data-name="common#getContactImageCDNUrl"><a href="common.html#getContactImageCDNUrl">getContactImageCDNUrl</a></li>
+            
                 <li data-name="common#getContactImageUrl"><a href="common.html#getContactImageUrl">getContactImageUrl</a></li>
             
                 <li data-name="common#getDocumentIds"><a href="common.html#getDocumentIds">getDocumentIds</a></li>
@@ -125,6 +127,8 @@
             
                 <li data-name="common#getFriendlyReservationDuration"><a href="common.html#getFriendlyReservationDuration">getFriendlyReservationDuration</a></li>
             
+                <li data-name="common#getFriendlyReservationFrequency"><a href="common.html#getFriendlyReservationFrequency">getFriendlyReservationFrequency</a></li>
+            
                 <li data-name="common#getFriendlyReservationStatus"><a href="common.html#getFriendlyReservationStatus">getFriendlyReservationStatus</a></li>
             
                 <li data-name="common#getFriendlyTemplateCss"><a href="common.html#getFriendlyTemplateCss">getFriendlyTemplateCss</a></li>
@@ -132,6 +136,8 @@
                 <li data-name="common#getFriendlyTemplateSize"><a href="common.html#getFriendlyTemplateSize">getFriendlyTemplateSize</a></li>
             
                 <li data-name="common#getFriendlyTemplateStatus"><a href="common.html#getFriendlyTemplateStatus">getFriendlyTemplateStatus</a></li>
+            
+                <li data-name="common#getIconAvatar"><a href="common.html#getIconAvatar">getIconAvatar</a></li>
             
                 <li data-name="common#getImageCDNUrl"><a href="common.html#getImageCDNUrl">getImageCDNUrl</a></li>
             
@@ -169,6 +175,8 @@
             
                 <li data-name="common#getTransactionSummary"><a href="common.html#getTransactionSummary">getTransactionSummary</a></li>
             
+                <li data-name="common#getUserImageCDNUrl"><a href="common.html#getUserImageCDNUrl">getUserImageCDNUrl</a></li>
+            
                 <li data-name="common#getUserImageUrl"><a href="common.html#getUserImageUrl">getUserImageUrl</a></li>
             
                 <li data-name="common#isCodeFromScanner"><a href="common.html#isCodeFromScanner">isCodeFromScanner</a></li>
@@ -176,6 +184,8 @@
                 <li data-name="common#isCodeValid"><a href="common.html#isCodeValid">isCodeValid</a></li>
             
                 <li data-name="common#isFreeEmail"><a href="common.html#isFreeEmail">isFreeEmail</a></li>
+            
+                <li data-name="common#isNumeric"><a href="common.html#isNumeric">isNumeric</a></li>
             
                 <li data-name="common#isOrderArchived"><a href="common.html#isOrderArchived">isOrderArchived</a></li>
             
@@ -188,6 +198,8 @@
                 <li data-name="common#isReservationOverdue"><a href="common.html#isReservationOverdue">isReservationOverdue</a></li>
             
                 <li data-name="common#isValidBarcode"><a href="common.html#isValidBarcode">isValidBarcode</a></li>
+            
+                <li data-name="common#isValidDate"><a href="common.html#isValidDate">isValidDate</a></li>
             
                 <li data-name="common#isValidDocQRCode"><a href="common.html#isValidDocQRCode">isValidDocQRCode</a></li>
             
@@ -249,25 +261,6 @@
         <li class="item" data-name="api.ApiAnonymous">
             <span class="title">
                 <a href="api.ApiAnonymous.html">api.ApiAnonymous</a>
-                
-            </span>
-            <ul class="members itemMembers">
-            
-            </ul>
-            <ul class="typedefs itemMembers">
-            
-            </ul>
-            <ul class="methods itemMembers">
-            
-            </ul>
-            <ul class="events itemMembers">
-            
-            </ul>
-        </li>
-    
-        <li class="item" data-name="api.ApiAuthV2">
-            <span class="title">
-                <a href="api.ApiAuthV2.html">api.ApiAuthV2</a>
                 
             </span>
             <ul class="members itemMembers">
@@ -411,9 +404,15 @@
             
                 <li data-name="Base#clearFlag"><a href="Base.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Base#clearLabel"><a href="Base.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
             
                 <li data-name="Base#setFlag"><a href="Base.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Base#setLabel"><a href="Base.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Base#updateFields"><a href="Base.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -518,6 +517,35 @@
             </ul>
         </li>
     
+        <li class="item" data-name="ColorLabel">
+            <span class="title">
+                <a href="ColorLabel.html">ColorLabel</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="ColorLabel#_fromJson"><a href="ColorLabel.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="ColorLabel#_toJson"><a href="ColorLabel.html#_toJson">_toJson</a></li>
+            
+                <li data-name="ColorLabel#isDirty"><a href="ColorLabel.html#isDirty">isDirty</a></li>
+            
+                <li data-name="ColorLabel#isValid"><a href="ColorLabel.html#isValid">isValid</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
         <li class="item" data-name="Comment">
             <span class="title">
                 <a href="Comment.html">Comment</a>
@@ -583,11 +611,17 @@
             
                 <li data-name="Contact#clearFlag"><a href="Contact.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Contact#clearLabel"><a href="Contact.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
             
                 <li data-name="Contact#setFlag"><a href="Contact.html#setFlag">setFlag</a></li>
             
+                <li data-name="Contact#setLabel"><a href="Contact.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Contact#undoArchive"><a href="Contact.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Contact#updateFields"><a href="Contact.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -869,11 +903,15 @@
             
                 <li data-name="Item#clearFlag"><a href="Item.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Item#clearLabel"><a href="Item.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Item#duplicate"><a href="Item.html#duplicate">duplicate</a></li>
             
                 <li data-name="Item#expire"><a href="Item.html#expire">expire</a></li>
             
                 <li data-name="Item#getAvailabilities"><a href="Item.html#getAvailabilities">getAvailabilities</a></li>
+            
+                <li data-name="Item#getDepreciation"><a href="Item.html#getDepreciation">getDepreciation</a></li>
             
                 <li data-name="Item#getLastNumber"><a href="Item.html#getLastNumber">getLastNumber</a></li>
             
@@ -889,6 +927,8 @@
             
                 <li data-name="Item#setFlag"><a href="Item.html#setFlag">setFlag</a></li>
             
+                <li data-name="Item#setLabel"><a href="Item.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Item#takeCustody"><a href="Item.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Item#transferCustody"><a href="Item.html#transferCustody">transferCustody</a></li>
@@ -896,6 +936,8 @@
                 <li data-name="Item#undoExpire"><a href="Item.html#undoExpire">undoExpire</a></li>
             
                 <li data-name="Item#updateBasicFields"><a href="Item.html#updateBasicFields">updateBasicFields</a></li>
+            
+                <li data-name="Item#updateFields"><a href="Item.html#updateFields">updateFields</a></li>
             
                 <li data-name="Item#updateGeo"><a href="Item.html#updateGeo">updateGeo</a></li>
             
@@ -974,6 +1016,8 @@
             
                 <li data-name="Kit#clearFlag"><a href="Kit.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Kit#clearLabel"><a href="Kit.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Kit#duplicate"><a href="Kit.html#duplicate">duplicate</a></li>
             
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
@@ -986,9 +1030,13 @@
             
                 <li data-name="Kit#setFlag"><a href="Kit.html#setFlag">setFlag</a></li>
             
+                <li data-name="Kit#setLabel"><a href="Kit.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Kit#takeCustody"><a href="Kit.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Kit#transferCustody"><a href="Kit.html#transferCustody">transferCustody</a></li>
+            
+                <li data-name="Kit#updateFields"><a href="Kit.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1071,7 +1119,13 @@
             
                 <li data-name="Location#clearFlag"><a href="Location.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Location#clearLabel"><a href="Location.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Location#setFlag"><a href="Location.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Location#setLabel"><a href="Location.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Location#updateFields"><a href="Location.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1152,11 +1206,17 @@
             
                 <li data-name="Order#clearFlag"><a href="Order.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Order#clearLabel"><a href="Order.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Order#isValidDueDate"><a href="Order.html#isValidDueDate">isValidDueDate</a></li>
             
                 <li data-name="Order#setFlag"><a href="Order.html#setFlag">setFlag</a></li>
             
+                <li data-name="Order#setLabel"><a href="Order.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Order#undoArchive"><a href="Order.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Order#updateFields"><a href="Order.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1317,6 +1377,8 @@
             
                 <li data-name="OrderTransfer#clearFlag"><a href="OrderTransfer.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="OrderTransfer#clearLabel"><a href="OrderTransfer.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="OrderTransfer#isDirty"><a href="OrderTransfer.html#isDirty">isDirty</a></li>
             
                 <li data-name="OrderTransfer#isEmpty"><a href="OrderTransfer.html#isEmpty">isEmpty</a></li>
@@ -1327,9 +1389,13 @@
             
                 <li data-name="OrderTransfer#setFlag"><a href="OrderTransfer.html#setFlag">setFlag</a></li>
             
+                <li data-name="OrderTransfer#setLabel"><a href="OrderTransfer.html#setLabel">setLabel</a></li>
+            
                 <li data-name="OrderTransfer#start"><a href="OrderTransfer.html#start">start</a></li>
             
                 <li data-name="OrderTransfer#undoStart"><a href="OrderTransfer.html#undoStart">undoStart</a></li>
+            
+                <li data-name="OrderTransfer#updateFields"><a href="OrderTransfer.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1425,9 +1491,15 @@
             
                 <li data-name="Reservation#clearFlag"><a href="Reservation.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Reservation#clearLabel"><a href="Reservation.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Reservation#setFlag"><a href="Reservation.html#setFlag">setFlag</a></li>
             
+                <li data-name="Reservation#setLabel"><a href="Reservation.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Reservation#undoArchive"><a href="Reservation.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Reservation#updateFields"><a href="Reservation.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1448,6 +1520,8 @@
                 <li data-name="Reservation#canCancel"><a href="Reservation.html#canCancel">canCancel</a></li>
             
                 <li data-name="Reservation#cancel"><a href="Reservation.html#cancel">cancel</a></li>
+            
+                <li data-name="Reservation#cancelRepeat"><a href="Reservation.html#cancelRepeat">cancelRepeat</a></li>
             
                 <li data-name="Reservation#canDelete"><a href="Reservation.html#canDelete">canDelete</a></li>
             
@@ -1673,9 +1747,15 @@
             
                 <li data-name="Transaction#clearFlag"><a href="Transaction.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Transaction#clearLabel"><a href="Transaction.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Transaction#setFlag"><a href="Transaction.html#setFlag">setFlag</a></li>
             
+                <li data-name="Transaction#setLabel"><a href="Transaction.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Transaction#undoArchive"><a href="Transaction.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Transaction#updateFields"><a href="Transaction.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1800,7 +1880,13 @@
             
                 <li data-name="User#clearFlag"><a href="User.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="User#clearLabel"><a href="User.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="User#setFlag"><a href="User.html#setFlag">setFlag</a></li>
+            
+                <li data-name="User#setLabel"><a href="User.html#setLabel">setLabel</a></li>
+            
+                <li data-name="User#updateFields"><a href="User.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1873,13 +1959,19 @@
             
                 <li data-name="UserSync#clearFlag"><a href="UserSync.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="UserSync#clearLabel"><a href="UserSync.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="UserSync#clone"><a href="UserSync.html#clone">clone</a></li>
             
                 <li data-name="UserSync#setFlag"><a href="UserSync.html#setFlag">setFlag</a></li>
             
+                <li data-name="UserSync#setLabel"><a href="UserSync.html#setLabel">setLabel</a></li>
+            
                 <li data-name="UserSync#syncUsers"><a href="UserSync.html#syncUsers">syncUsers</a></li>
             
                 <li data-name="UserSync#testConnection"><a href="UserSync.html#testConnection">testConnection</a></li>
+            
+                <li data-name="UserSync#updateFields"><a href="UserSync.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -2015,18 +2107,13 @@
     <section>
         <article class="readme"><h1>CHECKROOM CORE JS</h1>
 <p>A JavaScript wrapper around the CHEQROOM REST API</p>
-<h2>Repo</h2>
-<p><a href="https://github.com/CHECKROOM/checkroom_core_js">https://github.com/CHECKROOM/checkroom_core_js</a></p>
 <h2>Docs</h2>
 <p><a href="http://checkroom.github.io/checkroom_core_js/">http://checkroom.github.io/checkroom_core_js/</a></p>
-<h2>Installation</h2>
-<p>Install <code>sudo npm install</code> required npm packages</p>
-<h2>Build instructions</h2>
-<p>Call <code>grunt</code> to build and run the tests</p>
-<p>Call <code>grunt docs</code> to rebuild the documentation</p>
-<p>Call <code>grunt gh-pages</code> to publish the documentation</p>
-<h2>Sample code</h2>
-<pre><code class="lang-javascript">
+<h2>Install</h2>
+<pre><code>npm install cheqroom-core</code></pre>
+<h2>Usage</h2>
+<pre><code class="lang-javascript">var cr = require('cheqroom-core');
+
 //
 // Authenticating via username and password
 //
@@ -2034,7 +2121,7 @@ var baseUrl = 'https://api.cheqroom.com/api/v2_5';
 var userName = &quot;&quot;;
 var password = &quot;&quot;;
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
+var ajax = new cr.api.ApiAjax();
 var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
 var authUser = null;
 
@@ -2111,28 +2198,33 @@ contact.get()
             .done(function() {
                 console.log(contact.name, contact.company);
             });
-    });</code></pre>
-<p>//
+    });
+
+
+//
 // Query operators
 //
-Operators other than equality may also be used in queries — just attach the operator name to a key with a double-underscore:</p>
-<p>ne – not equal to
+Operators other than equality may also be used in queries — just attach the operator name to a key with a double-underscore:
+
+ne – not equal to
 lt – less than
 lte – less than or equal to
 gt – greater than
 gte – greater than or equal to
-not – negate a standard check, may be used before other operators (e.g. Q(age<strong>not</strong>mod=5))
+not – negate a standard check, may be used before other operators (e.g. Q(age__not__mod=5))
 in – value is in list (a list of values should be provided)
 nin – value is not in list (a list of values should be provided)
 mod – value % x == y, where x and y are two provided values
 all – every item in list of values provided is in array
 size – the size of the array is
-exists – value for field exists</p>
-<p>//
+exists – value for field exists
+
+//
 // String search syntax
 //
-The following operators are available as shortcuts to querying with regular expressions:</p>
-<p>exact – string field exactly matches value
+The following operators are available as shortcuts to querying with regular expressions:
+
+exact – string field exactly matches value
 iexact – string field exactly matches value (case insensitive)
 contains – string field contains value
 icontains – string field contains value (case insensitive)
@@ -2140,7 +2232,11 @@ startswith – string field starts with value
 istartswith – string field starts with value (case insensitive)
 endswith – string field ends with value
 iendswith – string field ends with value (case insensitive)
-match – performs an $elemMatch so you can match an entire document within an array</p>
+match – performs an $elemMatch so you can match an entire document within an array</code></pre>
+<h2>Build instructions</h2>
+<p>Call <code>grunt</code> to build and run the tests</p>
+<p>Call <code>grunt docs</code> to rebuild the documentation</p>
+<p>Call <code>grunt gh-pages</code> to publish the documentation</p>
 <hr>
 <p>Copyright CHECKROOM NV 2017</p></article>
     </section>
@@ -2153,7 +2249,7 @@ match – performs an $elemMatch so you can match an entire document within an a
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon May 29 2017 15:56:38 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Feb 27 2018 15:58:35 GMT+0100 (CET)
         </footer>
     </div>
 </div>

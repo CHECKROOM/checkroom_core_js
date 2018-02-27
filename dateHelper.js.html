@@ -101,6 +101,8 @@
             
                 <li data-name="common#getCheqRoomRedirectUrlQR"><a href="common.html#getCheqRoomRedirectUrlQR">getCheqRoomRedirectUrlQR</a></li>
             
+                <li data-name="common#getContactImageCDNUrl"><a href="common.html#getContactImageCDNUrl">getContactImageCDNUrl</a></li>
+            
                 <li data-name="common#getContactImageUrl"><a href="common.html#getContactImageUrl">getContactImageUrl</a></li>
             
                 <li data-name="common#getDocumentIds"><a href="common.html#getDocumentIds">getDocumentIds</a></li>
@@ -125,6 +127,8 @@
             
                 <li data-name="common#getFriendlyReservationDuration"><a href="common.html#getFriendlyReservationDuration">getFriendlyReservationDuration</a></li>
             
+                <li data-name="common#getFriendlyReservationFrequency"><a href="common.html#getFriendlyReservationFrequency">getFriendlyReservationFrequency</a></li>
+            
                 <li data-name="common#getFriendlyReservationStatus"><a href="common.html#getFriendlyReservationStatus">getFriendlyReservationStatus</a></li>
             
                 <li data-name="common#getFriendlyTemplateCss"><a href="common.html#getFriendlyTemplateCss">getFriendlyTemplateCss</a></li>
@@ -132,6 +136,8 @@
                 <li data-name="common#getFriendlyTemplateSize"><a href="common.html#getFriendlyTemplateSize">getFriendlyTemplateSize</a></li>
             
                 <li data-name="common#getFriendlyTemplateStatus"><a href="common.html#getFriendlyTemplateStatus">getFriendlyTemplateStatus</a></li>
+            
+                <li data-name="common#getIconAvatar"><a href="common.html#getIconAvatar">getIconAvatar</a></li>
             
                 <li data-name="common#getImageCDNUrl"><a href="common.html#getImageCDNUrl">getImageCDNUrl</a></li>
             
@@ -169,6 +175,8 @@
             
                 <li data-name="common#getTransactionSummary"><a href="common.html#getTransactionSummary">getTransactionSummary</a></li>
             
+                <li data-name="common#getUserImageCDNUrl"><a href="common.html#getUserImageCDNUrl">getUserImageCDNUrl</a></li>
+            
                 <li data-name="common#getUserImageUrl"><a href="common.html#getUserImageUrl">getUserImageUrl</a></li>
             
                 <li data-name="common#isCodeFromScanner"><a href="common.html#isCodeFromScanner">isCodeFromScanner</a></li>
@@ -176,6 +184,8 @@
                 <li data-name="common#isCodeValid"><a href="common.html#isCodeValid">isCodeValid</a></li>
             
                 <li data-name="common#isFreeEmail"><a href="common.html#isFreeEmail">isFreeEmail</a></li>
+            
+                <li data-name="common#isNumeric"><a href="common.html#isNumeric">isNumeric</a></li>
             
                 <li data-name="common#isOrderArchived"><a href="common.html#isOrderArchived">isOrderArchived</a></li>
             
@@ -188,6 +198,8 @@
                 <li data-name="common#isReservationOverdue"><a href="common.html#isReservationOverdue">isReservationOverdue</a></li>
             
                 <li data-name="common#isValidBarcode"><a href="common.html#isValidBarcode">isValidBarcode</a></li>
+            
+                <li data-name="common#isValidDate"><a href="common.html#isValidDate">isValidDate</a></li>
             
                 <li data-name="common#isValidDocQRCode"><a href="common.html#isValidDocQRCode">isValidDocQRCode</a></li>
             
@@ -249,25 +261,6 @@
         <li class="item" data-name="api.ApiAnonymous">
             <span class="title">
                 <a href="api.ApiAnonymous.html">api.ApiAnonymous</a>
-                
-            </span>
-            <ul class="members itemMembers">
-            
-            </ul>
-            <ul class="typedefs itemMembers">
-            
-            </ul>
-            <ul class="methods itemMembers">
-            
-            </ul>
-            <ul class="events itemMembers">
-            
-            </ul>
-        </li>
-    
-        <li class="item" data-name="api.ApiAuthV2">
-            <span class="title">
-                <a href="api.ApiAuthV2.html">api.ApiAuthV2</a>
                 
             </span>
             <ul class="members itemMembers">
@@ -411,9 +404,15 @@
             
                 <li data-name="Base#clearFlag"><a href="Base.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Base#clearLabel"><a href="Base.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
             
                 <li data-name="Base#setFlag"><a href="Base.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Base#setLabel"><a href="Base.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Base#updateFields"><a href="Base.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -518,6 +517,35 @@
             </ul>
         </li>
     
+        <li class="item" data-name="ColorLabel">
+            <span class="title">
+                <a href="ColorLabel.html">ColorLabel</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="ColorLabel#_fromJson"><a href="ColorLabel.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="ColorLabel#_toJson"><a href="ColorLabel.html#_toJson">_toJson</a></li>
+            
+                <li data-name="ColorLabel#isDirty"><a href="ColorLabel.html#isDirty">isDirty</a></li>
+            
+                <li data-name="ColorLabel#isValid"><a href="ColorLabel.html#isValid">isValid</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
         <li class="item" data-name="Comment">
             <span class="title">
                 <a href="Comment.html">Comment</a>
@@ -583,11 +611,17 @@
             
                 <li data-name="Contact#clearFlag"><a href="Contact.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Contact#clearLabel"><a href="Contact.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
             
                 <li data-name="Contact#setFlag"><a href="Contact.html#setFlag">setFlag</a></li>
             
+                <li data-name="Contact#setLabel"><a href="Contact.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Contact#undoArchive"><a href="Contact.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Contact#updateFields"><a href="Contact.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -869,11 +903,15 @@
             
                 <li data-name="Item#clearFlag"><a href="Item.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Item#clearLabel"><a href="Item.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Item#duplicate"><a href="Item.html#duplicate">duplicate</a></li>
             
                 <li data-name="Item#expire"><a href="Item.html#expire">expire</a></li>
             
                 <li data-name="Item#getAvailabilities"><a href="Item.html#getAvailabilities">getAvailabilities</a></li>
+            
+                <li data-name="Item#getDepreciation"><a href="Item.html#getDepreciation">getDepreciation</a></li>
             
                 <li data-name="Item#getLastNumber"><a href="Item.html#getLastNumber">getLastNumber</a></li>
             
@@ -889,6 +927,8 @@
             
                 <li data-name="Item#setFlag"><a href="Item.html#setFlag">setFlag</a></li>
             
+                <li data-name="Item#setLabel"><a href="Item.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Item#takeCustody"><a href="Item.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Item#transferCustody"><a href="Item.html#transferCustody">transferCustody</a></li>
@@ -896,6 +936,8 @@
                 <li data-name="Item#undoExpire"><a href="Item.html#undoExpire">undoExpire</a></li>
             
                 <li data-name="Item#updateBasicFields"><a href="Item.html#updateBasicFields">updateBasicFields</a></li>
+            
+                <li data-name="Item#updateFields"><a href="Item.html#updateFields">updateFields</a></li>
             
                 <li data-name="Item#updateGeo"><a href="Item.html#updateGeo">updateGeo</a></li>
             
@@ -974,6 +1016,8 @@
             
                 <li data-name="Kit#clearFlag"><a href="Kit.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Kit#clearLabel"><a href="Kit.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Kit#duplicate"><a href="Kit.html#duplicate">duplicate</a></li>
             
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
@@ -986,9 +1030,13 @@
             
                 <li data-name="Kit#setFlag"><a href="Kit.html#setFlag">setFlag</a></li>
             
+                <li data-name="Kit#setLabel"><a href="Kit.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Kit#takeCustody"><a href="Kit.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Kit#transferCustody"><a href="Kit.html#transferCustody">transferCustody</a></li>
+            
+                <li data-name="Kit#updateFields"><a href="Kit.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1071,7 +1119,13 @@
             
                 <li data-name="Location#clearFlag"><a href="Location.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Location#clearLabel"><a href="Location.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Location#setFlag"><a href="Location.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Location#setLabel"><a href="Location.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Location#updateFields"><a href="Location.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1152,11 +1206,17 @@
             
                 <li data-name="Order#clearFlag"><a href="Order.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Order#clearLabel"><a href="Order.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Order#isValidDueDate"><a href="Order.html#isValidDueDate">isValidDueDate</a></li>
             
                 <li data-name="Order#setFlag"><a href="Order.html#setFlag">setFlag</a></li>
             
+                <li data-name="Order#setLabel"><a href="Order.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Order#undoArchive"><a href="Order.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Order#updateFields"><a href="Order.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1317,6 +1377,8 @@
             
                 <li data-name="OrderTransfer#clearFlag"><a href="OrderTransfer.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="OrderTransfer#clearLabel"><a href="OrderTransfer.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="OrderTransfer#isDirty"><a href="OrderTransfer.html#isDirty">isDirty</a></li>
             
                 <li data-name="OrderTransfer#isEmpty"><a href="OrderTransfer.html#isEmpty">isEmpty</a></li>
@@ -1327,9 +1389,13 @@
             
                 <li data-name="OrderTransfer#setFlag"><a href="OrderTransfer.html#setFlag">setFlag</a></li>
             
+                <li data-name="OrderTransfer#setLabel"><a href="OrderTransfer.html#setLabel">setLabel</a></li>
+            
                 <li data-name="OrderTransfer#start"><a href="OrderTransfer.html#start">start</a></li>
             
                 <li data-name="OrderTransfer#undoStart"><a href="OrderTransfer.html#undoStart">undoStart</a></li>
+            
+                <li data-name="OrderTransfer#updateFields"><a href="OrderTransfer.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1425,9 +1491,15 @@
             
                 <li data-name="Reservation#clearFlag"><a href="Reservation.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Reservation#clearLabel"><a href="Reservation.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Reservation#setFlag"><a href="Reservation.html#setFlag">setFlag</a></li>
             
+                <li data-name="Reservation#setLabel"><a href="Reservation.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Reservation#undoArchive"><a href="Reservation.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Reservation#updateFields"><a href="Reservation.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1448,6 +1520,8 @@
                 <li data-name="Reservation#canCancel"><a href="Reservation.html#canCancel">canCancel</a></li>
             
                 <li data-name="Reservation#cancel"><a href="Reservation.html#cancel">cancel</a></li>
+            
+                <li data-name="Reservation#cancelRepeat"><a href="Reservation.html#cancelRepeat">cancelRepeat</a></li>
             
                 <li data-name="Reservation#canDelete"><a href="Reservation.html#canDelete">canDelete</a></li>
             
@@ -1673,9 +1747,15 @@
             
                 <li data-name="Transaction#clearFlag"><a href="Transaction.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Transaction#clearLabel"><a href="Transaction.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Transaction#setFlag"><a href="Transaction.html#setFlag">setFlag</a></li>
             
+                <li data-name="Transaction#setLabel"><a href="Transaction.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Transaction#undoArchive"><a href="Transaction.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Transaction#updateFields"><a href="Transaction.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1800,7 +1880,13 @@
             
                 <li data-name="User#clearFlag"><a href="User.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="User#clearLabel"><a href="User.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="User#setFlag"><a href="User.html#setFlag">setFlag</a></li>
+            
+                <li data-name="User#setLabel"><a href="User.html#setLabel">setLabel</a></li>
+            
+                <li data-name="User#updateFields"><a href="User.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1873,13 +1959,19 @@
             
                 <li data-name="UserSync#clearFlag"><a href="UserSync.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="UserSync#clearLabel"><a href="UserSync.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="UserSync#clone"><a href="UserSync.html#clone">clone</a></li>
             
                 <li data-name="UserSync#setFlag"><a href="UserSync.html#setFlag">setFlag</a></li>
             
+                <li data-name="UserSync#setLabel"><a href="UserSync.html#setLabel">setLabel</a></li>
+            
                 <li data-name="UserSync#syncUsers"><a href="UserSync.html#syncUsers">syncUsers</a></li>
             
                 <li data-name="UserSync#testConnection"><a href="UserSync.html#testConnection">testConnection</a></li>
+            
+                <li data-name="UserSync#updateFields"><a href="UserSync.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -2074,7 +2166,9 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      roundType = StringField(default="nearest", choices=ROUND_TYPE)  # nearest, longer, shorter
      */
 
-    var INCREMENT = 15;
+    var INCREMENT = 15,
+        START_OF_DAY_HRS = 9,
+        END_OF_DAY_HRS = 17;
 
     /**
      * @name  DateHelper
@@ -2087,6 +2181,8 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         this.roundMinutes = spec.roundMinutes || INCREMENT;
         this.timeFormat24 = (spec.timeFormat24) ? spec.timeFormat24 : false;
         this._momentFormat = (this.timeFormat24) ? "MMM D [at] H:mm" : "MMM D [at] h:mm a";
+        this.startOfDayHours = (spec.startOfDayHours!=null) ? startOfDayHours : START_OF_DAY_HRS;
+        this.endOfDayHours = (spec.endOfDayHours!=null) ? endOfDayHours : END_OF_DAY_HRS;
     };
 
     /**
@@ -2153,10 +2249,8 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             date = moment(date);
         }
         now = now || this.getNow();
-        format = format || this._momentFormat;
-        var diff = now.diff(date, 'days');
-        var str = (Math.abs(diff) &lt; 7) ? date.calendar() : date.format(format);
-        return str
+                    
+        return date.calendar() 
             .replace("AM", "am")
             .replace("PM", "pm")
             .split(" at ");
@@ -2243,17 +2337,23 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
      * @returns {}
      */
     DateHelper.prototype.getFriendlyFromTo = function(from, to, useHours, now, separator, format) {
+        if (!moment.isMoment(from)) {
+            from = moment(from);
+        }
+        if (!moment.isMoment(to)) {
+            to = moment(to);
+        }
         now = now || this.getNow();
 
         var sep = separator || " - ",
             fromParts = this.getFriendlyDateParts(from, now, format),
             toParts = this.getFriendlyDateParts(to, now, format),
             result = {
-                dayDiff: from.diff(to, 'days'),
-                fromDate: fromParts[0],
-                fromTime: (useHours) ? fromParts[1] : "",
-                toDate: toParts[0],
-                toTime: (useHours) ? toParts[1] : ""
+                dayDiff: from ? from.clone().startOf('day').diff(to, 'days') : -1,
+                fromDate: from ? fromParts[0] : "No from date set",
+                fromTime: (useHours && from != null) ? fromParts[1] : "",
+                toDate: to ? toParts[0] : "No to date set",
+                toTime: (useHours && to != null) ? toParts[1] : ""
             };
 
         result.fromText = result.fromDate;
@@ -2271,7 +2371,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         // Build a text based on the dates and times we have
         if (result.dayDiff==0) {
             if (useHours) {
-                result.text = result.fromText + sep + result.toTime;
+                result.text = result.fromText + sep + result.toText;
             } else {
                 result.text = result.fromText;
             }
@@ -2301,6 +2401,121 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             fromText: mFrom.calendar().replace(' at ', ' '),
             toText: mTo.calendar().replace(' at ', ' ')
         };
+    };
+
+
+    /**
+     * makeStartDate helps making an start date for a transaction, usually a reservation
+     * It will do the standard rounding
+     * But also, if you're using dates instead of datetimes,
+     * it will try to make smart decisions about which hours to use
+     * @param m - the Moment date
+     * @param useHours - does the profile use hours?
+     * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+     * @param minDate - passing in a minimum start-date, will be different for reservations compared to orders
+     * @param maxDate - passing in a maximum start-date (not used for the moment)
+     * @param now - the current moment (just to make testing easier)
+     * @returns {moment}
+     * @private
+     */
+    DateHelper.prototype.makeStartDate = function(m, useHours, dayMode, minDate, maxDate, now) {
+        useHours = (useHours!=null) ? useHours : true; // is the account set up to use hours?
+        dayMode = (dayMode!=null) ? dayMode : false; // did the selection come from a calendar fullcalendar day selection?
+        now = now || moment();  // the current time (for unit testing)
+
+        if( (useHours) &&
+            (!dayMode)) {
+            // The account is set up to use hours,
+            // and the user picked the hours himself (since it's not picked from a dayMode calendar)
+            // We'll just round the from date
+            // if it's before the minDate, just take the minDate instead
+            m = this.roundTimeFrom(m);
+        } else {
+            // When we get here we know that either:
+            // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+            // or
+            // 2) The account is set up to use days instead of hours
+            //
+            // Which means we still need to see if we can make a smart decision about the hours part
+            // we'll base this on typical business hours (usually 9 to 5)
+            var isToday = m.isSame(now, 'day'),
+                startOfBusinessDay = this._makeStartOfBusinessDay(m);
+            if (isToday) {
+                // The start date is today
+                // and the current time is still before business hours
+                // we can use the start time to start-of-business hours
+                if (m.isBefore(startOfBusinessDay)) {
+                    m = startOfBusinessDay;
+                } else {
+                    // We're already at the beginning of business hours
+                    // or even already passed it, just try rounding the
+                    // time and see if its before minDate
+                    m = this.roundTimeFrom(m);
+                }
+            } else {
+                // The start date is not today, we can just take the business day start from the date that was passed
+                m = startOfBusinessDay;
+            }
+        }
+
+        // Make sure we never return anything before the mindate
+        return ((minDate) && (m.isBefore(minDate))) ? minDate : m;
+    };
+
+    /**
+     * makeEndDate helps making an end date for a transaction
+     * It will do the standard rounding
+     * But also, if you're using dates instead of datetimes,
+     * it will try to make smart decisions about which hours to use
+     * @param m - the Moment date
+     * @param useHours - does the profile use hours?
+     * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
+     * @param minDate
+     * @param maxDate
+     * @param now - the current moment (just to make testing easier)
+     * @returns {moment}
+     * @private
+     */
+    DateHelper.prototype.makeEndDate = function(m, useHours, dayMode, minDate, maxDate, now) {
+        useHours = (useHours!=null) ? useHours : true;
+        dayMode = (dayMode!=null) ? dayMode : false;
+        now = now || moment();
+
+        if( (useHours) &&
+            (!dayMode)) {
+            // The account is set up to use hours,
+            // and since dayMode is false,
+            // we assume the hours are picked by the user himself
+            // just do the rounding and we're done
+            m = this.roundTimeTo(m);
+        } else {
+            // When we get here we know that either:
+            // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
+            // or
+            // 2) The account is set up to use days instead of hours
+            //
+            // Which means we still need to see if we can make a smart decision about the hours part
+            var isToday = m.isSame(now, 'day'),
+                endOfBusinessDay = this._makeEndOfBusinessDay(m),
+                endOfDay = this._makeEndOfDay(m);
+            if (isToday) {
+                // The end date is today
+                // and the current date is before business hours
+                // we can use the end time to end-of-business hours
+                if (m.isBefore(endOfBusinessDay)) {
+                    m = endOfBusinessDay;
+                } else {
+                    m = endOfDay;
+                }
+            } else if (m.isAfter(endOfBusinessDay)) {
+                m = endOfDay;
+            } else {
+                m = endOfBusinessDay;
+            }
+        }
+
+        // Make sure we never return a date after the max date
+        return ((maxDate) && (m.isAfter(maxDate))) ? maxDate : m;
     };
 
     /**
@@ -2408,6 +2623,19 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         }
     };
 
+    DateHelper.prototype._makeStartOfBusinessDay = function(m) {
+        return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    };
+
+    DateHelper.prototype._makeEndOfBusinessDay = function(m) {
+        return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    };
+
+    DateHelper.prototype._makeEndOfDay = function(m) {
+        return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
+    };
+
+
     return DateHelper;
 
 });</code></pre>
@@ -2422,7 +2650,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon May 29 2017 15:56:35 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Feb 27 2018 15:58:33 GMT+0100 (CET)
         </footer>
     </div>
 </div>

@@ -101,6 +101,8 @@
             
                 <li data-name="common#getCheqRoomRedirectUrlQR"><a href="common.html#getCheqRoomRedirectUrlQR">getCheqRoomRedirectUrlQR</a></li>
             
+                <li data-name="common#getContactImageCDNUrl"><a href="common.html#getContactImageCDNUrl">getContactImageCDNUrl</a></li>
+            
                 <li data-name="common#getContactImageUrl"><a href="common.html#getContactImageUrl">getContactImageUrl</a></li>
             
                 <li data-name="common#getDocumentIds"><a href="common.html#getDocumentIds">getDocumentIds</a></li>
@@ -125,6 +127,8 @@
             
                 <li data-name="common#getFriendlyReservationDuration"><a href="common.html#getFriendlyReservationDuration">getFriendlyReservationDuration</a></li>
             
+                <li data-name="common#getFriendlyReservationFrequency"><a href="common.html#getFriendlyReservationFrequency">getFriendlyReservationFrequency</a></li>
+            
                 <li data-name="common#getFriendlyReservationStatus"><a href="common.html#getFriendlyReservationStatus">getFriendlyReservationStatus</a></li>
             
                 <li data-name="common#getFriendlyTemplateCss"><a href="common.html#getFriendlyTemplateCss">getFriendlyTemplateCss</a></li>
@@ -132,6 +136,8 @@
                 <li data-name="common#getFriendlyTemplateSize"><a href="common.html#getFriendlyTemplateSize">getFriendlyTemplateSize</a></li>
             
                 <li data-name="common#getFriendlyTemplateStatus"><a href="common.html#getFriendlyTemplateStatus">getFriendlyTemplateStatus</a></li>
+            
+                <li data-name="common#getIconAvatar"><a href="common.html#getIconAvatar">getIconAvatar</a></li>
             
                 <li data-name="common#getImageCDNUrl"><a href="common.html#getImageCDNUrl">getImageCDNUrl</a></li>
             
@@ -169,6 +175,8 @@
             
                 <li data-name="common#getTransactionSummary"><a href="common.html#getTransactionSummary">getTransactionSummary</a></li>
             
+                <li data-name="common#getUserImageCDNUrl"><a href="common.html#getUserImageCDNUrl">getUserImageCDNUrl</a></li>
+            
                 <li data-name="common#getUserImageUrl"><a href="common.html#getUserImageUrl">getUserImageUrl</a></li>
             
                 <li data-name="common#isCodeFromScanner"><a href="common.html#isCodeFromScanner">isCodeFromScanner</a></li>
@@ -176,6 +184,8 @@
                 <li data-name="common#isCodeValid"><a href="common.html#isCodeValid">isCodeValid</a></li>
             
                 <li data-name="common#isFreeEmail"><a href="common.html#isFreeEmail">isFreeEmail</a></li>
+            
+                <li data-name="common#isNumeric"><a href="common.html#isNumeric">isNumeric</a></li>
             
                 <li data-name="common#isOrderArchived"><a href="common.html#isOrderArchived">isOrderArchived</a></li>
             
@@ -188,6 +198,8 @@
                 <li data-name="common#isReservationOverdue"><a href="common.html#isReservationOverdue">isReservationOverdue</a></li>
             
                 <li data-name="common#isValidBarcode"><a href="common.html#isValidBarcode">isValidBarcode</a></li>
+            
+                <li data-name="common#isValidDate"><a href="common.html#isValidDate">isValidDate</a></li>
             
                 <li data-name="common#isValidDocQRCode"><a href="common.html#isValidDocQRCode">isValidDocQRCode</a></li>
             
@@ -249,25 +261,6 @@
         <li class="item" data-name="api.ApiAnonymous">
             <span class="title">
                 <a href="api.ApiAnonymous.html">api.ApiAnonymous</a>
-                
-            </span>
-            <ul class="members itemMembers">
-            
-            </ul>
-            <ul class="typedefs itemMembers">
-            
-            </ul>
-            <ul class="methods itemMembers">
-            
-            </ul>
-            <ul class="events itemMembers">
-            
-            </ul>
-        </li>
-    
-        <li class="item" data-name="api.ApiAuthV2">
-            <span class="title">
-                <a href="api.ApiAuthV2.html">api.ApiAuthV2</a>
                 
             </span>
             <ul class="members itemMembers">
@@ -411,9 +404,15 @@
             
                 <li data-name="Base#clearFlag"><a href="Base.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Base#clearLabel"><a href="Base.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Base#isDirty"><a href="Base.html#isDirty">isDirty</a></li>
             
                 <li data-name="Base#setFlag"><a href="Base.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Base#setLabel"><a href="Base.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Base#updateFields"><a href="Base.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -518,6 +517,35 @@
             </ul>
         </li>
     
+        <li class="item" data-name="ColorLabel">
+            <span class="title">
+                <a href="ColorLabel.html">ColorLabel</a>
+                
+            </span>
+            <ul class="members itemMembers">
+            
+            </ul>
+            <ul class="typedefs itemMembers">
+            
+            </ul>
+            <ul class="methods itemMembers">
+            
+            <span class="subtitle">Methods</span>
+            
+                <li data-name="ColorLabel#_fromJson"><a href="ColorLabel.html#_fromJson">_fromJson</a></li>
+            
+                <li data-name="ColorLabel#_toJson"><a href="ColorLabel.html#_toJson">_toJson</a></li>
+            
+                <li data-name="ColorLabel#isDirty"><a href="ColorLabel.html#isDirty">isDirty</a></li>
+            
+                <li data-name="ColorLabel#isValid"><a href="ColorLabel.html#isValid">isValid</a></li>
+            
+            </ul>
+            <ul class="events itemMembers">
+            
+            </ul>
+        </li>
+    
         <li class="item" data-name="Comment">
             <span class="title">
                 <a href="Comment.html">Comment</a>
@@ -583,11 +611,17 @@
             
                 <li data-name="Contact#clearFlag"><a href="Contact.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Contact#clearLabel"><a href="Contact.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Contact#isDirty"><a href="Contact.html#isDirty">isDirty</a></li>
             
                 <li data-name="Contact#setFlag"><a href="Contact.html#setFlag">setFlag</a></li>
             
+                <li data-name="Contact#setLabel"><a href="Contact.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Contact#undoArchive"><a href="Contact.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Contact#updateFields"><a href="Contact.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -869,11 +903,15 @@
             
                 <li data-name="Item#clearFlag"><a href="Item.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Item#clearLabel"><a href="Item.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Item#duplicate"><a href="Item.html#duplicate">duplicate</a></li>
             
                 <li data-name="Item#expire"><a href="Item.html#expire">expire</a></li>
             
                 <li data-name="Item#getAvailabilities"><a href="Item.html#getAvailabilities">getAvailabilities</a></li>
+            
+                <li data-name="Item#getDepreciation"><a href="Item.html#getDepreciation">getDepreciation</a></li>
             
                 <li data-name="Item#getLastNumber"><a href="Item.html#getLastNumber">getLastNumber</a></li>
             
@@ -889,6 +927,8 @@
             
                 <li data-name="Item#setFlag"><a href="Item.html#setFlag">setFlag</a></li>
             
+                <li data-name="Item#setLabel"><a href="Item.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Item#takeCustody"><a href="Item.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Item#transferCustody"><a href="Item.html#transferCustody">transferCustody</a></li>
@@ -896,6 +936,8 @@
                 <li data-name="Item#undoExpire"><a href="Item.html#undoExpire">undoExpire</a></li>
             
                 <li data-name="Item#updateBasicFields"><a href="Item.html#updateBasicFields">updateBasicFields</a></li>
+            
+                <li data-name="Item#updateFields"><a href="Item.html#updateFields">updateFields</a></li>
             
                 <li data-name="Item#updateGeo"><a href="Item.html#updateGeo">updateGeo</a></li>
             
@@ -974,6 +1016,8 @@
             
                 <li data-name="Kit#clearFlag"><a href="Kit.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Kit#clearLabel"><a href="Kit.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Kit#duplicate"><a href="Kit.html#duplicate">duplicate</a></li>
             
                 <li data-name="Kit#isDirty"><a href="Kit.html#isDirty">isDirty</a></li>
@@ -986,9 +1030,13 @@
             
                 <li data-name="Kit#setFlag"><a href="Kit.html#setFlag">setFlag</a></li>
             
+                <li data-name="Kit#setLabel"><a href="Kit.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Kit#takeCustody"><a href="Kit.html#takeCustody">takeCustody</a></li>
             
                 <li data-name="Kit#transferCustody"><a href="Kit.html#transferCustody">transferCustody</a></li>
+            
+                <li data-name="Kit#updateFields"><a href="Kit.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1071,7 +1119,13 @@
             
                 <li data-name="Location#clearFlag"><a href="Location.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Location#clearLabel"><a href="Location.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Location#setFlag"><a href="Location.html#setFlag">setFlag</a></li>
+            
+                <li data-name="Location#setLabel"><a href="Location.html#setLabel">setLabel</a></li>
+            
+                <li data-name="Location#updateFields"><a href="Location.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1152,11 +1206,17 @@
             
                 <li data-name="Order#clearFlag"><a href="Order.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Order#clearLabel"><a href="Order.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Order#isValidDueDate"><a href="Order.html#isValidDueDate">isValidDueDate</a></li>
             
                 <li data-name="Order#setFlag"><a href="Order.html#setFlag">setFlag</a></li>
             
+                <li data-name="Order#setLabel"><a href="Order.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Order#undoArchive"><a href="Order.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Order#updateFields"><a href="Order.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1317,6 +1377,8 @@
             
                 <li data-name="OrderTransfer#clearFlag"><a href="OrderTransfer.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="OrderTransfer#clearLabel"><a href="OrderTransfer.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="OrderTransfer#isDirty"><a href="OrderTransfer.html#isDirty">isDirty</a></li>
             
                 <li data-name="OrderTransfer#isEmpty"><a href="OrderTransfer.html#isEmpty">isEmpty</a></li>
@@ -1327,9 +1389,13 @@
             
                 <li data-name="OrderTransfer#setFlag"><a href="OrderTransfer.html#setFlag">setFlag</a></li>
             
+                <li data-name="OrderTransfer#setLabel"><a href="OrderTransfer.html#setLabel">setLabel</a></li>
+            
                 <li data-name="OrderTransfer#start"><a href="OrderTransfer.html#start">start</a></li>
             
                 <li data-name="OrderTransfer#undoStart"><a href="OrderTransfer.html#undoStart">undoStart</a></li>
+            
+                <li data-name="OrderTransfer#updateFields"><a href="OrderTransfer.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1425,9 +1491,15 @@
             
                 <li data-name="Reservation#clearFlag"><a href="Reservation.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Reservation#clearLabel"><a href="Reservation.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Reservation#setFlag"><a href="Reservation.html#setFlag">setFlag</a></li>
             
+                <li data-name="Reservation#setLabel"><a href="Reservation.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Reservation#undoArchive"><a href="Reservation.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Reservation#updateFields"><a href="Reservation.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1448,6 +1520,8 @@
                 <li data-name="Reservation#canCancel"><a href="Reservation.html#canCancel">canCancel</a></li>
             
                 <li data-name="Reservation#cancel"><a href="Reservation.html#cancel">cancel</a></li>
+            
+                <li data-name="Reservation#cancelRepeat"><a href="Reservation.html#cancelRepeat">cancelRepeat</a></li>
             
                 <li data-name="Reservation#canDelete"><a href="Reservation.html#canDelete">canDelete</a></li>
             
@@ -1673,9 +1747,15 @@
             
                 <li data-name="Transaction#clearFlag"><a href="Transaction.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="Transaction#clearLabel"><a href="Transaction.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="Transaction#setFlag"><a href="Transaction.html#setFlag">setFlag</a></li>
             
+                <li data-name="Transaction#setLabel"><a href="Transaction.html#setLabel">setLabel</a></li>
+            
                 <li data-name="Transaction#undoArchive"><a href="Transaction.html#undoArchive">undoArchive</a></li>
+            
+                <li data-name="Transaction#updateFields"><a href="Transaction.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1800,7 +1880,13 @@
             
                 <li data-name="User#clearFlag"><a href="User.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="User#clearLabel"><a href="User.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="User#setFlag"><a href="User.html#setFlag">setFlag</a></li>
+            
+                <li data-name="User#setLabel"><a href="User.html#setLabel">setLabel</a></li>
+            
+                <li data-name="User#updateFields"><a href="User.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -1873,13 +1959,19 @@
             
                 <li data-name="UserSync#clearFlag"><a href="UserSync.html#clearFlag">clearFlag</a></li>
             
+                <li data-name="UserSync#clearLabel"><a href="UserSync.html#clearLabel">clearLabel</a></li>
+            
                 <li data-name="UserSync#clone"><a href="UserSync.html#clone">clone</a></li>
             
                 <li data-name="UserSync#setFlag"><a href="UserSync.html#setFlag">setFlag</a></li>
             
+                <li data-name="UserSync#setLabel"><a href="UserSync.html#setLabel">setLabel</a></li>
+            
                 <li data-name="UserSync#syncUsers"><a href="UserSync.html#syncUsers">syncUsers</a></li>
             
                 <li data-name="UserSync#testConnection"><a href="UserSync.html#testConnection">testConnection</a></li>
+            
+                <li data-name="UserSync#updateFields"><a href="UserSync.html#updateFields">updateFields</a></li>
             
             </ul>
             <ul class="typedefs itemMembers">
@@ -2022,7 +2114,7 @@
     
         
         <div class="tag-source">
-            <a href="user.js_.html">user.js</a>, <a href="user.js_.html#line27">line 27</a>
+            <a href="user.js_.html">user.js</a>, <a href="user.js_.html#line28">line 28</a>
         </div>
         
     </div>
@@ -2291,6 +2383,51 @@
             
 <dt>
     <div class="nameContainer">
+        <h4 class="name" id="clearLabel">clearLabel</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Clears the label of an item</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
         <h4 class="name" id="setFlag">setFlag</h4>
     </div>
     
@@ -2300,6 +2437,96 @@
     
     <div class="description">
         <p>Sets the flag of an item</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="setLabel">setLabel</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Sets the label of an item</p>
+    </div>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="updateFields">updateFields</h4>
+    </div>
+    
+    
+</dt>
+<dd>
+    
+    <div class="description">
+        <p>Update fields of a document</p>
     </div>
     
     
@@ -2351,7 +2578,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line120">line 120</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line122">line 122</a>
         </div>
         
     </div>
@@ -2487,7 +2714,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line312">line 312</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line314">line 314</a>
         </div>
         
     </div>
@@ -2623,7 +2850,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line102">line 102</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line104">line 104</a>
         </div>
         
     </div>
@@ -2701,7 +2928,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line297">line 297</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line299">line 299</a>
         </div>
         
     </div>
@@ -2819,7 +3046,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line213">line 213</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line215">line 215</a>
         </div>
         
     </div>
@@ -2950,7 +3177,7 @@
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line131">line 131</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line132">line 132</a>
         </div>
         
     </div>
@@ -3068,7 +3295,7 @@
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line171">line 171</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line172">line 172</a>
         </div>
         
     </div>
@@ -3146,7 +3373,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line153">line 153</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line155">line 155</a>
         </div>
         
     </div>
@@ -3282,7 +3509,7 @@
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line332">line 332</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line334">line 334</a>
         </div>
         
     </div>
@@ -3418,7 +3645,7 @@
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line86">line 86</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line87">line 87</a>
         </div>
         
     </div>
@@ -3497,7 +3724,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line44">line 44</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line45">line 45</a>
         </div>
         
     </div>
@@ -3575,7 +3802,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line112">line 112</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line113">line 113</a>
         </div>
         
     </div>
@@ -3691,7 +3918,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="user.js_.html">user.js</a>, <a href="user.js_.html#line131">line 131</a>
+            <a href="user.js_.html">user.js</a>, <a href="user.js_.html#line164">line 164</a>
         </div>
         
     </div>
@@ -3767,7 +3994,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="user.js_.html">user.js</a>, <a href="user.js_.html#line116">line 116</a>
+            <a href="user.js_.html">user.js</a>, <a href="user.js_.html#line118">line 118</a>
         </div>
         
     </div>
@@ -3845,7 +4072,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line76">line 76</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line77">line 77</a>
         </div>
         
     </div>
@@ -3923,7 +4150,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line97">line 97</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line98">line 98</a>
         </div>
         
     </div>
@@ -4041,7 +4268,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line33">line 33</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line34">line 34</a>
         </div>
         
     </div>
@@ -4119,7 +4346,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line281">line 281</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line283">line 283</a>
         </div>
         
     </div>
@@ -4255,7 +4482,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line196">line 196</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line198">line 198</a>
         </div>
         
     </div>
@@ -4409,7 +4636,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line171">line 171</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line173">line 173</a>
         </div>
         
     </div>
@@ -4545,7 +4772,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="document.js.html">document.js</a>, <a href="document.js.html#line151">line 151</a>
+            <a href="document.js.html">document.js</a>, <a href="document.js.html#line152">line 152</a>
         </div>
         
     </div>
@@ -4663,7 +4890,7 @@ or resets it when no old raw response was found</p>
     
         
         <div class="tag-source">
-            <a href="base.js.html">base.js</a>, <a href="base.js.html#line136">line 136</a>
+            <a href="base.js.html">base.js</a>, <a href="base.js.html#line138">line 138</a>
         </div>
         
     </div>
@@ -4821,7 +5048,7 @@ or resets it when no old raw response was found</p>
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Mon May 29 2017 15:57:01 GMT+0200 (CEST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Feb 27 2018 15:58:43 GMT+0100 (CET)
         </footer>
     </div>
 </div>

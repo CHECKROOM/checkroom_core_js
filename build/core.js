@@ -882,7 +882,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^[A-Z0-9\-]{4,22}$/i) != null;
+    return barCode && barCode.match(/^\S*([A-Z0-9 \-]{4,22})\S*$/i) != null;
   },
   /**
    * isValidQRCode
@@ -3228,7 +3228,7 @@ common_validation = function (moment) {
      * @returns {boolean}
      */
     isFreeEmail: function (email) {
-      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
+      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
       return !re.test(email);
     },
     /**
@@ -5187,7 +5187,7 @@ field = function ($, common) {
    * @method
    * @returns {boolean}
    */
-  Field.prototype.isValid = function () {
+  Field.prototype.isValid = function (allowEmpty) {
     var value = $.trim(this.value);
     // skip if not required and empty
     if (!this.required && value == '')
@@ -5202,8 +5202,9 @@ field = function ($, common) {
     case 'date':
     case 'datetime':
       return common.isValidDate(value);
+    case 'string':
     case 'select':
-      return this.value != '';
+      return value != '';
     default:
       if (this.editor == 'phone') {
         return common.isValidPhone(value);
@@ -15941,7 +15942,7 @@ Field = function ($, common) {
    * @method
    * @returns {boolean}
    */
-  Field.prototype.isValid = function () {
+  Field.prototype.isValid = function (allowEmpty) {
     var value = $.trim(this.value);
     // skip if not required and empty
     if (!this.required && value == '')
@@ -15956,8 +15957,9 @@ Field = function ($, common) {
     case 'date':
     case 'datetime':
       return common.isValidDate(value);
+    case 'string':
     case 'select':
-      return this.value != '';
+      return value != '';
     default:
       if (this.editor == 'phone') {
         return common.isValidPhone(value);

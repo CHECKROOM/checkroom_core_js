@@ -45,7 +45,7 @@ define(['jquery', 'common'], /** Field */ function ($, common) {
      * @method
      * @returns {boolean}
      */
-    Field.prototype.isValid = function() {
+    Field.prototype.isValid = function(allowEmpty) {
         var value = $.trim(this.value);
 
         // skip if not required and empty
@@ -61,8 +61,9 @@ define(['jquery', 'common'], /** Field */ function ($, common) {
             case "date":
             case "datetime":
                 return common.isValidDate(value);
+            case "string":
             case "select":
-                return this.value != "";
+                return value != "";
             default:
                 if(this.editor == "phone"){
                     return common.isValidPhone(value);

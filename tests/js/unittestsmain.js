@@ -37,7 +37,8 @@ require([
     'userTest',
     'availabilityTest',
     'webHookTest',
-    'signupTest'
+    'signupTest',
+    'validationTest'
     ], function(
         orderTransferTest,
         commonTest,
@@ -54,14 +55,15 @@ require([
         userTest,
         availabilityTest,
         webHookTest,
-        signupTest) {
+        signupTest,
+        validationTest) {
 
         //commonTest.run();
 
         //orderTransferTest.run();
         //helperTest.run();
         //simpleTest.run();
-        dateHelperTest.run();
+        //dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();
@@ -73,6 +75,7 @@ require([
         //availabilityTest.run();
         //webHookTest.run();
         //signupTest.run();
+        validationTest.run();
 
 
         // start QUnit.

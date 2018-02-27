@@ -3,7 +3,7 @@
  * @module field
  * @copyright CHECKROOM NV 2015
  */
-define(['jquery'], /** Field */ function ($) {
+define(['jquery', 'common'], /** Field */ function ($, common) {
 
     var DEFAULTS = {
         name: null,
@@ -13,7 +13,8 @@ define(['jquery'], /** Field */ function ($) {
         kind: "string",
         form: false,
         editor: null,
-        description: ""
+        description: "",
+        select: []
     };
 
     /**
@@ -35,6 +36,7 @@ define(['jquery'], /** Field */ function ($) {
         this.form = spec.form || DEFAULTS.form;
         this.editor = spec.editor || DEFAULTS.editor;   
         this.description = spec.description || DEFAULTS.description; 
+        this.select = spec.select || DEFAULTS.select;
     };
 
     /**
@@ -43,9 +45,31 @@ define(['jquery'], /** Field */ function ($) {
      * @method
      * @returns {boolean}
      */
-    Field.prototype.isValid = function() {
-        if(!this.required) return true;
-        return $.trim(this.value) != "";
+    Field.prototype.isValid = function(allowEmpty) {
+        var value = $.trim(this.value);
+
+        // skip if not required and empty
+        if(!this.required && value == "") return true;
+
+        switch(this.kind){
+            case "float":
+            case "decimal":
+            case "currency":
+                return common.isNumeric(value);
+            case "int":
+                return common.isNumeric(value, true);
+            case "date":
+            case "datetime":
+                return common.isValidDate(value);
+            case "string":
+            case "select":
+                return value != "";
+            default:
+                if(this.editor == "phone"){
+                    return common.isValidPhone(value);
+                }
+                return true;
+        }     
     };
 
     /**

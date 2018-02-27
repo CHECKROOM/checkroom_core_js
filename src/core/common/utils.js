@@ -176,6 +176,32 @@ define(['jquery'], function ($) {
         return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     }
 
-    return utils;
+    /**
+     * getFriendlyKind
+     * @memberOf utils
+     * @name  utils#getFriendlyKind
+     * @method
+     * @param {object} kind
+     * @return {string}
+     */
+    utils.getFriendlyKind = function(kind){
+        var friendlyKind = kind;
+
+        if(kind == "string") {
+            friendlyKind = "single line text";
+        }
+
+        if(kind == "text") {
+           friendlyKind = "multi line text";
+        }
+
+        if(kind == "select") {
+            friendlyKind = "dropdown list"
+        }
+
+        return friendlyKind;
+     };
+
+     return utils;
 
 });

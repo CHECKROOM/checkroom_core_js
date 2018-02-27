@@ -139,23 +139,30 @@ define([
      * @param unit
      * @param editor
      * @param description
+     * @param select
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, skipRead) {
+    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+        var params = {
+            collection: collection,
+            name: name,
+            kind: kind,
+            required: required,
+            form: form,
+            unit: unit,
+            editor: editor,
+            description: description
+        };
+        if(select && select.length > 0){
+            params.select = select;
+        }
+
         return this._doApiCall({
             pk: this.id,
             method: "createField",
             skipRead: skipRead,
-            params: {
-                collection: collection,
-                name: name,
-                kind: kind,
-                required: required,
-                form: form,
-                unit: unit,
-                editor: editor,
-                description: description}
+            params: params
         });
     };
 
@@ -171,25 +178,30 @@ define([
      * @param unit
      * @param editor
      * @param description
+     * @param select
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, skipRead) {
+    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+        var params = {
+            collection: collection,
+            name: name,
+            kind: kind,
+            required: required,
+            form: form,
+            unit: unit,
+            editor: editor,
+            description: description
+        }
+        if(select && select.length > 0){
+            params.select = select;
+        }
+
         return this._doApiCall({
             pk: this.id,
             method: "updateField",
             skipRead: skipRead,
-            params: {
-                collection: collection,
-                name: name,
-                newName: newName,
-                kind: kind,
-                required: required,
-                form: form,
-                unit: unit,
-                editor: editor,
-                description: description
-            }
+            params: params
         });
     };
 

@@ -339,9 +339,8 @@ api = function ($, moment) {
     if (this.device) {
       params.device = this.device;
     }
-    var url = this.urlAuth + '?' + $.param(params);
     var dfd = $.Deferred();
-    this.ajax.get(url, 30000).done(function (resp) {
+    this.ajax.post(this.urlAuth, params, 30000).done(function (resp) {
       // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
       // 
       // REMARK
@@ -883,7 +882,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^[A-Z0-9\-]{4,22}$/i) != null;
+    return barCode && barCode.match(/^\S*([A-Z0-9 \-]{4,22})\S*$/i) != null;
   },
   /**
    * isValidQRCode
@@ -1762,7 +1761,7 @@ common_image = function ($) {
      * @param  {string} size Possible values XS,S,M,L,XL
      * @return {string} base64 image url    
      */
-    getIconAvatar: function (size, value) {
+    getIconAvatar: function (size, value, fontColorHex, backgroundColorHex, fontSize) {
       var sizes = {
         'XS': 32,
         'S': 64,
@@ -1771,6 +1770,12 @@ common_image = function ($) {
         'XL': 512
       };
       var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
+      if (!fontColorHex)
+        fontColorHex = '#aaa';
+      if (!backgroundColorHex)
+        backgroundColorHex = '#f5f5f5';
+      if (!fontSize)
+        fontSize = canvasWidth / 2;
       var $canvas = $('<canvas />').attr({
         width: canvasWidth,
         height: canvasHeight
@@ -1783,11 +1788,11 @@ common_image = function ($) {
         $canvas.css('height', canvasCssHeight);
         context.scale(window.devicePixelRatio, window.devicePixelRatio);
       }
-      context.fillStyle = '#f5f5f5';
+      context.fillStyle = backgroundColorHex;
       context.fillRect(0, 0, canvasWidth, canvasHeight);
-      context.font = canvasWidth / 2 + 'px FontAwesome';
+      context.font = fontSize + 'px FontAwesome';
       context.textAlign = 'center';
-      context.fillStyle = '#aaa';
+      context.fillStyle = fontColorHex;
       context.fillText(String.fromCharCode('0x' + value), canvasCssWidth / 2, canvasCssHeight / 1.5);
       return $canvas.get(0).toDataURL();
     },
@@ -1872,33 +1877,7 @@ common_image = function ($) {
       return url;
     },
     getNoImage: function (size) {
-      var sizes = {
-        'XS': 64,
-        'S': 128,
-        'M': 256,
-        'L': 512,
-        'XL': 1024
-      };
-      var canvasWidth = sizes[size], canvasHeight = sizes[size], canvasCssWidth = canvasWidth, canvasCssHeight = canvasHeight;
-      var $canvas = $('<canvas />').attr({
-        width: canvasWidth,
-        height: canvasHeight
-      });
-      var context = $canvas.get(0).getContext('2d');
-      if (window.devicePixelRatio) {
-        $canvas.attr('width', canvasWidth * window.devicePixelRatio);
-        $canvas.attr('height', canvasHeight * window.devicePixelRatio);
-        $canvas.css('width', canvasCssWidth);
-        $canvas.css('height', canvasCssHeight);
-        context.scale(window.devicePixelRatio, window.devicePixelRatio);
-      }
-      context.fillStyle = 'rgba(255,255,255,0.5)';
-      context.fillRect(0, 0, canvasWidth, canvasHeight);
-      context.font = canvasWidth / 2 + 'px FontAwesome';
-      context.textAlign = 'center';
-      context.fillStyle = 'rgba(0,0,0,0.2)';
-      context.fillText(String.fromCharCode('0xf03e'), canvasCssWidth / 2, canvasCssHeight / 1.5);
-      return $canvas.get(0).toDataURL();
+      return this.getIconAvatar(size, 'f03e', 'rgba(0,0,0,0.2)', 'rgba(255,255,255,0.5)');
     }
   };
 }(jquery);
@@ -3188,74 +3167,141 @@ common_inflection = function () {
       return vals;
     };
   }
-}();
-common_validation = {
   /**
-   * isValidEmail
-   * @memberOf common
-   * @name  common#isValidEmail
-   * @method
-   * @param  {string}  email 
-   * @return {Boolean}       
-   */
-  isValidEmail: function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
-    return re.test(email);
-  },
-  /**
-   * isFreeEmail
-   * @memberOf common
-   * @name common#isFreeEmail
-   * @method
-   * @param email
-   * @returns {boolean}
-   */
-  isFreeEmail: function (email) {
-    var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-    return !re.test(email);
-  },
-  /**
-   * isValidPhone
-   * @memberOf common
-   * @name  common#isValidPhone
-   * @method
-   * @param  {string}  phone 
-   * @return {Boolean}       
-   */
-  isValidPhone: function (phone) {
-    var isnum = /^\d{9,}$/.test(phone);
-    if (isnum) {
-      return true;
+  * Draw rectangle with rounded corners on canvas
+  * https://stackoverflow.com/questions/1255512/how-to-draw-a-rounded-rectangle-on-html-canvas
+  */
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius, fill, stroke) {
+    var cornerRadius = {
+      upperLeft: 0,
+      upperRight: 0,
+      lowerLeft: 0,
+      lowerRight: 0
+    };
+    if (typeof stroke == 'undefined') {
+      stroke = true;
     }
-    var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
-    return m != null && m.length > 0;
-  },
-  /**
-   * isValidURL
-   * @memberOf common
-   * @name common#isValidURL
-   * @method
-   * @param {string}  url
-   * @returns {boolean}
-   */
-  isValidURL: function (url) {
-    // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-    var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
-    return re.test(url);
-  },
-  /**
-   * isValidPassword
-   * @memberOf common
-   * @name common#isValidPassword
-   * @method
-   * @param password
-   * @returns {boolean}
-   */
-  isValidPassword: function (password) {
-    var hasDigit = password.match(/[0-9]/);
-    return password.length >= 4 && hasDigit;
-  }
-};
+    if (typeof radius === 'object') {
+      for (var side in radius) {
+        cornerRadius[side] = radius[side];
+      }
+    }
+    this.beginPath();
+    this.moveTo(x + cornerRadius.upperLeft, y);
+    this.lineTo(x + width - cornerRadius.upperRight, y);
+    this.quadraticCurveTo(x + width, y, x + width, y + cornerRadius.upperRight);
+    this.lineTo(x + width, y + height - cornerRadius.lowerRight);
+    this.quadraticCurveTo(x + width, y + height, x + width - cornerRadius.lowerRight, y + height);
+    this.lineTo(x + cornerRadius.lowerLeft, y + height);
+    this.quadraticCurveTo(x, y + height, x, y + height - cornerRadius.lowerLeft);
+    this.lineTo(x, y + cornerRadius.upperLeft);
+    this.quadraticCurveTo(x, y, x + cornerRadius.upperLeft, y);
+    this.closePath();
+    if (stroke) {
+      this.stroke();
+    }
+    if (fill) {
+      this.fill();
+    }
+  };
+}();
+common_validation = function (moment) {
+  return {
+    /**
+     * isValidEmail
+     * @memberOf common
+     * @name  common#isValidEmail
+     * @method
+     * @param  {string}  email 
+     * @return {Boolean}       
+     */
+    isValidEmail: function (email) {
+      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
+      return re.test(email);
+    },
+    /**
+     * isFreeEmail
+     * @memberOf common
+     * @name common#isFreeEmail
+     * @method
+     * @param email
+     * @returns {boolean}
+     */
+    isFreeEmail: function (email) {
+      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
+      return !re.test(email);
+    },
+    /**
+     * isValidPhone
+     * @memberOf common
+     * @name  common#isValidPhone
+     * @method
+     * @param  {string}  phone 
+     * @return {Boolean}       
+     */
+    isValidPhone: function (phone) {
+      var isnum = /^\d{9,}$/.test(phone);
+      if (isnum) {
+        return true;
+      }
+      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+      return m != null && m.length > 0;
+    },
+    /**
+     * isValidURL
+     * @memberOf common
+     * @name common#isValidURL
+     * @method
+     * @param {string}  url
+     * @returns {boolean}
+     */
+    isValidURL: function (url) {
+      // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
+      var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
+      return re.test(url);
+    },
+    /**
+     * isValidPassword
+     * @memberOf common
+     * @name common#isValidPassword
+     * @method
+     * @param password
+     * @returns {boolean}
+     */
+    isValidPassword: function (password) {
+      var hasDigit = password.match(/[0-9]/);
+      return password.length >= 4 && hasDigit;
+    },
+    /**
+     * isNumeric
+     * https://stackoverflow.com/questions/18082/validate-decimal-numbers-in-javascript-isnumeric
+     * @memberOf common
+     * @name common#isNumeric
+     * @method
+     * @param  {string}     value
+     * @param  {boolean}    onlyInteger
+     * @return {Boolean}    
+     */
+    isNumeric: function (value, onlyInteger) {
+      var isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+      if (onlyInteger) {
+        return '' + value === '' + parseInt(value);
+      }
+      return isNumeric;
+    },
+    /**
+     * isValidDate
+     * @memberOf common
+     * @name common#isValidDate
+     * @method
+     * @param  {string}     value
+     * @return {Boolean}    
+     */
+    isValidDate: function (value) {
+      return moment(value).isValid();
+    }
+  };
+}(moment);
 common_utils = function ($) {
   var utils = {};
   /**
@@ -3406,6 +3452,27 @@ common_utils = function ($) {
    */
   utils.getFriendlyFileName = function (name) {
     return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  };
+  /**
+   * getFriendlyKind
+   * @memberOf utils
+   * @name  utils#getFriendlyKind
+   * @method
+   * @param {object} kind
+   * @return {string}
+   */
+  utils.getFriendlyKind = function (kind) {
+    var friendlyKind = kind;
+    if (kind == 'string') {
+      friendlyKind = 'single line text';
+    }
+    if (kind == 'text') {
+      friendlyKind = 'multi line text';
+    }
+    if (kind == 'select') {
+      friendlyKind = 'dropdown list';
+    }
+    return friendlyKind;
   };
   return utils;
 }(jquery);
@@ -5083,7 +5150,7 @@ attachment = function ($) {
   };
   return Attachment;
 }(jquery);
-field = function ($) {
+field = function ($, common) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -5092,7 +5159,8 @@ field = function ($) {
     kind: 'string',
     form: false,
     editor: null,
-    description: ''
+    description: '',
+    select: []
   };
   /**
    * @name  Field
@@ -5111,6 +5179,7 @@ field = function ($) {
     this.form = spec.form || DEFAULTS.form;
     this.editor = spec.editor || DEFAULTS.editor;
     this.description = spec.description || DEFAULTS.description;
+    this.select = spec.select || DEFAULTS.select;
   };
   /**
    * isValid
@@ -5118,10 +5187,30 @@ field = function ($) {
    * @method
    * @returns {boolean}
    */
-  Field.prototype.isValid = function () {
-    if (!this.required)
+  Field.prototype.isValid = function (allowEmpty) {
+    var value = $.trim(this.value);
+    // skip if not required and empty
+    if (!this.required && value == '')
       return true;
-    return $.trim(this.value) != '';
+    switch (this.kind) {
+    case 'float':
+    case 'decimal':
+    case 'currency':
+      return common.isNumeric(value);
+    case 'int':
+      return common.isNumeric(value, true);
+    case 'date':
+    case 'datetime':
+      return common.isValidDate(value);
+    case 'string':
+    case 'select':
+      return value != '';
+    default:
+      if (this.editor == 'phone') {
+        return common.isValidPhone(value);
+      }
+      return true;
+    }
   };
   /**
    * isDirty
@@ -5142,7 +5231,7 @@ field = function ($) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery);
+}(jquery, common);
 Base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Some constant values
   var DEFAULTS = {
@@ -7741,9 +7830,15 @@ DateHelper = function ($, moment) {
    * @returns {}
    */
   DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
+    if (!moment.isMoment(from)) {
+      from = moment(from);
+    }
+    if (!moment.isMoment(to)) {
+      to = moment(to);
+    }
     now = now || this.getNow();
     var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+        dayDiff: from ? from.clone().startOf('day').diff(to, 'days') : -1,
         fromDate: from ? fromParts[0] : 'No from date set',
         fromTime: useHours && from != null ? fromParts[1] : '',
         toDate: to ? toParts[0] : 'No to date set',
@@ -7762,7 +7857,7 @@ DateHelper = function ($, moment) {
     // Build a text based on the dates and times we have
     if (result.dayDiff == 0) {
       if (useHours) {
-        result.text = result.fromText + sep + result.toTime;
+        result.text = result.fromText + sep + result.toText;
       } else {
         result.text = result.fromText;
       }
@@ -8463,24 +8558,29 @@ Group = function ($, common, api, Document) {
    * @param unit
    * @param editor
    * @param description
+   * @param select
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, skipRead) {
+  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+    var params = {
+      collection: collection,
+      name: name,
+      kind: kind,
+      required: required,
+      form: form,
+      unit: unit,
+      editor: editor,
+      description: description
+    };
+    if (select && select.length > 0) {
+      params.select = select;
+    }
     return this._doApiCall({
       pk: this.id,
       method: 'createField',
       skipRead: skipRead,
-      params: {
-        collection: collection,
-        name: name,
-        kind: kind,
-        required: required,
-        form: form,
-        unit: unit,
-        editor: editor,
-        description: description
-      }
+      params: params
     });
   };
   /**
@@ -8495,25 +8595,29 @@ Group = function ($, common, api, Document) {
    * @param unit
    * @param editor
    * @param description
+   * @param select
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, skipRead) {
+  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+    var params = {
+      collection: collection,
+      name: name,
+      kind: kind,
+      required: required,
+      form: form,
+      unit: unit,
+      editor: editor,
+      description: description
+    };
+    if (select && select.length > 0) {
+      params.select = select;
+    }
     return this._doApiCall({
       pk: this.id,
       method: 'updateField',
       skipRead: skipRead,
-      params: {
-        collection: collection,
-        name: name,
-        newName: newName,
-        kind: kind,
-        required: required,
-        form: form,
-        unit: unit,
-        editor: editor,
-        description: description
-      }
+      params: params
     });
   };
   /**
@@ -10367,9 +10471,15 @@ dateHelper = function ($, moment) {
    * @returns {}
    */
   DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
+    if (!moment.isMoment(from)) {
+      from = moment(from);
+    }
+    if (!moment.isMoment(to)) {
+      to = moment(to);
+    }
     now = now || this.getNow();
     var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from ? from.startOf('day').diff(to, 'days') : -1,
+        dayDiff: from ? from.clone().startOf('day').diff(to, 'days') : -1,
         fromDate: from ? fromParts[0] : 'No from date set',
         fromTime: useHours && from != null ? fromParts[1] : '',
         toDate: to ? toParts[0] : 'No to date set',
@@ -10388,7 +10498,7 @@ dateHelper = function ($, moment) {
     // Build a text based on the dates and times we have
     if (result.dayDiff == 0) {
       if (useHours) {
-        result.text = result.fromText + sep + result.toTime;
+        result.text = result.fromText + sep + result.toText;
       } else {
         result.text = result.fromText;
       }
@@ -12283,7 +12393,7 @@ PermissionHandler = function () {
     this._isRootOrAdmin = user.role == 'root' || user.role == 'admin';
     this._isRootOrAdminOrUser = user.role == 'root' || user.role == 'admin' || user.role == 'user';
     this._isSelfService = user.role == 'selfservice';
-    this._useWebHooks = limits.allowWebHooks;
+    this._useWebhooks = limits.allowWebhooks && profile.useWebhooks;
     this._useOrders = limits.allowOrders && profile.useOrders;
     this._useReservations = limits.allowReservations && profile.useReservations;
     this._usePdf = limits.allowGeneratePdf;
@@ -12301,6 +12411,7 @@ PermissionHandler = function () {
     this._useRestrictLocations = limits.allowRestrictLocations && profile.useRestrictLocations;
     this._useReporting = limits.allowReporting && profile.useReporting;
     this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
+    this._useNotifications = limits.allowNotifications && profile.useNotifications;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -12663,6 +12774,8 @@ PermissionHandler = function () {
       case 'clearFlag':
         return this._useFlags && this._canClearFlag;
       // Other
+      case 'printLabel':
+        return this._isRootOrAdmin;
       case 'generateDocument':
         return this._usePdf && this._isRootOrAdminOrUser;
       }
@@ -12725,7 +12838,7 @@ PermissionHandler = function () {
       case 'create':
       case 'update':
       case 'delete':
-        return this._isRootOrAdmin;
+        return this._useNotifications && this._isRootOrAdmin;
       }
       break;
     case 'webhooks':
@@ -12736,7 +12849,7 @@ PermissionHandler = function () {
       case 'create':
       case 'update':
       case 'delete':
-        return this._useWebHooks && this._isRootOrAdmin;
+        return this._useWebhooks && this._isRootOrAdmin;
       }
       break;
     case 'account':
@@ -15792,7 +15905,7 @@ ColorLabel = function ($) {
   };
   return ColorLabel;
 }(jquery);
-Field = function ($) {
+Field = function ($, common) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -15801,7 +15914,8 @@ Field = function ($) {
     kind: 'string',
     form: false,
     editor: null,
-    description: ''
+    description: '',
+    select: []
   };
   /**
    * @name  Field
@@ -15820,6 +15934,7 @@ Field = function ($) {
     this.form = spec.form || DEFAULTS.form;
     this.editor = spec.editor || DEFAULTS.editor;
     this.description = spec.description || DEFAULTS.description;
+    this.select = spec.select || DEFAULTS.select;
   };
   /**
    * isValid
@@ -15827,10 +15942,30 @@ Field = function ($) {
    * @method
    * @returns {boolean}
    */
-  Field.prototype.isValid = function () {
-    if (!this.required)
+  Field.prototype.isValid = function (allowEmpty) {
+    var value = $.trim(this.value);
+    // skip if not required and empty
+    if (!this.required && value == '')
       return true;
-    return $.trim(this.value) != '';
+    switch (this.kind) {
+    case 'float':
+    case 'decimal':
+    case 'currency':
+      return common.isNumeric(value);
+    case 'int':
+      return common.isNumeric(value, true);
+    case 'date':
+    case 'datetime':
+      return common.isValidDate(value);
+    case 'string':
+    case 'select':
+      return value != '';
+    default:
+      if (this.editor == 'phone') {
+        return common.isValidPhone(value);
+      }
+      return true;
+    }
   };
   /**
    * isDirty
@@ -15851,7 +15986,7 @@ Field = function ($) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery);
+}(jquery, common);
 core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
   var core = {};
   // namespaces

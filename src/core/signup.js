@@ -9,10 +9,12 @@ define([
     "jstz", 
     "api",
     "settings",
+    "field",
+    'dateHelper',
     "common/inflection",
     "common/validation",
     "common/clientStorage",
-    "common/utils"], function ($, jstz, api, settings, inflection, validation, clientStorage, utils) {
+    "common/utils"], function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
 
     var DEFAULT_PLAN = "1215_cr_90";
     var DEFAULT_PERIOD = "yearly";
@@ -23,7 +25,7 @@ define([
         opt = opt || {};
         this.ds = opt.ds || new api.ApiAnonymous({
                 urlApi: settings.urlApi,
-                ajax: new api.ApiAjax({useJsonp: settings.useJsonp})
+                ajax: new api.ApiAjax()
             });
 
         this.firstName = opt.firstName || "";  // between 2 and 25 chars
@@ -39,6 +41,8 @@ define([
         this.phone = opt.phone || "";
         this.industry = opt.industry || "";
 
+        this.fields = [];
+
         this.inviteToken = opt.inviteToken || "";
         this.selfserviceToken = opt.selfserviceToken || "";
 
@@ -50,6 +54,8 @@ define([
         this.onActivatedInvite = opt.onActivatedInvite || function(){ return $.Deferred().resolve(); };
         this.onBeforeActivateSelfService = opt.onBeforeActivateSelfService || function(){ return $.Deferred().resolve(); };
         this.onActivatedSelfService = opt.onActivatedSelfService || function(){ return $.Deferred().resolve(); };
+        
+        this.onContactFields = opt.onContactFields || function(){ return $.Deferred().resolve(); }
     };
 
     // Implementation
@@ -143,9 +149,44 @@ define([
         return validation.isValidPhone($.trim(this.phone));
     };
 
+    Signup.prototype.parseFields = function(fieldDefs){
+        if(!fieldDefs) return [];
+
+        var fields = [];
+
+        // Return only form field definitions that are required and need to be shown on the form
+        fieldDefs = fieldDefs.filter(function(def) { return def.form && def.required; });
+
+        // Create a Field object for each field definition
+        for (var i=0;i<fieldDefs.length;i++) {
+            fields.push(this._getField(fieldDefs[i]));
+        }
+
+        this.fields = fields;
+        this.onContactFields(fields);
+    }
+
     Signup.prototype.inviteIsValid = function(){
+        var that = this;
+
         if($.trim(this.inviteToken) != ""){
             return this.ds.call('checkInvite', { code: this.inviteToken }).then(function(resp){
+                that.parseFields(resp.customerFields);
+
+                return resp.result;
+            });
+        }else{
+            return $.Deferred().resolve(false);
+        }
+    }
+
+     Signup.prototype.selfServiceIsValid = function(){
+        var that = this;
+
+        if($.trim(this.selfserviceToken) != ""){
+            return this.ds.call('checkSelfServiceKey', { key: this.selfserviceToken }).then(function(resp){
+                that.parseFields(resp.customerFields);
+
                 return resp.result;
             });
         }else{
@@ -170,6 +211,10 @@ define([
         var parts = Signup.splitFirstLastName($.trim(name));
         this.firstName = parts.firstName;
         this.lastName = parts.lastName;
+    };
+
+    Signup.prototype._getField = function(data){
+        return new Field(data)
     };
 
     Signup.prototype.createAccount = function() {
@@ -230,13 +275,22 @@ define([
 
         return beforeActivate()
             .then(function(){
-                return that.ds.longCall('activateInvite', {
+                var params = {
                     name: that.getFullName(),
                     code: that.inviteToken,
                     login: $.trim(that.login),
                     password: $.trim(that.password),
                     timezone: $.trim(that.timezone)
-                }).then(function(user){
+                };
+
+                // Add custom contact fields
+                if(that.fields){
+                    $.each(that.fields, function(i, field){
+                        params['fields__' + field.name] = field.value;
+                    });
+                }
+
+                return that.ds.longCall('activateInvite', params).then(function(user){
                     if(storeInLocalStorage){
                         // Already store the login token in localStorage
                         var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
@@ -255,7 +309,7 @@ define([
 
         return beforeActivate()
             .then(function(){
-                return  that.ds.longCall('createSelfServiceUser', {
+                var params = {
                     name: that.getFullName(),
                     login: $.trim(that.login),
                     password: $.trim(that.password),
@@ -263,7 +317,16 @@ define([
                     email: $.trim(that.email),
                     phone: $.trim(that.phone),
                     key: that.selfserviceToken
-                }).then(function(user){
+                };
+
+                // Add custom contact fields
+                if(that.fields){
+                    $.each(that.fields, function(i, field){
+                        params['fields__' + field.name] = field.value;
+                    });
+                }
+
+                return  that.ds.longCall('createSelfServiceUser', params).then(function(user){
                     if(storeInLocalStorage){
                         // Already store the login token in localStorage
                         var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});

@@ -23,7 +23,7 @@ var baseUrl = 'https://api.cheqroom.com/api/v2_5';
 var userName = "";
 var password = "";
 
-var ajax = new cr.api.ApiAjax({useJsonp: true});
+var ajax = new cr.api.ApiAjax();
 var auth = new cr.api.ApiAuthV2({ajax: ajax, urlAuth: baseUrl + '/authenticate'});
 var authUser = null;
 

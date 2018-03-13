@@ -85,6 +85,11 @@ define(['moment'], function (moment) {
                 (width==210.0) &&
                 (height==297.0)) {
                 return "A4";
+            } else if(
+            	(unit=="cm") &&
+            	(width==21) &&
+            	(height==29.7)){
+            	return "A4";
             } else {
 				var friendlyUnit = (unit=="inch") ? '"' : unit;
                 return width + friendlyUnit + " x " + height + friendlyUnit;

@@ -3997,6 +3997,8 @@ common_template = function (moment) {
         return 'US Letter';
       } else if (unit == 'mm' && width == 210 && height == 297) {
         return 'A4';
+      } else if (unit == 'cm' && width == 21 && height == 29.7) {
+        return 'A4';
       } else {
         var friendlyUnit = unit == 'inch' ? '"' : unit;
         return width + friendlyUnit + ' x ' + height + friendlyUnit;
@@ -4315,11 +4317,14 @@ field = function ($, common) {
       return common.isValidDate(value);
     case 'string':
     case 'select':
-      return value != '';
-    default:
       if (this.editor == 'phone') {
         return common.isValidPhone(value);
       }
+      if (this.editor == 'email') {
+        return common.isValidEmail(value);
+      }
+      return value != '';
+    default:
       return true;
     }
   };

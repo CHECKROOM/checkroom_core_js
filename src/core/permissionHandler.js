@@ -346,6 +346,7 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
+                    case "extend":
                         return this._canCreateOrders;
                     // Generic actions
                     case "addAttachment":
@@ -353,7 +354,7 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
-                        return this._useOrders;           
+                        return this._useOrders;
                     case "archive":
                     case "undoArchive":
                         return this._useOrders && this._isRootOrAdmin;

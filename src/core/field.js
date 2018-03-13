@@ -63,11 +63,16 @@ define(['jquery', 'common'], /** Field */ function ($, common) {
                 return common.isValidDate(value);
             case "string":
             case "select":
-                return value != "";
-            default:
                 if(this.editor == "phone"){
                     return common.isValidPhone(value);
                 }
+                if(this.editor == "email"){
+                    return common.isValidEmail(value);
+                }
+
+                return value != "";
+            default:
+
                 return true;
         }     
     };

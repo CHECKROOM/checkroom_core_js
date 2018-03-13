@@ -329,7 +329,11 @@ define([
     };
 
     Item.prototype._isDirtyFlag = function() {
-        return this._isDirtyStringProperty("flag");
+        if(this.raw){
+            return this.raw.flag != this.flag;
+        }else{
+            return false;
+        }
     };
 
     //

@@ -12444,6 +12444,8 @@ PermissionHandler = function () {
       this._canClearLabel = profile.selfServiceCanClearLabel;
       this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
       this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
+      this._canOrderConflict = this._useOrders && profile.selfServiceCanOrderConflict;
+      this._canReservationConflict = this._useReservations && profile.selfServiceCanReservationConflict;
       break;
     case 'user':
       this._canSetFlag = profile.userCanSetFlag;
@@ -12452,6 +12454,8 @@ PermissionHandler = function () {
       this._canClearLabel = profile.userCanClearLabel;
       this._canReadOrders = this._useOrders;
       this._canCreateOrders = this._useOrders;
+      this._canOrderConflict = this._useOrders && profile.userCanOrderConflict;
+      this._canReservationConflict = this._useOrders && profile.userCanReservationConflict;
       break;
     default:
       this._canSetFlag = true;
@@ -12460,6 +12464,8 @@ PermissionHandler = function () {
       this._canClearLabel = true;
       this._canReadOrders = this._useOrders;
       this._canCreateOrders = this._useOrders;
+      this._canOrderConflict = this._useOrders && profile.adminCanOrderConflict;
+      this._canReservationConflict = this._useOrders && profile.adminCanReservationConflict;
       break;
     }
     if (this._isSelfService) {
@@ -12715,8 +12721,8 @@ PermissionHandler = function () {
         return this._canCreateOrders && this._useCheckinLocation;
       case 'forceCheckListCheckin':
         return this.profile.forceCheckListCheckin;
-      case 'forceConflictResolving':
-        return false;  // this.profile.forceConflictResolving;
+      case 'ignoreConflicts':
+        return this._canOrderConflict;
       }
       break;
     case 'reservations':
@@ -12768,6 +12774,8 @@ PermissionHandler = function () {
       // Other
       case 'generateDocument':
         return this._usePdf && this._isRootOrAdminOrUser;
+      case 'ignoreConflicts':
+        return this._canReservationConflict;
       }
       break;
     case 'customers':

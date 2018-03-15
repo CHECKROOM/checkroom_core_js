@@ -231,6 +231,22 @@ define([
     };
 
     /**
+     * Checks if specific item can be removed from the checkout
+     * BUGFIX: prevent deleting item of a checkout that already has been partially checked in
+     * but checkout is afterwards undone by undoCheckout
+     * 
+     * @method
+     * @name Order#canRemoveItem
+     * @param item
+     * @returns {boolean}
+     */
+    Order.prototype.canRemoveItem = function(item) {
+        return ((item.status=="await_checkout") && 
+                (item.order && item.order == this.id));
+    };
+
+
+    /**
      * Checks if items can be swapped in the checkout (based on status)
      * @method
      * @name Order#canSwapItems

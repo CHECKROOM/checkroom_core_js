@@ -11971,7 +11971,7 @@ Order = function ($, api, Transaction, Conflict, common) {
         if (transItem && transItem.length > 0) {
           transItem = transItem[0];
         }
-        if (transItem != null && transItem.status != 'expired') {
+        if (transItem != null && transItem.status != 'expired' && transItem.status != 'in_custody') {
           // Order cannot conflict with itself
           // or with the Reservation from which it was created
           if (av.order != orderId && av.reservation != reservationId) {
@@ -11997,11 +11997,22 @@ Order = function ($, api, Transaction, Conflict, common) {
     // We can check if all the items are:
     // - at the right location
     // - not expired
-    var conflicts = [], locId = this.helper.ensureId(this.location || '');
+    var that = this, conflicts = [], locId = this.helper.ensureId(this.location || '');
     $.each(this.items, function (i, item) {
+      // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+      if (item.order != that.id)
+        return true;
       if (item.status == 'expired') {
         conflicts.push(new Conflict({
           kind: 'expired',
+          item: item._id,
+          itemName: item.name,
+          locationCurrent: item.location,
+          locationDesired: locId
+        }));
+      } else if (item.status == 'in_custody') {
+        conflicts.push(new Conflict({
+          kind: 'custody',
           item: item._id,
           itemName: item.name,
           locationCurrent: item.location,

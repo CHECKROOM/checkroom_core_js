@@ -382,7 +382,8 @@ define([
                     }
 
                     if( (transItem!=null) &&
-                        (transItem.status!="expired")) {
+                        (transItem.status!="expired") &&
+                        (transItem.status!="in_custody")) {
 
                         // Order cannot conflict with itself
                         // or with the Reservation from which it was created
@@ -413,10 +414,14 @@ define([
         // We can check if all the items are:
         // - at the right location
         // - not expired
-        var conflicts = [],
+        var that = this,
+            conflicts = [],
             locId = this.helper.ensureId(this.location || "");
 
         $.each(this.items, function(i, item) {
+            // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+            if(item.order != that.id) return true;
+
             if (item.status == "expired") {
                 conflicts.push(new Conflict({
                     kind: "expired",
@@ -425,8 +430,18 @@ define([
                     locationCurrent: item.location,
                     locationDesired: locId
                 }));
-                // If order location is defined, check if item
-                // is at the right location
+                
+            } else if(item.status == "in_custody"){
+                conflicts.push(new Conflict({
+                    kind: "custody",
+                    item: item._id,
+                    itemName: item.name,
+                    locationCurrent: item.location,
+                    locationDesired: locId
+                }));
+
+            // If order location is defined, check if item
+            // is at the right location
             } else if (locId && item.location != locId) {
                 conflicts.push(new Conflict({
                     kind: "location",

@@ -16,7 +16,7 @@ define([
     "common/clientStorage",
     "common/utils"], function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
 
-    var DEFAULT_PLAN = "1215_cr_90";
+    var DEFAULT_PLAN = "1215_cr_120";
     var DEFAULT_PERIOD = "yearly";
     var DEFAULT_SOURCE = "attempt";
     var DEFAULT_KIND = "trial";
@@ -211,6 +211,13 @@ define([
         var parts = Signup.splitFirstLastName($.trim(name));
         this.firstName = parts.firstName;
         this.lastName = parts.lastName;
+        
+        // Generate login name based on name
+        if(this.firstName || this.lastName){
+            this.login = utils.getLoginName(this.firstName, this.lastName);
+        } else{
+            this.login = "";
+        }
     };
 
     Signup.prototype._getField = function(data){

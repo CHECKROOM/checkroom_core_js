@@ -29,7 +29,9 @@ define([
         emailField: "mail",
         restrictLocations: [],
         timezone: "Etc/GMT",
-        hostCert: 'ldap_tls_demand'
+        hostCert: 'ldap_tls_demand',
+        caCert: '',
+        report: 'always'
     };
 
     // Allow overriding the ctor during inheritance
@@ -88,6 +90,8 @@ define([
         this.restrictLocations = spec.restrictLocations?spec.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
         this.timezone = spec.timezone || DEFAULTS.timezone;
         this.hostCert = spec.hostCert || DEFAULTS.hostCert;
+        this.caCert = spec.caCert || DEFAULTS.caCert;
+        this.report = spec.report || DEFAULTS.report;
     };
 
     UserSync.prototype = new tmp();
@@ -152,6 +156,8 @@ define([
             (this.emailField==DEFAULTS.emailField) &&
             (this.timezone==DEFAULTS.timezone) &&
             (this.hostCert==DEFAULTS.hostCert) &&
+            (this.caCert==DEFAULTS.caCert) &&
+            (this.report==DEFAULTS.report) &&
             (this.restrictLocations && this.restrictLocations.length == 0));
     };
 
@@ -188,6 +194,8 @@ define([
             var emailField = this.raw.emailField || DEFAULTS.emailField;
             var timezone = this.raw.timezone || DEFAULTS.timezone;
             var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
+            var caCert = this.raw.caCert || DEFAULTS.caCert;
+            var report = this.raw.report || DEFAULTS.report;
 
             return (
                 (this.kind!=kind) ||
@@ -209,6 +217,8 @@ define([
                 (this.emailField!=emailField) ||
                 (this.timezone!=timezone) ||
                 (this.hostCert!=hostCert) ||
+                (this.caCert!=caCert) ||
+                (this.report!=report) ||
                 (this._isDirtyRestrictLocations())
             );
         }
@@ -276,7 +286,9 @@ define([
         data.port = this.port || DEFAULTS.port;
         data.timeOut = this.timeOut || DEFAULTS.timeOut;
         data.login = this.login || DEFAULTS.login;
-        data.password = this.password || DEFAULTS.password;
+        if(this.password){
+          data.password = this.password;
+        }
         data.newUsers = this.newUsers || DEFAULTS.newUsers;
         data.existingUsers = this.existingUsers || DEFAULTS.existingUsers;
         data.missingUsers = this.missingUsers || DEFAULTS.missingUsers;
@@ -289,6 +301,8 @@ define([
         data.emailField = this.emailField || DEFAULTS.emailField;
         data.timezone = this.timezone || DEFAULTS.timezone;
         data.hostCert = this.hostCert || DEFAULTS.hostCert;
+        data.caCert = this.caCert || DEFAULTS.caCert;
+        data.report = this.report || DEFAULTS.report;
 
         return data;
     };
@@ -326,6 +340,8 @@ define([
                 that.restrictLocations = data.restrictLocations?data.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
                 that.timezone = data.timezone || DEFAULTS.timezone;
                 that.hostCert = data.hostCert || DEFAULTS.hostCert;
+                that.caCert = data.caCert || DEFAULTS.caCert;
+                that.report = data.report || DEFAULTS.report;
 
                 $.publish('usersync.fromJson', data);
                 return data;

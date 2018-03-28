@@ -3404,7 +3404,14 @@ common_utils = function ($) {
    */
   utils.getLoginName = function (firstName, lastName) {
     var patt = /[\s-]*/gim;
-    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+    var parts = [];
+    if (firstName) {
+      parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
+    }
+    if (lastName) {
+      parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
+    }
+    return parts.join('.');
   };
   /**
    * Gets a parameter from the querystring (returns null if not found)
@@ -5022,6 +5029,12 @@ signup = function ($, jstz, api, settings, Field, dateHelper, inflection, valida
     var parts = Signup.splitFirstLastName($.trim(name));
     this.firstName = parts.firstName;
     this.lastName = parts.lastName;
+    // Generate login name based on name
+    if (this.firstName || this.lastName) {
+      this.login = utils.getLoginName(this.firstName, this.lastName);
+    } else {
+      this.login = '';
+    }
   };
   Signup.prototype._getField = function (data) {
     return new Field(data);

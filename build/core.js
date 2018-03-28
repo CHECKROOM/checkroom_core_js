@@ -3404,7 +3404,14 @@ common_utils = function ($) {
    */
   utils.getLoginName = function (firstName, lastName) {
     var patt = /[\s-]*/gim;
-    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+    var parts = [];
+    if (firstName) {
+      parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
+    }
+    if (lastName) {
+      parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
+    }
+    return parts.join('.');
   };
   /**
    * Gets a parameter from the querystring (returns null if not found)
@@ -15223,7 +15230,9 @@ UserSync = function ($, Base, common) {
     emailField: 'mail',
     restrictLocations: [],
     timezone: 'Etc/GMT',
-    hostCert: 'ldap_tls_demand'
+    hostCert: 'ldap_tls_demand',
+    caCert: '',
+    report: 'always'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -15277,6 +15286,8 @@ UserSync = function ($, Base, common) {
     this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.timezone = spec.timezone || DEFAULTS.timezone;
     this.hostCert = spec.hostCert || DEFAULTS.hostCert;
+    this.caCert = spec.caCert || DEFAULTS.caCert;
+    this.report = spec.report || DEFAULTS.report;
   };
   UserSync.prototype = new tmp();
   UserSync.prototype.constructor = UserSync;
@@ -15313,7 +15324,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && this.caCert == DEFAULTS.caCert && this.report == DEFAULTS.report && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -15346,7 +15357,9 @@ UserSync = function ($, Base, common) {
       var emailField = this.raw.emailField || DEFAULTS.emailField;
       var timezone = this.raw.timezone || DEFAULTS.timezone;
       var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
-      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this._isDirtyRestrictLocations();
+      var caCert = this.raw.caCert || DEFAULTS.caCert;
+      var report = this.raw.report || DEFAULTS.report;
+      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this.caCert != caCert || this.report != report || this._isDirtyRestrictLocations();
     }
     return isDirty;
   };
@@ -15407,7 +15420,9 @@ UserSync = function ($, Base, common) {
     data.port = this.port || DEFAULTS.port;
     data.timeOut = this.timeOut || DEFAULTS.timeOut;
     data.login = this.login || DEFAULTS.login;
-    data.password = this.password || DEFAULTS.password;
+    if (this.password) {
+      data.password = this.password;
+    }
     data.newUsers = this.newUsers || DEFAULTS.newUsers;
     data.existingUsers = this.existingUsers || DEFAULTS.existingUsers;
     data.missingUsers = this.missingUsers || DEFAULTS.missingUsers;
@@ -15420,6 +15435,8 @@ UserSync = function ($, Base, common) {
     data.emailField = this.emailField || DEFAULTS.emailField;
     data.timezone = this.timezone || DEFAULTS.timezone;
     data.hostCert = this.hostCert || DEFAULTS.hostCert;
+    data.caCert = this.caCert || DEFAULTS.caCert;
+    data.report = this.report || DEFAULTS.report;
     return data;
   };
   /**
@@ -15454,6 +15471,8 @@ UserSync = function ($, Base, common) {
       that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       that.timezone = data.timezone || DEFAULTS.timezone;
       that.hostCert = data.hostCert || DEFAULTS.hostCert;
+      that.caCert = data.caCert || DEFAULTS.caCert;
+      that.report = data.report || DEFAULTS.report;
       $.publish('usersync.fromJson', data);
       return data;
     });

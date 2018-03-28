@@ -116,7 +116,16 @@ define(['jquery'], function ($) {
      */
     utils.getLoginName = function(firstName, lastName) {
         var patt = /[\s-]*/igm;
-        return  firstName.latinise().toLowerCase().replace(patt, '') + "." + lastName.latinise().toLowerCase().replace(patt, '');
+
+        var parts = [];
+        if(firstName){
+            parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
+        }
+        if(lastName){
+            parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
+        }
+
+        return  parts.join("."); 
     };
 
     /**

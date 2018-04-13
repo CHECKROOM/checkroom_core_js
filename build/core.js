@@ -4000,16 +4000,95 @@ common_template = function (moment) {
     getFriendlyTemplateSize: function (width, height, unit) {
       if (width == 0 || height == 0) {
         return '';
-      } else if (unit == 'inch' && width == 8.5 && height == 11) {
+      } else if (unit == 'inch' && (width == 8.5 && height == 11 || width == 11 && height == 8.5)) {
         return 'US Letter';
-      } else if (unit == 'mm' && width == 210 && height == 297) {
+      } else if (unit == 'inch' && (width == 11 && height == 17 || width == 17 && height == 11)) {
+        return 'US Tabloid';
+      } else if (unit == 'mm' && (width == 210 && height == 297 || width == 297 && height == 210)) {
         return 'A4';
-      } else if (unit == 'cm' && width == 21 && height == 29.7) {
+      } else if (unit == 'cm' && (width == 21 && height == 29.7 || width == 29.7 && height == 21)) {
         return 'A4';
       } else {
         var friendlyUnit = unit == 'inch' ? '"' : unit;
         return width + friendlyUnit + ' x ' + height + friendlyUnit;
       }
+    },
+    /**
+    * getPageSizes
+    *
+    * @memberOf common
+    * @name  common#getPageSizes
+    * @method
+    * 
+    * @return {array}
+    */
+    getPageSizes: function () {
+      return [
+        {
+          id: 'letter',
+          name: 'US Letter',
+          width: 8.5,
+          height: 11,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 816,
+            height: 1056
+          }
+        },
+        {
+          id: 'a4',
+          name: 'A4',
+          width: 210,
+          height: 297,
+          unit: 'mm',
+          layout: 'portrait',
+          px: {
+            width: 793,
+            height: 1122
+          }
+        },
+        {
+          id: 'tabloid',
+          name: 'US Tabloid',
+          width: 11,
+          height: 17,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 1056,
+            height: 1632
+          }
+        }
+      ];
+    },
+    /**
+    * getPageSize
+    *
+    * @memberOf common
+    * @name  common#getPageSize
+    * @method
+    * 
+    * @return {object}
+    */
+    getPageSize: function (unit, width, height) {
+      var pageSizes = this.getPageSizes(), pageSize = null;
+      // Portrait?
+      pageSize = pageSizes.find(function (size) {
+        return size.unit == unit && size.width == width && size.height == height;
+      });
+      if (pageSize)
+        return pageSize;
+      // Landscape?
+      pageSize = pageSizes.find(function (size) {
+        return size.unit == unit && size.width == height && size.height == width;
+      });
+      if (pageSize) {
+        pageSize.layout = 'landscape';
+        return pageSize;
+      }
+      // Unknown pagesize
+      return null;
     }
   };
 }(moment);
@@ -5218,6 +5297,9 @@ field = function ($, common) {
       }
       if (this.editor == 'email') {
         return common.isValidEmail(value);
+      }
+      if (this.editor == 'url') {
+        return common.isValidURL(value);
       }
       return value != '';
     default:
@@ -11741,7 +11823,7 @@ Order = function ($, api, Transaction, Conflict, common) {
     var that = this;
     // Already set the from, to and due dates
     // Transaction._fromJson might need it during _getConflicts
-    that.from = data.started == null || data.started == 'null' ? null : data.started;
+    that.from = data.started == null || data.started == 'null' ? this.getMinDateFrom() : data.started;
     that.to = data.finished == null || data.finished == 'null' ? null : data.finished;
     that.due = data.due == null || data.due == 'null' ? null : data.due;
     that.reservation = data.reservation || null;
@@ -11915,7 +11997,15 @@ Order = function ($, api, Transaction, Conflict, common) {
         return this._getServerConflicts(this.items, this.from, this.due, this.id, // orderId
         this.helper.ensureId(this.reservation))  // reservationId
 .then(function (serverConflicts) {
-          return conflicts.concat(serverConflicts);
+          // Don't include conflicts for items that are no longer part of the order anymore
+          var itemsInOrder = that.items.filter(function (item) {
+            return that.helper.ensureId(item.order) == that.id;
+          }).map(function (item) {
+            return item._id;
+          });
+          return conflicts.concat(serverConflicts.filter(function (c) {
+            return itemsInOrder.indexOf(c.item) != -1;
+          }));
         });
       }
     }
@@ -12464,6 +12554,8 @@ PermissionHandler = function () {
       this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
       this._canOrderConflict = this._useOrders && profile.selfServiceCanOrderConflict;
       this._canReservationConflict = this._useReservations && profile.selfServiceCanReservationConflict;
+      this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody;
+      this._canReadOwnCustody = this._useCustody;
       break;
     case 'user':
       this._canSetFlag = profile.userCanSetFlag;
@@ -12474,6 +12566,8 @@ PermissionHandler = function () {
       this._canCreateOrders = this._useOrders;
       this._canOrderConflict = this._useOrders && profile.userCanOrderConflict;
       this._canReservationConflict = this._useOrders && profile.userCanReservationConflict;
+      this._canTakeCustody = true;
+      this._canReadOwnCustody = this._useCustody;
       break;
     default:
       this._canSetFlag = true;
@@ -12484,12 +12578,13 @@ PermissionHandler = function () {
       this._canCreateOrders = this._useOrders;
       this._canOrderConflict = this._useOrders && profile.adminCanOrderConflict;
       this._canReservationConflict = this._useOrders && profile.adminCanReservationConflict;
+      this._canTakeCustody = true;
+      this._canReadOwnCustody = this._useCustody;
       break;
     }
     if (this._isSelfService) {
       // Override some permissions for selfservice users
       this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
-      this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
     }
   };
   PermissionHandler.prototype.hasAnyAdminPermission = function () {
@@ -12510,7 +12605,7 @@ PermissionHandler = function () {
     return this.hasPermission(action || 'read', 'items', data, location);
   };
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
-    return this._useCustody;
+    return this._useCustody || this._canReadOwnCustody;
   };
   PermissionHandler.prototype.hasItemFlagPermission = function () {
     return this._useFlags;
@@ -12633,11 +12728,13 @@ PermissionHandler = function () {
         return this._useReservations;
       case 'checkout':
         return this._canCreateOrders;
+      case 'seeOwnCustody':
+        return this._canReadOwnCustody;
       case 'takeCustody':
       case 'releaseCustody':
-        return this._useCustody;
+        return this._canTakeCustody;
       case 'transferCustody':
-        return this._useCustody && this._isRootOrAdmin;
+        return this._canTakeCustody && this._isRootOrAdmin;
       }
       break;
     case 'kits':
@@ -12679,12 +12776,14 @@ PermissionHandler = function () {
         return this._useReservations;
       case 'checkout':
         return this._canCreateOrders;
+      case 'seeOwnCustody':
+        return this._canReadOwnCustody;
       case 'takeCustody':
       case 'releaseCustody':
-        return this._useCustody;
+        return this._canTakeCustody;
       case 'transferCustody':
       case 'giveCustody':
-        return this._useCustody && this._isRootOrAdmin;
+        return this._canTakeCustody && this._isRootOrAdmin;
       }
       break;
     case 'orders':
@@ -16025,6 +16124,9 @@ Field = function ($, common) {
       }
       if (this.editor == 'email') {
         return common.isValidEmail(value);
+      }
+      if (this.editor == 'url') {
+        return common.isValidURL(value);
       }
       return value != '';
     default:

@@ -85,7 +85,7 @@ define([
 
         // Already set the from, to and due dates
         // Transaction._fromJson might need it during _getConflicts
-        that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
+        that.from = ((data.started==null) || (data.started=="null")) ? this.getMinDateFrom() : data.started;
         that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
         that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
         that.reservation = data.reservation || null;
@@ -300,7 +300,13 @@ define([
                     this.id,  // orderId
                     this.helper.ensureId(this.reservation))  // reservationId
                     .then(function(serverConflicts) {
-                        return conflicts.concat(serverConflicts);
+                         // Don't include conflicts for items that are no longer part of the order anymore
+                        var itemsInOrder = that.items.filter(function(item){
+                             return that.helper.ensureId(item.order) == that.id; 
+                        }).map(function(item){ return item._id; });
+                        return conflicts.concat(serverConflicts.filter(function(c){ 
+                            return itemsInOrder.indexOf(c.item) != -1; 
+                        }));
                     });
             }
         }

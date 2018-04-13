@@ -69,6 +69,9 @@ define(['jquery', 'common'], /** Field */ function ($, common) {
                 if(this.editor == "email"){
                     return common.isValidEmail(value);
                 }
+                if(this.editor == "url"){
+                    return common.isValidURL(value);
+                }
 
                 return value != "";
             default:

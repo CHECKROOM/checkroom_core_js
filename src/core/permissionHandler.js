@@ -41,7 +41,7 @@ define([], function () {
 
         this._canSetFlag = false;
         this._canClearFlag = false;
-
+                
         switch(user.role) {
             case "selfservice":
                 this._canSetFlag = profile.selfServiceCanSetFlag;
@@ -52,6 +52,8 @@ define([], function () {
                 this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
                 this._canOrderConflict = this._useOrders && profile.selfServiceCanOrderConflict;
                 this._canReservationConflict = this._useReservations && profile.selfServiceCanReservationConflict;
+                this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody;
+                this._canReadOwnCustody = this._useCustody;
                 break;
             case "user":
                 this._canSetFlag = profile.userCanSetFlag;
@@ -62,6 +64,8 @@ define([], function () {
                 this._canCreateOrders = this._useOrders;
                 this._canOrderConflict = this._useOrders && profile.userCanOrderConflict;
                 this._canReservationConflict = this._useOrders && profile.userCanReservationConflict;
+                this._canTakeCustody = true;
+                this._canReadOwnCustody = this._useCustody;
                 break;
             default:
                 this._canSetFlag = true;
@@ -72,13 +76,14 @@ define([], function () {
                 this._canCreateOrders = this._useOrders;
                 this._canOrderConflict = this._useOrders && profile.adminCanOrderConflict;
                 this._canReservationConflict = this._useOrders && profile.adminCanReservationConflict;
+                this._canTakeCustody = true;
+                this._canReadOwnCustody = this._useCustody;
                 break;
         }
 
         if (this._isSelfService) {
             // Override some permissions for selfservice users
             this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
-            this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
         }
     };
 
@@ -112,7 +117,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasItemCustodyPermission = function() {
-        return this._useCustody;
+        return this._useCustody || this._canReadOwnCustody;
     };
 
     PermissionHandler.prototype.hasItemFlagPermission = function() {
@@ -268,11 +273,13 @@ define([], function () {
                         return this._useReservations;
                     case "checkout":
                         return this._canCreateOrders;
+                    case "seeOwnCustody":
+                        return this._canReadOwnCustody;
                     case "takeCustody":
                     case "releaseCustody":
-                        return this._useCustody;
+                        return this._canTakeCustody;
                     case "transferCustody":
-                        return this._useCustody && this._isRootOrAdmin;
+                        return this._canTakeCustody && this._isRootOrAdmin;
                 }
                 break;
             case "kits":
@@ -314,12 +321,14 @@ define([], function () {
                         return this._useReservations;
                     case "checkout":
                         return this._canCreateOrders;
+                    case "seeOwnCustody":
+                        return this._canReadOwnCustody;
                     case "takeCustody":
                     case "releaseCustody":
-                        return this._useCustody;
+                        return this._canTakeCustody;
                     case "transferCustody":
                     case "giveCustody":
-                        return this._useCustody && this._isRootOrAdmin;
+                        return this._canTakeCustody && this._isRootOrAdmin;
                 }
                 break;
             case "orders":

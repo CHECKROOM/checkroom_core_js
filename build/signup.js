@@ -4000,16 +4000,95 @@ common_template = function (moment) {
     getFriendlyTemplateSize: function (width, height, unit) {
       if (width == 0 || height == 0) {
         return '';
-      } else if (unit == 'inch' && width == 8.5 && height == 11) {
+      } else if (unit == 'inch' && (width == 8.5 && height == 11 || width == 11 && height == 8.5)) {
         return 'US Letter';
-      } else if (unit == 'mm' && width == 210 && height == 297) {
+      } else if (unit == 'inch' && (width == 11 && height == 17 || width == 17 && height == 11)) {
+        return 'US Tabloid';
+      } else if (unit == 'mm' && (width == 210 && height == 297 || width == 297 && height == 210)) {
         return 'A4';
-      } else if (unit == 'cm' && width == 21 && height == 29.7) {
+      } else if (unit == 'cm' && (width == 21 && height == 29.7 || width == 29.7 && height == 21)) {
         return 'A4';
       } else {
         var friendlyUnit = unit == 'inch' ? '"' : unit;
         return width + friendlyUnit + ' x ' + height + friendlyUnit;
       }
+    },
+    /**
+    * getPageSizes
+    *
+    * @memberOf common
+    * @name  common#getPageSizes
+    * @method
+    * 
+    * @return {array}
+    */
+    getPageSizes: function () {
+      return [
+        {
+          id: 'letter',
+          name: 'US Letter',
+          width: 8.5,
+          height: 11,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 816,
+            height: 1056
+          }
+        },
+        {
+          id: 'a4',
+          name: 'A4',
+          width: 210,
+          height: 297,
+          unit: 'mm',
+          layout: 'portrait',
+          px: {
+            width: 793,
+            height: 1122
+          }
+        },
+        {
+          id: 'tabloid',
+          name: 'US Tabloid',
+          width: 11,
+          height: 17,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 1056,
+            height: 1632
+          }
+        }
+      ];
+    },
+    /**
+    * getPageSize
+    *
+    * @memberOf common
+    * @name  common#getPageSize
+    * @method
+    * 
+    * @return {object}
+    */
+    getPageSize: function (unit, width, height) {
+      var pageSizes = this.getPageSizes(), pageSize = null;
+      // Portrait?
+      pageSize = pageSizes.find(function (size) {
+        return size.unit == unit && size.width == width && size.height == height;
+      });
+      if (pageSize)
+        return pageSize;
+      // Landscape?
+      pageSize = pageSizes.find(function (size) {
+        return size.unit == unit && size.width == height && size.height == width;
+      });
+      if (pageSize) {
+        pageSize.layout = 'landscape';
+        return pageSize;
+      }
+      // Unknown pagesize
+      return null;
     }
   };
 }(moment);
@@ -4329,6 +4408,9 @@ field = function ($, common) {
       }
       if (this.editor == 'email') {
         return common.isValidEmail(value);
+      }
+      if (this.editor == 'url') {
+        return common.isValidURL(value);
       }
       return value != '';
     default:
@@ -4854,7 +4936,7 @@ dateHelper = function ($, moment) {
   return DateHelper;
 }(jquery, moment);
 signup = function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
-  var DEFAULT_PLAN = '1215_cr_90';
+  var DEFAULT_PLAN = '1215_cr_120';
   var DEFAULT_PERIOD = 'yearly';
   var DEFAULT_SOURCE = 'attempt';
   var DEFAULT_KIND = 'trial';

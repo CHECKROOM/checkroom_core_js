@@ -72,28 +72,78 @@ define(['moment'], function (moment) {
 	     * @return {string}
 	     */
 	    getFriendlyTemplateSize: function(width, height, unit) {
+            
             if( (width==0.0) || 
                 (height==0.0)) {
                 return "";
             } else if(
                 (unit=="inch") &&
-                (width==8.5) &&
-                (height==11.0)) {
+                ((width==8.5 && height==11.0) || (width==11.0 && height==8.5))) {
                 return "US Letter";
             } else if(
+                (unit=="inch") &&
+                ((width==11.0 && height==17.0) || (width==17.0 && height==11.0))) {
+                return "US Tabloid";
+            } else if(
                 (unit=="mm") &&
-                (width==210.0) &&
-                (height==297.0)) {
+                ((width==210.0 && height==297.0) || (width==297.0 && height== 210.0))) {
                 return "A4";
             } else if(
             	(unit=="cm") &&
-            	(width==21) &&
-            	(height==29.7)){
+            	((width==21 && height==29.7) || (width==29.7 && height==21))){
             	return "A4";
             } else {
 				var friendlyUnit = (unit=="inch") ? '"' : unit;
                 return width + friendlyUnit + " x " + height + friendlyUnit;
             }
+	    },
+	    /**
+	     * getPageSizes
+	     *
+	     * @memberOf common
+	     * @name  common#getPageSizes
+	     * @method
+	     * 
+	     * @return {array}
+	     */
+	    getPageSizes: function(){
+	    	return [
+		    	{id: "letter", name: "US Letter", width: 8.5, height: 11.0, unit: "inch", layout: "portrait", px: { width: 816, height: 1056 }},
+	            {id: "a4", name: "A4", width: 210.0, height: 297.0, unit: "mm", layout: "portrait", px: { width: 793, height: 1122 }},
+	            {id: "tabloid", name: "US Tabloid", width: 11.0, height: 17.0, unit: "inch", layout: "portrait", px: { width: 1056, height: 1632 }}
+	        ];
+	    },
+	    /**
+	     * getPageSize
+	     *
+	     * @memberOf common
+	     * @name  common#getPageSize
+	     * @method
+	     * 
+	     * @return {object}
+	     */
+	    getPageSize: function(unit, width, height){
+	    	var pageSizes = this.getPageSizes(),
+	    		pageSize = null;
+
+	    	// Portrait?
+	    	pageSize = pageSizes.find(function(size){
+                return size.unit == unit && size.width == width && size.height == height;
+            });
+            if(pageSize) return pageSize;
+
+	    	// Landscape?
+	    	pageSize = pageSizes.find(function(size){
+                return size.unit == unit && size.width == height && size.height == width;
+            });
+            if(pageSize){
+	    		pageSize.layout = "landscape";
+				return pageSize;
+			}
+			
+
+			// Unknown pagesize
+			return null;
 	    }
 	};
 });

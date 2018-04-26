@@ -550,6 +550,48 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
                 equal(helper.getFriendlyFromTo(moment(), moment().add(5, "days"), false, moment()).text, getFriendlyDate(moment(), false) + " - " + getFriendlyDate(moment().add(5, "days"), false));
             });
 
+            // Business hours
+            // ----
+            test('isValidBusinessDate', function() {
+                var helper = new cr.DateHelper({
+                    businessHours: [
+                        {"dayOfWeek":0,"openTime":540,"closeTime":1020}, // Mon 9-17
+                        {"dayOfWeek":1,"openTime":540,"closeTime":1020}, // Thu 9-17
+                        {"dayOfWeek":2,"openTime":540,"closeTime":1020}, // Wed 9-17
+                        {"dayOfWeek":3,"openTime":540,"closeTime":1020}, // Thr 9-17
+                        {"dayOfWeek":4,"openTime":660,"closeTime":1140}  // Fri 11-19
+                    ]
+                });
+
+                //dayOfweek (1 == Mon, 0 == Sun)
+                var getDateForDay = function(dayOfWeek, time, timeFormat){
+                    return moment(time, timeFormat || "HH:mm").day(dayOfWeek);
+                }
+
+                // Monday
+                equal(helper.isValidBusinessDate(getDateForDay(1, "17:00")), true); 
+                equal(helper.isValidBusinessDate(getDateForDay(1, "17:15")), false); 
+                equal(helper.isValidBusinessDate(getDateForDay(1, "5:00 pm", "hh:mm a")), true);
+                equal(helper.isValidBusinessDate(getDateForDay(1, "5:15 pm", "hh:mm a")), false);
+
+                // Sunday
+                equal(helper.isValidBusinessDate(getDateForDay(0, "17:15")), false);
+                equal(helper.isValidBusinessDate(getDateForDay(0, "5:15 am", "hh:mm a")), false);
+
+                // Saturday
+                equal(helper.isValidBusinessDate(getDateForDay(6, "17:15")), false); 
+                equal(helper.isValidBusinessDate(getDateForDay(6, "5:15 am", "hh:mm a")), false); 
+
+                // Friday
+                equal(helper.isValidBusinessDate(getDateForDay(5, "7:15")), false); 
+                equal(helper.isValidBusinessDate(getDateForDay(5, "17:15")), true); 
+                equal(helper.isValidBusinessDate(getDateForDay(5, "20:15")), false); 
+                equal(helper.isValidBusinessDate(getDateForDay(5, "7:15 am", "hh:mm a")), false); 
+                equal(helper.isValidBusinessDate(getDateForDay(5, "5:15 pm", "hh:mm a")), true); 
+                equal(helper.isValidBusinessDate(getDateForDay(5, "8:15 pm", "hh:mm a")), false); 
+
+            });
+
         };
 
         return {run: run}

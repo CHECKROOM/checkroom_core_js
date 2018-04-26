@@ -106,11 +106,15 @@ define([
      */
     Transaction.prototype.getNextTimeSlot = function(d) {
         d = d || this.getNowRounded();
-        var next = moment(d).add(this._getDateHelper().roundMinutes, "minutes");
+
+        var dateHelper = this._getDateHelper();
+
+        var next = moment(d).add(dateHelper.roundMinutes, "minutes");
         if (next.isSame(d)) {
-            next = next.add(this._getDateHelper().roundMinutes, "minutes");
+            next = next.add(dateHelper.roundMinutes, "minutes");
         }
-        return next
+
+        return dateHelper.getValidBusinessDate(next);
     };
 
     /**
@@ -820,7 +824,10 @@ define([
         // - at this location
         // - in the specified list (if any)
         params = params || {};
-        params.location = this._getId(this.location);
+
+        if(this.location){
+            params.location = this._getId(this.location);
+        }
 
         if( (listName!=null) &&
             (listName.length>0)) {

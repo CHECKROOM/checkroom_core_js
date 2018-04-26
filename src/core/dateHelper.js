@@ -91,6 +91,8 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         this._momentFormat = (this.timeFormat24) ? "MMM D [at] H:mm" : "MMM D [at] h:mm a";
         this.startOfDayHours = (spec.startOfDayHours!=null) ? startOfDayHours : START_OF_DAY_HRS;
         this.endOfDayHours = (spec.endOfDayHours!=null) ? endOfDayHours : END_OF_DAY_HRS;
+        this.businessHours = spec.businessHours || [];
+        this.weekStart = spec.weekStart || 1;
     };
 
     /**
@@ -230,7 +232,9 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
             }
         }
 
-        return ranges;
+        return ranges.filter(function(r){
+            return global.dateHelper.isValidBusinessDate(r.to);
+        });
     };
 
     /**
@@ -531,18 +535,85 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         }
     };
 
+    DateHelper.prototype.isValidBusinessDate = function(d){
+        var isValid = false;
+
+        var businessHours = this.businessHours;
+        if(businessHours.length > 0){ 
+            
+            $.each(this._getBusinessHours(d), function(i, h){
+                var openTime = moment(moment.utc(moment.duration(h.openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm'),
+                    closeTime = moment(moment.utc(moment.duration(h.closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+
+                var testDate = moment(d.clone().format('H:mm'), 'H:mm');
+
+                isValid = testDate.isBetween(openTime, closeTime) || testDate.isSame(openTime) || testDate.isSame(closeTime);
+
+                if(isValid) return false;
+            });     
+        }else{
+            isValid = true;
+        }
+
+        return isValid;
+    }
+
+    DateHelper.prototype.getValidBusinessDate = function(d){
+        var that = this,
+            maxMinutes = 0;
+
+        while(!this.isValidBusinessDate(d) || (maxMinutes >= 7*24*60)){
+            d = d.add(that.roundMinutes, "minutes");
+            
+            // Prevent infinite loop by stopping after 1 full week
+            maxMinutes += dateHelper.roundMinutes;
+        }
+
+        return d;
+    }
+
+    DateHelper.prototype._getBusinessHours = function(d){
+        var businessHours = this.businessHours;
+        if(businessHours.length > 0){ 
+            return businessHours.filter(function(bh){ return bh.dayOfWeek == (d.day() - 1); });
+        }else{
+            return [];
+        }
+    }
+
     DateHelper.prototype._makeStartOfBusinessDay = function(m) {
-        return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+        var startOfBusinessDay = m.clone().hour(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+
+        var businessHours = this.businessHours;
+        if(businessHours.length > 0){
+            var businessHoursForDay = this._getBusinessHours(m)
+            if(businessHoursForDay.length > 0){
+                var openTime = moment(moment.utc(moment.duration(businessHoursForDay[0].openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');  
+                startOfBusinessDay.hour(openTime.hour()).minute(openTime.minute());               
+            }
+        }             
+        return this.getValidBusinessDate(startOfBusinessDay);
     };
 
     DateHelper.prototype._makeEndOfBusinessDay = function(m) {
-        return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+        var endOfBusinessDay = m.clone().hour(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+
+        var businessHours = this.businessHours;
+        if(businessHours.length > 0){
+            var businessHoursForDay = this._getBusinessHours(m).sort(function(a, b){ return a.closeTime < b.closeTime; });
+            if(businessHoursForDay.length > 0){
+                var closeTime = moment(moment.utc(moment.duration(businessHoursForDay[0].closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+                endOfBusinessDay.hour(closeTime.hour()).minute(closeTime.minute());
+            }
+             
+        }
+
+        return this.getValidBusinessDate(endOfBusinessDay);
     };
 
     DateHelper.prototype._makeEndOfDay = function(m) {
         return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
     };
-
 
     return DateHelper;
 

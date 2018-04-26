@@ -28,6 +28,7 @@ define([
         customerLabels: [],
         reservationLabels: [],
         orderLabels: [],
+        businessHours: [],
         cancelled: null
     };
 
@@ -56,6 +57,7 @@ define([
      * @property {array} customerLabels     the groups customer labels
      * @property {array} reservationLabels  the groups reservation labels
      * @property {array} orderLabels        the groups order labels
+     * @property {array} businessHours      the groups business hours
      * @constructor
      * @extends Document
      */
@@ -79,6 +81,7 @@ define([
         this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
         this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
         this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
+        this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
     };
 
     Group.prototype = new tmp();
@@ -446,6 +449,30 @@ define([
         }
     };
 
+    /**
+     * Helper method that returns the business days
+     * @returns {Array}
+     */
+    Group.prototype.getBusinessDays = function(){
+        return this.businessHours.map(function(bh){
+            //server side: 0 => monday - 6 => sunday
+            //client side: 1 => monday - 7 => sunday
+            return bh.dayOfWeek + 1; 
+        });
+    };
+
+    /**
+     * Helper method that returns the business hours for a given day
+     * @returns {Array}
+     */
+    Group.prototype.getBusinessHours = function(day){
+        return this.businessHours.filter(function(bh){
+            //server side: 0 => monday - 6 => sunday
+            //client side: 1 => monday - 7 => sunday
+            return (bh.dayOfWeek + 1) == day; 
+        });
+    };
+
     //
     // Specific validators
     /**
@@ -498,7 +525,8 @@ define([
                 that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
                 that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
                 that.cancelled = data.cancelled || DEFAULTS.cancelled;
-                    
+                that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
+
                 return that._fromColorLabelsJson(data, options);                
             });
     };

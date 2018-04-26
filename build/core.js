@@ -7781,6 +7781,8 @@ DateHelper = function ($, moment) {
     this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
     this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
     this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
+    this.businessHours = spec.businessHours || [];
+    this.weekStart = spec.weekStart || 1;
   };
   /**
    * @name parseDate
@@ -7910,7 +7912,9 @@ DateHelper = function ($, moment) {
         });
       }
     }
-    return ranges;
+    return ranges.filter(function (r) {
+      return global.dateHelper.isValidBusinessDate(r.to);
+    });
   };
   /**
    * getFriendlyFromTo
@@ -8189,11 +8193,66 @@ DateHelper = function ($, moment) {
       break;
     }
   };
+  DateHelper.prototype.isValidBusinessDate = function (d) {
+    var isValid = false;
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      $.each(this._getBusinessHours(d), function (i, h) {
+        var openTime = moment(moment.utc(moment.duration(h.openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm'), closeTime = moment(moment.utc(moment.duration(h.closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        var testDate = moment(d.clone().format('H:mm'), 'H:mm');
+        isValid = testDate.isBetween(openTime, closeTime) || testDate.isSame(openTime) || testDate.isSame(closeTime);
+        if (isValid)
+          return false;
+      });
+    } else {
+      isValid = true;
+    }
+    return isValid;
+  };
+  DateHelper.prototype.getValidBusinessDate = function (d) {
+    var that = this, maxMinutes = 0;
+    while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
+      d = d.add(that.roundMinutes, 'minutes');
+      // Prevent infinite loop by stopping after 1 full week
+      maxMinutes += dateHelper.roundMinutes;
+    }
+    return d;
+  };
+  DateHelper.prototype._getBusinessHours = function (d) {
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      return businessHours.filter(function (bh) {
+        return bh.dayOfWeek == d.day() - 1;
+      });
+    } else {
+      return [];
+    }
+  };
   DateHelper.prototype._makeStartOfBusinessDay = function (m) {
-    return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var startOfBusinessDay = m.clone().hour(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m);
+      if (businessHoursForDay.length > 0) {
+        var openTime = moment(moment.utc(moment.duration(businessHoursForDay[0].openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        startOfBusinessDay.hour(openTime.hour()).minute(openTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(startOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfBusinessDay = function (m) {
-    return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var endOfBusinessDay = m.clone().hour(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m).sort(function (a, b) {
+        return a.closeTime < b.closeTime;
+      });
+      if (businessHoursForDay.length > 0) {
+        var closeTime = moment(moment.utc(moment.duration(businessHoursForDay[0].closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        endOfBusinessDay.hour(closeTime.hour()).minute(closeTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(endOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfDay = function (m) {
     return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
@@ -8548,6 +8607,7 @@ Group = function ($, common, api, Document) {
     customerLabels: [],
     reservationLabels: [],
     orderLabels: [],
+    businessHours: [],
     cancelled: null
   };
   // Allow overriding the ctor during inheritance
@@ -8575,6 +8635,7 @@ Group = function ($, common, api, Document) {
    * @property {array} customerLabels     the groups customer labels
    * @property {array} reservationLabels  the groups reservation labels
    * @property {array} orderLabels        the groups order labels
+   * @property {array} businessHours      the groups business hours
    * @constructor
    * @extends Document
    */
@@ -8597,6 +8658,7 @@ Group = function ($, common, api, Document) {
     this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
     this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
     this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
+    this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
   };
   Group.prototype = new tmp();
   Group.prototype.constructor = Group;
@@ -8936,6 +8998,28 @@ Group = function ($, common, api, Document) {
       return [];
     }
   };
+  /**
+   * Helper method that returns the business days
+   * @returns {Array}
+   */
+  Group.prototype.getBusinessDays = function () {
+    return this.businessHours.map(function (bh) {
+      //server side: 0 => monday - 6 => sunday
+      //client side: 1 => monday - 7 => sunday
+      return bh.dayOfWeek + 1;
+    });
+  };
+  /**
+   * Helper method that returns the business hours for a given day
+   * @returns {Array}
+   */
+  Group.prototype.getBusinessHours = function (day) {
+    return this.businessHours.filter(function (bh) {
+      //server side: 0 => monday - 6 => sunday
+      //client side: 1 => monday - 7 => sunday
+      return bh.dayOfWeek + 1 == day;
+    });
+  };
   //
   // Specific validators
   /**
@@ -8984,6 +9068,7 @@ Group = function ($, common, api, Document) {
       that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
       that.cancelled = data.cancelled || DEFAULTS.cancelled;
+      that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
       return that._fromColorLabelsJson(data, options);
     });
   };
@@ -10426,6 +10511,8 @@ dateHelper = function ($, moment) {
     this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
     this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
     this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
+    this.businessHours = spec.businessHours || [];
+    this.weekStart = spec.weekStart || 1;
   };
   /**
    * @name parseDate
@@ -10555,7 +10642,9 @@ dateHelper = function ($, moment) {
         });
       }
     }
-    return ranges;
+    return ranges.filter(function (r) {
+      return global.dateHelper.isValidBusinessDate(r.to);
+    });
   };
   /**
    * getFriendlyFromTo
@@ -10834,11 +10923,66 @@ dateHelper = function ($, moment) {
       break;
     }
   };
+  DateHelper.prototype.isValidBusinessDate = function (d) {
+    var isValid = false;
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      $.each(this._getBusinessHours(d), function (i, h) {
+        var openTime = moment(moment.utc(moment.duration(h.openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm'), closeTime = moment(moment.utc(moment.duration(h.closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        var testDate = moment(d.clone().format('H:mm'), 'H:mm');
+        isValid = testDate.isBetween(openTime, closeTime) || testDate.isSame(openTime) || testDate.isSame(closeTime);
+        if (isValid)
+          return false;
+      });
+    } else {
+      isValid = true;
+    }
+    return isValid;
+  };
+  DateHelper.prototype.getValidBusinessDate = function (d) {
+    var that = this, maxMinutes = 0;
+    while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
+      d = d.add(that.roundMinutes, 'minutes');
+      // Prevent infinite loop by stopping after 1 full week
+      maxMinutes += dateHelper.roundMinutes;
+    }
+    return d;
+  };
+  DateHelper.prototype._getBusinessHours = function (d) {
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      return businessHours.filter(function (bh) {
+        return bh.dayOfWeek == d.day() - 1;
+      });
+    } else {
+      return [];
+    }
+  };
   DateHelper.prototype._makeStartOfBusinessDay = function (m) {
-    return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var startOfBusinessDay = m.clone().hour(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m);
+      if (businessHoursForDay.length > 0) {
+        var openTime = moment(moment.utc(moment.duration(businessHoursForDay[0].openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        startOfBusinessDay.hour(openTime.hour()).minute(openTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(startOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfBusinessDay = function (m) {
-    return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var endOfBusinessDay = m.clone().hour(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m).sort(function (a, b) {
+        return a.closeTime < b.closeTime;
+      });
+      if (businessHoursForDay.length > 0) {
+        var closeTime = moment(moment.utc(moment.duration(businessHoursForDay[0].closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        endOfBusinessDay.hour(closeTime.hour()).minute(closeTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(endOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfDay = function (m) {
     return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
@@ -10939,11 +11083,12 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.getNextTimeSlot = function (d) {
     d = d || this.getNowRounded();
-    var next = moment(d).add(this._getDateHelper().roundMinutes, 'minutes');
+    var dateHelper = this._getDateHelper();
+    var next = moment(d).add(dateHelper.roundMinutes, 'minutes');
     if (next.isSame(d)) {
-      next = next.add(this._getDateHelper().roundMinutes, 'minutes');
+      next = next.add(dateHelper.roundMinutes, 'minutes');
     }
-    return next;
+    return dateHelper.getValidBusinessDate(next);
   };
   /**
    * Gets the lowest possible from date, by default now
@@ -11580,7 +11725,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // - at this location
     // - in the specified list (if any)
     params = params || {};
-    params.location = this._getId(this.location);
+    if (this.location) {
+      params.location = this._getId(this.location);
+    }
     if (listName != null && listName.length > 0) {
       params.listName = listName;
     }
@@ -14185,11 +14332,12 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.getNextTimeSlot = function (d) {
     d = d || this.getNowRounded();
-    var next = moment(d).add(this._getDateHelper().roundMinutes, 'minutes');
+    var dateHelper = this._getDateHelper();
+    var next = moment(d).add(dateHelper.roundMinutes, 'minutes');
     if (next.isSame(d)) {
-      next = next.add(this._getDateHelper().roundMinutes, 'minutes');
+      next = next.add(dateHelper.roundMinutes, 'minutes');
     }
-    return next;
+    return dateHelper.getValidBusinessDate(next);
   };
   /**
    * Gets the lowest possible from date, by default now
@@ -14826,7 +14974,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // - at this location
     // - in the specified list (if any)
     params = params || {};
-    params.location = this._getId(this.location);
+    if (this.location) {
+      params.location = this._getId(this.location);
+    }
     if (listName != null && listName.length > 0) {
       params.listName = listName;
     }

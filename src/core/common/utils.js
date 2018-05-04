@@ -167,6 +167,9 @@ define(['jquery'], function ($) {
                 (cust.indexOf(';')<0) &&
                 ($.trim(cust).length>0) &&
                 (arr.indexOf(cust) >= idx));
+            }).map(function(cust){ 
+                // trim each line
+                return $.trim(cust); 
             });
         } else {
             return [];

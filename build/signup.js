@@ -3444,6 +3444,9 @@ common_utils = function ($) {
       var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
       return customs.filter(function (cust, idx, arr) {
         return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
+      }).map(function (cust) {
+        // trim each line
+        return $.trim(cust);
       });
     } else {
       return [];

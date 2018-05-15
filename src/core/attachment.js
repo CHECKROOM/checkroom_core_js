@@ -4,10 +4,8 @@
  * @module attachment
  * @copyright CHECKROOM NV 2015
  */
-define(['jquery'], /** Attachment */ function ($) {
+define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmentHelper) {
 
-    var EXT = /(?:\.([^.]+))?$/;
-    var IMAGES = ['jpg', 'jpeg', 'png', 'gif'];
     var PREVIEWS = ['jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'pdf'];
     var DEFAULTS = {
         fileName: '',
@@ -73,8 +71,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {string}
      */
     Attachment.prototype.getExt = function(fileName) {
-        fileName = fileName || this.fileName;
-        return (EXT.exec(fileName)[1] || "").toLowerCase();
+        return attachmentHelper.getExt(fileName || this.fileName);
     };
 
     /**
@@ -118,8 +115,7 @@ define(['jquery'], /** Attachment */ function ($) {
      * @returns {boolean}
      */
     Attachment.prototype.isImage = function() {
-        var ext = this.getExt(this.fileName);
-        return ($.inArray(ext, IMAGES) >= 0);
+        return attachmentHelper.isImage(this.fileName);
     };
 
     /**

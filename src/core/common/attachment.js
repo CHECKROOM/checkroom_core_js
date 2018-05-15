@@ -3,6 +3,9 @@
  * @copyright CHECKROOM NV 2015
  */
 define(['moment'],function (moment) {
+     var IMAGES = ['jpg', 'jpeg', 'png', 'gif'];
+      
+
     /**
      * Provides attachment related helper methods
      */
@@ -57,6 +60,34 @@ define(['moment'],function (moment) {
                 }
             }
             return "";
+        },
+        /**
+         * isImage
+         *
+         * @memberOf common
+         * @name  common#isImage
+         * @method
+         * 
+         * @param  fileName
+         * @return {boolean}  
+         */
+        isImage: function(fileName){
+            var ext = this.getExt(fileName);
+            return ($.inArray(ext, IMAGES) >= 0);
+        },
+        /**
+         * getExt
+         *
+         * @memberOf common
+         * @name  common#getExt
+         * @method
+         * 
+         * @param  fileName
+         * @return {string}  
+         */
+        getExt: function(fileName){
+            var EXT = /(?:\.([^.]+))?$/;
+            return (EXT.exec(fileName)[1] || "").toLowerCase();
         }
     };
 });

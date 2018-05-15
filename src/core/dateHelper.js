@@ -575,7 +575,7 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     DateHelper.prototype._getBusinessHours = function(d){
         var businessHours = this.businessHours;
         if(businessHours.length > 0){ 
-            return businessHours.filter(function(bh){ return bh.dayOfWeek == (d.day() - 1); });
+            return businessHours.filter(function(bh){ return bh.isoWeekday == d.isoWeekday(); });
         }else{
             return [];
         }

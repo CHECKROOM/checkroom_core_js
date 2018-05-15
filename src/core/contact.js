@@ -16,7 +16,8 @@ define([
         email: "",
         status: "active",
         user: {},
-        kind: "contact"
+        kind: "contact",
+        cover: ""
     };
 
     // Allow overriding the ctor during inheritance
@@ -45,6 +46,7 @@ define([
         this.status = spec.status || DEFAULTS.status;
         this.user = spec.user || DEFAULTS.user;
         this.kind = spec.kind || DEFAULTS.kind;
+        this.cover = spec.cover || DEFAULTS.cover;
     };
 
     Contact.prototype = new tmp();
@@ -248,6 +250,9 @@ define([
                 that.status = data.status || DEFAULTS.status;
                 that.user = data.user || DEFAULTS.user;
                 that.kind = data.kind || DEFAULTS.kind;
+
+                var cover = data.cover || DEFAULTS.cover;
+                that.cover = common.isImage(cover)?cover:"";
 
                 $.publish('contact.fromJson', data);
                 return data;

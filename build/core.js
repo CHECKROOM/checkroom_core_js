@@ -1882,6 +1882,12 @@ common_image = function ($) {
   };
 }(jquery);
 common_attachment = function (moment) {
+  var IMAGES = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif'
+  ];
   /**
    * Provides attachment related helper methods
    */
@@ -1935,6 +1941,34 @@ common_attachment = function (moment) {
         }
       }
       return '';
+    },
+    /**
+     * isImage
+     *
+     * @memberOf common
+     * @name  common#isImage
+     * @method
+     * 
+     * @param  fileName
+     * @return {boolean}  
+     */
+    isImage: function (fileName) {
+      var ext = this.getExt(fileName);
+      return $.inArray(ext, IMAGES) >= 0;
+    },
+    /**
+     * getExt
+     *
+     * @memberOf common
+     * @name  common#getExt
+     * @method
+     * 
+     * @param  fileName
+     * @return {string}  
+     */
+    getExt: function (fileName) {
+      var EXT = /(?:\.([^.]+))?$/;
+      return (EXT.exec(fileName)[1] || '').toLowerCase();
     }
   };
 }(moment);
@@ -3855,12 +3889,15 @@ common_contact = function (imageHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageUrl = function (ds, contact, size, bustCache) {
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
     // Show profile picture of user?
     if (contact.user && contact.user.picture)
       return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
+    // Show contact image
+    if (contact.cover)
+      return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
@@ -3875,12 +3912,15 @@ common_contact = function (imageHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
     // Show profile picture of user?
     if (contact.user && contact.user.picture)
       return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
+    // Show contact image
+    if (contact.cover)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.cover, size, bustCache);
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
@@ -4864,14 +4904,7 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
-Attachment = function ($) {
-  var EXT = /(?:\.([^.]+))?$/;
-  var IMAGES = [
-    'jpg',
-    'jpeg',
-    'png',
-    'gif'
-  ];
+Attachment = function ($, attachmentHelper) {
   var PREVIEWS = [
     'jpg',
     'jpeg',
@@ -4941,8 +4974,7 @@ Attachment = function ($) {
    * @returns {string}
    */
   Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.fileName;
-    return (EXT.exec(fileName)[1] || '').toLowerCase();
+    return attachmentHelper.getExt(fileName || this.fileName);
   };
   /**
    * Gets a friendly file size
@@ -4974,8 +5006,7 @@ Attachment = function ($) {
    * @returns {boolean}
    */
   Attachment.prototype.isImage = function () {
-    var ext = this.getExt(this.fileName);
-    return $.inArray(ext, IMAGES) >= 0;
+    return attachmentHelper.isImage(this.fileName);
   };
   /**
    * Checks if the attachment has a preview
@@ -5021,7 +5052,7 @@ Attachment = function ($) {
     return $.Deferred().resolve(data);
   };
   return Attachment;
-}(jquery);
+}(jquery, common_attachment);
 comment = function ($) {
   var DEFAULTS = {
     id: '',
@@ -5083,14 +5114,7 @@ comment = function ($) {
   };
   return Comment;
 }(jquery);
-attachment = function ($) {
-  var EXT = /(?:\.([^.]+))?$/;
-  var IMAGES = [
-    'jpg',
-    'jpeg',
-    'png',
-    'gif'
-  ];
+attachment = function ($, attachmentHelper) {
   var PREVIEWS = [
     'jpg',
     'jpeg',
@@ -5160,8 +5184,7 @@ attachment = function ($) {
    * @returns {string}
    */
   Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.fileName;
-    return (EXT.exec(fileName)[1] || '').toLowerCase();
+    return attachmentHelper.getExt(fileName || this.fileName);
   };
   /**
    * Gets a friendly file size
@@ -5193,8 +5216,7 @@ attachment = function ($) {
    * @returns {boolean}
    */
   Attachment.prototype.isImage = function () {
-    var ext = this.getExt(this.fileName);
-    return $.inArray(ext, IMAGES) >= 0;
+    return attachmentHelper.isImage(this.fileName);
   };
   /**
    * Checks if the attachment has a preview
@@ -5240,7 +5262,7 @@ attachment = function ($) {
     return $.Deferred().resolve(data);
   };
   return Attachment;
-}(jquery);
+}(jquery, common_attachment);
 field = function ($, common) {
   var DEFAULTS = {
     name: null,
@@ -7456,7 +7478,8 @@ Contact = function ($, Base, common, User, Helper) {
     email: '',
     status: 'active',
     user: {},
-    kind: 'contact'
+    kind: 'contact',
+    cover: ''
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7482,6 +7505,7 @@ Contact = function ($, Base, common, User, Helper) {
     this.status = spec.status || DEFAULTS.status;
     this.user = spec.user || DEFAULTS.user;
     this.kind = spec.kind || DEFAULTS.kind;
+    this.cover = spec.cover || DEFAULTS.cover;
   };
   Contact.prototype = new tmp();
   Contact.prototype.constructor = Contact;
@@ -7674,6 +7698,8 @@ Contact = function ($, Base, common, User, Helper) {
       that.status = data.status || DEFAULTS.status;
       that.user = data.user || DEFAULTS.user;
       that.kind = data.kind || DEFAULTS.kind;
+      var cover = data.cover || DEFAULTS.cover;
+      that.cover = common.isImage(cover) ? cover : '';
       $.publish('contact.fromJson', data);
       return data;
     });
@@ -8225,7 +8251,7 @@ DateHelper = function ($, moment) {
     var businessHours = this.businessHours;
     if (businessHours.length > 0) {
       return businessHours.filter(function (bh) {
-        return bh.dayOfWeek == d.day() - 1;
+        return bh.isoWeekday == d.isoWeekday();
       });
     } else {
       return [];
@@ -9009,19 +9035,76 @@ Group = function ($, common, api, Document) {
     return this.businessHours.map(function (bh) {
       //server side: 0 => monday - 6 => sunday
       //client side: 1 => monday - 7 => sunday
-      return bh.dayOfWeek + 1;
+      return bh.isoWeekday;
     });
   };
   /**
-   * Helper method that returns the business hours for a given day
+   * Helper method that returns the business hours for a given iso day
    * @returns {Array}
    */
-  Group.prototype.getBusinessHours = function (day) {
+  Group.prototype.getBusinessHoursForIsoWeekday = function (isoDay) {
     return this.businessHours.filter(function (bh) {
       //server side: 0 => monday - 6 => sunday
       //client side: 1 => monday - 7 => sunday
-      return bh.dayOfWeek + 1 == day;
+      return bh.isoWeekday == isoDay;
     });
+  };
+  /**
+   * setBusinessHours: translate iso weekdays back to server days
+   * @param {array} businessHours 
+   * @param {boolean} skipRead      
+   */
+  Group.prototype.setBusinessHours = function (businessHours, skipRead) {
+    var that = this;
+    businessHours = businessHours || [];
+    // Make copy of array
+    businessHours = businessHours.slice().map(function (bh) {
+      // BUGFIX clone object!!!!
+      var newBh = $.extend({}, bh);
+      newBh.dayOfWeek = bh.isoWeekday - 1;
+      //server side 0-6 Mon-Sun
+      delete newBh.isoWeekday;
+      return newBh;
+    });
+    return this._doApiCall({
+      method: 'setBusinessHours',
+      params: { businessHours: businessHours },
+      skipRead: skipRead,
+      usePost: true
+    });
+  };
+  /**
+   * getDefaultBusinessHours: in iso weekdays
+   * @return {array}
+   */
+  Group.prototype.getDefaultBusinessHours = function () {
+    return [
+      {
+        isoWeekday: 1,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 2,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 3,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 4,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 5,
+        openTime: 540,
+        closeTime: 1020
+      }
+    ];
   };
   //
   // Specific validators
@@ -9072,8 +9155,26 @@ Group = function ($, common, api, Document) {
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
       that.cancelled = data.cancelled || DEFAULTS.cancelled;
       that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
-      return that._fromColorLabelsJson(data, options);
+      return that._fromColorLabelsJson(data, options).then(function (data) {
+        return that._fromBusinessHoursJson(data, options);
+      });
     });
+  };
+  /**
+   * _fromBusinessHoursJson: client side uses iso weekdays
+   * @param  {object} data    
+   * @param  {object} options 
+   * @return {object}         
+   */
+  Group.prototype._fromBusinessHoursJson = function (data, options) {
+    data.businessHours = data.businessHours.map(function (bh) {
+      if (!bh.isoWeekday) {
+        bh.isoWeekday = bh.dayOfWeek + 1;  // 1-7 Mon - Sun
+      }
+      delete bh.dayOfWeek;
+      return bh;
+    });
+    return $.Deferred().resolve(data);
   };
   /**
    * _fromColorLabelsJson: reads the document labels
@@ -10955,7 +11056,7 @@ dateHelper = function ($, moment) {
     var businessHours = this.businessHours;
     if (businessHours.length > 0) {
       return businessHours.filter(function (bh) {
-        return bh.dayOfWeek == d.day() - 1;
+        return bh.isoWeekday == d.isoWeekday();
       });
     } else {
       return [];

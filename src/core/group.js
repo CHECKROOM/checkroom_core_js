@@ -457,21 +457,65 @@ define([
         return this.businessHours.map(function(bh){
             //server side: 0 => monday - 6 => sunday
             //client side: 1 => monday - 7 => sunday
-            return bh.dayOfWeek + 1; 
+            return bh.isoWeekday; 
         });
     };
 
     /**
-     * Helper method that returns the business hours for a given day
+     * Helper method that returns the business hours for a given iso day
      * @returns {Array}
      */
-    Group.prototype.getBusinessHours = function(day){
+    Group.prototype.getBusinessHoursForIsoWeekday = function(isoDay){
         return this.businessHours.filter(function(bh){
             //server side: 0 => monday - 6 => sunday
             //client side: 1 => monday - 7 => sunday
-            return (bh.dayOfWeek + 1) == day; 
+            return bh.isoWeekday == isoDay; 
         });
     };
+
+    /**
+     * setBusinessHours: translate iso weekdays back to server days
+     * @param {array} businessHours 
+     * @param {boolean} skipRead      
+     */
+    Group.prototype.setBusinessHours = function(businessHours, skipRead){
+        var that = this;
+
+        businessHours = businessHours || [];
+
+        // Make copy of array
+        businessHours = businessHours.slice().map(function(bh){ 
+            // BUGFIX clone object!!!!
+            var newBh = $.extend({}, bh);
+
+            newBh.dayOfWeek = bh.isoWeekday - 1; //server side 0-6 Mon-Sun
+
+            delete newBh.isoWeekday;
+
+            return newBh;
+        })
+
+        return this._doApiCall({
+            method: "setBusinessHours", 
+            params: { businessHours: businessHours }, 
+            skipRead: skipRead, 
+            usePost: true
+        });
+    }
+
+    /**
+     * getDefaultBusinessHours: in iso weekdays
+     * @return {array}
+     */
+    Group.prototype.getDefaultBusinessHours = function(){
+        return [
+            { isoWeekday: 1, openTime: 540, closeTime: 1020},
+            { isoWeekday: 2, openTime: 540, closeTime: 1020},
+            { isoWeekday: 3, openTime: 540, closeTime: 1020},
+            { isoWeekday: 4, openTime: 540, closeTime: 1020},
+            { isoWeekday: 5, openTime: 540, closeTime: 1020}
+        ];
+    }
 
     //
     // Specific validators
@@ -527,8 +571,30 @@ define([
                 that.cancelled = data.cancelled || DEFAULTS.cancelled;
                 that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
 
-                return that._fromColorLabelsJson(data, options);                
+                return that._fromColorLabelsJson(data, options).then(function(data){
+                    return that._fromBusinessHoursJson(data, options);
+                });                
             });
+    };
+
+    /**
+     * _fromBusinessHoursJson: client side uses iso weekdays
+     * @param  {object} data    
+     * @param  {object} options 
+     * @return {object}         
+     */
+    Group.prototype._fromBusinessHoursJson = function(data, options){
+        data.businessHours = data.businessHours.map(function(bh){
+            if(!bh.isoWeekday){
+                bh.isoWeekday = bh.dayOfWeek + 1; // 1-7 Mon - Sun
+            }
+
+            delete bh.dayOfWeek;
+
+            return bh;
+        })
+
+        return $.Deferred().resolve(data);
     };
 
     /**

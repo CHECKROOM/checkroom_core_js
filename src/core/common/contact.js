@@ -57,11 +57,14 @@ define(['common/image'], function (imageHelper) {
 	 * @return {string} image path or base64 image
 	 */
 	that.getContactImageUrl = function(ds, contact, size, bustCache) {
-		// Show maintenance avatar?
-		if(contact.kind == "maintenance") return imageHelper.getMaintenanceAvatar(size);
-
 		// Show profile picture of user?
 		if(contact.user && contact.user.picture) return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
+
+		// Show contact image
+		if(contact.cover) return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+
+		// Show maintenance avatar?
+		if(contact.kind == "maintenance") return imageHelper.getMaintenanceAvatar(size);
 
 		// Show avatar initials
 		return imageHelper.getAvatarInitial(contact.name, size);
@@ -78,11 +81,14 @@ define(['common/image'], function (imageHelper) {
 	 * @return {string} image path or base64 image
 	 */
 	that.getContactImageCDNUrl = function(settings, groupid, contact, size, bustCache) {
-		// Show maintenance avatar?
-		if(contact.kind == "maintenance") return imageHelper.getMaintenanceAvatar(size);
-
 		// Show profile picture of user?
 		if(contact.user && contact.user.picture) return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
+
+		// Show contact image
+		if(contact.cover) return imageHelper.getImageCDNUrl(settings, groupid, contact.cover, size, bustCache);
+
+		// Show maintenance avatar?
+		if(contact.kind == "maintenance") return imageHelper.getMaintenanceAvatar(size);
 
 		// Show avatar initials
 		return imageHelper.getAvatarInitial(contact.name, size);

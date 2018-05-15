@@ -1882,6 +1882,12 @@ common_image = function ($) {
   };
 }(jquery);
 common_attachment = function (moment) {
+  var IMAGES = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif'
+  ];
   /**
    * Provides attachment related helper methods
    */
@@ -1935,6 +1941,34 @@ common_attachment = function (moment) {
         }
       }
       return '';
+    },
+    /**
+     * isImage
+     *
+     * @memberOf common
+     * @name  common#isImage
+     * @method
+     * 
+     * @param  fileName
+     * @return {boolean}  
+     */
+    isImage: function (fileName) {
+      var ext = this.getExt(fileName);
+      return $.inArray(ext, IMAGES) >= 0;
+    },
+    /**
+     * getExt
+     *
+     * @memberOf common
+     * @name  common#getExt
+     * @method
+     * 
+     * @param  fileName
+     * @return {string}  
+     */
+    getExt: function (fileName) {
+      var EXT = /(?:\.([^.]+))?$/;
+      return (EXT.exec(fileName)[1] || '').toLowerCase();
     }
   };
 }(moment);
@@ -3855,12 +3889,15 @@ common_contact = function (imageHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageUrl = function (ds, contact, size, bustCache) {
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
     // Show profile picture of user?
     if (contact.user && contact.user.picture)
       return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
+    // Show contact image
+    if (contact.cover)
+      return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
@@ -3875,12 +3912,15 @@ common_contact = function (imageHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
     // Show profile picture of user?
     if (contact.user && contact.user.picture)
       return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
+    // Show contact image
+    if (contact.cover)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.cover, size, bustCache);
+    // Show maintenance avatar?
+    if (contact.kind == 'maintenance')
+      return imageHelper.getMaintenanceAvatar(size);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
@@ -4960,7 +5000,7 @@ dateHelper = function ($, moment) {
     var businessHours = this.businessHours;
     if (businessHours.length > 0) {
       return businessHours.filter(function (bh) {
-        return bh.dayOfWeek == d.day() - 1;
+        return bh.isoWeekday == d.isoWeekday();
       });
     } else {
       return [];

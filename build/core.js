@@ -882,7 +882,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^\S*([A-Z0-9 \-]{4,22})\S*$/i) != null;
+    return barCode && barCode.match(/^([A-Z0-9\s\-]{4,22})$/i) != null;
   },
   /**
    * isValidQRCode
@@ -923,6 +923,8 @@ common_code = {
    * @return {Boolean} 
    */
   isValidDocQRCode: function (qrCode) {
+    if (typeof qrCode !== 'string')
+      return false;
     return qrCode && (qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null || qrCode.match(/^[a-z0-9]{8}$/i) != null);
   },
   /**
@@ -3844,7 +3846,7 @@ common_kit = function ($, itemHelpers) {
   };
   return that;
 }(jquery, common_item);
-common_contact = function (imageHelper) {
+common_contact = function (imageHelper, attachmentHelper) {
   var that = {};
   that.contactGetUserId = function (contact) {
     if (contact.user) {
@@ -3893,8 +3895,12 @@ common_contact = function (imageHelper) {
     if (contact.user && contact.user.picture)
       return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
     // Show contact image
-    if (contact.cover)
-      return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+    if (contact.cover) {
+      // Bugfix don't show pdf preview images as contact image
+      if (attachmentHelper.isImage(contact.cover)) {
+        return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+      }
+    }
     // Show maintenance avatar?
     if (contact.kind == 'maintenance')
       return imageHelper.getMaintenanceAvatar(size);
@@ -3925,7 +3931,7 @@ common_contact = function (imageHelper) {
     return imageHelper.getAvatarInitial(contact.name, size);
   };
   return that;
-}(common_image);
+}(common_image, common_attachment);
 common_user = function (imageHelper) {
   return {
     /**

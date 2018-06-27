@@ -1,7 +1,7 @@
 /*
  * Contact helpers
  */
-define(['common/image'], function (imageHelper) {
+define(['common/image', 'common/attachment'], function (imageHelper, attachmentHelper) {
 	var that = {};
 
 	that.contactGetUserId = function(contact) {
@@ -45,6 +45,14 @@ define(['common/image'], function (imageHelper) {
 		return (!that.contactGetUserSync(contact));
 	};
 
+	that.contactCanBlock = function(contact) {
+		return contact.status=="active";
+	};
+
+	that.contactCanUndoBlock = function(contact) {
+		return contact.status=="blocked";
+	};
+
 
 	/**
 	 * getContactImageUrl
@@ -57,11 +65,17 @@ define(['common/image'], function (imageHelper) {
 	 * @return {string} image path or base64 image
 	 */
 	that.getContactImageUrl = function(ds, contact, size, bustCache) {
+
 		// Show profile picture of user?
 		if(contact.user && contact.user.picture) return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
 
 		// Show contact image
-		if(contact.cover) return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+		if(contact.cover) {
+			// Bugfix don't show pdf preview images as contact image
+   			if(attachmentHelper.isImage(contact.cover)){
+				return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+			}
+		}
 
 		// Show maintenance avatar?
 		if(contact.kind == "maintenance") return imageHelper.getMaintenanceAvatar(size);

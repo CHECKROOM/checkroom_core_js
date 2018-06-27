@@ -19,6 +19,7 @@ define([], function () {
         this._isRootOrAdmin =         (user.role == "root") || (user.role == "admin");
         this._isRootOrAdminOrUser =   (user.role == "root") || (user.role == "admin") || (user.role == "user");
         this._isSelfService =         (user.role == "selfservice");
+        this._isBlockedContact =      (user.customer && user.customer.status == "blocked");        
         this._useWebhooks =           (limits.allowWebhooks) &&             (profile.useWebhooks);
         this._useOrders =             (limits.allowOrders) &&               (profile.useOrders);
         this._useReservations =       (limits.allowReservations) &&         (profile.useReservations);
@@ -38,52 +39,57 @@ define([], function () {
         this._useReporting =          (limits.allowReporting) &&            (profile.useReporting);
         this._useDepreciations =      (limits.allowDepreciations) &&        (profile.useDepreciations);
         this._useNotifications =      (limits.allowNotifications) &&        (profile.useNotifications);
+        this._useBlockContacts =      (limits.allowBlockContacts) &&        (profile.useBlockContacts);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
-                
+
         switch(user.role) {
             case "selfservice":
-                this._canSetFlag = profile.selfServiceCanSetFlag;
-                this._canClearFlag = profile.selfServiceCanClearFlag;
+                this._canSetFlag = this._useFlags && profile.selfServiceCanSetFlag;
+                this._canClearFlag = this._useFlags && profile.selfServiceCanClearFlag;
                 this._canSetLabel = profile.selfServiceCanSetLabel;
                 this._canClearLabel = profile.selfServiceCanClearLabel;
                 this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
-                this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
+                this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder && !this._isBlockedContact;
                 this._canOrderConflict = this._useOrders && profile.selfServiceCanOrderConflict;
+                this._canCreateReservations = this._useReservations && profile.selfServiceCanReserve && !this._isBlockedContact;
+                this._canReadReservations = this._useReservations && profile.selfServiceCanReserve;
                 this._canReservationConflict = this._useReservations && profile.selfServiceCanReservationConflict;
-                this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody;
+                this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody && !this._isBlockedContact;
                 this._canReadOwnCustody = this._useCustody;
+                this._canBlockContacts = false;
                 break;
             case "user":
-                this._canSetFlag = profile.userCanSetFlag;
-                this._canClearFlag = profile.userCanClearFlag;
+                this._canSetFlag = this._useFlags && profile.userCanSetFlag;
+                this._canClearFlag = this._useFlags && profile.userCanClearFlag;
                 this._canSetLabel = profile.userCanSetLabel;
                 this._canClearLabel = profile.userCanClearLabel;
                 this._canReadOrders = this._useOrders;
                 this._canCreateOrders = this._useOrders;
                 this._canOrderConflict = this._useOrders && profile.userCanOrderConflict;
+                this._canCreateReservations = this._useReservations;
+                this._canReadReservations = this._useReservations;
                 this._canReservationConflict = this._useOrders && profile.userCanReservationConflict;
-                this._canTakeCustody = true;
+                this._canTakeCustody = this._useCustody;
                 this._canReadOwnCustody = this._useCustody;
+                this._canBlockContacts = this._useBlockContacts && profile.userCanBlock;
                 break;
             default:
-                this._canSetFlag = true;
-                this._canClearFlag = true;
+                this._canSetFlag = this._useFlags;
+                this._canClearFlag = this._useFlags;
                 this._canSetLabel = true;
                 this._canClearLabel = true;
                 this._canReadOrders = this._useOrders;
                 this._canCreateOrders = this._useOrders;
                 this._canOrderConflict = this._useOrders && profile.adminCanOrderConflict;
+                this._canCreateReservations = this._useReservations;
+                this._canReadReservations = this._useReservations;
                 this._canReservationConflict = this._useOrders && profile.adminCanReservationConflict;
-                this._canTakeCustody = true;
+                this._canTakeCustody = this._useCustody;
                 this._canReadOwnCustody = this._useCustody;
+                this._canBlockContacts = this._useBlockContacts;
                 break;
-        }
-
-        if (this._isSelfService) {
-            // Override some permissions for selfservice users
-            this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
         }
     };
 
@@ -160,6 +166,9 @@ define([], function () {
         return (!this._isSelfService);
     };
 
+    PermissionHandler.prototype.hasBlockContactsPermission = function(action, data, location) {
+        return this._useBlockContacts;
+    };
     
     PermissionHandler.prototype.hasCheckoutPermission = function(action, data, location) {
         return this.hasPermission(action || "read", "orders", data, location);
@@ -175,7 +184,6 @@ define([], function () {
         return this.hasPermission(action, "categories", data, location);
     };
 
-    
     PermissionHandler.prototype.hasNotificationPermission = function(action, data, location){
          return this.hasPermission(action, "notifications", data, location);
     };
@@ -225,7 +233,7 @@ define([], function () {
         //return this.hasPermission(action, "asset-tags", data, location);
         return this.hasAnyAdminPermission();
     };
-    
+
     PermissionHandler.prototype.hasPermission = function(action, collection, data, location) {
         if( (this._isSelfService) && 
             (!this._useSelfService)) {
@@ -270,7 +278,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Modules
                     case "reserve":
-                        return this._useReservations;
+                        return this._canCreateReservations;
                     case "checkout":
                         return this._canCreateOrders;
                     case "seeOwnCustody":
@@ -318,7 +326,7 @@ define([], function () {
                     // Modules
                     // Modules
                     case "reserve":
-                        return this._useReservations;
+                        return this._canCreateReservations;
                     case "checkout":
                         return this._canCreateOrders;
                     case "seeOwnCustody":
@@ -394,13 +402,15 @@ define([], function () {
                     default:
                         return false;
                     
-                    // TODO: Add items to open reservation
-
                     // CRUD
                     case "create":
-                    case "read":
                     case "update":
                     case "delete":
+                        return this._canCreateReservations;
+
+                    case "read":
+                        return this._canReadReservations;
+
                     // Reservation specific actions
                     case "setFromToDate":
                     case "setCustomer":
@@ -417,6 +427,7 @@ define([], function () {
                     case "switchToOrder":
                     case "reserveAgain":
                     case "reserveRepeat":
+
                     // Generic actions
                     case "setFields":
                     case "setField":
@@ -426,12 +437,15 @@ define([], function () {
                     case "updateComment":
                     case "removeComment":
                     case "export":
-                        return this._useReservations;
+                        return this._canCreateReservations;
+
                     case "makeOrder":
                         return this._canCreateOrders;
+                        
                     case "archive":
                     case "undoArchive":
                         return this._useReservations && this._isRootOrAdmin;
+                    
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && this._canSetFlag;
@@ -475,6 +489,9 @@ define([], function () {
                         return this._isRootOrAdmin;
                     case "generateDocument":
                         return this._usePdf && this._isRootOrAdminOrUser;
+                    case "block":
+                    case "undoBlock":
+                        return this._canBlockContacts;
                 }
                 break;
             case "users":

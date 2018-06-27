@@ -111,6 +111,24 @@ define([
             (this.name==DEFAULTS.name));
     };
 
+     /**
+     * Checks if the Kit items is dirty
+     * @name Kit#isDirtyItems
+     * @returns {boolean}
+     * @override
+     */
+    Kit.prototype.isDirtyItems = function(){
+        var toItemArrayString = function(items){
+            items = items || [];
+
+            return items.map(function(it){ return it._id; }).sort().join(",");
+        };
+
+        var raw = this.raw || {};
+
+        return toItemArrayString(this.items) != toItemArrayString(raw.items);
+    }
+
     /**
      * Checks if the Kits is dirty and needs saving
      * @name Kit#isDirty
@@ -123,7 +141,7 @@ define([
             (this.raw)) {
             isDirty = this._isDirtyStringProperty("name");
         }
-        return isDirty;
+        return isDirty || this.isDirtyItems();
     };
 
     //

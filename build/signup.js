@@ -923,8 +923,6 @@ common_code = {
    * @return {Boolean} 
    */
   isValidDocQRCode: function (qrCode) {
-    if (typeof qrCode !== 'string')
-      return false;
     return qrCode && (qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null || qrCode.match(/^[a-z0-9]{8}$/i) != null);
   },
   /**
@@ -3821,6 +3819,44 @@ common_kit = function ($, itemHelpers) {
     return itemHelpers.getItemStatusCss(status);
   };
   /**
+   * getKitStatusIcon
+   *
+   * @memberOf common
+   * @name  common#getKitStatusIcon
+   * @method
+   * 
+   * @param  status
+   * @return {string}       
+   */
+  that.getKitStatusIcon = function (status) {
+    switch (status) {
+    case 'available':
+      return 'fa fa-check-circle';
+    case 'checkedout':
+      return 'fa fa-times-circle';
+    case 'await_checkout':
+      return 'fa fa-ellipsis-h';
+    case 'incomplete':
+      return 'fa fa-warning';
+    case 'empty':
+      return 'fa fa-ellipsis-h';
+    case 'in_transit':
+      return 'fa fa-truck';
+    case 'in_custody':
+      return 'fa fa-exchange';
+    case 'maintenance':
+      return 'fa fa-wrench';
+    case 'repair':
+      return 'fa fa-wrench';
+    case 'inspection':
+      return 'fa fa-stethoscope';
+    case 'expired':
+      return 'fa fa-bug';
+    default:
+      return '';
+    }
+  };
+  /**
    * getKitIds
    *
    * @memberOf common
@@ -3879,6 +3915,12 @@ common_contact = function (imageHelper, attachmentHelper) {
   };
   that.contactCanDelete = function (contact) {
     return !that.contactGetUserSync(contact);
+  };
+  that.contactCanBlock = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanUndoBlock = function (contact) {
+    return contact.status == 'blocked';
   };
   /**
   * getContactImageUrl

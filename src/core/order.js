@@ -265,6 +265,32 @@ define([
         return (this.status=="open") || (this.status=="closed");
     };
 
+    /**
+     * Checks of order due date can be extended 
+     * @param  {moment} due (optional)
+     * @param  {bool} skipRead
+     * @return {promise}
+     */
+    Order.prototype.canExtendCheckout = function(due) {
+        // We can only extend orders which are open
+        // and for which their due date will be
+        // at least 1 timeslot from now
+        var can = true;
+        if( (this.status!="open") ||
+            ((due) && 
+             (due.isBefore(this.getNextTimeSlot())))) {
+            can = false;
+        }
+
+        // Only orders with active contacts can be extended
+        if((this.contact) &&
+           (this.contact.status != "active")){
+            can = false;
+        }
+
+        return can;
+    };
+
     //
     // Base overrides
     //
@@ -717,22 +743,13 @@ define([
     };
 
     /**
-     * Checks of order due date can be extended to given date
-     * @param  {moment} due
+     * Checks of order due date can be extended 
+     * @param  {moment} due (optional)
      * @param  {bool} skipRead
      * @return {promise}
      */
     Order.prototype.canExtend = function(due) {
-        // We can only extend orders which are open
-        // and for which their due date will be
-        // at least 1 timeslot from now
-        var can = true;
-        if( (this.status!="open") ||
-            (due.isBefore(this.getNextTimeSlot()))) {
-            can = false;
-        }
-
-        return $.Deferred().resolve({ result: can });
+        return $.Deferred().resolve({ result: this.canExtendCheckout(due) });
     };
 
     /**

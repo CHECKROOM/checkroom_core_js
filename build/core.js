@@ -923,8 +923,6 @@ common_code = {
    * @return {Boolean} 
    */
   isValidDocQRCode: function (qrCode) {
-    if (typeof qrCode !== 'string')
-      return false;
     return qrCode && (qrCode.match(/^http:\/\/cheqroom\.com\/qr\/[a-z0-9]{8}$/i) != null || qrCode.match(/^[a-z0-9]{8}$/i) != null);
   },
   /**
@@ -3821,6 +3819,44 @@ common_kit = function ($, itemHelpers) {
     return itemHelpers.getItemStatusCss(status);
   };
   /**
+   * getKitStatusIcon
+   *
+   * @memberOf common
+   * @name  common#getKitStatusIcon
+   * @method
+   * 
+   * @param  status
+   * @return {string}       
+   */
+  that.getKitStatusIcon = function (status) {
+    switch (status) {
+    case 'available':
+      return 'fa fa-check-circle';
+    case 'checkedout':
+      return 'fa fa-times-circle';
+    case 'await_checkout':
+      return 'fa fa-ellipsis-h';
+    case 'incomplete':
+      return 'fa fa-warning';
+    case 'empty':
+      return 'fa fa-ellipsis-h';
+    case 'in_transit':
+      return 'fa fa-truck';
+    case 'in_custody':
+      return 'fa fa-exchange';
+    case 'maintenance':
+      return 'fa fa-wrench';
+    case 'repair':
+      return 'fa fa-wrench';
+    case 'inspection':
+      return 'fa fa-stethoscope';
+    case 'expired':
+      return 'fa fa-bug';
+    default:
+      return '';
+    }
+  };
+  /**
    * getKitIds
    *
    * @memberOf common
@@ -3879,6 +3915,12 @@ common_contact = function (imageHelper, attachmentHelper) {
   };
   that.contactCanDelete = function (contact) {
     return !that.contactGetUserSync(contact);
+  };
+  that.contactCanBlock = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanUndoBlock = function (contact) {
+    return contact.status == 'blocked';
   };
   /**
   * getContactImageUrl
@@ -7485,7 +7527,8 @@ Contact = function ($, Base, common, User, Helper) {
     status: 'active',
     user: {},
     kind: 'contact',
-    cover: ''
+    cover: '',
+    blocked: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7512,6 +7555,7 @@ Contact = function ($, Base, common, User, Helper) {
     this.user = spec.user || DEFAULTS.user;
     this.kind = spec.kind || DEFAULTS.kind;
     this.cover = spec.cover || DEFAULTS.cover;
+    this.blocked = spec.blocked || DEFAULTS.blocked;
   };
   Contact.prototype = new tmp();
   Contact.prototype.constructor = Contact;
@@ -7602,6 +7646,22 @@ Contact = function ($, Base, common, User, Helper) {
     return common.contactCanUndoArchive(this);
   };
   /**
+   * Checks if a contact can be blocked
+   * @name Contact#canBlock
+   * @returns {boolean}
+   */
+  Contact.prototype.canBlock = function () {
+    return common.contactCanBlock(this);
+  };
+  /**
+   * Checks if a contact can be unblocked 
+   * @name Contact#canUndoBlock
+   * @returns {boolean}
+   */
+  Contact.prototype.canUndoBlock = function () {
+    return common.contactCanUndoBlock(this);
+  };
+  /**
    * Checks if a contact can be deleted (based on status and link to user)
    * @name Contact#canDelete
    * @returns {boolean}
@@ -7632,6 +7692,34 @@ Contact = function ($, Base, common, User, Helper) {
     return this._doApiCall({
       method: 'undoArchive',
       params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Blocks a contact
+   * @name Contact#block
+   * @param message
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.block = function (message, skipRead) {
+    return this._doApiCall({
+      method: 'block',
+      params: { message: message },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unblock a contact
+   * @name Contact#undoBlock
+   * @param message
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.undoBlock = function (message, skipRead) {
+    return this._doApiCall({
+      method: 'undoBlock',
+      params: { message: message },
       skipRead: skipRead
     });
   };
@@ -7704,6 +7792,7 @@ Contact = function ($, Base, common, User, Helper) {
       that.status = data.status || DEFAULTS.status;
       that.user = data.user || DEFAULTS.user;
       that.kind = data.kind || DEFAULTS.kind;
+      that.blocked = data.blocked || DEFAULTS.blocked;
       var cover = data.cover || DEFAULTS.cover;
       that.cover = common.isImage(cover) ? cover : '';
       $.publish('contact.fromJson', data);
@@ -10076,6 +10165,22 @@ Kit = function ($, Base, common) {
     return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
   };
   /**
+   * Checks if the Kit items is dirty
+   * @name Kit#isDirtyItems
+   * @returns {boolean}
+   * @override
+   */
+  Kit.prototype.isDirtyItems = function () {
+    var toItemArrayString = function (items) {
+      items = items || [];
+      return items.map(function (it) {
+        return it._id;
+      }).sort().join(',');
+    };
+    var raw = this.raw || {};
+    return toItemArrayString(this.items) != toItemArrayString(raw.items);
+  };
+  /**
    * Checks if the Kits is dirty and needs saving
    * @name Kit#isDirty
    * @returns {boolean}
@@ -10086,7 +10191,7 @@ Kit = function ($, Base, common) {
     if (!isDirty && this.raw) {
       isDirty = this._isDirtyStringProperty('name');
     }
-    return isDirty;
+    return isDirty || this.isDirtyItems();
   };
   //
   // Business logic
@@ -12229,6 +12334,26 @@ Order = function ($, api, Transaction, Conflict, common) {
   Order.prototype.canGenerateDocument = function () {
     return this.status == 'open' || this.status == 'closed';
   };
+  /**
+   * Checks of order due date can be extended 
+   * @param  {moment} due (optional)
+   * @param  {bool} skipRead
+   * @return {promise}
+   */
+  Order.prototype.canExtendCheckout = function (due) {
+    // We can only extend orders which are open
+    // and for which their due date will be
+    // at least 1 timeslot from now
+    var can = true;
+    if (this.status != 'open' || due && due.isBefore(this.getNextTimeSlot())) {
+      can = false;
+    }
+    // Only orders with active contacts can be extended
+    if (this.contact && this.contact.status != 'active') {
+      can = false;
+    }
+    return can;
+  };
   //
   // Base overrides
   //
@@ -12622,20 +12747,13 @@ Order = function ($, api, Transaction, Conflict, common) {
     });
   };
   /**
-   * Checks of order due date can be extended to given date
-   * @param  {moment} due
+   * Checks of order due date can be extended 
+   * @param  {moment} due (optional)
    * @param  {bool} skipRead
    * @return {promise}
    */
   Order.prototype.canExtend = function (due) {
-    // We can only extend orders which are open
-    // and for which their due date will be
-    // at least 1 timeslot from now
-    var can = true;
-    if (this.status != 'open' || due.isBefore(this.getNextTimeSlot())) {
-      can = false;
-    }
-    return $.Deferred().resolve({ result: can });
+    return $.Deferred().resolve({ result: this.canExtendCheckout(due) });
   };
   /**
    * Extends order due date
@@ -12780,6 +12898,7 @@ PermissionHandler = function () {
     this._isRootOrAdmin = user.role == 'root' || user.role == 'admin';
     this._isRootOrAdminOrUser = user.role == 'root' || user.role == 'admin' || user.role == 'user';
     this._isSelfService = user.role == 'selfservice';
+    this._isBlockedContact = user.customer && user.customer.status == 'blocked';
     this._useWebhooks = limits.allowWebhooks && profile.useWebhooks;
     this._useOrders = limits.allowOrders && profile.useOrders;
     this._useReservations = limits.allowReservations && profile.useReservations;
@@ -12799,49 +12918,55 @@ PermissionHandler = function () {
     this._useReporting = limits.allowReporting && profile.useReporting;
     this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
     this._useNotifications = limits.allowNotifications && profile.useNotifications;
+    this._useBlockContacts = limits.allowBlockContacts && profile.useBlockContacts;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
     case 'selfservice':
-      this._canSetFlag = profile.selfServiceCanSetFlag;
-      this._canClearFlag = profile.selfServiceCanClearFlag;
+      this._canSetFlag = this._useFlags && profile.selfServiceCanSetFlag;
+      this._canClearFlag = this._useFlags && profile.selfServiceCanClearFlag;
       this._canSetLabel = profile.selfServiceCanSetLabel;
       this._canClearLabel = profile.selfServiceCanClearLabel;
       this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
-      this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
+      this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder && !this._isBlockedContact;
       this._canOrderConflict = this._useOrders && profile.selfServiceCanOrderConflict;
+      this._canCreateReservations = this._useReservations && profile.selfServiceCanReserve && !this._isBlockedContact;
+      this._canReadReservations = this._useReservations && profile.selfServiceCanReserve;
       this._canReservationConflict = this._useReservations && profile.selfServiceCanReservationConflict;
-      this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody;
+      this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody && !this._isBlockedContact;
       this._canReadOwnCustody = this._useCustody;
+      this._canBlockContacts = false;
       break;
     case 'user':
-      this._canSetFlag = profile.userCanSetFlag;
-      this._canClearFlag = profile.userCanClearFlag;
+      this._canSetFlag = this._useFlags && profile.userCanSetFlag;
+      this._canClearFlag = this._useFlags && profile.userCanClearFlag;
       this._canSetLabel = profile.userCanSetLabel;
       this._canClearLabel = profile.userCanClearLabel;
       this._canReadOrders = this._useOrders;
       this._canCreateOrders = this._useOrders;
       this._canOrderConflict = this._useOrders && profile.userCanOrderConflict;
+      this._canCreateReservations = this._useReservations;
+      this._canReadReservations = this._useReservations;
       this._canReservationConflict = this._useOrders && profile.userCanReservationConflict;
-      this._canTakeCustody = true;
+      this._canTakeCustody = this._useCustody;
       this._canReadOwnCustody = this._useCustody;
+      this._canBlockContacts = this._useBlockContacts && profile.userCanBlock;
       break;
     default:
-      this._canSetFlag = true;
-      this._canClearFlag = true;
+      this._canSetFlag = this._useFlags;
+      this._canClearFlag = this._useFlags;
       this._canSetLabel = true;
       this._canClearLabel = true;
       this._canReadOrders = this._useOrders;
       this._canCreateOrders = this._useOrders;
       this._canOrderConflict = this._useOrders && profile.adminCanOrderConflict;
+      this._canCreateReservations = this._useReservations;
+      this._canReadReservations = this._useReservations;
       this._canReservationConflict = this._useOrders && profile.adminCanReservationConflict;
-      this._canTakeCustody = true;
+      this._canTakeCustody = this._useCustody;
       this._canReadOwnCustody = this._useCustody;
+      this._canBlockContacts = this._useBlockContacts;
       break;
-    }
-    if (this._isSelfService) {
-      // Override some permissions for selfservice users
-      this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
     }
   };
   PermissionHandler.prototype.hasAnyAdminPermission = function () {
@@ -12893,6 +13018,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasContactReadOtherPermission = function (action, data, location) {
     return !this._isSelfService;
+  };
+  PermissionHandler.prototype.hasBlockContactsPermission = function (action, data, location) {
+    return this._useBlockContacts;
   };
   PermissionHandler.prototype.hasCheckoutPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'orders', data, location);
@@ -12982,7 +13110,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Modules
       case 'reserve':
-        return this._useReservations;
+        return this._canCreateReservations;
       case 'checkout':
         return this._canCreateOrders;
       case 'seeOwnCustody':
@@ -13030,7 +13158,7 @@ PermissionHandler = function () {
       // Modules
       // Modules
       case 'reserve':
-        return this._useReservations;
+        return this._canCreateReservations;
       case 'checkout':
         return this._canCreateOrders;
       case 'seeOwnCustody':
@@ -13103,12 +13231,13 @@ PermissionHandler = function () {
       switch (action) {
       default:
         return false;
-      // TODO: Add items to open reservation
       // CRUD
       case 'create':
-      case 'read':
       case 'update':
       case 'delete':
+        return this._canCreateReservations;
+      case 'read':
+        return this._canReadReservations;
       // Reservation specific actions
       case 'setFromToDate':
       case 'setCustomer':
@@ -13134,7 +13263,7 @@ PermissionHandler = function () {
       case 'updateComment':
       case 'removeComment':
       case 'export':
-        return this._useReservations;
+        return this._canCreateReservations;
       case 'makeOrder':
         return this._canCreateOrders;
       case 'archive':
@@ -13183,6 +13312,9 @@ PermissionHandler = function () {
         return this._isRootOrAdmin;
       case 'generateDocument':
         return this._usePdf && this._isRootOrAdminOrUser;
+      case 'block':
+      case 'undoBlock':
+        return this._canBlockContacts;
       }
       break;
     case 'users':
@@ -13494,7 +13626,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canReserveAgain = function () {
-    return this.status == 'open' || (this.status == 'closed' || this.status == 'cancelled');
+    return (this.status == 'open' || this.status == 'closed' || this.status == 'cancelled') && (this.contact && this.contact.status == 'active');
   };
   /**
    * Checks if the reservation can be into recurring reservations (based on status)
@@ -13503,7 +13635,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canReserveRepeat = function () {
-    return this.status == 'open' || this.status == 'closed';
+    return (this.status == 'open' || this.status == 'closed') && (this.contact && this.contact.status == 'active');
   };
   /**
    * Checks if we can generate a document for this reservation (based on status)

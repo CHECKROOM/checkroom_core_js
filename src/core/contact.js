@@ -17,7 +17,8 @@ define([
         status: "active",
         user: {},
         kind: "contact",
-        cover: ""
+        cover: "",
+        blocked: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -47,6 +48,7 @@ define([
         this.user = spec.user || DEFAULTS.user;
         this.kind = spec.kind || DEFAULTS.kind;
         this.cover = spec.cover || DEFAULTS.cover;
+        this.blocked = spec.blocked || DEFAULTS.blocked;
     };
 
     Contact.prototype = new tmp();
@@ -148,6 +150,24 @@ define([
     };
 
     /**
+     * Checks if a contact can be blocked
+     * @name Contact#canBlock
+     * @returns {boolean}
+     */
+    Contact.prototype.canBlock = function() {
+        return common.contactCanBlock(this);
+    };
+
+    /**
+     * Checks if a contact can be unblocked 
+     * @name Contact#canUndoBlock
+     * @returns {boolean}
+     */
+    Contact.prototype.canUndoBlock = function() {
+        return common.contactCanUndoBlock(this);
+    };
+
+    /**
      * Checks if a contact can be deleted (based on status and link to user)
      * @name Contact#canDelete
      * @returns {boolean}
@@ -174,6 +194,28 @@ define([
      */
     Contact.prototype.undoArchive = function(skipRead) {
         return this._doApiCall({method: "undoArchive", params: {}, skipRead: skipRead});
+    };
+
+    /**
+     * Blocks a contact
+     * @name Contact#block
+     * @param message
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.block = function(message, skipRead) {
+        return this._doApiCall({method: "block", params: { message: message }, skipRead: skipRead});
+    };
+
+    /**
+     * Unblock a contact
+     * @name Contact#undoBlock
+     * @param message
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.undoBlock = function(message, skipRead) {
+        return this._doApiCall({method: "undoBlock", params: { message: message }, skipRead: skipRead});
     };
 
     /**
@@ -250,6 +292,7 @@ define([
                 that.status = data.status || DEFAULTS.status;
                 that.user = data.user || DEFAULTS.user;
                 that.kind = data.kind || DEFAULTS.kind;
+                that.blocked = data.blocked || DEFAULTS.blocked;                
 
                 var cover = data.cover || DEFAULTS.cover;
                 that.cover = common.isImage(cover)?cover:"";

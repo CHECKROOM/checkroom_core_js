@@ -146,6 +146,33 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
     };
 
     /**
+     * getKitStatusIcon
+     *
+     * @memberOf common
+     * @name  common#getKitStatusIcon
+     * @method
+     * 
+     * @param  status
+     * @return {string}       
+     */
+    that.getKitStatusIcon = function(status) {
+        switch(status) {
+            case 'available': return 'fa fa-check-circle';
+            case 'checkedout': return 'fa fa-times-circle';
+            case 'await_checkout': return 'fa fa-ellipsis-h';
+            case 'incomplete': return 'fa fa-warning';
+            case 'empty': return 'fa fa-ellipsis-h';
+            case 'in_transit': return 'fa fa-truck';
+            case 'in_custody': return 'fa fa-exchange';
+            case 'maintenance': return 'fa fa-wrench';
+            case 'repair': return 'fa fa-wrench';
+            case 'inspection': return 'fa fa-stethoscope';
+            case 'expired': return 'fa fa-bug';
+            default: return '';
+        }
+    };
+
+    /**
      * getKitIds
      *
      * @memberOf common

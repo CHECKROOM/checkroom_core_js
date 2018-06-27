@@ -244,7 +244,11 @@ define([
      * @returns {boolean}
      */
     Reservation.prototype.canReserveAgain = function() {
-        return (this.status == "open") || (this.status == "closed" || (this.status == "cancelled"));
+        return ((this.status == "open") || 
+                (this.status == "closed") || 
+                (this.status == "cancelled")) &&
+               ((this.contact) &&
+                (this.contact.status == "active"));
     };
 
     /**
@@ -254,7 +258,10 @@ define([
      * @returns {boolean}
      */
     Reservation.prototype.canReserveRepeat = function() {
-        return (this.status == "open") || (this.status == "closed");
+        return ((this.status == "open") || 
+                (this.status == "closed")) &&
+               ((this.contact) &&
+                (this.contact.status == "active"));
     };
 
     /**

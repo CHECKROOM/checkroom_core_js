@@ -882,7 +882,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^\S*([A-Z0-9 \-]{4,22})\S*$/i) != null;
+    return barCode && barCode.match(/^([A-Z0-9\s\-]{4,22})$/i) != null;
   },
   /**
    * isValidQRCode
@@ -3819,6 +3819,44 @@ common_kit = function ($, itemHelpers) {
     return itemHelpers.getItemStatusCss(status);
   };
   /**
+   * getKitStatusIcon
+   *
+   * @memberOf common
+   * @name  common#getKitStatusIcon
+   * @method
+   * 
+   * @param  status
+   * @return {string}       
+   */
+  that.getKitStatusIcon = function (status) {
+    switch (status) {
+    case 'available':
+      return 'fa fa-check-circle';
+    case 'checkedout':
+      return 'fa fa-times-circle';
+    case 'await_checkout':
+      return 'fa fa-ellipsis-h';
+    case 'incomplete':
+      return 'fa fa-warning';
+    case 'empty':
+      return 'fa fa-ellipsis-h';
+    case 'in_transit':
+      return 'fa fa-truck';
+    case 'in_custody':
+      return 'fa fa-exchange';
+    case 'maintenance':
+      return 'fa fa-wrench';
+    case 'repair':
+      return 'fa fa-wrench';
+    case 'inspection':
+      return 'fa fa-stethoscope';
+    case 'expired':
+      return 'fa fa-bug';
+    default:
+      return '';
+    }
+  };
+  /**
    * getKitIds
    *
    * @memberOf common
@@ -3844,7 +3882,7 @@ common_kit = function ($, itemHelpers) {
   };
   return that;
 }(jquery, common_item);
-common_contact = function (imageHelper) {
+common_contact = function (imageHelper, attachmentHelper) {
   var that = {};
   that.contactGetUserId = function (contact) {
     if (contact.user) {
@@ -3878,6 +3916,12 @@ common_contact = function (imageHelper) {
   that.contactCanDelete = function (contact) {
     return !that.contactGetUserSync(contact);
   };
+  that.contactCanBlock = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanUndoBlock = function (contact) {
+    return contact.status == 'blocked';
+  };
   /**
   * getContactImageUrl
   *
@@ -3893,8 +3937,12 @@ common_contact = function (imageHelper) {
     if (contact.user && contact.user.picture)
       return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
     // Show contact image
-    if (contact.cover)
-      return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+    if (contact.cover) {
+      // Bugfix don't show pdf preview images as contact image
+      if (attachmentHelper.isImage(contact.cover)) {
+        return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+      }
+    }
     // Show maintenance avatar?
     if (contact.kind == 'maintenance')
       return imageHelper.getMaintenanceAvatar(size);
@@ -3925,7 +3973,7 @@ common_contact = function (imageHelper) {
     return imageHelper.getAvatarInitial(contact.name, size);
   };
   return that;
-}(common_image);
+}(common_image, common_attachment);
 common_user = function (imageHelper) {
   return {
     /**

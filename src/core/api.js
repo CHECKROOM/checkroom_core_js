@@ -363,23 +363,26 @@ define([
      * @param method
      * @param params
      * @param timeOut
-     * @param opt
+     * @param usePost
      * @returns {*}
      */
-    api.ApiAnonymous.prototype.call = function(method, params, timeOut, opt) {
+    api.ApiAnonymous.prototype.call = function(method, params, timeOut, usePost) {
         system.log('ApiAnonymous: call ' + method);
         if (this.version) {
             params = params || {};
             params["_v"] = this.version;
         }
 
-        var url =
-            this.urlApi +
-            '/' +
-            method +
-            '?' +
-            $.param(this.ajax._prepareDict(params));
-        return this.ajax.get(url, timeOut, opt);
+        var cmd = "call." + method;
+        var url = this.urlApi + '/' + method; 
+        var getUrl = url + "?" + $.param(this.ajax._prepareDict(params));
+
+        if( (usePost) ||
+            (getUrl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this.ajax.post(url, params, timeOut);
+        } else {
+            return this.ajax.get(getUrl, timeOut);
+        }
     };
 
     /**
@@ -388,12 +391,12 @@ define([
      * @name ApiAnonymous#longCall
      * @param method
      * @param params
-     * @param opt
+     * @param usePost
      * @returns {*}
      */
-    api.ApiAnonymous.prototype.longCall = function(method, params, opt) {
+    api.ApiAnonymous.prototype.longCall = function(method, params, usePost) {
         system.log('ApiAnonymous: longCall ' + method);
-        return this.call(method, params, 60000, opt);
+        return this.call(method, params, 60000, usePost);
     };
 
     //*************

@@ -47,7 +47,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\nfactory($, moment);\n}\n}(function (jquery, moment) {",
+                                "start":"(function (root, factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\n root.cheqroomCore = factory($, moment);\n}\n}(this, function (jquery, moment) {",
                                 "end": '\nreturn core;\n}))'
                             },
                         }));

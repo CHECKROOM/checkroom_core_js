@@ -93,6 +93,44 @@ define([], function () {
         }
     };
 
+    // 
+    // Module helpers
+    // 
+    PermissionHandler.prototype.canUseItemCustody = function(){
+        return this.limits.allowCustody;    
+    }
+    PermissionHandler.prototype.canUseItemDepreciation = function(){
+        return this.limits.allowDepreciations;
+    };
+    PermissionHandler.prototype.canUseReporting = function(){
+        return this.limits.allowReporting;
+    };
+    PermissionHandler.prototype.canUseWebhooks = function(){
+        return this.limits.allowWebhooks;
+    };
+    PermissionHandler.prototype.canUseUserSync = function(){
+        return this.limits.allowUserSync;
+    };
+    PermissionHandler.prototype.canUseRestrictLocations = function(){
+        return this.limits.allowRestrictLocations;
+    };
+    PermissionHandler.prototype.canUseBlockContacts = function(){
+        return this.limits.allowBlockContacts;
+    };
+    PermissionHandler.prototype.canUseBusinessHours = function(){
+        return this.limits.allowBusinessHours;
+    };
+
+    //
+    // Permission helpers
+    //
+
+    // Specific web app permission method to check if we need to show module
+    // even if user has no permission (upgrade page)
+    PermissionHandler.prototype.hasUpgradePermission = function(){
+        return this._isOwner || this._isRootOrAdmin;
+    }
+
     PermissionHandler.prototype.hasAnyAdminPermission = function() {
         return  this.hasPermission("create", "locations") ||
                 this.hasPermission("create", "categories") ||

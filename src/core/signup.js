@@ -237,7 +237,7 @@ define([
                     subscription: $.trim(that.plan),
                     company: $.trim(that.company),
                     groupId: that.getGroupId()
-                })
+                }, true)
                     .then(function(data) {
                         return afterCreate(data);
                     });
@@ -261,7 +261,7 @@ define([
                     load_sample: false,
                     owner_customer: true,
                     maintenance_customer: true
-                })
+                }, true)
                     .then(function(user) {
                         if(storeInLocalStorage){
                             // Already store the login token in localStorage

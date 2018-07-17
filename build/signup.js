@@ -699,6 +699,33 @@ api = function ($, moment) {
     return url;
   };
   /**
+   * Export objects in the collection
+   * @method
+   * @name ApiDataSource#export
+   * @param params
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @param mimeType
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.export = function (params, fields, limit, skip, sort, mimeType) {
+    system.log('ApiDataSource: ' + this.collection + ': export ' + params);
+    var cmd = 'export';
+    var url = this.exportUrl(params, fields, limit, skip, sort, mimeType);
+    return this._ajaxGet(cmd, url);
+  };
+  api.ApiDataSource.prototype.exportUrl = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'call/export';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    url += '?' + this.getParams(p);
+    return url;
+  };
+  /**
    * Calls a certain method on an object or on the entire collection
    * @method
    * @name ApiDataSource#call

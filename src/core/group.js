@@ -497,7 +497,7 @@ define([
 
         return this._doApiCall({
             method: "setBusinessHours", 
-            params: { businessHours: businessHours }, 
+            params: { businessHours: businessHours, _fields: this._fields }, 
             skipRead: skipRead, 
             usePost: true
         });

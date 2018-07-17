@@ -387,17 +387,23 @@ api = function ($, moment) {
    * @param method
    * @param params
    * @param timeOut
-   * @param opt
+   * @param usePost
    * @returns {*}
    */
-  api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
+  api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
     system.log('ApiAnonymous: call ' + method);
     if (this.version) {
       params = params || {};
       params['_v'] = this.version;
     }
-    var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
-    return this.ajax.get(url, timeOut, opt);
+    var cmd = 'call.' + method;
+    var url = this.urlApi + '/' + method;
+    var getUrl = url + '?' + $.param(this.ajax._prepareDict(params));
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this.ajax.post(url, params, timeOut);
+    } else {
+      return this.ajax.get(getUrl, timeOut);
+    }
   };
   /**
    * Makes a long call (timeout 60s) to the API which doesn't require a token
@@ -405,12 +411,12 @@ api = function ($, moment) {
    * @name ApiAnonymous#longCall
    * @param method
    * @param params
-   * @param opt
+   * @param usePost
    * @returns {*}
    */
-  api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
+  api.ApiAnonymous.prototype.longCall = function (method, params, usePost) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 60000, opt);
+    return this.call(method, params, 60000, usePost);
   };
   //*************
   // ApiDataSource
@@ -685,6 +691,33 @@ api = function ($, moment) {
   };
   api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
     var url = this.getBaseUrl() + 'search';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    url += '?' + this.getParams(p);
+    return url;
+  };
+  /**
+   * Export objects in the collection
+   * @method
+   * @name ApiDataSource#export
+   * @param params
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @param mimeType
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.export = function (params, fields, limit, skip, sort, mimeType) {
+    system.log('ApiDataSource: ' + this.collection + ': export ' + params);
+    var cmd = 'export';
+    var url = this.exportUrl(params, fields, limit, skip, sort, mimeType);
+    return this._ajaxGet(cmd, url);
+  };
+  api.ApiDataSource.prototype.exportUrl = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'call/export';
     var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
     if (mimeType != null && mimeType.length > 0) {
       p['mimeType'] = mimeType;
@@ -5086,7 +5119,7 @@ dateHelper = function ($, moment) {
   return DateHelper;
 }(jquery, moment);
 signup = function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
-  var DEFAULT_PLAN = '1215_cr_120';
+  var DEFAULT_PLAN = 'cr_1802_professional_yearly_usd_500';
   var DEFAULT_PERIOD = 'yearly';
   var DEFAULT_SOURCE = 'attempt';
   var DEFAULT_KIND = 'trial';
@@ -5277,10 +5310,10 @@ signup = function ($, jstz, api, settings, Field, dateHelper, inflection, valida
       return that.ds.longCall('createAccount', {
         kind: DEFAULT_KIND,
         period: $.trim(that.period),
-        plan: $.trim(that.plan),
+        subscription: $.trim(that.plan),
         company: $.trim(that.company),
         groupId: that.getGroupId()
-      }).then(function (data) {
+      }, true).then(function (data) {
         return afterCreate(data);
       });
     });
@@ -5298,7 +5331,7 @@ signup = function ($, jstz, api, settings, Field, dateHelper, inflection, valida
         load_sample: false,
         owner_customer: true,
         maintenance_customer: true
-      }).then(function (user) {
+      }, true).then(function (user) {
         if (storeInLocalStorage) {
           // Already store the login token in localStorage
           var tmpUser = new api.ApiUser({

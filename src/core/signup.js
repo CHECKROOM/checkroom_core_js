@@ -16,7 +16,7 @@ define([
     "common/clientStorage",
     "common/utils"], function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
 
-    var DEFAULT_PLAN = "1215_cr_120";
+    var DEFAULT_PLAN = "cr_1802_professional_yearly_usd_500";
     var DEFAULT_PERIOD = "yearly";
     var DEFAULT_SOURCE = "attempt";
     var DEFAULT_KIND = "trial";
@@ -234,10 +234,10 @@ define([
                 return that.ds.longCall("createAccount", {
                     kind: DEFAULT_KIND,
                     period: $.trim(that.period),
-                    plan: $.trim(that.plan),
+                    subscription: $.trim(that.plan),
                     company: $.trim(that.company),
                     groupId: that.getGroupId()
-                })
+                }, true)
                     .then(function(data) {
                         return afterCreate(data);
                     });
@@ -261,7 +261,7 @@ define([
                     load_sample: false,
                     owner_customer: true,
                     maintenance_customer: true
-                })
+                }, true)
                     .then(function(user) {
                         if(storeInLocalStorage){
                             // Already store the login token in localStorage

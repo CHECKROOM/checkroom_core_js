@@ -1,10 +1,10 @@
-(function (factory) {
+(function (root, factory) {
 if (typeof define === 'function' && define.amd) {
 define(['jquery', 'moment'], factory);
 } else {
-factory($, moment);
+ root.cheqroomCore = factory($, moment);
 }
-}(function (jquery, moment) {/**
+}(this, function (jquery, moment) {/**
  * Provides the classes needed to communicate with the CHECKROOM API
  * @module api
  * @namespace api
@@ -387,17 +387,23 @@ api = function ($, moment) {
    * @param method
    * @param params
    * @param timeOut
-   * @param opt
+   * @param usePost
    * @returns {*}
    */
-  api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
+  api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
     system.log('ApiAnonymous: call ' + method);
     if (this.version) {
       params = params || {};
       params['_v'] = this.version;
     }
-    var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
-    return this.ajax.get(url, timeOut, opt);
+    var cmd = 'call.' + method;
+    var url = this.urlApi + '/' + method;
+    var getUrl = url + '?' + $.param(this.ajax._prepareDict(params));
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this.ajax.post(url, params, timeOut);
+    } else {
+      return this.ajax.get(getUrl, timeOut);
+    }
   };
   /**
    * Makes a long call (timeout 60s) to the API which doesn't require a token
@@ -405,12 +411,12 @@ api = function ($, moment) {
    * @name ApiAnonymous#longCall
    * @param method
    * @param params
-   * @param opt
+   * @param usePost
    * @returns {*}
    */
-  api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
+  api.ApiAnonymous.prototype.longCall = function (method, params, usePost) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 60000, opt);
+    return this.call(method, params, 60000, usePost);
   };
   //*************
   // ApiDataSource
@@ -685,6 +691,33 @@ api = function ($, moment) {
   };
   api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
     var url = this.getBaseUrl() + 'search';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    url += '?' + this.getParams(p);
+    return url;
+  };
+  /**
+   * Export objects in the collection
+   * @method
+   * @name ApiDataSource#export
+   * @param params
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @param mimeType
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.export = function (params, fields, limit, skip, sort, mimeType) {
+    system.log('ApiDataSource: ' + this.collection + ': export ' + params);
+    var cmd = 'export';
+    var url = this.exportUrl(params, fields, limit, skip, sort, mimeType);
+    return this._ajaxGet(cmd, url);
+  };
+  api.ApiDataSource.prototype.exportUrl = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'call/export';
     var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
     if (mimeType != null && mimeType.length > 0) {
       p['mimeType'] = mimeType;
@@ -9163,7 +9196,10 @@ Group = function ($, common, api, Document) {
     });
     return this._doApiCall({
       method: 'setBusinessHours',
-      params: { businessHours: businessHours },
+      params: {
+        businessHours: businessHours,
+        _fields: this._fields
+      },
       skipRead: skipRead,
       usePost: true
     });
@@ -12968,6 +13004,41 @@ PermissionHandler = function () {
       this._canBlockContacts = this._useBlockContacts;
       break;
     }
+  };
+  // 
+  // Module helpers
+  // 
+  PermissionHandler.prototype.canUseItemCustody = function () {
+    return this.limits.allowCustody;
+  };
+  PermissionHandler.prototype.canUseItemDepreciation = function () {
+    return this.limits.allowDepreciations;
+  };
+  PermissionHandler.prototype.canUseReporting = function () {
+    return this.limits.allowReporting;
+  };
+  PermissionHandler.prototype.canUseWebhooks = function () {
+    return this.limits.allowWebhooks;
+  };
+  PermissionHandler.prototype.canUseUserSync = function () {
+    return this.limits.allowUserSync;
+  };
+  PermissionHandler.prototype.canUseRestrictLocations = function () {
+    return this.limits.allowRestrictLocations;
+  };
+  PermissionHandler.prototype.canUseBlockContacts = function () {
+    return this.limits.allowBlockContacts;
+  };
+  PermissionHandler.prototype.canUseBusinessHours = function () {
+    return this.limits.allowBusinessHours;
+  };
+  //
+  // Permission helpers
+  //
+  // Specific web app permission method to check if we need to show module
+  // even if user has no permission (upgrade page)
+  PermissionHandler.prototype.hasUpgradePermission = function () {
+    return this._isOwner || this._isRootOrAdmin;
   };
   PermissionHandler.prototype.hasAnyAdminPermission = function () {
     return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs');

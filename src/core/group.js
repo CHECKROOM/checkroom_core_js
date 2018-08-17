@@ -340,14 +340,15 @@ define([
      * @param shipping
      * @returns {promise}
      */
-    Group.prototype.buyProducts = function(listOfProductQtyTuples, shipping) {
+    Group.prototype.buyProducts = function(listOfProductQtyTuples, shipping, coupon) {
         return this._doApiCall({
             pk: this.id,
             method: "buyProducts",
             skipRead: true,
             params: {
                 products: listOfProductQtyTuples,
-                shipping: shipping
+                shipping: shipping,
+                coupon: coupon
             }
         });
     };

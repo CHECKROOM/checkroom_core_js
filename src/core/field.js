@@ -72,6 +72,9 @@ define(['jquery', 'common'], /** Field */ function ($, common) {
                 if(this.editor == "url"){
                     return common.isValidURL(value);
                 }
+                if(this.editor == "number"){
+                    return common.isNumeric(value);
+                }
 
                 return value != "";
             default:

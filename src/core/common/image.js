@@ -206,7 +206,7 @@ define(['jquery'], function ($) {
          */
         getImageCDNUrl: function(settings, groupId, attachmentId, size) {
              // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-            var url = "https://cheqroom-cdn.s3.amazonaws.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
+            var url = "https://assets.cheqroomcdn.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
             if( (size) &&
                 (size.length>0)) {
                 var parts = url.split('.');

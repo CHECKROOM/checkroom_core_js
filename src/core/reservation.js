@@ -52,7 +52,7 @@ define([
     };
 
     Reservation.prototype.getMinDateTo = function() {
-        return this.getNextTimeSlot(this.from);
+        return this.getNextTimeSlot(this.from && this.from.isBefore(this.getNowRounded())?null:this.from);
     };
 
     //

@@ -1900,7 +1900,7 @@ common_image = function ($) {
      */
     getImageCDNUrl: function (settings, groupId, attachmentId, size) {
       // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-      var url = 'https://cheqroom-cdn.s3.amazonaws.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+      var url = 'https://assets.cheqroomcdn.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
       if (size && size.length > 0) {
         var parts = url.split('.');
         var ext = attachmentId.indexOf('.') != -1 ? parts.pop() : '';
@@ -3324,7 +3324,7 @@ common_validation = function (moment) {
      */
     isValidURL: function (url) {
       // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-      var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
+      var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
       return re.test(url);
     },
     /**
@@ -3350,11 +3350,11 @@ common_validation = function (moment) {
      * @return {Boolean}    
      */
     isNumeric: function (value, onlyInteger) {
-      var isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+      var isNumeric = $.isNumeric(value);
       if (onlyInteger) {
-        return '' + value === '' + parseInt(value);
+        return (value ^ 0) === Number(value);
       }
-      return isNumeric;
+      return $.isNumeric(value);
     },
     /**
      * isValidDate
@@ -3365,6 +3365,10 @@ common_validation = function (moment) {
      * @return {Boolean}    
      */
     isValidDate: function (value) {
+      // make sure numbers are parsed as a number
+      if (!isNaN(value)) {
+        value = parseInt(value);
+      }
       return moment(value).isValid();
     }
   };
@@ -3550,6 +3554,36 @@ common_utils = function ($) {
       friendlyKind = 'dropdown list';
     }
     return friendlyKind;
+  };
+  /**
+   * arrayToCSV
+   * https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
+   * @param  {array} csv      
+   * @param  {[type]} filename 
+   */
+  utils.arrayToCSV = function (csv, filename) {
+    var csvFile;
+    var downloadLink;
+    // CSV file
+    csvFile = new Blob([csv], { type: 'text/csv' });
+    // BUGFIX IE Access is denied.
+    // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(csvFile, filename);
+    } else {
+      // Download link
+      downloadLink = window.document.createElement('a');
+      // File name
+      downloadLink.download = filename;
+      // Create a link to the file
+      downloadLink.href = window.URL.createObjectURL(csvFile);
+      // Hide download link
+      downloadLink.style.display = 'none';
+      // Add the link to DOM
+      window.document.body.appendChild(downloadLink);
+      // Click download link
+      downloadLink.click();
+    }
   };
   return utils;
 }(jquery);
@@ -5406,6 +5440,9 @@ field = function ($, common) {
       }
       if (this.editor == 'url') {
         return common.isValidURL(value);
+      }
+      if (this.editor == 'number') {
+        return common.isNumeric(value);
       }
       return value != '';
     default:
@@ -9059,14 +9096,15 @@ Group = function ($, common, api, Document) {
    * @param shipping
    * @returns {promise}
    */
-  Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping) {
+  Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping, coupon) {
     return this._doApiCall({
       pk: this.id,
       method: 'buyProducts',
       skipRead: true,
       params: {
         products: listOfProductQtyTuples,
-        shipping: shipping
+        shipping: shipping,
+        coupon: coupon
       }
     });
   };
@@ -12467,7 +12505,12 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @private
    */
   Order.prototype._getServerConflicts = function (items, fromDate, dueDate, orderId, reservationId) {
-    var conflicts = [], kind = '', transItem = null, itemIds = common.getItemIds(items);
+    var that = this;
+    var conflicts = [], kind = '', transItem = null, itemIds = common.getItemIds(items.filter(function (item) {
+        // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+        // Don't want to show conflicts for items that arn't part of the order anymore
+        return item.order == that.id;
+      }));
     // Get the availabilities for these items
     return this.dsItems.call(null, 'getAvailabilities', {
       items: itemIds,
@@ -13538,7 +13581,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this.getNextTimeSlot();
   };
   Reservation.prototype.getMinDateTo = function () {
-    return this.getNextTimeSlot(this.from);
+    return this.getNextTimeSlot(this.from && this.from.isBefore(this.getNowRounded()) ? null : this.from);
   };
   //
   // Helpers
@@ -16590,6 +16633,9 @@ Field = function ($, common) {
       }
       if (this.editor == 'url') {
         return common.isValidURL(value);
+      }
+      if (this.editor == 'number') {
+        return common.isNumeric(value);
       }
       return value != '';
     default:

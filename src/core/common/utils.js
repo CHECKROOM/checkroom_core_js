@@ -214,6 +214,43 @@ define(['jquery'], function ($) {
         return friendlyKind;
      };
 
-     return utils;
+    /**
+     * arrayToCSV
+     * https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
+     * @param  {array} csv      
+     * @param  {[type]} filename 
+     */
+    utils.arrayToCSV = function(csv, filename){
+        var csvFile;
+        var downloadLink;
 
+        // CSV file
+        csvFile = new Blob([csv], {type: "text/csv"});
+
+        // BUGFIX IE Access is denied.
+        // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+            window.navigator.msSaveOrOpenBlob(csvFile, filename);
+        } else {
+            // Download link
+            downloadLink = window.document.createElement("a");
+
+            // File name
+            downloadLink.download = filename;
+
+            // Create a link to the file
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+
+            // Hide download link
+            downloadLink.style.display = "none";
+
+            // Add the link to DOM
+            window.document.body.appendChild(downloadLink);
+
+            // Click download link
+            downloadLink.click();
+        }
+    }
+
+    return utils;
 });

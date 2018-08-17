@@ -388,10 +388,15 @@ define([
      * @private
      */
     Order.prototype._getServerConflicts = function(items, fromDate, dueDate, orderId, reservationId) {
+        var that = this;
         var conflicts = [],
             kind = "",
             transItem = null,
-            itemIds = common.getItemIds(items);
+            itemIds = common.getItemIds(items.filter(function(item){
+                // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+                // Don't want to show conflicts for items that arn't part of the order anymore
+                return (item.order == that.id);
+            }));
 
         // Get the availabilities for these items
         return this.dsItems.call(null, "getAvailabilities", {

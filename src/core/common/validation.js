@@ -54,7 +54,7 @@ define(['moment'], function (moment) {
          */
         isValidURL : function(url) {
             // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-            var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
+            var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
             return re.test(url);
         },
         /**
@@ -80,13 +80,13 @@ define(['moment'], function (moment) {
          * @return {Boolean}    
          */
         isNumeric: function(value, onlyInteger){
-            var isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+            var isNumeric = $.isNumeric(value);
 
             if(onlyInteger){
-                return '' + value === '' + parseInt(value);
+                return (value ^ 0) === Number(value);
             }
 
-            return isNumeric;
+            return $.isNumeric(value);
         },
         /**
          * isValidDate
@@ -97,6 +97,11 @@ define(['moment'], function (moment) {
          * @return {Boolean}    
          */
         isValidDate: function(value){
+            // make sure numbers are parsed as a number
+            if(!isNaN(value)){
+                value = parseInt(value);
+            }
+
             return moment(value).isValid();
         }
     };

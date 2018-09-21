@@ -29,7 +29,8 @@ define([
         reservationLabels: [],
         orderLabels: [],
         businessHours: [],
-        cancelled: null
+        cancelled: null,
+        calendarTemplate: '{{number}}: {{name_or_summary}} - {{contact.name}}'
     };
 
     // Allow overriding the ctor during inheritance
@@ -58,6 +59,7 @@ define([
      * @property {array} reservationLabels  the groups reservation labels
      * @property {array} orderLabels        the groups order labels
      * @property {array} businessHours      the groups business hours
+     * @property {string} calendarTemplate  the group calendar event title template
      * @constructor
      * @extends Document
      */
@@ -82,6 +84,7 @@ define([
         this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
         this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
         this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
+        this.calendarTemplate = spec.calendarTemplate || DEFAULTS.calendarTemplate;
     };
 
     Group.prototype = new tmp();
@@ -507,6 +510,9 @@ define([
     /**
      * getDefaultBusinessHours: in iso weekdays
      * @return {array}
+     * setCalendarTemplate
+     * @param {string} template 
+     * @param {string} kind      
      */
     Group.prototype.getDefaultBusinessHours = function(){
         return [
@@ -516,7 +522,52 @@ define([
             { isoWeekday: 4, openTime: 540, closeTime: 1020},
             { isoWeekday: 5, openTime: 540, closeTime: 1020}
         ];
-    }
+    };
+
+    /**
+     * setCalendarTemplate
+     * @param {string} template 
+     * @param {string} kind      
+     */
+    Group.prototype.setCalendarTemplate = function(template, kind){
+        return this._doApiCall({
+            method: "setCalendarTemplate", 
+            params: { template: template, kind: kind }, 
+            skipRead: true,
+            usePost: true
+        });
+    };
+
+    /**
+     * setCalendarTemplate      
+     */
+    Group.prototype.clearCalendarTemplate = function(){
+        return this._doApiCall({
+            method: "clearCalendarTemplate",
+            skipRead: true
+        });
+    };
+
+    /**
+     * getCalendarTemplatePreview
+     * @param {string} template 
+     * @param {string} kind     
+     */
+    Group.prototype.getCalendarTemplatePreview = function(template, kind){
+        return this._doApiCall({
+            method: "getCalendarTemplatePreview",
+            params: { template: template, kind: kind }, 
+            skipRead: true,
+            usePost: true
+        });
+    };
+
+    /**
+     * getDefaultCalendarTemplate
+     */
+    Group.prototype.getDefaultCalendarTemplate = function(){
+        return DEFAULTS.calendarTemplate;
+    };
 
     //
     // Specific validators
@@ -571,6 +622,7 @@ define([
                 that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
                 that.cancelled = data.cancelled || DEFAULTS.cancelled;
                 that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
+                that.calendarTemplate = data.calendarTemplate || DEFAULTS.calendarTemplate;
 
                 return that._fromColorLabelsJson(data, options).then(function(data){
                     return that._fromBusinessHoursJson(data, options);

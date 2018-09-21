@@ -323,8 +323,9 @@ define([], function () {
                         return this._canReadOwnCustody;
                     case "takeCustody":
                     case "releaseCustody":
-                        return this._canTakeCustody;
                     case "transferCustody":
+                        return this._canTakeCustody;
+                    case "giveCustody":
                         return this._canTakeCustody && this._isRootOrAdmin;
                 }
                 break;
@@ -371,8 +372,8 @@ define([], function () {
                         return this._canReadOwnCustody;
                     case "takeCustody":
                     case "releaseCustody":
-                        return this._canTakeCustody;
                     case "transferCustody":
+                        return this._canTakeCustody;
                     case "giveCustody":
                         return this._canTakeCustody && this._isRootOrAdmin;
                 }

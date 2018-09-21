@@ -3311,7 +3311,7 @@ common_validation = function (moment) {
       if (isnum) {
         return true;
       }
-      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){7,20}(( x| ext)\d{1,5}){0,1}$/);
       return m != null && m.length > 0;
     },
     /**
@@ -3552,6 +3552,9 @@ common_utils = function ($) {
     }
     if (kind == 'select') {
       friendlyKind = 'dropdown list';
+    }
+    if (kind == 'number') {
+      friendlyKind = 'numeric';
     }
     return friendlyKind;
   };

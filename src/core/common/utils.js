@@ -211,6 +211,10 @@ define(['jquery'], function ($) {
             friendlyKind = "dropdown list"
         }
 
+        if(kind == "number") {
+            friendlyKind = "numeric"
+        }
+
         return friendlyKind;
      };
 

@@ -3311,7 +3311,7 @@ common_validation = function (moment) {
       if (isnum) {
         return true;
       }
-      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){7,20}(( x| ext)\d{1,5}){0,1}$/);
       return m != null && m.length > 0;
     },
     /**
@@ -3552,6 +3552,9 @@ common_utils = function ($) {
     }
     if (kind == 'select') {
       friendlyKind = 'dropdown list';
+    }
+    if (kind == 'number') {
+      friendlyKind = 'numeric';
     }
     return friendlyKind;
   };
@@ -8802,7 +8805,8 @@ Group = function ($, common, api, Document) {
     reservationLabels: [],
     orderLabels: [],
     businessHours: [],
-    cancelled: null
+    cancelled: null,
+    calendarTemplate: '{{number}}: {{name_or_summary}} - {{contact.name}}'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8830,6 +8834,7 @@ Group = function ($, common, api, Document) {
    * @property {array} reservationLabels  the groups reservation labels
    * @property {array} orderLabels        the groups order labels
    * @property {array} businessHours      the groups business hours
+   * @property {string} calendarTemplate  the group calendar event title template
    * @constructor
    * @extends Document
    */
@@ -8853,6 +8858,7 @@ Group = function ($, common, api, Document) {
     this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
     this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
     this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
+    this.calendarTemplate = spec.calendarTemplate || DEFAULTS.calendarTemplate;
   };
   Group.prototype = new tmp();
   Group.prototype.constructor = Group;
@@ -9245,6 +9251,9 @@ Group = function ($, common, api, Document) {
   /**
    * getDefaultBusinessHours: in iso weekdays
    * @return {array}
+   * setCalendarTemplate
+   * @param {string} template 
+   * @param {string} kind      
    */
   Group.prototype.getDefaultBusinessHours = function () {
     return [
@@ -9274,6 +9283,53 @@ Group = function ($, common, api, Document) {
         closeTime: 1020
       }
     ];
+  };
+  /**
+   * setCalendarTemplate
+   * @param {string} template 
+   * @param {string} kind      
+   */
+  Group.prototype.setCalendarTemplate = function (template, kind) {
+    return this._doApiCall({
+      method: 'setCalendarTemplate',
+      params: {
+        template: template,
+        kind: kind
+      },
+      skipRead: true,
+      usePost: true
+    });
+  };
+  /**
+   * setCalendarTemplate      
+   */
+  Group.prototype.clearCalendarTemplate = function () {
+    return this._doApiCall({
+      method: 'clearCalendarTemplate',
+      skipRead: true
+    });
+  };
+  /**
+   * getCalendarTemplatePreview
+   * @param {string} template 
+   * @param {string} kind     
+   */
+  Group.prototype.getCalendarTemplatePreview = function (template, kind) {
+    return this._doApiCall({
+      method: 'getCalendarTemplatePreview',
+      params: {
+        template: template,
+        kind: kind
+      },
+      skipRead: true,
+      usePost: true
+    });
+  };
+  /**
+   * getDefaultCalendarTemplate
+   */
+  Group.prototype.getDefaultCalendarTemplate = function () {
+    return DEFAULTS.calendarTemplate;
   };
   //
   // Specific validators
@@ -9324,6 +9380,7 @@ Group = function ($, common, api, Document) {
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
       that.cancelled = data.cancelled || DEFAULTS.cancelled;
       that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
+      that.calendarTemplate = data.calendarTemplate || DEFAULTS.calendarTemplate;
       return that._fromColorLabelsJson(data, options).then(function (data) {
         return that._fromBusinessHoursJson(data, options);
       });
@@ -13231,8 +13288,9 @@ PermissionHandler = function () {
         return this._canReadOwnCustody;
       case 'takeCustody':
       case 'releaseCustody':
-        return this._canTakeCustody;
       case 'transferCustody':
+        return this._canTakeCustody;
+      case 'giveCustody':
         return this._canTakeCustody && this._isRootOrAdmin;
       }
       break;
@@ -13279,8 +13337,8 @@ PermissionHandler = function () {
         return this._canReadOwnCustody;
       case 'takeCustody':
       case 'releaseCustody':
-        return this._canTakeCustody;
       case 'transferCustody':
+        return this._canTakeCustody;
       case 'giveCustody':
         return this._canTakeCustody && this._isRootOrAdmin;
       }

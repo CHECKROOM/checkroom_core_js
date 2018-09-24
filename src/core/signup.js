@@ -20,6 +20,7 @@ define([
     var DEFAULT_PERIOD = "yearly";
     var DEFAULT_SOURCE = "attempt";
     var DEFAULT_KIND = "trial";
+    var DEFAULT_DEVICE_KIND = null;
 
     var Signup = function(opt, settings) {
         opt = opt || {};
@@ -37,6 +38,7 @@ define([
         this.password = opt.password || "";
         this.plan = opt.plan || DEFAULT_PLAN;
         this.period = opt.period || DEFAULT_PERIOD;
+        this.deviceKind = opt.deviceKind || DEFAULT_DEVICE_KIND;
         this.source = opt.source || "";
         this.phone = opt.phone || "";
         this.industry = opt.industry || "";
@@ -236,7 +238,8 @@ define([
                     period: $.trim(that.period),
                     subscription: $.trim(that.plan),
                     company: $.trim(that.company),
-                    groupId: that.getGroupId()
+                    groupId: that.getGroupId(),
+                    signupDevice: that.deviceKind
                 }, true)
                     .then(function(data) {
                         return afterCreate(data);

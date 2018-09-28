@@ -63,7 +63,7 @@ require([
         //orderTransferTest.run();
         //helperTest.run();
         //simpleTest.run();
-        dateHelperTest.run();
+        //dateHelperTest.run();
         //contactTest.run();
         //locationTest.run();
         //kitTest.run();
@@ -75,7 +75,7 @@ require([
         //availabilityTest.run();
         //webHookTest.run();
         //signupTest.run();
-        //validationTest.run();
+        validationTest.run();
 
 
         // start QUnit.

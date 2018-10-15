@@ -153,6 +153,28 @@ define([
         return (this.status=="open");
     };
 
+     /**
+     * Checks if the reservation can be closed
+     * @method
+     * @name Reservation#canClose
+     * @returns {boolean}
+     */
+    Reservation.prototype.canClose = function() {
+        return (this.status=="open");
+    };
+
+    /**
+     * Checks if the reservation can be unclosed
+     * @method
+     * @name Reservation#canUndoClose
+     * @returns {boolean}
+     */
+    Reservation.prototype.canUndoClose = function() {
+        return (this.status=="closed_manually") &&
+                ((this.contact) &&
+                 (this.contact.status == "active"));
+    };
+
     /**
      * Checks if the reservation can be edited
      * @method
@@ -246,6 +268,7 @@ define([
     Reservation.prototype.canReserveAgain = function() {
         return ((this.status == "open") || 
                 (this.status == "closed") || 
+                (this.status == "closed_manually") ||
                 (this.status == "cancelled")) &&
                ((this.contact) &&
                 (this.contact.status == "active"));
@@ -259,7 +282,8 @@ define([
      */
     Reservation.prototype.canReserveRepeat = function() {
         return ((this.status == "open") || 
-                (this.status == "closed")) &&
+                (this.status == "closed") || 
+                (this.status == "closed_manually")) &&
                ((this.contact) &&
                 (this.contact.status == "active"));
     };
@@ -270,7 +294,7 @@ define([
      * @returns {boolean}
      */
     Reservation.prototype.canGenerateDocument = function() {
-        return (this.status=="open") || (this.status=="closed");
+        return (this.status=="open") || (this.status=="closed") || (this.status=="closed_manually");
     };
 
     //
@@ -702,6 +726,66 @@ define([
                 return $.Deferred().reject(err);
             });
     };
+
+
+    /**
+     * Closes the booked reservation and sets the status to `closed_manually`
+     * @method
+     * @name Reservation#close
+     * @param message
+     * @param skipRead
+     * @param skipErrorHandling
+     * @returns {*}
+     */
+    Reservation.prototype.close = function(message, skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "close", params:{ message: message || "" }, skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status closed_manually') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
+    };
+
+    /**
+     * Uncloses the reservation and sets the status to `open` again
+     * @method
+     * @name Reservation#undoClose
+     * @param skipRead
+     * @param skipErrorHandling
+     * @returns {*}
+     */
+    Reservation.prototype.undoClose = function(skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "undoClose", skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
+    };    
 
     /**
      * Turns an open reservation into an order (which still needs to be checked out)

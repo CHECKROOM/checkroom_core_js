@@ -915,7 +915,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^([A-Z0-9\s\-]{4,22})$/i) != null;
+    return barCode && barCode.match(/^([A-Z0-9\s\-]{3,22})$/i) != null;
   },
   /**
    * isValidQRCode
@@ -1181,7 +1181,7 @@ common_order = function (moment) {
       if (this.isOrderOverdue(order, now)) {
         return 'label-overdue';
       } else if (this.isOrderArchived(order)) {
-        return this.getFriendlyOrderCss(order.status) + ' label-striped';
+        return 'label-archived';
       } else {
         return this.getFriendlyOrderCss(order.status);
       }
@@ -1206,6 +1206,8 @@ common_reservation = {
     case 'open':
       return 'label-open';
     case 'closed':
+      return 'label-converted';
+    case 'closed_manually':
       return 'label-closed';
     case 'cancelled':
       return 'label-cancelled';
@@ -1230,7 +1232,9 @@ common_reservation = {
     case 'open':
       return 'Booked';
     case 'closed':
-      return 'Completed';
+      return 'Converted';
+    case 'closed_manually':
+      return 'Closed';
     case 'cancelled':
       return 'Cancelled';
     default:
@@ -1323,10 +1327,17 @@ common_reservation = {
    * @return {string}       
    */
   getReservationCss: function (reservation) {
-    if (this.isOrderArchived(reservation)) {
-      return this.getFriendlyReservationCss(reservation.status) + ' label-striped';
+    if (this.isReservationArchived(reservation)) {
+      return 'label-archived';
     } else {
       return this.getFriendlyReservationCss(reservation.status);
+    }
+  },
+  getReservationStatus: function (reservation) {
+    if (this.isReservationArchived(reservation)) {
+      return 'Archived';
+    } else {
+      return this.getFriendlyReservationStatus(reservation.status);
     }
   }
 };
@@ -3296,7 +3307,7 @@ common_validation = function (moment) {
      */
     isFreeEmail: function (email) {
       var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
-      return m != null && m.length > 0;
+      return m == null;
     },
     /**
      * isValidPhone
@@ -13058,6 +13069,7 @@ PermissionHandler = function () {
     this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
     this._useNotifications = limits.allowNotifications && profile.useNotifications;
     this._useBlockContacts = limits.allowBlockContacts && profile.useBlockContacts;
+    this._useReservationsClose = this._useReservations && profile.useReservationsClose;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -13454,6 +13466,9 @@ PermissionHandler = function () {
         return this._usePdf && this._isRootOrAdminOrUser;
       case 'ignoreConflicts':
         return this._canReservationConflict;
+      case 'close':
+      case 'undoClose':
+        return this._useReservationsClose;
       }
       break;
     case 'customers':
@@ -13719,6 +13734,24 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this.status == 'open';
   };
   /**
+   * Checks if the reservation can be closed
+   * @method
+   * @name Reservation#canClose
+   * @returns {boolean}
+   */
+  Reservation.prototype.canClose = function () {
+    return this.status == 'open';
+  };
+  /**
+   * Checks if the reservation can be unclosed
+   * @method
+   * @name Reservation#canUndoClose
+   * @returns {boolean}
+   */
+  Reservation.prototype.canUndoClose = function () {
+    return this.status == 'closed_manually' && (this.contact && this.contact.status == 'active');
+  };
+  /**
    * Checks if the reservation can be edited
    * @method
    * @name Reservation#canEdit
@@ -13801,7 +13834,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canReserveAgain = function () {
-    return (this.status == 'open' || this.status == 'closed' || this.status == 'cancelled') && (this.contact && this.contact.status == 'active');
+    return (this.status == 'open' || this.status == 'closed' || this.status == 'closed_manually' || this.status == 'cancelled') && (this.contact && this.contact.status == 'active');
   };
   /**
    * Checks if the reservation can be into recurring reservations (based on status)
@@ -13810,7 +13843,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canReserveRepeat = function () {
-    return (this.status == 'open' || this.status == 'closed') && (this.contact && this.contact.status == 'active');
+    return (this.status == 'open' || this.status == 'closed' || this.status == 'closed_manually') && (this.contact && this.contact.status == 'active');
   };
   /**
    * Checks if we can generate a document for this reservation (based on status)
@@ -13818,7 +13851,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {boolean}
    */
   Reservation.prototype.canGenerateDocument = function () {
-    return this.status == 'open' || this.status == 'closed';
+    return this.status == 'open' || this.status == 'closed' || this.status == 'closed_manually';
   };
   //
   // Document overrides
@@ -14203,6 +14236,62 @@ Reservation = function ($, api, Transaction, Conflict) {
     }, function (err) {
       if (!skipErrorHandling) {
         if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status cancelled') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
+  };
+  /**
+   * Closes the booked reservation and sets the status to `closed_manually`
+   * @method
+   * @name Reservation#close
+   * @param message
+   * @param skipRead
+   * @param skipErrorHandling
+   * @returns {*}
+   */
+  Reservation.prototype.close = function (message, skipRead, skipErrorHandling) {
+    var that = this;
+    return this._doApiCall({
+      method: 'close',
+      params: { message: message || '' },
+      skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status closed_manually') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
+  };
+  /**
+   * Uncloses the reservation and sets the status to `open` again
+   * @method
+   * @name Reservation#undoClose
+   * @param skipRead
+   * @param skipErrorHandling
+   * @returns {*}
+   */
+  Reservation.prototype.undoClose = function (skipRead, skipErrorHandling) {
+    var that = this;
+    return this._doApiCall({
+      method: 'undoClose',
+      skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)) {
           return that.get();
         }
       }

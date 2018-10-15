@@ -48,7 +48,7 @@ define(['settings'], function (settings) {
 		 * @return {Boolean}         
 		 */
 		isValidBarcode: function(barCode){
-			return barCode && barCode.match(/^([A-Z0-9\s\-]{4,22})$/i) != null;
+			return barCode && barCode.match(/^([A-Z0-9\s\-]{3,22})$/i) != null;
 		},
 
 		/**

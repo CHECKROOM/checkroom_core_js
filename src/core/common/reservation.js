@@ -17,7 +17,8 @@ define(function () {
             switch(status) {
                 case 'creating': return 'label-creating';
                 case 'open': return 'label-open';
-                case 'closed': return 'label-closed';
+                case 'closed': return 'label-converted';
+                case 'closed_manually': return 'label-closed';
                 case 'cancelled': return 'label-cancelled';
                 default: return '';
             }
@@ -36,7 +37,8 @@ define(function () {
             switch(status) {
                 case 'creating': return 'Draft';
                 case 'open': return 'Booked';
-                case 'closed': return 'Completed';
+                case 'closed': return 'Converted';
+                case 'closed_manually': return 'Closed';
                 case 'cancelled': return 'Cancelled';
                 default: return 'Unknown';
             }
@@ -119,10 +121,17 @@ define(function () {
          * @return {string}       
          */
         getReservationCss: function(reservation) {
-            if(this.isOrderArchived(reservation)){
-                return this.getFriendlyReservationCss(reservation.status) + " label-striped";
+            if(this.isReservationArchived(reservation)){
+                return "label-archived";
             }else{
                 return this.getFriendlyReservationCss(reservation.status);
+            }
+        },
+        getReservationStatus: function(reservation){
+            if(this.isReservationArchived(reservation)) {
+                return "Archived";
+            }else{
+                return this.getFriendlyReservationStatus(reservation.status)
             }
         }
     };

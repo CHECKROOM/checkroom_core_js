@@ -915,7 +915,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^([A-Z0-9\s\-]{4,22})$/i) != null;
+    return barCode && barCode.match(/^([A-Z0-9\s\-]{3,22})$/i) != null;
   },
   /**
    * isValidQRCode
@@ -1181,7 +1181,7 @@ common_order = function (moment) {
       if (this.isOrderOverdue(order, now)) {
         return 'label-overdue';
       } else if (this.isOrderArchived(order)) {
-        return this.getFriendlyOrderCss(order.status) + ' label-striped';
+        return 'label-archived';
       } else {
         return this.getFriendlyOrderCss(order.status);
       }
@@ -1206,6 +1206,8 @@ common_reservation = {
     case 'open':
       return 'label-open';
     case 'closed':
+      return 'label-converted';
+    case 'closed_manually':
       return 'label-closed';
     case 'cancelled':
       return 'label-cancelled';
@@ -1230,7 +1232,9 @@ common_reservation = {
     case 'open':
       return 'Booked';
     case 'closed':
-      return 'Completed';
+      return 'Converted';
+    case 'closed_manually':
+      return 'Closed';
     case 'cancelled':
       return 'Cancelled';
     default:
@@ -1323,10 +1327,17 @@ common_reservation = {
    * @return {string}       
    */
   getReservationCss: function (reservation) {
-    if (this.isOrderArchived(reservation)) {
-      return this.getFriendlyReservationCss(reservation.status) + ' label-striped';
+    if (this.isReservationArchived(reservation)) {
+      return 'label-archived';
     } else {
       return this.getFriendlyReservationCss(reservation.status);
+    }
+  },
+  getReservationStatus: function (reservation) {
+    if (this.isReservationArchived(reservation)) {
+      return 'Archived';
+    } else {
+      return this.getFriendlyReservationStatus(reservation.status);
     }
   }
 };
@@ -3296,7 +3307,7 @@ common_validation = function (moment) {
      */
     isFreeEmail: function (email) {
       var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
-      return m != null && m.length > 0;
+      return m == null;
     },
     /**
      * isValidPhone

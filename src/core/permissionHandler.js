@@ -40,6 +40,7 @@ define([], function () {
         this._useDepreciations =      (limits.allowDepreciations) &&        (profile.useDepreciations);
         this._useNotifications =      (limits.allowNotifications) &&        (profile.useNotifications);
         this._useBlockContacts =      (limits.allowBlockContacts) &&        (profile.useBlockContacts);
+        this._useReservationsClose =  (this._useReservations) &&            (profile.useReservationsClose);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -495,6 +496,9 @@ define([], function () {
                         return this._usePdf && this._isRootOrAdminOrUser;
                     case "ignoreConflicts":
                         return this._canReservationConflict;
+                    case "close":
+                    case "undoClose":
+                        return this._useReservationsClose;
                 }
                 break;
             case "customers":

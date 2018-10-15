@@ -33,7 +33,7 @@ define(['moment'], function (moment) {
          */
         isFreeEmail: function(email) {
             var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
-            return ((m!=null) && (m.length>0));
+            return m == null;
         },
         /**
          * isValidPhone

@@ -525,12 +525,16 @@ api = function ($, moment) {
   api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
     system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
     var cmd = 'getMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + ',';
+    var url = this.getBaseUrl() + pks.join(',');
     var p = this.getParamsDict(fields);
     if (!$.isEmptyObject(p)) {
       url += '?' + this.getParams(p);
     }
-    return this._ajaxGet(cmd, url);
+    return this._ajaxGet(cmd, url).then(function (resp) {
+      // BUGFIX make sure that response is an array
+      resp = $.isArray(resp) ? resp : [resp];
+      return resp;
+    });
   };
   /**
    * Deletes a document by its primary key
@@ -8421,11 +8425,15 @@ DateHelper = function ($, moment) {
     return isValid;
   };
   DateHelper.prototype.getValidBusinessDate = function (d) {
-    var that = this, maxMinutes = 0;
+    var that = this, now = this.getNow(), maxMinutes = 0;
+    //bugfix getValidBusinessDate only returns dates from now or in the future
+    if (d.isBefore(now)) {
+      d.date(now.date());
+    }
     while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
       d = d.add(that.roundMinutes, 'minutes');
       // Prevent infinite loop by stopping after 1 full week
-      maxMinutes += dateHelper.roundMinutes;
+      maxMinutes += that.roundMinutes;
     }
     return d;
   };
@@ -11300,11 +11308,15 @@ dateHelper = function ($, moment) {
     return isValid;
   };
   DateHelper.prototype.getValidBusinessDate = function (d) {
-    var that = this, maxMinutes = 0;
+    var that = this, now = this.getNow(), maxMinutes = 0;
+    //bugfix getValidBusinessDate only returns dates from now or in the future
+    if (d.isBefore(now)) {
+      d.date(now.date());
+    }
     while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
       d = d.add(that.roundMinutes, 'minutes');
       // Prevent infinite loop by stopping after 1 full week
-      maxMinutes += dateHelper.roundMinutes;
+      maxMinutes += that.roundMinutes;
     }
     return d;
   };

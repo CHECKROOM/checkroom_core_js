@@ -560,13 +560,19 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
 
     DateHelper.prototype.getValidBusinessDate = function(d){
         var that = this,
+            now = this.getNow(),
             maxMinutes = 0;
+
+        //bugfix getValidBusinessDate only returns dates from now or in the future
+        if(d.isBefore(now)){
+            d.date(now.date());
+        }
 
         while(!this.isValidBusinessDate(d) || (maxMinutes >= 7*24*60)){
             d = d.add(that.roundMinutes, "minutes");
             
             // Prevent infinite loop by stopping after 1 full week
-            maxMinutes += dateHelper.roundMinutes;
+            maxMinutes += that.roundMinutes;
         }
 
         return d;

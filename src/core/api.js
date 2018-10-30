@@ -516,12 +516,17 @@ define([
     api.ApiDataSource.prototype.getMultiple = function(pks, fields) {
         system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
         var cmd = "getMultiple";
-        var url = this.getBaseUrl() + pks.join(',') + ',';
+        var url = this.getBaseUrl() + pks.join(',');
         var p = this.getParamsDict(fields);
         if (!$.isEmptyObject(p)) {
             url += '?' + this.getParams(p);
         }
-        return this._ajaxGet(cmd, url);
+        return this._ajaxGet(cmd, url).then(function(resp){
+            // BUGFIX make sure that response is an array
+            resp = $.isArray(resp)?resp:[resp];
+
+            return resp;
+        });
     };
 
     /**

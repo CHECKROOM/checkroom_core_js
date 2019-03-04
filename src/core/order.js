@@ -190,6 +190,34 @@ define([
         );
     };
 
+
+
+    /**
+     * Checks if the checkout can be checked out again (based on status)
+     * @method
+     * @name Order#canCheckoutAgain
+     * @returns {boolean}
+     */
+    Order.prototype.canCheckoutAgain = function() {
+        return (this.status == "closed") &&                
+               ((this.contact) &&
+                (this.contact.status == "active")) &&
+               (this.items.filter(function(item){ return item.status == "available"; }).length == this.items.length);
+    };
+
+
+    /**
+     * Creates a new, draft check-out with the same info
+     * as the original check-out
+     * @method
+     * @name Reservation#checkoutAgain
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.checkoutAgain = function(skipRead) {
+        return this._doApiCall({method: "checkoutAgain", params: {}, skipRead: skipRead});
+    };
+
     /**
      * Checks if order can undo checkout
      * @method
@@ -207,7 +235,11 @@ define([
      * @returns {boolean}
      */
     Order.prototype.canDelete = function() {
-        return (this.status=="creating");
+        var that = this;
+
+        // If order has partially checked in items, then it can't be deleted anymore
+        return (this.status=="creating") &&
+               (this.items.filter(function(item){ return (item.order && item.order == that.id); }).length == this.items.length);
     };
 
     /**

@@ -4,13 +4,21 @@ define(['jquery', 'moment'], factory);
 } else {
  root.cheqroomCore = factory($, moment);
 }
-}(this, function (jquery, moment) {/**
- * Provides the classes needed to communicate with the CHECKROOM API
- * @module api
- * @namespace api
- * @copyright CHECKROOM NV 2015
- */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+}(this, function (jquery, moment) {//Queued AJAX requests
+//https://stackoverflow.com/questions/3034874/sequencing-ajax-requests/3035268#3035268
+//http://jsfiddle.net/p4zjH/1/
+var common_queue, api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+common_queue = function ($) {
+  $.fn.ajaxQueue = function () {
+    var previous = new $.Deferred().resolve();
+    return function (fn, fail) {
+      if (typeof fn !== 'function') {
+        throw 'must be a function';
+      }
+      return previous = previous.then(fn, fail || fn);
+    };
+  };
+}(jquery);
 api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -525,16 +533,33 @@ api = function ($, moment) {
   api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
     system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
     var cmd = 'getMultiple';
-    var url = this.getBaseUrl() + pks.join(',');
-    var p = this.getParamsDict(fields);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    return this._ajaxGet(cmd, url).then(function (resp) {
-      // BUGFIX make sure that response is an array
-      resp = $.isArray(resp) ? resp : [resp];
-      return resp;
+    //BUGFIX url to long
+    var chunk_size = 100;
+    var groups = pks.map(function (e, i) {
+      return i % chunk_size === 0 ? pks.slice(i, i + chunk_size) : null;
+    }).filter(function (e) {
+      return e;
     });
+    var that = this, returnArr = [];
+    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred();
+    $.each(groups, function (i, group) {
+      var url = that.getBaseUrl() + group.join(',');
+      var p = that.getParamsDict(fields);
+      if (!$.isEmptyObject(p)) {
+        url += '?' + that.getParams(p);
+      }
+      ajaxQueue(function () {
+        return that._ajaxGet(cmd, url).then(function (resp) {
+          // BUGFIX make sure that response is an array
+          resp = $.isArray(resp) ? resp : [resp];
+          returnArr = returnArr.concat(resp);
+        });
+      });
+    });
+    ajaxQueue(function () {
+      return dfdMultiple.resolve(returnArr);
+    });
+    return dfdMultiple;
   };
   /**
    * Deletes a document by its primary key
@@ -3298,7 +3323,7 @@ common_validation = function (moment) {
      * @return {Boolean}       
      */
     isValidEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      var m = email.match(/^([\w-\+']+(?:\.[\w-\+']+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
       return m != null && m.length > 0;
     },
     /**
@@ -3310,7 +3335,7 @@ common_validation = function (moment) {
      * @returns {boolean}
      */
     isFreeEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
       return m == null;
     },
     /**
@@ -4238,6 +4263,18 @@ common_template = function (moment) {
             width: 1056,
             height: 1632
           }
+        },
+        {
+          id: 'label4x6',
+          name: '4" x 6" Shipping Label',
+          width: 4,
+          height: 6,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 384,
+            height: 576
+          }
         }
       ];
     },
@@ -4438,11 +4475,10 @@ common_transaction = function (moment, keyValues) {
      * @returns {duration}
      */
   that.getOrderDuration = function (transaction) {
-    if (transaction.started != null) {
-      var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
-      if (to) {
-        return moment.duration(to - transaction.started);
-      }
+    var from = transaction.started || moment();
+    var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+    if (to) {
+      return moment.duration(to - from);
     }
     return null;
   };
@@ -4499,17 +4535,6 @@ common_transaction = function (moment, keyValues) {
   };
   return that;
 }(moment, common_keyValues);
-common_queue = function ($) {
-  $.fn.ajaxQueue = function () {
-    var previous = new $.Deferred().resolve();
-    return function (fn, fail) {
-      if (typeof fn !== 'function') {
-        throw 'must be a function';
-      }
-      return previous = previous.then(fn, fail || fn);
-    };
-  };
-}(jquery);
 common_pubsub = function ($) {
   var o = $({});
   $.subscribe = function () {
@@ -4919,7 +4944,7 @@ document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiLongCall = function (spec) {
-    spec.timeOut = spec.timeOut || 30000;
+    spec.timeOut = spec.timeOut || 60000;
     return this._doApiCall(spec);
   };
   Document.prototype._getColorLabel = function (data, options) {
@@ -5661,7 +5686,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
     return this._doApiCall({
       method: 'setFields',
-      params: { fields: changedFields },
+      params: changedFields,
       skipRead: skipRead,
       usePost: true
     });
@@ -5676,6 +5701,9 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @returns {promise}
    */
   Base.prototype.setField = function (field, value, skipRead) {
+    if (!value) {
+      return this.clearField(field, skipRead);
+    }
     return this._doApiCall({
       method: 'setField',
       params: {
@@ -6582,7 +6610,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
     return this._doApiCall({
       method: 'setFields',
-      params: { fields: changedFields },
+      params: changedFields,
       skipRead: skipRead,
       usePost: true
     });
@@ -6597,6 +6625,9 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @returns {promise}
    */
   Base.prototype.setField = function (field, value, skipRead) {
+    if (!value) {
+      return this.clearField(field, skipRead);
+    }
     return this._doApiCall({
       method: 'setField',
       params: {
@@ -8797,7 +8828,7 @@ Document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiLongCall = function (spec) {
-    spec.timeOut = spec.timeOut || 30000;
+    spec.timeOut = spec.timeOut || 60000;
     return this._doApiCall(spec);
   };
   Document.prototype._getColorLabel = function (data, options) {
@@ -12041,7 +12072,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canArchive = function () {
-    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   /**
    * Checks if we can unarchive a transaction (based on status)
@@ -12049,7 +12080,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canUndoArchive = function () {
-    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   Transaction.prototype.setField = function (field, value, skipRead) {
     var that = this;
@@ -12426,6 +12457,32 @@ Order = function ($, api, Transaction, Conflict, common) {
     }).length > 0);
   };
   /**
+   * Checks if the checkout can be checked out again (based on status)
+   * @method
+   * @name Order#canCheckoutAgain
+   * @returns {boolean}
+   */
+  Order.prototype.canCheckoutAgain = function () {
+    return this.status == 'closed' && (this.contact && this.contact.status == 'active') && this.items.filter(function (item) {
+      return item.status == 'available';
+    }).length == this.items.length;
+  };
+  /**
+   * Creates a new, draft check-out with the same info
+   * as the original check-out
+   * @method
+   * @name Reservation#checkoutAgain
+   * @param skipRead
+   * @returns {promise}
+   */
+  Order.prototype.checkoutAgain = function (skipRead) {
+    return this._doApiCall({
+      method: 'checkoutAgain',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
    * Checks if order can undo checkout
    * @method
    * @name Order#canUndoCheckout
@@ -12441,7 +12498,11 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @returns {boolean}
    */
   Order.prototype.canDelete = function () {
-    return this.status == 'creating';
+    var that = this;
+    // If order has partially checked in items, then it can't be deleted anymore
+    return this.status == 'creating' && this.items.filter(function (item) {
+      return item.order && item.order == that.id;
+    }).length == this.items.length;
   };
   /**
    * Checks if items can be added to the checkout (based on status)
@@ -13082,6 +13143,8 @@ PermissionHandler = function () {
     this._useNotifications = limits.allowNotifications && profile.useNotifications;
     this._useBlockContacts = limits.allowBlockContacts && profile.useBlockContacts;
     this._useReservationsClose = this._useReservations && profile.useReservationsClose;
+    this._useSlack = limits.allowIntegrationSlack && profile.useIntegrationSlack;
+    this._useApi = limits.allowAPI;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -13159,6 +13222,9 @@ PermissionHandler = function () {
   PermissionHandler.prototype.canUseBusinessHours = function () {
     return this.limits.allowBusinessHours;
   };
+  PermissionHandler.prototype.canUseSlack = function () {
+    return this.limits.allowIntegrationSlack;
+  };
   //
   // Permission helpers
   //
@@ -13207,6 +13273,12 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasLabelPermission = function () {
     return this._canSetLabel && this._canClearLabel;
+  };
+  PermissionHandler.prototype.hasSlackPermission = function () {
+    return this._useSlack;
+  };
+  PermissionHandler.prototype.hasApiPermission = function () {
+    return this._useApi;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -13399,6 +13471,7 @@ PermissionHandler = function () {
       case 'setField':
       case 'clearField':
       case 'extend':
+      case 'checkoutAgain':
         return this._canCreateOrders;
       // Generic actions
       case 'addAttachment':
@@ -13937,7 +14010,9 @@ Reservation = function ($, api, Transaction, Conflict) {
               itemName: item.name,
               doc: conflict.conflictsWith,
               fromDate: conflict.fromDate,
-              toDate: conflict.toDate
+              toDate: conflict.toDate,
+              locationCurrent: conflict.locationCurrent,
+              locationDesired: conflict.locationDesired
             }));
           } else {
             if (showStatusConflicts && item.status == 'expired') {
@@ -14398,7 +14473,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     if (toDate) {
       params.toDate = toDate;
     }
-    return this._doApiCall({
+    return this._doApiLongCall({
       method: 'reserveAgain',
       params: params,
       skipRead: skipRead
@@ -14417,7 +14492,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {promise}
    */
   Reservation.prototype.reserveRepeat = function (frequency, until, customer, location) {
-    return this._doApiCall({
+    return this._doApiLongCall({
       method: 'reserveRepeat',
       params: {
         frequency: frequency,
@@ -15436,7 +15511,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canArchive = function () {
-    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   /**
    * Checks if we can unarchive a transaction (based on status)
@@ -15444,7 +15519,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canUndoArchive = function () {
-    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   Transaction.prototype.setField = function (field, value, skipRead) {
     var that = this;

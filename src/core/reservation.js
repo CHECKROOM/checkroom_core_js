@@ -383,7 +383,9 @@ define([
                                 itemName: item.name,
                                 doc: conflict.conflictsWith,
                                 fromDate: conflict.fromDate,
-                                toDate: conflict.toDate
+                                toDate: conflict.toDate,
+                                locationCurrent: conflict.locationCurrent,
+                                locationDesired: conflict.locationDesired
                             }));
                         } else {
                             if( (showStatusConflicts) &&
@@ -870,7 +872,7 @@ define([
             params.toDate = toDate;
         }
 
-        return this._doApiCall({method: "reserveAgain", params: params, skipRead: skipRead});
+        return this._doApiLongCall({method: "reserveAgain", params: params, skipRead: skipRead});
     };
 
     /**
@@ -886,7 +888,7 @@ define([
      * @returns {promise}
      */
     Reservation.prototype.reserveRepeat = function(frequency, until, customer, location) {
-        return this._doApiCall({method: "reserveRepeat", params: {
+        return this._doApiLongCall({method: "reserveRepeat", params: {
             frequency: frequency,
             until: until,
             customer: customer,

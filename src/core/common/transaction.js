@@ -41,12 +41,12 @@ define(['moment', 'common/keyValues'], function (moment, keyValues) {
      * @returns {duration}
      */
     that.getOrderDuration = function(transaction) {
-        if (transaction.started!=null) {
-            var to = (transaction.status=="closed") ? transaction.finished : transaction.due;
-            if (to) {
-                return moment.duration(to - transaction.started);
-            }
+        var from = transaction.started || moment();
+        var to = (transaction.status=="closed") ? transaction.finished : transaction.due;
+        if (to) {
+            return moment.duration(to - from);
         }
+        
         return null;
     };
 

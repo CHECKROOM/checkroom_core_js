@@ -189,7 +189,7 @@ define([
 
         return this._doApiCall({
             method: 'setFields',
-            params: {fields: changedFields},
+            params: changedFields,
             skipRead: skipRead,
             usePost: true
         });
@@ -205,6 +205,10 @@ define([
      * @returns {promise}
      */
     Base.prototype.setField = function(field, value, skipRead) {
+        if(!value){
+            return this.clearField(field, skipRead);
+        }
+
         return this._doApiCall({
             method: 'setField',
             params: {field: field, value: value},

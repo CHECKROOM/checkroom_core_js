@@ -20,6 +20,8 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                   ok(common.isValidEmail("test@test.com"));
                   ok(!common.isValidEmail("test"));
                   ok(common.isValidEmail("example@made.for.digital"));
+                  ok(common.isValidEmail("Clayton.O'Brien@ampcontrolgroup.com"));
+                  ok(!common.isValidEmail("josé.mourinho@noclub.com"))
             })
         };
 

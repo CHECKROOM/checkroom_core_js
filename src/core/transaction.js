@@ -761,7 +761,7 @@ define([
     Transaction.prototype.canArchive = function() {
         return (
         (this.archived==null) &&
-        ((this.status == "cancelled") || (this.status == "closed")));
+        ((this.status == "cancelled") || (this.status == "closed") || (this.status == "closed_manually")));
     };
 
     /**
@@ -772,7 +772,7 @@ define([
     Transaction.prototype.canUndoArchive = function() {
         return (
         (this.archived!=null) &&
-        ((this.status == "cancelled") || (this.status == "closed")));
+        ((this.status == "cancelled") || (this.status == "closed") || (this.status == "closed_manually")));
     };
 
 

@@ -6,7 +6,6 @@
  */
 define([
     "jquery",
-    "jstz", 
     "api",
     "settings",
     "field",
@@ -14,7 +13,7 @@ define([
     "common/inflection",
     "common/validation",
     "common/clientStorage",
-    "common/utils"], function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
+    "common/utils"], function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
 
     var DEFAULT_PLAN = "cr_1802_professional_yearly_usd_500";
     var DEFAULT_PERIOD = "yearly";
@@ -32,7 +31,7 @@ define([
         this.firstName = opt.firstName || "";  // between 2 and 25 chars
         this.lastName = opt.lastName || "";  // between 2 and 25 chars
         this.company = opt.company || "";  // between 3 and 46 chars
-        this.timezone = opt.timezone || jstz.determine().name();
+        this.timezone = opt.timezone || "America/New_York";
         this.email = opt.email || "";
         this.login = opt.login || "";
         this.password = opt.password || "";
@@ -382,7 +381,7 @@ define([
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
             plan = utils.getUrlParam("plan", DEFAULT_PLAN),
-            timezone = utils.getUrlParam("timezone", jstz.determine().name()),
+            timezone = utils.getUrlParam("timezone", "America/New_York"),
             inviteToken = utils.getUrlParam("code", ""),
             selfserviceToken = utils.getUrlParam("key", "");
 

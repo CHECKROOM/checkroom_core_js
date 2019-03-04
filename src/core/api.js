@@ -6,7 +6,8 @@
  */
 define([
     'jquery',
-    'moment'], function ($, moment) {
+    'moment',
+    'common/queue'], function ($, moment) {
     var MAX_QUERYSTRING_LENGTH = 2048;
 
     //TODO change this
@@ -516,17 +517,41 @@ define([
     api.ApiDataSource.prototype.getMultiple = function(pks, fields) {
         system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
         var cmd = "getMultiple";
-        var url = this.getBaseUrl() + pks.join(',');
-        var p = this.getParamsDict(fields);
-        if (!$.isEmptyObject(p)) {
-            url += '?' + this.getParams(p);
-        }
-        return this._ajaxGet(cmd, url).then(function(resp){
-            // BUGFIX make sure that response is an array
-            resp = $.isArray(resp)?resp:[resp];
 
-            return resp;
-        });
+        //BUGFIX url to long
+        var chunk_size = 100;
+        var groups = pks.map( function(e,i){ 
+            return i%chunk_size===0 ? pks.slice(i,i+chunk_size) : null; 
+        })
+        .filter(function(e){ return e; });
+
+        var that = this,
+            returnArr = [];
+
+        var ajaxQueue = new $.fn.ajaxQueue(),
+            dfdMultiple = $.Deferred();
+        $.each(groups, function(i, group){
+            var url = that.getBaseUrl() + group.join(',');
+            var p = that.getParamsDict(fields);
+            if (!$.isEmptyObject(p)) {
+                url += '?' + that.getParams(p);
+            }
+            
+            ajaxQueue(function(){
+                return that._ajaxGet(cmd, url).then(function(resp){
+                    // BUGFIX make sure that response is an array
+                    resp = $.isArray(resp)?resp:[resp];
+
+                    returnArr = returnArr.concat(resp);
+                });
+            });            
+        })
+
+        ajaxQueue(function(){
+            return dfdMultiple.resolve(returnArr);
+        })
+
+        return dfdMultiple;
     };
 
     /**

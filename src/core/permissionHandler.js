@@ -41,6 +41,8 @@ define([], function () {
         this._useNotifications =      (limits.allowNotifications) &&        (profile.useNotifications);
         this._useBlockContacts =      (limits.allowBlockContacts) &&        (profile.useBlockContacts);
         this._useReservationsClose =  (this._useReservations) &&            (profile.useReservationsClose);
+        this._useSlack =              (limits.allowIntegrationSlack) &&     (profile.useIntegrationSlack);
+        this._useApi =                (limits.allowAPI);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -121,6 +123,9 @@ define([], function () {
     PermissionHandler.prototype.canUseBusinessHours = function(){
         return this.limits.allowBusinessHours;
     };
+    PermissionHandler.prototype.canUseSlack = function(){
+        return this.limits.allowIntegrationSlack;
+    };
 
     //
     // Permission helpers
@@ -191,6 +196,14 @@ define([], function () {
 
     PermissionHandler.prototype.hasLabelPermission = function() {
         return this._canSetLabel && this._canClearLabel;
+    };
+
+    PermissionHandler.prototype.hasSlackPermission = function(){
+        return this._useSlack;
+    };
+
+    PermissionHandler.prototype.hasApiPermission = function(){
+        return this._useApi;
     };
 
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
@@ -410,6 +423,7 @@ define([], function () {
                     case "setField":
                     case "clearField":
                     case "extend":
+                    case "checkoutAgain":
                         return this._canCreateOrders;
                     // Generic actions
                     case "addAttachment":

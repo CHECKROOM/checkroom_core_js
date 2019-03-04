@@ -366,7 +366,7 @@ define([
      * @private
      */
     Document.prototype._doApiLongCall = function(spec) {
-        spec.timeOut = spec.timeOut || 30000;
+        spec.timeOut = spec.timeOut || 60000;
         return this._doApiCall(spec);
     };
 

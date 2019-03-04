@@ -1,16 +1,24 @@
 (function (factory) {
 if (typeof define === 'function' && define.amd) {
-define(['jquery', 'moment', 'jstz'], factory);
+define(['jquery', 'moment'], factory);
 } else {
-factory($, moment, jstz);
+factory($, moment);
 }
-}(function (jquery, moment, jstz) {/**
- * Provides the classes needed to communicate with the CHECKROOM API
- * @module api
- * @namespace api
- * @copyright CHECKROOM NV 2015
- */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common, field, dateHelper, signup;
+}(function (jquery, moment) {//Queued AJAX requests
+//https://stackoverflow.com/questions/3034874/sequencing-ajax-requests/3035268#3035268
+//http://jsfiddle.net/p4zjH/1/
+var common_queue, api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common, field, dateHelper, signup;
+common_queue = function ($) {
+  $.fn.ajaxQueue = function () {
+    var previous = new $.Deferred().resolve();
+    return function (fn, fail) {
+      if (typeof fn !== 'function') {
+        throw 'must be a function';
+      }
+      return previous = previous.then(fn, fail || fn);
+    };
+  };
+}(jquery);
 api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -525,16 +533,33 @@ api = function ($, moment) {
   api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
     system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
     var cmd = 'getMultiple';
-    var url = this.getBaseUrl() + pks.join(',');
-    var p = this.getParamsDict(fields);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    return this._ajaxGet(cmd, url).then(function (resp) {
-      // BUGFIX make sure that response is an array
-      resp = $.isArray(resp) ? resp : [resp];
-      return resp;
+    //BUGFIX url to long
+    var chunk_size = 100;
+    var groups = pks.map(function (e, i) {
+      return i % chunk_size === 0 ? pks.slice(i, i + chunk_size) : null;
+    }).filter(function (e) {
+      return e;
     });
+    var that = this, returnArr = [];
+    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred();
+    $.each(groups, function (i, group) {
+      var url = that.getBaseUrl() + group.join(',');
+      var p = that.getParamsDict(fields);
+      if (!$.isEmptyObject(p)) {
+        url += '?' + that.getParams(p);
+      }
+      ajaxQueue(function () {
+        return that._ajaxGet(cmd, url).then(function (resp) {
+          // BUGFIX make sure that response is an array
+          resp = $.isArray(resp) ? resp : [resp];
+          returnArr = returnArr.concat(resp);
+        });
+      });
+    });
+    ajaxQueue(function () {
+      return dfdMultiple.resolve(returnArr);
+    });
+    return dfdMultiple;
   };
   /**
    * Deletes a document by its primary key
@@ -3298,7 +3323,7 @@ common_validation = function (moment) {
      * @return {Boolean}       
      */
     isValidEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      var m = email.match(/^([\w-\+']+(?:\.[\w-\+']+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
       return m != null && m.length > 0;
     },
     /**
@@ -3310,7 +3335,7 @@ common_validation = function (moment) {
      * @returns {boolean}
      */
     isFreeEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
       return m == null;
     },
     /**
@@ -4238,6 +4263,18 @@ common_template = function (moment) {
             width: 1056,
             height: 1632
           }
+        },
+        {
+          id: 'label4x6',
+          name: '4" x 6" Shipping Label',
+          width: 4,
+          height: 6,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 384,
+            height: 576
+          }
         }
       ];
     },
@@ -4438,11 +4475,10 @@ common_transaction = function (moment, keyValues) {
      * @returns {duration}
      */
   that.getOrderDuration = function (transaction) {
-    if (transaction.started != null) {
-      var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
-      if (to) {
-        return moment.duration(to - transaction.started);
-      }
+    var from = transaction.started || moment();
+    var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+    if (to) {
+      return moment.duration(to - from);
     }
     return null;
   };
@@ -4499,17 +4535,6 @@ common_transaction = function (moment, keyValues) {
   };
   return that;
 }(moment, common_keyValues);
-common_queue = function ($) {
-  $.fn.ajaxQueue = function () {
-    var previous = new $.Deferred().resolve();
-    return function (fn, fail) {
-      if (typeof fn !== 'function') {
-        throw 'must be a function';
-      }
-      return previous = previous.then(fn, fail || fn);
-    };
-  };
-}(jquery);
 common_pubsub = function ($) {
   var o = $({});
   $.subscribe = function () {
@@ -5180,7 +5205,7 @@ dateHelper = function ($, moment) {
   };
   return DateHelper;
 }(jquery, moment);
-signup = function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
+signup = function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
   var DEFAULT_PLAN = 'cr_1802_professional_yearly_usd_500';
   var DEFAULT_PERIOD = 'yearly';
   var DEFAULT_SOURCE = 'attempt';
@@ -5198,7 +5223,7 @@ signup = function ($, jstz, api, settings, Field, dateHelper, inflection, valida
     // between 2 and 25 chars
     this.company = opt.company || '';
     // between 3 and 46 chars
-    this.timezone = opt.timezone || jstz.determine().name();
+    this.timezone = opt.timezone || 'America/New_York';
     this.email = opt.email || '';
     this.login = opt.login || '';
     this.password = opt.password || '';
@@ -5492,7 +5517,7 @@ signup = function ($, jstz, api, settings, Field, dateHelper, inflection, valida
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', jstz.determine().name()), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', ''), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', 'America/New_York'), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', '');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
@@ -5526,6 +5551,6 @@ signup = function ($, jstz, api, settings, Field, dateHelper, inflection, valida
     }, opt), settings);
   };
   return Signup;
-}(jquery, jstz, api, settings, field, dateHelper, common_inflection, common_validation, common_clientStorage, common_utils);
+}(jquery, api, settings, field, dateHelper, common_inflection, common_validation, common_clientStorage, common_utils);
 return signup;
 }))

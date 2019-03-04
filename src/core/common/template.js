@@ -110,7 +110,8 @@ define(['moment'], function (moment) {
 	    	return [
 		    	{id: "letter", name: "US Letter", width: 8.5, height: 11.0, unit: "inch", layout: "portrait", px: { width: 816, height: 1056 }},
 	            {id: "a4", name: "A4", width: 210.0, height: 297.0, unit: "mm", layout: "portrait", px: { width: 793, height: 1122 }},
-	            {id: "tabloid", name: "US Tabloid", width: 11.0, height: 17.0, unit: "inch", layout: "portrait", px: { width: 1056, height: 1632 }}
+	            {id: "tabloid", name: "US Tabloid", width: 11.0, height: 17.0, unit: "inch", layout: "portrait", px: { width: 1056, height: 1632 }},
+	            {id: "label4x6", name: "4\" x 6\" Shipping Label", width: 4.0, height: 6.0, unit: "inch", layout: "portrait", px: { width: 384, height: 576 }}
 	        ];
 	    },
 	    /**

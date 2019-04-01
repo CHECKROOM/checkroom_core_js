@@ -3367,7 +3367,7 @@ common_validation = function (moment) {
      */
     isValidURL: function (url) {
       // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-      var m = url.match(/^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/);
+      var m = url.match(/^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_\!-]+))*$/);
       return m != null && m.length > 0;
     },
     /**
@@ -13145,6 +13145,7 @@ PermissionHandler = function () {
     this._useReservationsClose = this._useReservations && profile.useReservationsClose;
     this._useSlack = limits.allowIntegrationSlack && profile.useIntegrationSlack;
     this._useApi = limits.allowAPI;
+    this._useReleaseAtLocation = this._useCustody && profile.custodyCanChangeLocation;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -13391,6 +13392,8 @@ PermissionHandler = function () {
         return this._canTakeCustody;
       case 'giveCustody':
         return this._canTakeCustody && this._isRootOrAdmin;
+      case 'releaseCustodyAt':
+        return this._canTakeCustody && this._useReleaseAtLocation;
       }
       break;
     case 'kits':
@@ -13440,6 +13443,8 @@ PermissionHandler = function () {
         return this._canTakeCustody;
       case 'giveCustody':
         return this._canTakeCustody && this._isRootOrAdmin;
+      case 'releaseCustodyAt':
+        return this._canTakeCustody && this._useReleaseAtLocation;
       }
       break;
     case 'orders':

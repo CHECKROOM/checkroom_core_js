@@ -43,6 +43,8 @@ define([], function () {
         this._useReservationsClose =  (this._useReservations) &&            (profile.useReservationsClose);
         this._useSlack =              (limits.allowIntegrationSlack) &&     (profile.useIntegrationSlack);
         this._useApi =                (limits.allowAPI);
+        this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation);
+        
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -341,6 +343,8 @@ define([], function () {
                         return this._canTakeCustody;
                     case "giveCustody":
                         return this._canTakeCustody && this._isRootOrAdmin;
+                    case "releaseCustodyAt":
+                        return this._canTakeCustody && this._useReleaseAtLocation;
                 }
                 break;
             case "kits":
@@ -390,6 +394,8 @@ define([], function () {
                         return this._canTakeCustody;
                     case "giveCustody":
                         return this._canTakeCustody && this._isRootOrAdmin;
+                    case "releaseCustodyAt":
+                        return this._canTakeCustody && this._useReleaseAtLocation;
                 }
                 break;
             case "orders":

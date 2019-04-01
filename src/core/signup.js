@@ -353,6 +353,7 @@ define([
             lastName: $.trim(this.lastName),
             email: $.trim(this.email),
             company: $.trim(this.company),
+            phone: this.phone,
             tags: tags || []
         });
     };

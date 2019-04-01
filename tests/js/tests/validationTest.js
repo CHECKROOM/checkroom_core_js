@@ -23,6 +23,10 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
                   ok(common.isValidEmail("Clayton.O'Brien@ampcontrolgroup.com"));
                   ok(!common.isValidEmail("josé.mourinho@noclub.com"))
             })
+
+            test('isValidUrl', function(){
+              ok(common.isValidUrl("https://1drv.ms/x/s!Apc_qRK-hoOumU3wmiUAB7j4vLGX"));
+            })
         };
 
         return {run: run}

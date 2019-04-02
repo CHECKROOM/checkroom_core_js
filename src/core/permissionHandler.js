@@ -43,7 +43,7 @@ define([], function () {
         this._useReservationsClose =  (this._useReservations) &&            (profile.useReservationsClose);
         this._useSlack =              (limits.allowIntegrationSlack) &&     (profile.useIntegrationSlack);
         this._useApi =                (limits.allowAPI);
-        this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation);
+        this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation !== undefined?profile.custodyCanChangeLocation:true); // TODO change this update fallback (mobile)
         
 
         this._canSetFlag = false;

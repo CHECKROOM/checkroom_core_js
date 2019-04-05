@@ -374,7 +374,7 @@ define([
      */
     Signup.fromQueryString = function(opt, settings) {
         var name = utils.getUrlParam("name", "").capitalize(),
-            email = utils.getUrlParam("email", ""),
+            email = utils.getUrlParam("email", "").replace(" ", "+"),
             company = utils.getUrlParam("company", ""),
             firstName = utils.getUrlParam("firstName", "").capitalize(),
             lastName = utils.getUrlParam("lastName", "").capitalize(),
@@ -384,7 +384,8 @@ define([
             plan = utils.getUrlParam("plan", DEFAULT_PLAN),
             timezone = utils.getUrlParam("timezone", "America/New_York"),
             inviteToken = utils.getUrlParam("code", ""),
-            selfserviceToken = utils.getUrlParam("key", "");
+            selfserviceToken = utils.getUrlParam("key", ""),
+            phone = utils.getUrlParam("phone", "").replace(" ", "+");
 
         if( (firstName.length==0) &&
             (lastName.length==0) &&
@@ -416,6 +417,7 @@ define([
             source: source,
             plan: plan,
             period: period,
+            phone: phone,
             inviteToken: inviteToken,
             selfserviceToken: selfserviceToken
         }, opt), settings);

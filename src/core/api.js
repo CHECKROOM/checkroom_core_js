@@ -67,6 +67,7 @@ define([
         spec = spec || {};
         this.timeOut = spec.timeOut || 10000;
         this.responseInTz = true;
+        this.headers = spec.headers || null;
     };
 
     api.ApiAjax.prototype.get = function(url, timeOut) {
@@ -142,6 +143,7 @@ define([
         var xhr = $.ajax({
             type: "POST",
             url: url,
+            headers : this.headers,
             data: JSON.stringify(this._prepareDict(data)),
             contentType: "application/json; charset=utf-8",
             timeout: timeOut || this.timeOut,
@@ -166,6 +168,7 @@ define([
 
         var xhr = $.ajax({
             url: url,
+            headers: this.headers,
             timeout: timeOut || this.timeOut,
             success: function(data) {return that._handleAjaxSuccess(dfd, data, opt);},
             error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
@@ -336,6 +339,40 @@ define([
 
     // Deprecated ApiAuthV2, use ApiAuth
     api.ApiAuthV2 = api.ApiAuth;
+
+
+    api.ApiJWTAuth = function(spec) {
+        spec = spec || {};
+
+        this.urlAuth = spec.urlAuth || '';
+        this.ajax = spec.ajax;
+        this.version = spec.version;
+        this.user = spec.user;
+        this.token = spec.token;
+        this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner:true;
+    };
+    api.ApiJWTAuth.prototype.authenticate = function() {
+        var dfd = $.Deferred();
+        this.ajax.post(this.urlAuth, { user: this.user, password: this.token }, 30000)
+            .done(function(resp) {
+                // Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+                // 
+                // REMARK
+                // - web app allows owners to still login on expired/cancelled account
+                // - mobile doesn't allow expired logins also not for owners
+                if ((resp.status=="OK") && 
+                    (['expired', 'cancelled_expired', 'archived'].indexOf(resp.subscription) != -1?that.allowAccountOwner:true)) {
+                    dfd.resolve(resp.data);
+                } else {
+                    dfd.reject(resp);
+                }
+            }).fail(function(err) {
+                dfd.reject(err);
+            });
+
+        return dfd.promise();   
+    }
+
 
     //*************
     // ApiAnonymous
@@ -729,8 +766,20 @@ define([
     api.ApiDataSource.prototype.search = function(params, fields, limit, skip, sort, mimeType) {
         system.log('ApiDataSource: ' + this.collection + ': search ' + params);
         var cmd = "search";
-        var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
-        return this._ajaxGet(cmd, url);
+        
+        var url = this.getBaseUrl() + 'search';
+        var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+        if( (mimeType!=null) &&
+            (mimeType.length>0)) {
+            p['mimeType'] = mimeType;
+        }
+        var getUrl = url + '?' + this.getParams(p);
+
+        if((getUrl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this._ajaxPost(cmd, url, p);
+        } else {
+            return this._ajaxGet(cmd, getUrl);
+        }
     };
 
     api.ApiDataSource.prototype.searchUrl = function(params, fields, limit, skip, sort, mimeType) {

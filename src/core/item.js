@@ -598,11 +598,12 @@ define([
     /**
      * Expires an item, puts it in the *expired* status
      * @name Item#expire
+     * @param message
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.expire = function(skipRead) {
-        return this._doApiCall({method: 'expire', skipRead: skipRead});
+    Item.prototype.expire = function(message, skipRead) {
+        return this._doApiCall({method: 'expire', params:{ message: message || "" }, skipRead: skipRead});
     };
 
     /**

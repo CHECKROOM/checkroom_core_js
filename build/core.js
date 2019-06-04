@@ -3367,7 +3367,7 @@ common_validation = function (moment) {
      */
     isValidURL: function (url) {
       // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-      var m = url.match(/^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_\!-]+))*$/);
+      var m = url.match(/^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_@\!-]+))*$/);
       return m != null && m.length > 0;
     },
     /**
@@ -8971,7 +8971,7 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, search, skipRead) {
     var params = {
       collection: collection,
       name: name,
@@ -8980,7 +8980,8 @@ Group = function ($, common, api, Document) {
       form: form,
       unit: unit,
       editor: editor,
-      description: description
+      description: description,
+      search: search
     };
     if (select && select.length > 0) {
       params.select = select;
@@ -9008,7 +9009,7 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, search, skipRead) {
     var params = {
       collection: collection,
       name: name,
@@ -9017,7 +9018,8 @@ Group = function ($, common, api, Document) {
       form: form,
       unit: unit,
       editor: editor,
-      description: description
+      description: description,
+      search: search
     };
     if (select && select.length > 0) {
       params.select = select;
@@ -9985,12 +9987,14 @@ Item = function ($, common, Base) {
   /**
    * Expires an item, puts it in the *expired* status
    * @name Item#expire
+   * @param message
    * @param skipRead
    * @returns {promise}
    */
-  Item.prototype.expire = function (skipRead) {
+  Item.prototype.expire = function (message, skipRead) {
     return this._doApiCall({
       method: 'expire',
+      params: { message: message || '' },
       skipRead: skipRead
     });
   };
@@ -13496,7 +13500,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf && this._isRootOrAdminOrUser;
+        return this._usePdf && this._canCreateOrders;
       case 'checkinAt':
         return this._canCreateOrders && this._useCheckinLocation;
       case 'forceCheckListCheckin':
@@ -13554,7 +13558,7 @@ PermissionHandler = function () {
         return this._useFlags && this._canClearFlag;
       // Other
       case 'generateDocument':
-        return this._usePdf && this._isRootOrAdminOrUser;
+        return this._usePdf && this._canCreateReservations;
       case 'ignoreConflicts':
         return this._canReservationConflict;
       case 'close':
@@ -13592,7 +13596,7 @@ PermissionHandler = function () {
       case 'printLabel':
         return this._isRootOrAdmin;
       case 'generateDocument':
-        return this._usePdf && this._isRootOrAdminOrUser;
+        return this._usePdf;
       case 'block':
       case 'undoBlock':
         return this._canBlockContacts;

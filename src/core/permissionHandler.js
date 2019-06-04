@@ -448,7 +448,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf && this._isRootOrAdminOrUser;
+                        return this._usePdf && this._canCreateOrders;
                     case "checkinAt":
                         return this._canCreateOrders && this._useCheckinLocation;
                     case "forceCheckListCheckin":
@@ -513,7 +513,7 @@ define([], function () {
                         return this._useFlags && this._canClearFlag;
                     // Other
                     case "generateDocument":
-                        return this._usePdf && this._isRootOrAdminOrUser;
+                        return this._usePdf && this._canCreateReservations;
                     case "ignoreConflicts":
                         return this._canReservationConflict;
                     case "close":
@@ -551,7 +551,7 @@ define([], function () {
                     case "printLabel":
                         return this._isRootOrAdmin;
                     case "generateDocument":
-                        return this._usePdf && this._isRootOrAdminOrUser;
+                        return this._usePdf;
                     case "block":
                     case "undoBlock":
                         return this._canBlockContacts;

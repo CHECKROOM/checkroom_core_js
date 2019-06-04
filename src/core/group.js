@@ -149,7 +149,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, select, search, skipRead) {
         var params = {
             collection: collection,
             name: name,
@@ -158,7 +158,8 @@ define([
             form: form,
             unit: unit,
             editor: editor,
-            description: description
+            description: description,
+            search: search
         };
         if(select && select.length > 0){
             params.select = select;
@@ -188,7 +189,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, select, search, skipRead) {
         var params = {
             collection: collection,
             name: name,
@@ -197,7 +198,8 @@ define([
             form: form,
             unit: unit,
             editor: editor,
-            description: description
+            description: description,
+            search: search
         }
         if(select && select.length > 0){
             params.select = select;

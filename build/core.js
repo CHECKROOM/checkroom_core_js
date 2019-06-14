@@ -11814,6 +11814,12 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
   };
+  Transaction.prototype.setLabel = function (labelId, skipRead) {
+    var that = this, dfdExists = this.existsInDb() ? $.Deferred().resolve() : this._createTransaction(skipRead);
+    return dfdExists.then(function () {
+      return Base.prototype.setLabel.call(that, labelId, skipRead);
+    });
+  };
   // Location setters
   /**
    * Sets the location for this transaction
@@ -15258,6 +15264,12 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
   Transaction.prototype.setDueDate = function (date, skipRead) {
     this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
+  };
+  Transaction.prototype.setLabel = function (labelId, skipRead) {
+    var that = this, dfdExists = this.existsInDb() ? $.Deferred().resolve() : this._createTransaction(skipRead);
+    return dfdExists.then(function () {
+      return Base.prototype.setLabel.call(that, labelId, skipRead);
+    });
   };
   // Location setters
   /**

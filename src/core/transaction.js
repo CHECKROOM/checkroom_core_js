@@ -490,6 +490,14 @@ define([
         return this._handleTransaction(skipRead);
     };
 
+    Transaction.prototype.setLabel = function(labelId, skipRead){
+        var that = this,
+            dfdExists = this.existsInDb()? $.Deferred().resolve():this._createTransaction(skipRead);
+        return dfdExists.then(function(){
+            return Base.prototype.setLabel.call(that, labelId, skipRead);
+        })
+    }
+
     // Location setters
     /**
      * Sets the location for this transaction

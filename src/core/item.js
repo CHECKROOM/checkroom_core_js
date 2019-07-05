@@ -29,7 +29,10 @@ define([
             kit: null,
             custody: null,
             cover: "",
-            catalog: null
+            catalog: null,
+            canReserve: 'available',
+            canOrder: 'available',
+            canCustody: 'available'
         };
 
     // Allow overriding the ctor during inheritance
@@ -86,6 +89,10 @@ define([
         this.custody = spec.custody || DEFAULTS.custody;
         this.cover = spec.cover || DEFAULTS.cover;
         this.catalog = spec.catalog || DEFAULTS.catalog;
+
+        this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
+        this._canCheckout = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+        this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
     };
 
     Item.prototype = new tmp();
@@ -239,6 +246,10 @@ define([
                     custodyId = (data.custody._id) ? data.custody._id : data.custody;
                 }
                 that.custody = custodyId;
+
+                that._canReserve = data.canReserve !== undefined ? data.canReserve: DEFAULTS.canReserve;
+                that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+                that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
 
                 $.publish('item.fromJson', data);
                 return data;
@@ -532,24 +543,6 @@ define([
     };
 
     /**
-     * Checks if an item can be reserved (based on status)
-     * @name Item#canReserve
-     * @returns {boolean}
-     */
-    Item.prototype.canReserve = function() {
-        return common.itemCanReserve(this);
-    };
-
-    /**
-     * Checks if an item can be checked out (based on status)
-     * @name Item#canCheckout
-     * @returns {boolean}
-     */
-    Item.prototype.canCheckout = function() {
-        return common.itemCanCheckout(this);
-    };
-
-    /**
      * Checks if we can go to the checkout of an item (based on status)
      * @name Item#canGoToCheckout
      * @returns {boolean}
@@ -777,12 +770,31 @@ define([
     };
 
     /**
+     * Checks if an item can be reserved (based on status)
+     * @name Item#canReserve
+     * @returns {boolean}
+     */
+    Item.prototype.canReserve = function() {
+        return common.itemCanReserve(this.raw);
+    };
+
+    /**
+     * Checks if an item can be checked out (based on status)
+     * @name Item#canCheckout
+     * @returns {boolean}
+     */
+    Item.prototype.canCheckout = function() {
+        return common.itemCanCheckout(this.raw);
+    };
+
+
+    /**
      * Checks if custody can be taken for an item (based on status)
      * @name Item#canTakeCustody
      * @returns {boolean}
      */
     Item.prototype.canTakeCustody = function() {
-        return common.itemCanTakeCustody(this);
+        return common.itemCanTakeCustody(this.raw);
     };
 
     /**
@@ -791,7 +803,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canReleaseCustody = function() {
-        return common.itemCanReleaseCustody(this);
+        return common.itemCanReleaseCustody(this.raw);
     };
 
     /**
@@ -800,7 +812,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canTransferCustody = function() {
-        return common.itemCanTransferCustody(this);
+        return common.itemCanTransferCustody(this.raw);
     };
 
     /**

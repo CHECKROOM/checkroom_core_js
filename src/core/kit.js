@@ -13,7 +13,10 @@ define([
         name: "",
         items: [],
         status: "unknown",
-        cover: ""
+        cover: "",
+        canReserve: "available",
+        canOrder: "available",
+        canCustody: "available"
     };
 
     // Allow overriding the ctor during inheritance
@@ -41,6 +44,10 @@ define([
         this.conflicts = [];
         this.status = spec.status || DEFAULTS.status;
         this.cover = spec.cover || DEFAULTS.cover;
+
+        this._canReserve = spec.canReserve !== undefined ? spec.canReserve: DEFAULTS.canReserve;
+        this._canOrder = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+        this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
     };
 
     Kit.prototype = new tmp();
@@ -156,7 +163,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canCheckout = function() {
-        return common.kitCanCheckout(this);
+        return common.kitCanCheckout(this.raw);
     };
 
     /**
@@ -166,7 +173,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReserve = function() {
-        return common.kitCanReserve(this);
+        return common.kitCanReserve(this.raw);
     };
 
     /**
@@ -349,6 +356,10 @@ define([
                 that.codes = data.codes || [];
                 that.status = data.status || DEFAULTS.status;
                 that.cover = data.cover || DEFAULTS.cover;
+
+                that._canReserve = data.canReserve !== undefined ? data.canReserve: DEFAULTS.canReserve;
+                that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+                that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
 
                 that._loadConflicts(that.items);
 

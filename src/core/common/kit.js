@@ -13,7 +13,7 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
      * @returns {boolean}
      */
     that.kitCanCheckout = function(kit) {
-        return common.getAvailableItems(kit.items || []).length > 0;
+        return kit.canOrder !== undefined ? kit.canOrder === 'available' : true;
     };
 
     /**
@@ -25,7 +25,7 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
      * @returns {boolean}
      */
     that.kitCanReserve = function(kit) {
-        return common.getActiveItems(kit.items || []).length > 0;
+        return kit.canReserve !== undefined ? kit.canReserve === 'available' : true;
     };
 
     /**
@@ -37,7 +37,8 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
      * @returns {boolean}
      */
     that.kitCanTakeCustody = function(kit) {
-        return (kit.status=="available");
+        var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+        return canCustody && (kit.status=="available");
     };
 
     /**
@@ -49,7 +50,8 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
      * @returns {boolean}
      */
     that.kitCanReleaseCustody = function(kit) {
-        return (kit.status=="in_custody");
+        var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+        return canCustody && (kit.status=="in_custody");
     };
 
     /**
@@ -61,7 +63,8 @@ define(['jquery', 'common/item'], function ($, itemHelpers) {
      * @returns {boolean}
      */
     that.kitCanTransferCustody = function(kit) {
-        return (kit.status=="in_custody");
+        var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+        return canCustody && (kit.status=="in_custody");
     };
 
     /**

@@ -20,6 +20,7 @@ define([
         newUsers: "create",
         existingUsers: "update",
         missingUsers: "ignore",
+        overwriteLocalUsers: true,
         autoSync: false,
         role: "selfservice",
         query: "(cn=*)",
@@ -31,7 +32,8 @@ define([
         timezone: "Etc/GMT",
         hostCert: 'ldap_tls_demand',
         caCert: '',
-        report: 'always'
+        report: 'always',
+        reportEmail: ''
     };
 
     // Allow overriding the ctor during inheritance
@@ -81,6 +83,7 @@ define([
         this.existingUsers = spec.existingUsers || DEFAULTS.existingUsers;
         this.missingUsers = spec.missingUsers || DEFAULTS.missingUsers;
         this.autoSync = (spec.autoSync!=null) ? spec.autoSync : DEFAULTS.autoSync;
+        this.overwriteLocalUsers = (spec.overwriteLocalUsers!=null) ? spec.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers; 
         this.role = spec.role || DEFAULTS.role;
         this.query = spec.query || DEFAULTS.query;
         this.base = spec.base || DEFAULTS.base;
@@ -92,6 +95,7 @@ define([
         this.hostCert = spec.hostCert || DEFAULTS.hostCert;
         this.caCert = spec.caCert || DEFAULTS.caCert;
         this.report = spec.report || DEFAULTS.report;
+        this.reportEmail = spec.reportEmail || DEFAULTS.reportEmail;
     };
 
     UserSync.prototype = new tmp();
@@ -148,6 +152,7 @@ define([
             (this.existsingUsers==DEFAULTS.existingUsers) &&
             (this.missingUsers==DEFAULTS.missingUsers) &&
             (this.autoSync==DEFAULTS.autoSync) &&
+            (this.overwriteLocalUsers==DEFAULTS.overwriteLocalUsers) &&
             (this.role==DEFAULTS.role) &&
             (this.query==DEFAULTS.query) &&
             (this.base==DEFAULTS.base) &&
@@ -158,6 +163,7 @@ define([
             (this.hostCert==DEFAULTS.hostCert) &&
             (this.caCert==DEFAULTS.caCert) &&
             (this.report==DEFAULTS.report) &&
+            (this.reportEmail==DEFAULTS.reportEmail) &&
             (this.restrictLocations && this.restrictLocations.length == 0));
     };
 
@@ -186,6 +192,7 @@ define([
             var existingUsers = this.raw.existingUsers || DEFAULTS.existingUsers;
             var missingUsers = this.raw.missingUsers || DEFAULTS.missingUsers;
             var autoSync = (this.raw.autoSync!=null) ? this.raw.autoSync : DEFAULTS.autoSync;
+            var overwriteLocalUsers = (this.raw.overwriteLocalUsers!=null) ? this.raw.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
             var role = this.raw.role || DEFAULTS.role;
             var query = this.raw.query || DEFAULTS.query;
             var base = this.raw.base || DEFAULTS.base;
@@ -196,6 +203,7 @@ define([
             var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
             var caCert = this.raw.caCert || DEFAULTS.caCert;
             var report = this.raw.report || DEFAULTS.report;
+            var reportEmail = this.raw.reportEmail || DEFAULTS.reportEmail;
 
             return (
                 (this.kind!=kind) ||
@@ -209,6 +217,7 @@ define([
                 (this.existingUsers!=existingUsers) ||
                 (this.missingUsers!=missingUsers) ||
                 (this.autoSync!=autoSync) ||
+                (this.overwriteLocalUsers!=overwriteLocalUsers) ||
                 (this.role!=role) ||
                 (this.query!=query) ||
                 (this.base!=base) ||
@@ -219,6 +228,7 @@ define([
                 (this.hostCert!=hostCert) ||
                 (this.caCert!=caCert) ||
                 (this.report!=report) ||
+                (this.reportEmail!=reportEmail) ||
                 (this._isDirtyRestrictLocations())
             );
         }
@@ -293,6 +303,7 @@ define([
         data.existingUsers = this.existingUsers || DEFAULTS.existingUsers;
         data.missingUsers = this.missingUsers || DEFAULTS.missingUsers;
         data.autoSync = (this.autoSync!=null) ? this.autoSync : DEFAULTS.autoSync;
+        data.overwriteLocalUsers = (this.overwriteLocalUsers != null) ? this.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
         data.role = this.role || DEFAULTS.role;
         data.query = this.query || DEFAULTS.query;
         data.base = this.base || DEFAULTS.base;
@@ -303,6 +314,7 @@ define([
         data.hostCert = this.hostCert || DEFAULTS.hostCert;
         data.caCert = this.caCert || DEFAULTS.caCert;
         data.report = this.report || DEFAULTS.report;
+        data.reportEmail = this.reportEmail || DEFAULTS.reportEmail;
 
         return data;
     };
@@ -331,6 +343,7 @@ define([
                 that.existingUsers = data.existingUsers || DEFAULTS.existingUsers;
                 that.missingUsers = data.missingUsers || DEFAULTS.missingUsers;
                 that.autoSync = (data.autoSync!=null) ? data.autoSync : DEFAULTS.autoSync;
+                that.overwriteLocalUsers = (data.overwriteLocalUsers!=null) ? data.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
                 that.role = data.role || DEFAULTS.role;
                 that.query = data.query || DEFAULTS.query;
                 that.base = data.base || DEFAULTS.base;
@@ -342,6 +355,7 @@ define([
                 that.hostCert = data.hostCert || DEFAULTS.hostCert;
                 that.caCert = data.caCert || DEFAULTS.caCert;
                 that.report = data.report || DEFAULTS.report;
+                that.reportEmail = data.reportEmail || DEFAULTS.reportEmail;
 
                 $.publish('usersync.fromJson', data);
                 return data;

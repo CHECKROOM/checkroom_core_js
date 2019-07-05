@@ -574,6 +574,7 @@ define([], function () {
                     case "undoArchive":
                     case "activate":
                     case "deactivate":
+                    case "clearSync":
                         return this._isRootOrAdmin;
                     case "changeAccountOwner":
                         return this._isOwner;

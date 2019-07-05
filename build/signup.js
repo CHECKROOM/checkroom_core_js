@@ -1373,19 +1373,22 @@ common_reservation = {
 common_item = function () {
   var that = {};
   that.itemCanTakeCustody = function (item) {
-    return item.status == 'available';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'available';
   };
   that.itemCanReleaseCustody = function (item) {
-    return item.status == 'in_custody';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'in_custody';
   };
   that.itemCanTransferCustody = function (item) {
-    return item.status == 'in_custody';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'in_custody';
   };
   that.itemCanReserve = function (item) {
-    return item.status != 'expired' && item.status != 'in_custody';
+    return item.canReserve !== undefined ? item.canReserve === 'available' : true;
   };
   that.itemCanCheckout = function (item) {
-    return item.status == 'available';
+    return item.canOrder !== undefined ? item.canOrder === 'available' : true;
   };
   that.itemCanGoToCheckout = function (item) {
     return item.status == 'checkedout' || item.status == 'await_checkout';
@@ -3812,7 +3815,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanCheckout = function (kit) {
-    return common.getAvailableItems(kit.items || []).length > 0;
+    return kit.canOrder !== undefined ? kit.canOrder === 'available' : true;
   };
   /**
    * Checks if a kit can be reserved (any items active)
@@ -3823,7 +3826,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReserve = function (kit) {
-    return common.getActiveItems(kit.items || []).length > 0;
+    return kit.canReserve !== undefined ? kit.canReserve === 'available' : true;
   };
   /**
    * Checks if custody can be taken for a kit (based on status)
@@ -3834,7 +3837,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanTakeCustody = function (kit) {
-    return kit.status == 'available';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'available';
   };
   /**
    * Checks if custody can be released for a kit (based on status)
@@ -3845,7 +3849,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReleaseCustody = function (kit) {
-    return kit.status == 'in_custody';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'in_custody';
   };
   /**
    * Checks if custody can be transferred for a kit (based on status)
@@ -3856,7 +3861,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanTransferCustody = function (kit) {
-    return kit.status == 'in_custody';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'in_custody';
   };
   /**
    * getKitStatus

@@ -1373,19 +1373,22 @@ common_reservation = {
 common_item = function () {
   var that = {};
   that.itemCanTakeCustody = function (item) {
-    return item.status == 'available';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'available';
   };
   that.itemCanReleaseCustody = function (item) {
-    return item.status == 'in_custody';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'in_custody';
   };
   that.itemCanTransferCustody = function (item) {
-    return item.status == 'in_custody';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'in_custody';
   };
   that.itemCanReserve = function (item) {
-    return item.status != 'expired' && item.status != 'in_custody';
+    return item.canReserve !== undefined ? item.canReserve === 'available' : true;
   };
   that.itemCanCheckout = function (item) {
-    return item.status == 'available';
+    return item.canOrder !== undefined ? item.canOrder === 'available' : true;
   };
   that.itemCanGoToCheckout = function (item) {
     return item.status == 'checkedout' || item.status == 'await_checkout';
@@ -3812,7 +3815,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanCheckout = function (kit) {
-    return common.getAvailableItems(kit.items || []).length > 0;
+    return kit.canOrder !== undefined ? kit.canOrder === 'available' : true;
   };
   /**
    * Checks if a kit can be reserved (any items active)
@@ -3823,7 +3826,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReserve = function (kit) {
-    return common.getActiveItems(kit.items || []).length > 0;
+    return kit.canReserve !== undefined ? kit.canReserve === 'available' : true;
   };
   /**
    * Checks if custody can be taken for a kit (based on status)
@@ -3834,7 +3837,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanTakeCustody = function (kit) {
-    return kit.status == 'available';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'available';
   };
   /**
    * Checks if custody can be released for a kit (based on status)
@@ -3845,7 +3849,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReleaseCustody = function (kit) {
-    return kit.status == 'in_custody';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'in_custody';
   };
   /**
    * Checks if custody can be transferred for a kit (based on status)
@@ -3856,7 +3861,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanTransferCustody = function (kit) {
-    return kit.status == 'in_custody';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'in_custody';
   };
   /**
    * getKitStatus
@@ -9523,7 +9529,10 @@ Item = function ($, common, Base) {
       kit: null,
       custody: null,
       cover: '',
-      catalog: null
+      catalog: null,
+      canReserve: 'available',
+      canOrder: 'available',
+      canCustody: 'available'
     };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9581,6 +9590,9 @@ Item = function ($, common, Base) {
     this.custody = spec.custody || DEFAULTS.custody;
     this.cover = spec.cover || DEFAULTS.cover;
     this.catalog = spec.catalog || DEFAULTS.catalog;
+    this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
+    this._canCheckout = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+    this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
   };
   Item.prototype = new tmp();
   Item.prototype.constructor = Item;
@@ -9687,6 +9699,9 @@ Item = function ($, common, Base) {
         custodyId = data.custody._id ? data.custody._id : data.custody;
       }
       that.custody = custodyId;
+      that._canReserve = data.canReserve !== undefined ? data.canReserve : DEFAULTS.canReserve;
+      that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+      that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
       $.publish('item.fromJson', data);
       return data;
     });
@@ -9928,22 +9943,6 @@ Item = function ($, common, Base) {
     });
   };
   /**
-   * Checks if an item can be reserved (based on status)
-   * @name Item#canReserve
-   * @returns {boolean}
-   */
-  Item.prototype.canReserve = function () {
-    return common.itemCanReserve(this);
-  };
-  /**
-   * Checks if an item can be checked out (based on status)
-   * @name Item#canCheckout
-   * @returns {boolean}
-   */
-  Item.prototype.canCheckout = function () {
-    return common.itemCanCheckout(this);
-  };
-  /**
    * Checks if we can go to the checkout of an item (based on status)
    * @name Item#canGoToCheckout
    * @returns {boolean}
@@ -10181,12 +10180,28 @@ Item = function ($, common, Base) {
     });
   };
   /**
+   * Checks if an item can be reserved (based on status)
+   * @name Item#canReserve
+   * @returns {boolean}
+   */
+  Item.prototype.canReserve = function () {
+    return common.itemCanReserve(this.raw);
+  };
+  /**
+   * Checks if an item can be checked out (based on status)
+   * @name Item#canCheckout
+   * @returns {boolean}
+   */
+  Item.prototype.canCheckout = function () {
+    return common.itemCanCheckout(this.raw);
+  };
+  /**
    * Checks if custody can be taken for an item (based on status)
    * @name Item#canTakeCustody
    * @returns {boolean}
    */
   Item.prototype.canTakeCustody = function () {
-    return common.itemCanTakeCustody(this);
+    return common.itemCanTakeCustody(this.raw);
   };
   /**
    * Checks if custody can be released for an item (based on status)
@@ -10194,7 +10209,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.canReleaseCustody = function () {
-    return common.itemCanReleaseCustody(this);
+    return common.itemCanReleaseCustody(this.raw);
   };
   /**
    * Checks if custody can be transferred for an item (based on status)
@@ -10202,7 +10217,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.canTransferCustody = function () {
-    return common.itemCanTransferCustody(this);
+    return common.itemCanTransferCustody(this.raw);
   };
   /**
    * Takes custody of an item
@@ -10266,7 +10281,10 @@ Kit = function ($, Base, common) {
     name: '',
     items: [],
     status: 'unknown',
-    cover: ''
+    cover: '',
+    canReserve: 'available',
+    canOrder: 'available',
+    canCustody: 'available'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -10292,6 +10310,9 @@ Kit = function ($, Base, common) {
     this.conflicts = [];
     this.status = spec.status || DEFAULTS.status;
     this.cover = spec.cover || DEFAULTS.cover;
+    this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
+    this._canOrder = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+    this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
   };
   Kit.prototype = new tmp();
   Kit.prototype.constructor = Kit;
@@ -10392,7 +10413,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canCheckout = function () {
-    return common.kitCanCheckout(this);
+    return common.kitCanCheckout(this.raw);
   };
   /**
    * Checks if a Kit can be reserved (based on status)
@@ -10401,7 +10422,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canReserve = function () {
-    return common.kitCanReserve(this);
+    return common.kitCanReserve(this.raw);
   };
   /**
    * addItems; adds a bunch of Items to the transaction using a list of item ids
@@ -10594,6 +10615,9 @@ Kit = function ($, Base, common) {
       that.codes = data.codes || [];
       that.status = data.status || DEFAULTS.status;
       that.cover = data.cover || DEFAULTS.cover;
+      that._canReserve = data.canReserve !== undefined ? data.canReserve : DEFAULTS.canReserve;
+      that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+      that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
@@ -13625,6 +13649,7 @@ PermissionHandler = function () {
       case 'undoArchive':
       case 'activate':
       case 'deactivate':
+      case 'clearSync':
         return this._isRootOrAdmin;
       case 'changeAccountOwner':
         return this._isOwner;
@@ -16085,6 +16110,7 @@ UserSync = function ($, Base, common) {
     newUsers: 'create',
     existingUsers: 'update',
     missingUsers: 'ignore',
+    overwriteLocalUsers: true,
     autoSync: false,
     role: 'selfservice',
     query: '(cn=*)',
@@ -16096,7 +16122,8 @@ UserSync = function ($, Base, common) {
     timezone: 'Etc/GMT',
     hostCert: 'ldap_tls_demand',
     caCert: '',
-    report: 'always'
+    report: 'always',
+    reportEmail: ''
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -16141,6 +16168,7 @@ UserSync = function ($, Base, common) {
     this.existingUsers = spec.existingUsers || DEFAULTS.existingUsers;
     this.missingUsers = spec.missingUsers || DEFAULTS.missingUsers;
     this.autoSync = spec.autoSync != null ? spec.autoSync : DEFAULTS.autoSync;
+    this.overwriteLocalUsers = spec.overwriteLocalUsers != null ? spec.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
     this.role = spec.role || DEFAULTS.role;
     this.query = spec.query || DEFAULTS.query;
     this.base = spec.base || DEFAULTS.base;
@@ -16152,6 +16180,7 @@ UserSync = function ($, Base, common) {
     this.hostCert = spec.hostCert || DEFAULTS.hostCert;
     this.caCert = spec.caCert || DEFAULTS.caCert;
     this.report = spec.report || DEFAULTS.report;
+    this.reportEmail = spec.reportEmail || DEFAULTS.reportEmail;
   };
   UserSync.prototype = new tmp();
   UserSync.prototype.constructor = UserSync;
@@ -16188,7 +16217,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && this.caCert == DEFAULTS.caCert && this.report == DEFAULTS.report && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.overwriteLocalUsers == DEFAULTS.overwriteLocalUsers && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && this.caCert == DEFAULTS.caCert && this.report == DEFAULTS.report && this.reportEmail == DEFAULTS.reportEmail && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -16213,6 +16242,7 @@ UserSync = function ($, Base, common) {
       var existingUsers = this.raw.existingUsers || DEFAULTS.existingUsers;
       var missingUsers = this.raw.missingUsers || DEFAULTS.missingUsers;
       var autoSync = this.raw.autoSync != null ? this.raw.autoSync : DEFAULTS.autoSync;
+      var overwriteLocalUsers = this.raw.overwriteLocalUsers != null ? this.raw.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
       var role = this.raw.role || DEFAULTS.role;
       var query = this.raw.query || DEFAULTS.query;
       var base = this.raw.base || DEFAULTS.base;
@@ -16223,7 +16253,8 @@ UserSync = function ($, Base, common) {
       var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
       var caCert = this.raw.caCert || DEFAULTS.caCert;
       var report = this.raw.report || DEFAULTS.report;
-      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this.caCert != caCert || this.report != report || this._isDirtyRestrictLocations();
+      var reportEmail = this.raw.reportEmail || DEFAULTS.reportEmail;
+      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.overwriteLocalUsers != overwriteLocalUsers || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this.caCert != caCert || this.report != report || this.reportEmail != reportEmail || this._isDirtyRestrictLocations();
     }
     return isDirty;
   };
@@ -16291,6 +16322,7 @@ UserSync = function ($, Base, common) {
     data.existingUsers = this.existingUsers || DEFAULTS.existingUsers;
     data.missingUsers = this.missingUsers || DEFAULTS.missingUsers;
     data.autoSync = this.autoSync != null ? this.autoSync : DEFAULTS.autoSync;
+    data.overwriteLocalUsers = this.overwriteLocalUsers != null ? this.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
     data.role = this.role || DEFAULTS.role;
     data.query = this.query || DEFAULTS.query;
     data.base = this.base || DEFAULTS.base;
@@ -16301,6 +16333,7 @@ UserSync = function ($, Base, common) {
     data.hostCert = this.hostCert || DEFAULTS.hostCert;
     data.caCert = this.caCert || DEFAULTS.caCert;
     data.report = this.report || DEFAULTS.report;
+    data.reportEmail = this.reportEmail || DEFAULTS.reportEmail;
     return data;
   };
   /**
@@ -16326,6 +16359,7 @@ UserSync = function ($, Base, common) {
       that.existingUsers = data.existingUsers || DEFAULTS.existingUsers;
       that.missingUsers = data.missingUsers || DEFAULTS.missingUsers;
       that.autoSync = data.autoSync != null ? data.autoSync : DEFAULTS.autoSync;
+      that.overwriteLocalUsers = data.overwriteLocalUsers != null ? data.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
       that.role = data.role || DEFAULTS.role;
       that.query = data.query || DEFAULTS.query;
       that.base = data.base || DEFAULTS.base;
@@ -16337,6 +16371,7 @@ UserSync = function ($, Base, common) {
       that.hostCert = data.hostCert || DEFAULTS.hostCert;
       that.caCert = data.caCert || DEFAULTS.caCert;
       that.report = data.report || DEFAULTS.report;
+      that.reportEmail = data.reportEmail || DEFAULTS.reportEmail;
       $.publish('usersync.fromJson', data);
       return data;
     });

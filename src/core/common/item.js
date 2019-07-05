@@ -5,23 +5,26 @@ define(function () {
 	var that = {};
 	
 	that.itemCanTakeCustody = function(item) {
-		return (item.status=="available");
+		var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+		return canCustody && (item.status=="available");
 	};
 	
 	that.itemCanReleaseCustody = function(item) {
-		return (item.status=="in_custody");
+		var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+		return canCustody && (item.status=="in_custody");
 	};
 	
 	that.itemCanTransferCustody = function(item) {
-		return (item.status=="in_custody");
+		var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+		return canCustody && (item.status=="in_custody");
 	};
 	
 	that.itemCanReserve = function(item) {
-		return (item.status!="expired") && (item.status!="in_custody");
+		return item.canReserve !== undefined ? item.canReserve === 'available' : true;
 	};
 	
 	that.itemCanCheckout = function(item) {
-		return (item.status=="available");
+		return item.canOrder !== undefined ? item.canOrder === 'available' : true;
 	};
 	
 	that.itemCanGoToCheckout = function(item) {

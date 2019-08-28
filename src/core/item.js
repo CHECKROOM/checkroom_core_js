@@ -32,7 +32,12 @@ define([
             catalog: null,
             canReserve: 'available',
             canOrder: 'available',
-            canCustody: 'available'
+            canCustody: 'available',
+            allowReserve: true,
+            allowOrder: true,
+            allowCustody: true,
+            flagged: null,
+            expired: null
         };
 
     // Allow overriding the ctor during inheritance
@@ -90,6 +95,9 @@ define([
         this.cover = spec.cover || DEFAULTS.cover;
         this.catalog = spec.catalog || DEFAULTS.catalog;
 
+        this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+        this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+        this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
         this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
         this._canCheckout = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
         this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
@@ -162,7 +170,8 @@ define([
             this._isDirtyCategory() ||
             this._isDirtyLocation() ||
             this._isDirtyGeo() || 
-            this._isDirtyFlag()
+            this._isDirtyFlag() ||
+            this._isDirtyPermissions()
         );
     };
 
@@ -200,6 +209,11 @@ define([
 
     Item.prototype._fromJson = function(data, options) {
         var that = this;
+
+        if(data.allowOrder === undefined) data.allowOrder = DEFAULTS.allowOrder;
+        if(data.allowReserve === undefined) data.allowReserve = DEFAULTS.allowReserve;
+        if(data.allowCustody === undefined) data.allowCustody = DEFAULTS.allowCustody;
+
         return Base.prototype._fromJson.call(this, data, options)
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
@@ -215,6 +229,8 @@ define([
                 that.geo = data.geo || DEFAULTS.geo.slice();
                 that.cover = data.cover || DEFAULTS.cover;
                 that.catalog = data.catalog || DEFAULTS.catalog;
+                that.flagged = data.flagged || DEFAULTS.flagged;
+                that.expired = data.expired || DEFAULTS.expired;
 
                 // Depending on the fields we'll need to get the _id directly or from the dicts
                 var locId = DEFAULTS.location;
@@ -250,6 +266,9 @@ define([
                 that._canReserve = data.canReserve !== undefined ? data.canReserve: DEFAULTS.canReserve;
                 that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
                 that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+                that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+                that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+                that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
 
                 $.publish('item.fromJson', data);
                 return data;
@@ -326,6 +345,20 @@ define([
         }
     };
 
+    Item.prototype._isDirtyPermissions = function(){
+        if(this.raw){
+            var allowReserve = this.raw.allowReserve,
+                allowCheckout = this.raw.allowOrder,
+                allowCustody = this.raw.allowCustody;
+
+            return (this.allowReserve != allowReserve) ||
+                    (this.allowCheckout != allowCheckout) ||
+                    (this.allowCustody != allowCustody);
+        }else{
+            return false;
+        }
+    };
+
     Item.prototype._isDirtyGeo = function() {
         if (this.raw) {
             var address = this.raw.address || DEFAULTS.address;
@@ -384,6 +417,7 @@ define([
             dfdLocation = $.Deferred(),
             dfdFields = $.Deferred(),
             dfdFlags = $.Deferred(),
+            dfdPermissions = $.Deferred(),
             dfdBasic = $.Deferred();
 
         if (this._isDirtyCategory()) {
@@ -440,6 +474,12 @@ define([
                     dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice, that.residualValue);
                 } else {
                     dfdBasic.resolve();
+                }
+
+                if(that._isDirtyPermissions()){
+                    dfdPermissions = that.updateAllowedActions(that.allowReserve, that.allowCheckout, that.allowCustody);
+                }else{
+                    dfdPermissions.resolve();
                 }
 
                 return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
@@ -768,6 +808,14 @@ define([
                 return (skipRead==true) ? data : that._fromJson(data[0]);
             });
     };
+
+    Item.prototype.updateAllowedActions = function(canReserve, canCheckout, canCustody, skipRead) {
+        return this._doApiCall({ 
+            method: 'setAllowedActions',
+            params: { reserve: canReserve, order: canCheckout, custody: canCustody  },
+            skipRead: skipRead
+        });
+    }
 
     /**
      * Checks if an item can be reserved (based on status)

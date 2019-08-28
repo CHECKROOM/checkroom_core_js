@@ -58,7 +58,7 @@ require([
         signupTest,
         validationTest) {
 
-        //commonTest.run();
+        commonTest.run();
 
         //orderTransferTest.run();
         //helperTest.run();
@@ -75,7 +75,7 @@ require([
         //availabilityTest.run();
         //webHookTest.run();
         //signupTest.run();
-        validationTest.run();
+        //validationTest.run();
 
 
         // start QUnit.

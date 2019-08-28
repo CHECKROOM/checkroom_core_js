@@ -141,6 +141,16 @@ define([
     };
 
     /**
+     * Checks if the order can be spotchecked
+     * @method
+     * @name Order#canSpotcheck
+     * @returns {boolean}
+     */
+    Order.prototype.canSpotcheck = function() {
+        return common.canOrderSpotcheck(this.raw);
+    };
+
+    /**
      * Checks if the order has an reservation linked to it
      * @method
      * @name Order#canGoToReservation
@@ -483,6 +493,7 @@ define([
         // We can check if all the items are:
         // - at the right location
         // - not expired
+        // - has order permission
         var that = this,
             conflicts = [],
             locId = this.helper.ensureId(this.location || "");
@@ -491,15 +502,20 @@ define([
             // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
             if(item.order != that.id) return true;
 
-            if (item.status == "expired") {
+            if(item.canOrder==="unavailable_allow"){
+                conflicts.push(new Conflict({
+                    kind: "not_allowed_order",
+                    item: item._id,
+                    itemName: item.name
+                }));
+            } else if (item.status == "expired") {
                 conflicts.push(new Conflict({
                     kind: "expired",
                     item: item._id,
                     itemName: item.name,
                     locationCurrent: item.location,
                     locationDesired: locId
-                }));
-                
+                }));                
             } else if(item.status == "in_custody"){
                 conflicts.push(new Conflict({
                     kind: "custody",

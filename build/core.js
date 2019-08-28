@@ -1214,6 +1214,9 @@ common_order = function (moment) {
       } else {
         return this.getFriendlyOrderCss(order.status);
       }
+    },
+    canOrderSpotcheck: function (order) {
+      return order.archived == null && ['closed'].indexOf(order.status) == -1;
     }
   };
 }(moment);
@@ -1368,17 +1371,22 @@ common_reservation = {
     } else {
       return this.getFriendlyReservationStatus(reservation.status);
     }
+  },
+  canReservationSpotcheck: function (reservation) {
+    return reservation.archived == null && [
+      'cancelled',
+      'closed'
+    ].indexOf(reservation.status) == -1;
   }
 };
-common_item = function () {
+common_item = function (moment, orderHelper, reservationHelper) {
   var that = {};
   that.itemCanTakeCustody = function (item) {
     var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
     return canCustody && item.status == 'available';
   };
   that.itemCanReleaseCustody = function (item) {
-    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
-    return canCustody && item.status == 'in_custody';
+    return item.status == 'in_custody';
   };
   that.itemCanTransferCustody = function (item) {
     var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
@@ -1543,7 +1551,9 @@ common_item = function () {
   * @return {Array}       
   */
   that.getAvailableItems = function (items) {
-    return this.getItemsByStatus(items, 'available');
+    return this.getItemsByStatus(items, 'available').filter(function (item) {
+      return item.canOrder === 'available';
+    });
   };
   /**
   * getActiveItems
@@ -1558,6 +1568,8 @@ common_item = function () {
   that.getActiveItems = function (items) {
     return this.getItemsByStatus(items, function (item) {
       return item.status != 'expired' && item.status != 'in_custody';
+    }).filter(function (item) {
+      return item.canReserve === 'available';
     });
   };
   /**
@@ -1575,8 +1587,220 @@ common_item = function () {
       return typeof item === 'string' ? item : item._id;
     });
   };
+  /**
+  * getItemMessages
+  *
+  * @memberOf common
+  * @name  common#getItemMessages
+  * @method
+  * 
+  * @param  item          
+  * @param  permissionHandler
+  * @param  dateHelper        
+  * @return {promise}                   
+  */
+  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
+    var formatDate = function (date) {
+      return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    // Check-out message?
+    if (item.status == 'checkedout' || item.status == 'await_checkout') {
+      var message = '', dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('orders').search({
+          _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+          _restrict: !isSelfservice,
+          _sort: 'started',
+          status: item.status == 'checkedout' ? 'open' : 'creating',
+          _limit: 1,
+          _skip: 0,
+          items__contains: item.id
+        }).then(function (resp) {
+          if (resp && resp.count > 0) {
+            dfd.resolve(resp.docs[0]);
+          }
+        });
+      }
+      dfd.then(function (checkout) {
+        if (item.status == 'await_checkout') {
+          message = 'Item is currently <strong>awaiting checkout</strong>';
+        } else {
+          if (checkout && orderHelper.isOrderOverdue(checkout)) {
+            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + ' from ' + checkout.customer.name;
+          } else {
+            message = 'Item is <strong>checked out</strong>' + (checkout ? ' to ' + checkout.customer.name + ' until ' + formatDate(checkout.due) : '');
+          }
+        }
+        messages.push({
+          kind: 'checkout',
+          priority: MessagePriority.Critical,
+          message: message,
+          checkout: checkout || {}
+        });
+        dfdCheckouts.resolve();
+      });
+    } else {
+      dfdCheckouts.resolve();
+    }
+    // Reservation message? 
+    if (perm.hasReservationPermission('read')) {
+      getDataSource('reservations').search({
+        status: 'open',
+        fromDate__gte: moment(),
+        _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'fromDate',
+        _limit: 1,
+        _skip: 0,
+        items__contains: item.id
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          var reservation = resp.docs[0];
+          message = 'Next <strong>reservation</strong> is ' + reservation.fromDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(reservation.fromDate) + '</span>';
+          messages.push({
+            kind: 'reservation',
+            priority: MessagePriority.High,
+            reservation: reservation,
+            message: message
+          });
+        }
+        dfdReservations.resolve();
+      });
+    } else {
+      dfdReservations.resolve();
+    }
+    // Custody message?
+    if (item.status == 'in_custody') {
+      var dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('items').call(item.id, 'getChangeLog', {
+          action__in: [
+            'takeCustody',
+            'transferCustody'
+          ],
+          limit: 1,
+          skip: 0
+        }).then(function (resp) {
+          getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+            dfd.resolve(contact, resp[0].created);
+          });
+        });
+      }
+      dfd.then(function (contact, since) {
+        var message = 'Item is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        messages.push({
+          kind: 'custody',
+          priority: MessagePriority.High,
+          by: contact || {},
+          message: message
+        });
+        dfdCustody.resolve();
+      });
+    } else {
+      dfdCustody.resolve();
+    }
+    // Permission message?
+    var canReserve = perm.hasItemPermission('reserve') && item.allowReserve, canCheckout = perm.hasItemPermission('checkout') && item.allowCheckout, canCustody = perm.hasItemPermission('takeCustody') && item.allowCustody;
+    if (!item.allowReserve || !item.allowCheckout || !item.allowCustody) {
+      var notAllowedActions = [], allowedActions = [];
+      if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (!canReserve && !canCheckout || canReserve && canCheckout)) {
+        if (canReserve && canCheckout) {
+          allowedActions.push('Bookings');
+        } else {
+          // modules enabled?d
+          if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Bookings');
+          }
+        }
+      } else {
+        if (canReserve) {
+          allowedActions.push('Reservation');
+        } else {
+          if (perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Reservation');
+          }
+        }
+        if (canCheckout) {
+          allowedActions.push('Check-out');
+        } else {
+          // module enabled
+          if (perm.hasCheckoutPermission('read')) {
+            notAllowedActions.push('Check-out');
+          }
+        }
+      }
+      if (canCustody) {
+        allowedActions.push('Custody');
+      } else {
+        // module enabled?
+        if (perm.hasItemPermission('takeCustody')) {
+          notAllowedActions.push('Custody');
+        }
+      }
+      var message = '', unavailable = !canReserve && !canCheckout && !canCustody;
+      if (unavailable) {
+        message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+      } else {
+        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + ' <span class=\'text-muted\'>not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
+      }
+      messages.push({
+        kind: 'permission',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    // Flag message?
+    if (item.flag) {
+      var message = 'Item was <strong>flagged</strong> as ' + item.flag + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'flag',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    if (item.warrantyDate) {
+      var message = '';
+      var inWarranty = Math.round(moment().diff(item.warrantyDate, 'days')) >= 0;
+      if (inWarranty) {
+        message = 'Went <strong>out of warranty</strong> ' + item.warrantyDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(item.warrantyDate) + '</span>';
+      } else {
+        message = 'Warranty <strong>expires</strong> ' + item.warrantyDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(item.warrantyDate) + '</span>';
+      }
+      messages.push({
+        kind: 'warranty',
+        priority: MessagePriority.Low,
+        message: message,
+        inWarranty: inWarranty
+      });
+    }
+    // Expired message?
+    if (item.status == 'expired') {
+      var message = 'Item was <strong>expired</strong> ' + (item.expired ? '<span class=\'text-muted\'>' + item.expired.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'expired',
+        priority: MessagePriority.Critical,
+        message: message
+      });
+    }
+    return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}();
+}(moment, common_order, common_reservation);
 common_conflicts = {
   /**
    * getFriendlyConflictKind
@@ -1600,6 +1824,10 @@ common_conflicts = {
       return 'Item is expired';
     case 'custody':
       return 'Item is in custody';
+    case 'not_allowed_reservation':
+      return 'Item cannot be reserved';
+    case 'not_allowed_order':
+      return 'Item cannot be checked out';
     default:
       return '';
     }
@@ -3725,11 +3953,6 @@ common_slimdown = function () {
       },
       // horizontal rule
       {
-        regex: /(?:[^\n]|\n(?! *\n))+/g,
-        replacement: para
-      },
-      // add paragraphs
-      {
         regex: /<\/ul>\s?<ul>/g,
         replacement: ''
       },
@@ -3740,10 +3963,16 @@ common_slimdown = function () {
       },
       // fix extra ol
       {
+        regex: /(?:[^\n]|(?:<[^>].*>)\n(?! *\n))+/g,
+        replacement: para
+      },
+      // add paragraphs
+      {
         regex: /<\/blockquote><blockquote>/g,
         replacement: '\n'
       }  // fix extra blockquote
     ];
+    //(\w+)\n
     // Add a rule.
     this.addRule = function (regex, replacement) {
       regex.global = true;
@@ -3804,7 +4033,7 @@ common_slimdown = function () {
   };
   window.Slimdown = Slimdown;
 }();
-common_kit = function ($, itemHelpers) {
+common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
   var that = {};
   /**
    * Checks if a kit can be checked out (any items available)
@@ -3815,7 +4044,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanCheckout = function (kit) {
-    return kit.canOrder !== undefined ? kit.canOrder === 'available' : true;
+    return kit.canOrder !== undefined ? kit.canOrder === 'available' || kit.canOrder === 'available_partially' : true;
   };
   /**
    * Checks if a kit can be reserved (any items active)
@@ -3826,7 +4055,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReserve = function (kit) {
-    return kit.canReserve !== undefined ? kit.canReserve === 'available' : true;
+    return kit.canReserve !== undefined ? kit.canReserve === 'available' || kit.canReserve === 'available_partially' : true;
   };
   /**
    * Checks if custody can be taken for a kit (based on status)
@@ -3999,8 +4228,258 @@ common_kit = function ($, itemHelpers) {
     });
     return ids;
   };
+  /**
+   * getKitMessages
+   *
+   * @memberOf common
+   * @name  common#getKitMessages
+   * @method
+   * 
+   * @param  kit          
+   * @param  permissionHandler
+   * @param  dateHelper        
+   * @return {promise}                   
+   */
+  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
+    var formatDate = function (date) {
+      return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    // Check-out message?
+    if (perm.hasCheckoutPermission('read') && (kit.status == 'checkedout' || kit.status == 'await_checkout')) {
+      var message = '', dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('orders').search({
+          _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+          _restrict: !isSelfservice,
+          _sort: 'started',
+          status: kit.status == 'checkedout' ? 'open' : 'creating',
+          _limit: 1,
+          _skip: 0,
+          items__in: itemHelpers.getItemIds(kit.items)
+        }).then(function (resp) {
+          if (resp && resp.count > 0) {
+            dfd.resolve(resp.docs[0]);
+          }
+        });
+      }
+      dfd.then(function (checkout) {
+        if (kit.status == 'await_checkout') {
+          message = 'Kit is currently <strong>awaiting checkout</strong>';
+        } else {
+          if (checkout && orderHelper.isOrderOverdue(checkout)) {
+            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + ' from ' + checkout.customer.name;
+          } else {
+            message = 'Kit is <strong>checked out</strong>' + (checkout ? ' to ' + checkout.customer.name + ' until ' + formatDate(checkout.due) : '');
+          }
+        }
+        messages.push({
+          kind: 'checkout',
+          priority: MessagePriority.Critical,
+          message: message,
+          checkout: checkout || {}
+        });
+        dfdCheckouts.resolve();
+      });
+    } else {
+      dfdCheckouts.resolve();
+    }
+    // Reservation message? 
+    if (perm.hasReservationPermission('read') && kit.items.length > 0) {
+      getDataSource('reservations').search({
+        status: 'open',
+        fromDate__gte: moment(),
+        _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'fromDate',
+        _limit: 1,
+        _skip: 0,
+        items__in: itemHelpers.getItemIds(kit.items)
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          var reservation = resp.docs[0];
+          message = 'Next <strong>reservation</strong> is ' + reservation.fromDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(reservation.fromDate) + '</span>';
+          messages.push({
+            kind: 'reservation',
+            priority: MessagePriority.High,
+            reservation: reservation,
+            message: message
+          });
+        }
+        dfdReservations.resolve();
+      });
+    } else {
+      dfdReservations.resolve();
+    }
+    // Custody message?
+    if (kit.status == 'in_custody') {
+      var dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('kits').call(kit.id, 'getChangeLog', {
+          action__in: ['takeCustody'],
+          limit: 1,
+          skip: 0
+        }).then(function (resp) {
+          getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+            dfd.resolve(contact, resp[0].created);
+          });
+        });
+      }
+      dfd.then(function (contact, since) {
+        var message = 'Kit is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        messages.push({
+          kind: 'custody',
+          priority: MessagePriority.High,
+          by: contact || {},
+          message: message
+        });
+        dfdCustody.resolve();
+      });
+    } else {
+      dfdCustody.resolve();
+    }
+    // Permission message?
+    var canReserve = perm.hasKitPermission('reserve') && (kit._canReserve || kit.canReserve), canCheckout = perm.hasKitPermission('checkout') && (kit._canOrder || kit.canOrder), canCustody = perm.hasKitPermission('takeCustody') && (kit._canCustody || kit.canCustody), kitCanReserve = canReserve === 'available' || canReserve === 'available_partially', kitCanCheckout = canCheckout === 'available' || canCheckout === 'available_partially', kitCanCustody = canCustody === 'available';
+    if (kitCanReserve || kitCanCheckout || kitCanCustody) {
+      var notAllowedActions = [], allowedActions = [];
+      if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (kitCanReserve && kitCanCheckout) || !kitCanReserve && !kitCanCheckout) {
+        if (kitCanReserve && kitCanCheckout) {
+          allowedActions.push('Bookings');
+        } else {
+          // modules enabled?d
+          if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Bookings');
+          }
+        }
+      } else {
+        if (kitCanReserve) {
+          allowedActions.push('Reservation');
+        } else {
+          // module enabled?
+          if (perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Reservation');
+          }
+        }
+        if (kitCanCheckout) {
+          allowedActions.push('Check-out');
+        } else {
+          // module enabled
+          if (perm.hasCheckoutPermission('read')) {
+            notAllowedActions.push('Check-out');
+          }
+        }
+      }
+      if (kitCanCustody) {
+        allowedActions.push('Custody');
+      } else {
+        // module enabled?
+        if (perm.hasItemPermission('takeCustody')) {
+          notAllowedActions.push('Custody');
+        }
+      }
+      var message = '', unavailable = !kitCanReserve && !kitCanCustody && !kitCanCheckout;
+      if (unavailable) {
+        message = 'Kit is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+      } else {
+        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? ' <span class=\'text-muted\'>not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
+      }
+      messages.push({
+        kind: 'permission',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    // Empty message?
+    if (kit.status == 'empty') {
+      var message = 'Kit is <strong>empty</strong>';
+      messages.push({
+        kind: 'empty',
+        priority: MessagePriority.Low,
+        message: message
+      });
+    }
+    // Incomplete message?
+    if (kit.status == 'incomplete') {
+      var message = 'Kit is <strong>incomplete</strong>';
+      var items = kit.items;
+      // Group per status total
+      var statuses = {};
+      $.each(items, function (i, item) {
+        var status = item.status;
+        if (item.status == 'available') {
+          var canReserve = item.canReserve, canCheckout = item.canOrder;
+          if (canReserve !== 'available' && canReserve !== 'unavailable_status' && (canCheckout !== 'available' && canCheckout !== 'unavailable_status')) {
+            status = 'unavailable';
+          }
+        }
+        var count = statuses[status] || 0;
+        statuses[status] = count + 1;
+      });
+      var unavailableTotal = statuses['unavailable'] || 0;
+      var checkedOutTotal = statuses['checkedout'] || 0;
+      var awaitCheckoutTotal = statuses['await_checkout'] || 0;
+      var expiredTotal = statuses['expired'] || 0;
+      var availableTotal = statuses['available'] || 0;
+      var inCustodyTotal = statuses['in_custody'] || 0;
+      var itemsText = items.length + ' item'.pluralize(items.length);
+      // If status total is equal to items total
+      // only show # items
+      if (availableTotal == items.length || checkedOutTotal == items.length || awaitCheckoutTotal == items.length || expiredTotal == items.length || inCustodyTotal == items.length) {
+      } else {
+        var msg = [];
+        if (unavailableTotal > 0) {
+          msg.push(unavailableTotal + ' unavailable');
+        }
+        if (availableTotal > 0) {
+          msg.push(availableTotal + ' available');
+        }
+        if (checkedOutTotal > 0) {
+          msg.push(checkedOutTotal + ' checked out');
+        }
+        if (awaitCheckoutTotal > 0) {
+          msg.push(awaitCheckoutTotal + ' awaiting checkout');
+        }
+        if (expiredTotal > 0) {
+          msg.push(expiredTotal + ' expired');
+        }
+        if (inCustodyTotal > 0) {
+          msg.push(inCustodyTotal + ' in custody');
+        }
+        message += ' <span class=\'text-muted\'>(' + msg.joinAdvanced(', ', ' and ') + ')</span>';
+      }
+      messages.push({
+        kind: 'incomplete',
+        priority: MessagePriority.Low,
+        message: message
+      });
+    }
+    // Expired message?
+    if (kit.status == 'expired') {
+      var message = 'Kit is <strong>expired</strong>';
+      messages.push({
+        kind: 'expired',
+        priority: MessagePriority.Critical,
+        message: message
+      });
+    }
+    return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}(jquery, common_item);
+}(jquery, common_item, moment, common_order, common_reservation);
 common_contact = function (imageHelper, attachmentHelper) {
   var that = {};
   that.contactGetUserId = function (contact) {
@@ -9532,7 +10011,12 @@ Item = function ($, common, Base) {
       catalog: null,
       canReserve: 'available',
       canOrder: 'available',
-      canCustody: 'available'
+      canCustody: 'available',
+      allowReserve: true,
+      allowOrder: true,
+      allowCustody: true,
+      flagged: null,
+      expired: null
     };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9590,6 +10074,9 @@ Item = function ($, common, Base) {
     this.custody = spec.custody || DEFAULTS.custody;
     this.cover = spec.cover || DEFAULTS.cover;
     this.catalog = spec.catalog || DEFAULTS.catalog;
+    this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+    this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+    this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
     this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
     this._canCheckout = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
     this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
@@ -9627,7 +10114,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyResidualValue() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyResidualValue() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag() || this._isDirtyPermissions();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -9659,6 +10146,12 @@ Item = function ($, common, Base) {
   };
   Item.prototype._fromJson = function (data, options) {
     var that = this;
+    if (data.allowOrder === undefined)
+      data.allowOrder = DEFAULTS.allowOrder;
+    if (data.allowReserve === undefined)
+      data.allowReserve = DEFAULTS.allowReserve;
+    if (data.allowCustody === undefined)
+      data.allowCustody = DEFAULTS.allowCustody;
     return Base.prototype._fromJson.call(this, data, options).then(function () {
       that.name = data.name || DEFAULTS.name;
       that.status = data.status || DEFAULTS.status;
@@ -9673,6 +10166,8 @@ Item = function ($, common, Base) {
       that.geo = data.geo || DEFAULTS.geo.slice();
       that.cover = data.cover || DEFAULTS.cover;
       that.catalog = data.catalog || DEFAULTS.catalog;
+      that.flagged = data.flagged || DEFAULTS.flagged;
+      that.expired = data.expired || DEFAULTS.expired;
       // Depending on the fields we'll need to get the _id directly or from the dicts
       var locId = DEFAULTS.location;
       if (data.location) {
@@ -9702,6 +10197,9 @@ Item = function ($, common, Base) {
       that._canReserve = data.canReserve !== undefined ? data.canReserve : DEFAULTS.canReserve;
       that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
       that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+      that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+      that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+      that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
       $.publish('item.fromJson', data);
       return data;
     });
@@ -9763,6 +10261,14 @@ Item = function ($, common, Base) {
       return false;
     }
   };
+  Item.prototype._isDirtyPermissions = function () {
+    if (this.raw) {
+      var allowReserve = this.raw.allowReserve, allowCheckout = this.raw.allowOrder, allowCustody = this.raw.allowCustody;
+      return this.allowReserve != allowReserve || this.allowCheckout != allowCheckout || this.allowCustody != allowCustody;
+    } else {
+      return false;
+    }
+  };
   Item.prototype._isDirtyGeo = function () {
     if (this.raw) {
       var address = this.raw.address || DEFAULTS.address;
@@ -9811,7 +10317,7 @@ Item = function ($, common, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdFlags = $.Deferred(), dfdBasic = $.Deferred();
+    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdFlags = $.Deferred(), dfdPermissions = $.Deferred(), dfdBasic = $.Deferred();
     if (this._isDirtyCategory()) {
       this.canChangeCategory(this.category).done(function (data) {
         if (data.result) {
@@ -9853,6 +10359,11 @@ Item = function ($, common, Base) {
         dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice, that.residualValue);
       } else {
         dfdBasic.resolve();
+      }
+      if (that._isDirtyPermissions()) {
+        dfdPermissions = that.updateAllowedActions(that.allowReserve, that.allowCheckout, that.allowCustody);
+      } else {
+        dfdPermissions.resolve();
       }
       return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
     });
@@ -10179,6 +10690,17 @@ Item = function ($, common, Base) {
       return skipRead == true ? data : that._fromJson(data[0]);
     });
   };
+  Item.prototype.updateAllowedActions = function (canReserve, canCheckout, canCustody, skipRead) {
+    return this._doApiCall({
+      method: 'setAllowedActions',
+      params: {
+        reserve: canReserve,
+        order: canCheckout,
+        custody: canCustody
+      },
+      skipRead: skipRead
+    });
+  };
   /**
    * Checks if an item can be reserved (based on status)
    * @name Item#canReserve
@@ -10284,7 +10806,10 @@ Kit = function ($, Base, common) {
     cover: '',
     canReserve: 'available',
     canOrder: 'available',
-    canCustody: 'available'
+    canCustody: 'available',
+    allowReserve: true,
+    allowOrder: true,
+    allowCustody: true
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -10310,6 +10835,9 @@ Kit = function ($, Base, common) {
     this.conflicts = [];
     this.status = spec.status || DEFAULTS.status;
     this.cover = spec.cover || DEFAULTS.cover;
+    this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+    this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+    this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
     this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
     this._canOrder = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
     this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
@@ -10532,7 +11060,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canTakeCustody = function () {
-    return common.kitCanTakeCustody(this);
+    return common.kitCanTakeCustody(this.raw);
   };
   /**
    * Checks if custody can be released for a kit (based on status)
@@ -10540,7 +11068,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canReleaseCustody = function () {
-    return common.kitCanReleaseCustody(this);
+    return common.kitCanReleaseCustody(this.raw);
   };
   /**
    * Checks if custody can be transferred for a kit (based on status)
@@ -10548,7 +11076,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canTransferCustody = function () {
-    return common.kitCanTransferCustody(this);
+    return common.kitCanTransferCustody(this.raw);
   };
   /**
    * Takes custody of a kit (and all items in it)
@@ -10618,6 +11146,9 @@ Kit = function ($, Base, common) {
       that._canReserve = data.canReserve !== undefined ? data.canReserve : DEFAULTS.canReserve;
       that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
       that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+      that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+      that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+      that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
@@ -12456,6 +12987,15 @@ Order = function ($, api, Transaction, Conflict, common) {
     return this.status == 'open';
   };
   /**
+   * Checks if the order can be spotchecked
+   * @method
+   * @name Order#canSpotcheck
+   * @returns {boolean}
+   */
+  Order.prototype.canSpotcheck = function () {
+    return common.canOrderSpotcheck(this.raw);
+  };
+  /**
    * Checks if the order has an reservation linked to it
    * @method
    * @name Order#canGoToReservation
@@ -12733,12 +13273,19 @@ Order = function ($, api, Transaction, Conflict, common) {
     // We can check if all the items are:
     // - at the right location
     // - not expired
+    // - has order permission
     var that = this, conflicts = [], locId = this.helper.ensureId(this.location || '');
     $.each(this.items, function (i, item) {
       // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
       if (item.order != that.id)
         return true;
-      if (item.status == 'expired') {
+      if (item.canOrder === 'unavailable_allow') {
+        conflicts.push(new Conflict({
+          kind: 'not_allowed_order',
+          item: item._id,
+          itemName: item.name
+        }));
+      } else if (item.status == 'expired') {
         conflicts.push(new Conflict({
           kind: 'expired',
           item: item._id,
@@ -13181,6 +13728,7 @@ PermissionHandler = function () {
     this._useApi = limits.allowAPI;
     this._useReleaseAtLocation = this._useCustody && (profile.custodyCanChangeLocation !== undefined ? profile.custodyCanChangeLocation : true);
     // TODO change this update fallback (mobile)
+    this._useSpotcheck = limits.allowSpotcheck && profile.useSpotcheck;
     this._canSetFlag = false;
     this._canClearFlag = false;
     switch (user.role) {
@@ -13261,6 +13809,9 @@ PermissionHandler = function () {
   PermissionHandler.prototype.canUseSlack = function () {
     return this.limits.allowIntegrationSlack;
   };
+  PermissionHandler.prototype.canUseSpotcheck = function () {
+    return this.limits.allowSpotcheck;
+  };
   //
   // Permission helpers
   //
@@ -13315,6 +13866,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasApiPermission = function () {
     return this._useApi;
+  };
+  PermissionHandler.prototype.hasSpotcheckPermission = function () {
+    return this._useSpotcheck;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -13405,6 +13959,7 @@ PermissionHandler = function () {
       case 'updateGeo':
       case 'changeLocation':
       case 'changeCategory':
+      case 'updatePermissions':
         return this._isRootOrAdmin;
       // Permissings for asset labels
       case 'printLabel':
@@ -13452,6 +14007,7 @@ PermissionHandler = function () {
       case 'removeItems':
       case 'moveItem':
       case 'export':
+      case 'updatePermissions':
         return this._useKits && this._isRootOrAdmin;
       // Permissings for asset labels
       case 'printLabel':
@@ -13744,7 +14300,7 @@ PermissionHandler = function () {
   };
   return PermissionHandler;
 }();
-Reservation = function ($, api, Transaction, Conflict) {
+Reservation = function ($, api, Transaction, Conflict, common) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -13831,6 +14387,15 @@ Reservation = function ($, api, Transaction, Conflict) {
       return to != null && to.isAfter(from) && to.isAfter(now);
     }
     return true;
+  };
+  /**
+   * Checks if the reservation can be spotchecked
+   * @method
+   * @name Reservation#canSpotcheck
+   * @returns {boolean}
+   */
+  Reservation.prototype.canSpotcheck = function () {
+    return common.canReservationSpotcheck(this.raw);
   };
   /**
    * Checks if the reservation can be booked
@@ -14026,12 +14591,16 @@ Reservation = function ($, api, Transaction, Conflict) {
     if ([
         'creating',
         'open'
-      ].indexOf(this.status) != -1 && this.items && this.items.length && (this.location || this.from && this.to)) {
+      ].indexOf(this.status) != -1 && this.items && this.items.length && (this.location || this.from && this.to || this.items.filter(function (it) {
+        return it.canReserve !== 'available';
+      }))) {
       var locId = this.location ? this._getId(this.location) : null;
       var showOrderConflicts = this.from && this.to && this.status == 'open';
       var showLocationConflicts = locId != null;
       var showStatusConflicts = true;
       // always show conflicts for expired, custody
+      var showPermissionConflicts = true;
+      // always show permission conflicts (canReserve)
       return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
         cnflcts = cnflcts || [];
         // Now we have 0 or more conflicts for this reservation
@@ -14056,7 +14625,13 @@ Reservation = function ($, api, Transaction, Conflict) {
               locationDesired: conflict.locationDesired
             }));
           } else {
-            if (showStatusConflicts && item.status == 'expired') {
+            if (showPermissionConflicts && item.canReserve == 'unavailable_allow') {
+              conflicts.push(new Conflict({
+                kind: 'not_allowed_reservation',
+                item: item._id,
+                itemName: item.name
+              }));
+            } else if (showStatusConflicts && item.status == 'expired') {
               conflicts.push(new Conflict({
                 kind: 'expired',
                 item: item._id,
@@ -14587,7 +15162,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     return unavailable;
   };
   return Reservation;
-}(jquery, api, transaction, conflict);
+}(jquery, api, transaction, conflict, common);
 Template = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {

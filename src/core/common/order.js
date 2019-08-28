@@ -132,6 +132,9 @@ define(['moment'], function (moment) {
         	} else {
         		return this.getFriendlyOrderCss(order.status);
         	}
-    	}
+    	},
+    	canOrderSpotcheck: function(order){
+            return order.archived == null  && ['closed'].indexOf(order.status) == -1;
+        }
 	};
 });

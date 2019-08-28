@@ -1214,6 +1214,9 @@ common_order = function (moment) {
       } else {
         return this.getFriendlyOrderCss(order.status);
       }
+    },
+    canOrderSpotcheck: function (order) {
+      return order.archived == null && ['closed'].indexOf(order.status) == -1;
     }
   };
 }(moment);
@@ -1368,17 +1371,22 @@ common_reservation = {
     } else {
       return this.getFriendlyReservationStatus(reservation.status);
     }
+  },
+  canReservationSpotcheck: function (reservation) {
+    return reservation.archived == null && [
+      'cancelled',
+      'closed'
+    ].indexOf(reservation.status) == -1;
   }
 };
-common_item = function () {
+common_item = function (moment, orderHelper, reservationHelper) {
   var that = {};
   that.itemCanTakeCustody = function (item) {
     var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
     return canCustody && item.status == 'available';
   };
   that.itemCanReleaseCustody = function (item) {
-    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
-    return canCustody && item.status == 'in_custody';
+    return item.status == 'in_custody';
   };
   that.itemCanTransferCustody = function (item) {
     var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
@@ -1543,7 +1551,9 @@ common_item = function () {
   * @return {Array}       
   */
   that.getAvailableItems = function (items) {
-    return this.getItemsByStatus(items, 'available');
+    return this.getItemsByStatus(items, 'available').filter(function (item) {
+      return item.canOrder === 'available';
+    });
   };
   /**
   * getActiveItems
@@ -1558,6 +1568,8 @@ common_item = function () {
   that.getActiveItems = function (items) {
     return this.getItemsByStatus(items, function (item) {
       return item.status != 'expired' && item.status != 'in_custody';
+    }).filter(function (item) {
+      return item.canReserve === 'available';
     });
   };
   /**
@@ -1575,8 +1587,220 @@ common_item = function () {
       return typeof item === 'string' ? item : item._id;
     });
   };
+  /**
+  * getItemMessages
+  *
+  * @memberOf common
+  * @name  common#getItemMessages
+  * @method
+  * 
+  * @param  item          
+  * @param  permissionHandler
+  * @param  dateHelper        
+  * @return {promise}                   
+  */
+  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
+    var formatDate = function (date) {
+      return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    // Check-out message?
+    if (item.status == 'checkedout' || item.status == 'await_checkout') {
+      var message = '', dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('orders').search({
+          _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+          _restrict: !isSelfservice,
+          _sort: 'started',
+          status: item.status == 'checkedout' ? 'open' : 'creating',
+          _limit: 1,
+          _skip: 0,
+          items__contains: item.id
+        }).then(function (resp) {
+          if (resp && resp.count > 0) {
+            dfd.resolve(resp.docs[0]);
+          }
+        });
+      }
+      dfd.then(function (checkout) {
+        if (item.status == 'await_checkout') {
+          message = 'Item is currently <strong>awaiting checkout</strong>';
+        } else {
+          if (checkout && orderHelper.isOrderOverdue(checkout)) {
+            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + ' from ' + checkout.customer.name;
+          } else {
+            message = 'Item is <strong>checked out</strong>' + (checkout ? ' to ' + checkout.customer.name + ' until ' + formatDate(checkout.due) : '');
+          }
+        }
+        messages.push({
+          kind: 'checkout',
+          priority: MessagePriority.Critical,
+          message: message,
+          checkout: checkout || {}
+        });
+        dfdCheckouts.resolve();
+      });
+    } else {
+      dfdCheckouts.resolve();
+    }
+    // Reservation message? 
+    if (perm.hasReservationPermission('read')) {
+      getDataSource('reservations').search({
+        status: 'open',
+        fromDate__gte: moment(),
+        _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'fromDate',
+        _limit: 1,
+        _skip: 0,
+        items__contains: item.id
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          var reservation = resp.docs[0];
+          message = 'Next <strong>reservation</strong> is ' + reservation.fromDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(reservation.fromDate) + '</span>';
+          messages.push({
+            kind: 'reservation',
+            priority: MessagePriority.High,
+            reservation: reservation,
+            message: message
+          });
+        }
+        dfdReservations.resolve();
+      });
+    } else {
+      dfdReservations.resolve();
+    }
+    // Custody message?
+    if (item.status == 'in_custody') {
+      var dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('items').call(item.id, 'getChangeLog', {
+          action__in: [
+            'takeCustody',
+            'transferCustody'
+          ],
+          limit: 1,
+          skip: 0
+        }).then(function (resp) {
+          getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+            dfd.resolve(contact, resp[0].created);
+          });
+        });
+      }
+      dfd.then(function (contact, since) {
+        var message = 'Item is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        messages.push({
+          kind: 'custody',
+          priority: MessagePriority.High,
+          by: contact || {},
+          message: message
+        });
+        dfdCustody.resolve();
+      });
+    } else {
+      dfdCustody.resolve();
+    }
+    // Permission message?
+    var canReserve = perm.hasItemPermission('reserve') && item.allowReserve, canCheckout = perm.hasItemPermission('checkout') && item.allowCheckout, canCustody = perm.hasItemPermission('takeCustody') && item.allowCustody;
+    if (!item.allowReserve || !item.allowCheckout || !item.allowCustody) {
+      var notAllowedActions = [], allowedActions = [];
+      if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (!canReserve && !canCheckout || canReserve && canCheckout)) {
+        if (canReserve && canCheckout) {
+          allowedActions.push('Bookings');
+        } else {
+          // modules enabled?d
+          if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Bookings');
+          }
+        }
+      } else {
+        if (canReserve) {
+          allowedActions.push('Reservation');
+        } else {
+          if (perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Reservation');
+          }
+        }
+        if (canCheckout) {
+          allowedActions.push('Check-out');
+        } else {
+          // module enabled
+          if (perm.hasCheckoutPermission('read')) {
+            notAllowedActions.push('Check-out');
+          }
+        }
+      }
+      if (canCustody) {
+        allowedActions.push('Custody');
+      } else {
+        // module enabled?
+        if (perm.hasItemPermission('takeCustody')) {
+          notAllowedActions.push('Custody');
+        }
+      }
+      var message = '', unavailable = !canReserve && !canCheckout && !canCustody;
+      if (unavailable) {
+        message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+      } else {
+        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + ' <span class=\'text-muted\'>not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
+      }
+      messages.push({
+        kind: 'permission',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    // Flag message?
+    if (item.flag) {
+      var message = 'Item was <strong>flagged</strong> as ' + item.flag + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'flag',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    if (item.warrantyDate) {
+      var message = '';
+      var inWarranty = Math.round(moment().diff(item.warrantyDate, 'days')) >= 0;
+      if (inWarranty) {
+        message = 'Went <strong>out of warranty</strong> ' + item.warrantyDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(item.warrantyDate) + '</span>';
+      } else {
+        message = 'Warranty <strong>expires</strong> ' + item.warrantyDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(item.warrantyDate) + '</span>';
+      }
+      messages.push({
+        kind: 'warranty',
+        priority: MessagePriority.Low,
+        message: message,
+        inWarranty: inWarranty
+      });
+    }
+    // Expired message?
+    if (item.status == 'expired') {
+      var message = 'Item was <strong>expired</strong> ' + (item.expired ? '<span class=\'text-muted\'>' + item.expired.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'expired',
+        priority: MessagePriority.Critical,
+        message: message
+      });
+    }
+    return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}();
+}(moment, common_order, common_reservation);
 common_conflicts = {
   /**
    * getFriendlyConflictKind
@@ -1600,6 +1824,10 @@ common_conflicts = {
       return 'Item is expired';
     case 'custody':
       return 'Item is in custody';
+    case 'not_allowed_reservation':
+      return 'Item cannot be reserved';
+    case 'not_allowed_order':
+      return 'Item cannot be checked out';
     default:
       return '';
     }
@@ -3725,11 +3953,6 @@ common_slimdown = function () {
       },
       // horizontal rule
       {
-        regex: /(?:[^\n]|\n(?! *\n))+/g,
-        replacement: para
-      },
-      // add paragraphs
-      {
         regex: /<\/ul>\s?<ul>/g,
         replacement: ''
       },
@@ -3740,10 +3963,16 @@ common_slimdown = function () {
       },
       // fix extra ol
       {
+        regex: /(?:[^\n]|(?:<[^>].*>)\n(?! *\n))+/g,
+        replacement: para
+      },
+      // add paragraphs
+      {
         regex: /<\/blockquote><blockquote>/g,
         replacement: '\n'
       }  // fix extra blockquote
     ];
+    //(\w+)\n
     // Add a rule.
     this.addRule = function (regex, replacement) {
       regex.global = true;
@@ -3804,7 +4033,7 @@ common_slimdown = function () {
   };
   window.Slimdown = Slimdown;
 }();
-common_kit = function ($, itemHelpers) {
+common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
   var that = {};
   /**
    * Checks if a kit can be checked out (any items available)
@@ -3815,7 +4044,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanCheckout = function (kit) {
-    return kit.canOrder !== undefined ? kit.canOrder === 'available' : true;
+    return kit.canOrder !== undefined ? kit.canOrder === 'available' || kit.canOrder === 'available_partially' : true;
   };
   /**
    * Checks if a kit can be reserved (any items active)
@@ -3826,7 +4055,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReserve = function (kit) {
-    return kit.canReserve !== undefined ? kit.canReserve === 'available' : true;
+    return kit.canReserve !== undefined ? kit.canReserve === 'available' || kit.canReserve === 'available_partially' : true;
   };
   /**
    * Checks if custody can be taken for a kit (based on status)
@@ -3999,8 +4228,258 @@ common_kit = function ($, itemHelpers) {
     });
     return ids;
   };
+  /**
+   * getKitMessages
+   *
+   * @memberOf common
+   * @name  common#getKitMessages
+   * @method
+   * 
+   * @param  kit          
+   * @param  permissionHandler
+   * @param  dateHelper        
+   * @return {promise}                   
+   */
+  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
+    var formatDate = function (date) {
+      return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    // Check-out message?
+    if (perm.hasCheckoutPermission('read') && (kit.status == 'checkedout' || kit.status == 'await_checkout')) {
+      var message = '', dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('orders').search({
+          _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+          _restrict: !isSelfservice,
+          _sort: 'started',
+          status: kit.status == 'checkedout' ? 'open' : 'creating',
+          _limit: 1,
+          _skip: 0,
+          items__in: itemHelpers.getItemIds(kit.items)
+        }).then(function (resp) {
+          if (resp && resp.count > 0) {
+            dfd.resolve(resp.docs[0]);
+          }
+        });
+      }
+      dfd.then(function (checkout) {
+        if (kit.status == 'await_checkout') {
+          message = 'Kit is currently <strong>awaiting checkout</strong>';
+        } else {
+          if (checkout && orderHelper.isOrderOverdue(checkout)) {
+            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + ' from ' + checkout.customer.name;
+          } else {
+            message = 'Kit is <strong>checked out</strong>' + (checkout ? ' to ' + checkout.customer.name + ' until ' + formatDate(checkout.due) : '');
+          }
+        }
+        messages.push({
+          kind: 'checkout',
+          priority: MessagePriority.Critical,
+          message: message,
+          checkout: checkout || {}
+        });
+        dfdCheckouts.resolve();
+      });
+    } else {
+      dfdCheckouts.resolve();
+    }
+    // Reservation message? 
+    if (perm.hasReservationPermission('read') && kit.items.length > 0) {
+      getDataSource('reservations').search({
+        status: 'open',
+        fromDate__gte: moment(),
+        _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'fromDate',
+        _limit: 1,
+        _skip: 0,
+        items__in: itemHelpers.getItemIds(kit.items)
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          var reservation = resp.docs[0];
+          message = 'Next <strong>reservation</strong> is ' + reservation.fromDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(reservation.fromDate) + '</span>';
+          messages.push({
+            kind: 'reservation',
+            priority: MessagePriority.High,
+            reservation: reservation,
+            message: message
+          });
+        }
+        dfdReservations.resolve();
+      });
+    } else {
+      dfdReservations.resolve();
+    }
+    // Custody message?
+    if (kit.status == 'in_custody') {
+      var dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('kits').call(kit.id, 'getChangeLog', {
+          action__in: ['takeCustody'],
+          limit: 1,
+          skip: 0
+        }).then(function (resp) {
+          getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+            dfd.resolve(contact, resp[0].created);
+          });
+        });
+      }
+      dfd.then(function (contact, since) {
+        var message = 'Kit is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        messages.push({
+          kind: 'custody',
+          priority: MessagePriority.High,
+          by: contact || {},
+          message: message
+        });
+        dfdCustody.resolve();
+      });
+    } else {
+      dfdCustody.resolve();
+    }
+    // Permission message?
+    var canReserve = perm.hasKitPermission('reserve') && (kit._canReserve || kit.canReserve), canCheckout = perm.hasKitPermission('checkout') && (kit._canOrder || kit.canOrder), canCustody = perm.hasKitPermission('takeCustody') && (kit._canCustody || kit.canCustody), kitCanReserve = canReserve === 'available' || canReserve === 'available_partially', kitCanCheckout = canCheckout === 'available' || canCheckout === 'available_partially', kitCanCustody = canCustody === 'available';
+    if (kitCanReserve || kitCanCheckout || kitCanCustody) {
+      var notAllowedActions = [], allowedActions = [];
+      if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (kitCanReserve && kitCanCheckout) || !kitCanReserve && !kitCanCheckout) {
+        if (kitCanReserve && kitCanCheckout) {
+          allowedActions.push('Bookings');
+        } else {
+          // modules enabled?d
+          if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Bookings');
+          }
+        }
+      } else {
+        if (kitCanReserve) {
+          allowedActions.push('Reservation');
+        } else {
+          // module enabled?
+          if (perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Reservation');
+          }
+        }
+        if (kitCanCheckout) {
+          allowedActions.push('Check-out');
+        } else {
+          // module enabled
+          if (perm.hasCheckoutPermission('read')) {
+            notAllowedActions.push('Check-out');
+          }
+        }
+      }
+      if (kitCanCustody) {
+        allowedActions.push('Custody');
+      } else {
+        // module enabled?
+        if (perm.hasItemPermission('takeCustody')) {
+          notAllowedActions.push('Custody');
+        }
+      }
+      var message = '', unavailable = !kitCanReserve && !kitCanCustody && !kitCanCheckout;
+      if (unavailable) {
+        message = 'Kit is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+      } else {
+        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? ' <span class=\'text-muted\'>not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
+      }
+      messages.push({
+        kind: 'permission',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    // Empty message?
+    if (kit.status == 'empty') {
+      var message = 'Kit is <strong>empty</strong>';
+      messages.push({
+        kind: 'empty',
+        priority: MessagePriority.Low,
+        message: message
+      });
+    }
+    // Incomplete message?
+    if (kit.status == 'incomplete') {
+      var message = 'Kit is <strong>incomplete</strong>';
+      var items = kit.items;
+      // Group per status total
+      var statuses = {};
+      $.each(items, function (i, item) {
+        var status = item.status;
+        if (item.status == 'available') {
+          var canReserve = item.canReserve, canCheckout = item.canOrder;
+          if (canReserve !== 'available' && canReserve !== 'unavailable_status' && (canCheckout !== 'available' && canCheckout !== 'unavailable_status')) {
+            status = 'unavailable';
+          }
+        }
+        var count = statuses[status] || 0;
+        statuses[status] = count + 1;
+      });
+      var unavailableTotal = statuses['unavailable'] || 0;
+      var checkedOutTotal = statuses['checkedout'] || 0;
+      var awaitCheckoutTotal = statuses['await_checkout'] || 0;
+      var expiredTotal = statuses['expired'] || 0;
+      var availableTotal = statuses['available'] || 0;
+      var inCustodyTotal = statuses['in_custody'] || 0;
+      var itemsText = items.length + ' item'.pluralize(items.length);
+      // If status total is equal to items total
+      // only show # items
+      if (availableTotal == items.length || checkedOutTotal == items.length || awaitCheckoutTotal == items.length || expiredTotal == items.length || inCustodyTotal == items.length) {
+      } else {
+        var msg = [];
+        if (unavailableTotal > 0) {
+          msg.push(unavailableTotal + ' unavailable');
+        }
+        if (availableTotal > 0) {
+          msg.push(availableTotal + ' available');
+        }
+        if (checkedOutTotal > 0) {
+          msg.push(checkedOutTotal + ' checked out');
+        }
+        if (awaitCheckoutTotal > 0) {
+          msg.push(awaitCheckoutTotal + ' awaiting checkout');
+        }
+        if (expiredTotal > 0) {
+          msg.push(expiredTotal + ' expired');
+        }
+        if (inCustodyTotal > 0) {
+          msg.push(inCustodyTotal + ' in custody');
+        }
+        message += ' <span class=\'text-muted\'>(' + msg.joinAdvanced(', ', ' and ') + ')</span>';
+      }
+      messages.push({
+        kind: 'incomplete',
+        priority: MessagePriority.Low,
+        message: message
+      });
+    }
+    // Expired message?
+    if (kit.status == 'expired') {
+      var message = 'Kit is <strong>expired</strong>';
+      messages.push({
+        kind: 'expired',
+        priority: MessagePriority.Critical,
+        message: message
+      });
+    }
+    return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}(jquery, common_item);
+}(jquery, common_item, moment, common_order, common_reservation);
 common_contact = function (imageHelper, attachmentHelper) {
   var that = {};
   that.contactGetUserId = function (contact) {

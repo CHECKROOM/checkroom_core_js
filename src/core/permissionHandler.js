@@ -44,7 +44,7 @@ define([], function () {
         this._useSlack =              (limits.allowIntegrationSlack) &&     (profile.useIntegrationSlack);
         this._useApi =                (limits.allowAPI);
         this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation !== undefined?profile.custodyCanChangeLocation:true); // TODO change this update fallback (mobile)
-        
+        this._useSpotcheck =           (limits.allowSpotcheck) &&           (profile.useSpotcheck);
 
         this._canSetFlag = false;
         this._canClearFlag = false;
@@ -128,6 +128,9 @@ define([], function () {
     PermissionHandler.prototype.canUseSlack = function(){
         return this.limits.allowIntegrationSlack;
     };
+    PermissionHandler.prototype.canUseSpotcheck = function(){
+        return this.limits.allowSpotcheck;
+    }
 
     //
     // Permission helpers
@@ -207,6 +210,10 @@ define([], function () {
     PermissionHandler.prototype.hasApiPermission = function(){
         return this._useApi;
     };
+
+    PermissionHandler.prototype.hasSpotcheckPermission = function(){
+        return this._useSpotcheck;
+    }
 
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
         return this.hasPermission(action || "read", "kits", data, location);
@@ -321,6 +328,7 @@ define([], function () {
                     case "updateGeo":
                     case "changeLocation":
                     case "changeCategory":
+                    case "updatePermissions":
                         return this._isRootOrAdmin;
                     // Permissings for asset labels
                     case "printLabel":
@@ -368,6 +376,7 @@ define([], function () {
                     case "removeItems":
                     case "moveItem":
                     case "export":
+                    case "updatePermissions":
                         return this._useKits && this._isRootOrAdmin;
                     // Permissings for asset labels
                     case "printLabel":

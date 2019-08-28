@@ -7,7 +7,8 @@ define([
     "jquery",
     "api",
     "transaction",
-    "conflict"],  /** @lends Transaction */ function ($, api, Transaction, Conflict) {
+    "conflict",
+    "common"],  /** @lends Transaction */ function ($, api, Transaction, Conflict, common) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -114,6 +115,16 @@ define([
 
         return true;
     }
+
+    /**
+     * Checks if the reservation can be spotchecked
+     * @method
+     * @name Reservation#canSpotcheck
+     * @returns {boolean}
+     */
+    Reservation.prototype.canSpotcheck = function() {
+        return common.canReservationSpotcheck(this.raw);
+    };
 
     /**
      * Checks if the reservation can be booked
@@ -353,12 +364,13 @@ define([
         if( (['creating', 'open'].indexOf(this.status) != -1) &&
             (this.items) &&
             (this.items.length) &&
-            ((this.location) || (this.from && this.to))) {
+            ((this.location) || (this.from && this.to) || (this.items.filter(function(it){ return it.canReserve !== "available"; })))) {
 
             var locId = this.location ? this._getId(this.location) : null;
             var showOrderConflicts = (this.from && this.to && this.status=="open");
             var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
+            var showPermissionConflicts = true; // always show permission conflicts (canReserve)
 
             return this.ds.call(this.id, "getConflicts")
                 .then(function(cnflcts) {
@@ -388,7 +400,14 @@ define([
                                 locationDesired: conflict.locationDesired
                             }));
                         } else {
-                            if( (showStatusConflicts) &&
+                            if( (showPermissionConflicts) &&
+                                (item.canReserve=="unavailable_allow")){
+                                conflicts.push(new Conflict({
+                                    kind: "not_allowed_reservation",
+                                    item: item._id,
+                                    itemName: item.name
+                                }));
+                            } else if( (showStatusConflicts) &&
                                 (item.status=="expired")) {
                                 conflicts.push(new Conflict({
                                     kind: "expired",

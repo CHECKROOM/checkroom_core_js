@@ -16,7 +16,10 @@ define([
         cover: "",
         canReserve: "available",
         canOrder: "available",
-        canCustody: "available"
+        canCustody: "available",
+        allowReserve: true,
+        allowOrder: true,
+        allowCustody: true
     };
 
     // Allow overriding the ctor during inheritance
@@ -45,6 +48,9 @@ define([
         this.status = spec.status || DEFAULTS.status;
         this.cover = spec.cover || DEFAULTS.cover;
 
+        this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+        this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+        this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
         this._canReserve = spec.canReserve !== undefined ? spec.canReserve: DEFAULTS.canReserve;
         this._canOrder = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
         this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
@@ -275,7 +281,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canTakeCustody = function() {
-        return common.kitCanTakeCustody(this);
+        return common.kitCanTakeCustody(this.raw);
     };
 
     /**
@@ -284,7 +290,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReleaseCustody = function() {
-        return common.kitCanReleaseCustody(this);
+        return common.kitCanReleaseCustody(this.raw);
     };
 
     /**
@@ -293,7 +299,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canTransferCustody = function() {
-        return common.kitCanTransferCustody(this);
+        return common.kitCanTransferCustody(this.raw);
     };
 
     /**
@@ -360,6 +366,9 @@ define([
                 that._canReserve = data.canReserve !== undefined ? data.canReserve: DEFAULTS.canReserve;
                 that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
                 that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+                that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+                that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+                that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
 
                 that._loadConflicts(that.items);
 

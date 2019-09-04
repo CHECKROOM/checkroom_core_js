@@ -390,7 +390,7 @@ define([
 	            if(unavailable){
 	            	message = "Item is <strong>unavailable</strong> for " + notAllowedActions.joinAdvanced(", ", ' and ');
 	            }else{
-	                message = "Item is <strong>available</strong> for " + allowedActions.joinAdvanced(', ', ' and ') + " <span class='text-muted'>not for " + notAllowedActions.joinAdvanced(', ', ' and ') + "</span>";
+	                message = "Item is <strong>available</strong> for " + allowedActions.joinAdvanced(', ', ' and ') + " <span class='text-muted'>, not for " + notAllowedActions.joinAdvanced(', ', ' and ') + "</span>";
 	            }
 
 	            messages.push({

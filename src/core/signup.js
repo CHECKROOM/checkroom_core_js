@@ -41,6 +41,7 @@ define([
         this.source = opt.source || "";
         this.phone = opt.phone || "";
         this.industry = opt.industry || "";
+        this.tags = opt.tags || [];
 
         this.fields = [];
 
@@ -238,7 +239,8 @@ define([
                     subscription: $.trim(that.plan),
                     company: $.trim(that.company),
                     groupId: that.getGroupId(),
-                    signupDevice: that.deviceKind
+                    signupDevice: that.deviceKind,
+                    tags: that.tags
                 }, true)
                     .then(function(data) {
                         return afterCreate(data);

@@ -134,14 +134,15 @@ define(['jquery'], function ($) {
      * @name  utils#getUrlParam
      * @method
      * @param  {string} name
-     * @param {string} default
+     * @param  {string} default
+     * @param  {string} url
      * @return {string}
      */
-    utils.getUrlParam = function(name, def) {
+    utils.getUrlParam = function(name, def, url) {
         name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
         var regexS = "[\\?&]"+name+"=([^&#]*)";
         var regex = new RegExp( regexS );
-        var results = regex.exec( window.location.href );
+        var results = regex.exec( url || window.location.href );
         return (results) ? decodeURIComponent(results[1].replace(/\+/g, " ")) : def;
     };
 

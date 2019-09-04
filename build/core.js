@@ -1751,7 +1751,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
       if (unavailable) {
         message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
       } else {
-        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + ' <span class=\'text-muted\'>not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
+        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + ' <span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
       }
       messages.push({
         kind: 'permission',
@@ -3764,14 +3764,15 @@ common_utils = function ($) {
    * @name  utils#getUrlParam
    * @method
    * @param  {string} name
-   * @param {string} default
+   * @param  {string} default
+   * @param  {string} url
    * @return {string}
    */
-  utils.getUrlParam = function (name, def) {
+  utils.getUrlParam = function (name, def, url) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     var regexS = '[\\?&]' + name + '=([^&#]*)';
     var regex = new RegExp(regexS);
-    var results = regex.exec(window.location.href);
+    var results = regex.exec(url || window.location.href);
     return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : def;
   };
   // jQuery extension method
@@ -4390,7 +4391,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
       if (unavailable) {
         message = 'Kit is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
       } else {
-        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? ' <span class=\'text-muted\'>not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
+        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? ' <span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
       }
       messages.push({
         kind: 'permission',

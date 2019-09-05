@@ -9,10 +9,11 @@ define([], function () {
      * @param limits - a group limits dict
      * @constructor
      */
-    var PermissionHandler = function (user, profile, limits) {
+    var PermissionHandler = function (user, profile, limits, permissions) {
         this.user = user;
         this.profile = profile;
         this.limits = limits;
+        this.permissions = permissions;
 
         // Helper booleans that mix a bunch of role stuff and profile / limits stuff
         this._isOwner =               (user.isOwner);
@@ -301,6 +302,10 @@ define([], function () {
             return false;
         }
 
+        var can = function(arr){
+            return permissions.some(perm => arr.includes(perm));
+        }
+
         switch (collection) {
             default:
                 return false;
@@ -309,7 +314,7 @@ define([], function () {
                     default:
                         return false;
                     case "read":
-                        return true;
+                        return can(["ITEMS_READER", "ITEMS_READER_RESTRICTED"]);
                     case "create":
                     case "duplicate":
                     case "update":
@@ -319,6 +324,8 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
+                        return can(["ITEMS_ADMIN", "ITEMS_ADMIN_RESTRICTED"]);
+                    
                     case "addAttachment":
                     case "addComment":
                     case "updateComment":

@@ -1751,7 +1751,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
       if (unavailable) {
         message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
       } else {
-        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + ' <span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
+        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + '<span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
       }
       messages.push({
         kind: 'permission',
@@ -4391,7 +4391,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
       if (unavailable) {
         message = 'Kit is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
       } else {
-        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? ' <span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
+        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? '<span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
       }
       messages.push({
         kind: 'permission',

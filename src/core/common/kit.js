@@ -405,7 +405,7 @@ define([
             if(unavailable){
                 message = "Kit is <strong>unavailable</strong> for " + notAllowedActions.joinAdvanced(", ", ' and ');
             }else{
-                message = "Kit is <strong>" + (canReserve == 'available_partially' || canCheckout == 'available_partially'?"partially ":"") + "available</strong> for " + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0?" <span class='text-muted'>, not for " + notAllowedActions.joinAdvanced(', ', ' and ') + "</span>":"");
+                message = "Kit is <strong>" + (canReserve == 'available_partially' || canCheckout == 'available_partially'?"partially ":"") + "available</strong> for " + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0?"<span class='text-muted'>, not for " + notAllowedActions.joinAdvanced(', ', ' and ') + "</span>":"");
             }
 
             messages.push({

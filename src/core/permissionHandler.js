@@ -16,10 +16,6 @@ define([], function () {
         this.permissions = permissions;
 
         // Helper booleans that mix a bunch of role stuff and profile / limits stuff
-        this._isOwner =               (user.isOwner);
-        this._isRootOrAdmin =         (user.role == "root") || (user.role == "admin");
-        this._isRootOrAdminOrUser =   (user.role == "root") || (user.role == "admin") || (user.role == "user");
-        this._isSelfService =         (user.role == "selfservice");
         this._isBlockedContact =      (user.customer && user.customer.status == "blocked");        
         this._useWebhooks =           (limits.allowWebhooks) &&             (profile.useWebhooks);
         this._useOrders =             (limits.allowOrders) &&               (profile.useOrders);
@@ -46,57 +42,6 @@ define([], function () {
         this._useApi =                (limits.allowAPI);
         this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation !== undefined?profile.custodyCanChangeLocation:true); // TODO change this update fallback (mobile)
         this._useSpotcheck =           (limits.allowSpotcheck) &&           (profile.useSpotcheck);
-
-        this._canSetFlag = false;
-        this._canClearFlag = false;
-
-        switch(user.role) {
-            case "selfservice":
-                this._canSetFlag = this._useFlags && profile.selfServiceCanSetFlag;
-                this._canClearFlag = this._useFlags && profile.selfServiceCanClearFlag;
-                this._canSetLabel = profile.selfServiceCanSetLabel;
-                this._canClearLabel = profile.selfServiceCanClearLabel;
-                this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
-                this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder && !this._isBlockedContact;
-                this._canOrderConflict = this._useOrders && profile.selfServiceCanOrderConflict;
-                this._canCreateReservations = this._useReservations && profile.selfServiceCanReserve && !this._isBlockedContact;
-                this._canReadReservations = this._useReservations && profile.selfServiceCanReserve;
-                this._canReservationConflict = this._useReservations && profile.selfServiceCanReservationConflict;
-                this._canTakeCustody = this._useCustody && profile.selfServiceCanCustody && !this._isBlockedContact;
-                this._canReadOwnCustody = this._useCustody;
-                this._canBlockContacts = false;
-                break;
-            case "user":
-                this._canSetFlag = this._useFlags && profile.userCanSetFlag;
-                this._canClearFlag = this._useFlags && profile.userCanClearFlag;
-                this._canSetLabel = profile.userCanSetLabel;
-                this._canClearLabel = profile.userCanClearLabel;
-                this._canReadOrders = this._useOrders;
-                this._canCreateOrders = this._useOrders;
-                this._canOrderConflict = this._useOrders && profile.userCanOrderConflict;
-                this._canCreateReservations = this._useReservations;
-                this._canReadReservations = this._useReservations;
-                this._canReservationConflict = this._useOrders && profile.userCanReservationConflict;
-                this._canTakeCustody = this._useCustody;
-                this._canReadOwnCustody = this._useCustody;
-                this._canBlockContacts = this._useBlockContacts && profile.userCanBlock;
-                break;
-            default:
-                this._canSetFlag = this._useFlags;
-                this._canClearFlag = this._useFlags;
-                this._canSetLabel = true;
-                this._canClearLabel = true;
-                this._canReadOrders = this._useOrders;
-                this._canCreateOrders = this._useOrders;
-                this._canOrderConflict = this._useOrders && profile.adminCanOrderConflict;
-                this._canCreateReservations = this._useReservations;
-                this._canReadReservations = this._useReservations;
-                this._canReservationConflict = this._useOrders && profile.adminCanReservationConflict;
-                this._canTakeCustody = this._useCustody;
-                this._canReadOwnCustody = this._useCustody;
-                this._canBlockContacts = this._useBlockContacts;
-                break;
-        }
     };
 
     // 
@@ -140,7 +85,7 @@ define([], function () {
     // Specific web app permission method to check if we need to show module
     // even if user has no permission (upgrade page)
     PermissionHandler.prototype.hasUpgradePermission = function(){
-        return this._isOwner || this._isRootOrAdmin;
+        return this.hasAccountPermission("upgrade");
     }
 
     PermissionHandler.prototype.hasAnyAdminPermission = function() {
@@ -313,61 +258,111 @@ define([], function () {
                 switch (action) {
                     default:
                         return false;
+                    // Read actions
                     case "read":
+                    case "get":
+                    case "getAvailabilities":
+                    case "getAvailability":
+                    case "getByCode":
+                    case "getChangeLog":
+                    case "getConflicts":
+                    case "getDepreciation":
+                    case "getImage":
+                    case "getLastItemNumber":
+                    case "getMultiple":
+                    case "getReport":
+                    case "getSummary":
+                    case "getTransactions":
+                    case "list":
+                    case "scannedCodeOn":
+                    case "search":
+                    case "searchAvailable":
                         return can(["ITEMS_READER", "ITEMS_READER_RESTRICTED"]);
                     case "create":
+                    case "createMultiple":
                     case "duplicate":
                     case "update":
+                    // Delete actions
                     case "delete":
+                    case "deleteMultiple":
+                    case "canDelete":                    
+                    // Change category actions
+                    case "changeCategory":
+                    case "canChangeCategory":
+                    // Attachment actions
+                    case "attach":
+                    case "detach":
+                    case "addAttachment":
+                    // Other update/delete actions
+                    case "changeLocation":
+                    case "updatePermissions":
+                    case "updateGeo":
+                    case "addBarcode":
+                    case "removeBarcode":
+                    case "addCodes":
+                    case "removeCodes":
+                    case "clearCatalog":
+                    case "clearCover":
                     case "expire":
                     case "undoExpire":
                     case "setFields":
                     case "setField":
                     case "clearField":
+                    case "setAllowedActions":
+                    case "setCatalog":
+                    case "setCover":
                         return can(["ITEMS_ADMIN", "ITEMS_ADMIN_RESTRICTED"]);
-                    
-                    case "addAttachment":
+                    // Import actions
+                    case "import":
+                    case "importAnalyze":
+                    case "importSample":
+                    case "importSpreadsheet":
+                    case "importValidate":
+                        return can(["ITEMS_IMPORTER", "ITEMS_IMPORTER_RESTRICTED"]);
+                    case "export":
+                        return can(["ITEMS_EXPORTER", "ITEMS_EXPORTER_RESTRICTED"]);
                     case "addComment":
                     case "updateComment":
+                        return can(["ITEMS_COMMENTER"]);
                     case "removeComment":
-                    case "import":
-                    case "export":
-                    case "updateGeo":
-                    case "changeLocation":
-                    case "changeCategory":
-                    case "updatePermissions":
-                        return this._isRootOrAdmin;
+                        return can(["ITEMS_COMMENTS_DELETER", "ITEMS_COMMENTS_OWN_DELETER"]);
                     // Permissings for asset labels
                     case "printLabel":
-                        return this._isRootOrAdmin;
+                        return can(["ITEMS_DOCUMENT_GENERATOR"]);
                     // Permissions for flags
                     case "setFlag":
-                        return this._useFlags && this._canSetFlag;
+                        return this._useFlags && can(["ITEMS_FLAGGER", "ITEMS_FLAGGER_RESTRICTED"]);
                     case "clearFlag":
-                        return this._useFlags && this._canClearFlag;
-                    // Modules
+                        return this._useFlags && can(["ITEMS_UNFLAGGER", "ITEMS_UNFLAGGER_RESTRICTED"]);
+                    // Reservation
                     case "reserve":
-                        return this._canCreateReservations;
+                        return this.hasReservationPermission("create");
+                    // Check-out
                     case "checkout":
-                        return this._canCreateOrders;
+                        return this.hasCheckoutPermission("create");
+                    // Custody
                     case "seeOwnCustody":
-                        return this._canReadOwnCustody;
+                        return this._useCustody && can(["ITEMS_CUSTODY_OWN_READER"]);
                     case "takeCustody":
+                        return this._useCustody && can(["ITEMS_CUSTODY_TAKER", "ITEMS_CUSTODY_TAKER_RESTRICTED"]);
                     case "releaseCustody":
+                        return this._useCustody && can(["ITEMS_CUSTODY_RELEASER", "ITEMS_CUSTODY_RELEASER_RESTRICTED", "ITEMS_CUSTODY_OWN_RELEASER"]);
                     case "transferCustody":
-                        return this._canTakeCustody;
+                        return this._useCustody && can(["ITEMS_CUSTODY_TRANSFERER", "ITEMS_CUSTODY_TRANSFERER_RESTRICTED", "ITEMS_CUSTODY_OWN_TRANSFERER"]);
                     case "giveCustody":
-                        return this._canTakeCustody && this._isRootOrAdmin;
+                        return this.hasItemPermission("takeCustody") && this.hasItemPermission("transferCustody");
                     case "releaseCustodyAt":
-                        return this._canTakeCustody && this._useReleaseAtLocation;
+                        return this.hasItemPermission("releaseCustody") && this._useReleaseAtLocation;
                 }
                 break;
             case "kits":
+                if(!this._useKits) return false;
+
                 switch (action) {
                     default:
                         return false;
                     case "read":
-                        return this._useKits;
+                        return can(["KITS_READER", "KITS_READER_RESTRICTED"]);
                     case "create":
                     case "duplicate":
                     case "update":
@@ -375,61 +370,57 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
-                    case "addAttachment":
-                    case "addComment":
-                    case "updateComment":
-                    case "removeComment":
                     case "addItems":
                     case "removeItems":
                     case "moveItem":
-                    case "export":
+                    case "addAttachment":
+                        return can(["KITS_ADMIN", "KITS_ADMIN_RESTRICTED"]);
+                    case "addComment":
+                    case "updateComment":
+                        return can(["KITS_COMMENTS_WRITER", "KITS_COMMENTS_OWN_WRITER"]);
+                    case "removeComment":
+                        return can(["KITS_COMMENTS_DELETER", "KITS_COMMENTS_OWN_DELETER"]);
                     case "updatePermissions":
-                        return this._useKits && this._isRootOrAdmin;
+                        return can(["KITS_ADMIN", "KITS_ADMIN_RESTRICTED"]);
+                    case "import":
+                        return can(["KITS_IMPORTER", "KITS_IMPORTER_RESTRICTED"]);
+                    case "export":
+                        return can(["KITS_EXPORTER", "KITS_EXPORTER_RESTRICTED"]);
                     // Permissings for asset labels
                     case "printLabel":
-                        return this._isRootOrAdmin;
-                    // Permissions for flags
-                    case "setFlag":
-                        return this._useFlags && this._canSetFlag;
-                    case "clearFlag":
-                        return this._useFlags && this._canClearFlag;
-                    // Other
-                    case "takeApart":
-                        return this.profile.canTakeApartKits;
-                    // Modules
-                    // Modules
+                        return can(["KITS_DOCUMENT_GENERATOR"]);
+                    // Reservation
                     case "reserve":
-                        return this._canCreateReservations;
+                        return this.hasReservationPermission("create");
+                    // Checkout
                     case "checkout":
-                        return this._canCreateOrders;
+                        return this.hasCheckoutPermission("create");
+                    // Custody
                     case "seeOwnCustody":
-                        return this._canReadOwnCustody;
+                        return this._useCustody && can(["KITS_CUSTODY_OWN_READER"]);
                     case "takeCustody":
+                        return this._useCustody && can(["KITS_CUSTODY_TAKER", "KITS_CUSTODY_TAKER_RESTRICTED"]);
                     case "releaseCustody":
+                        return this._useCustody && can(["KITS_CUSTODY_RELEASER", "KITS_CUSTODY_RELEASER_RESTRICTED", "KITS_CUSTODY_OWN_RELEASER"]);
                     case "transferCustody":
-                        return this._canTakeCustody;
+                        return this._useCustody && can(["KITS_CUSTODY_TRANSFERER", "KITS_CUSTODY_TRANSFERER_RESTRICTED", "KITS_CUSTODY_OWN_TRANSFERER"]);
                     case "giveCustody":
-                        return this._canTakeCustody && this._isRootOrAdmin;
+                        return this.hasKitPermission("takeCustody") && this.hasKitPermission("transferCustody");
                     case "releaseCustodyAt":
-                        return this._canTakeCustody && this._useReleaseAtLocation;
+                        return this.hasKitPermission("releaseCustody") && this._useReleaseAtLocation;
                 }
                 break;
             case "orders":
             case "checkouts":
+                if(!this._useOrders) return false;
+
                 switch (action) {
                     default:
                         return false;
-
-                    // TODO: Checkin at location
-                    // TODO: Add items to open check-out
-
                     // CRUD
                     case "create":
                     case "update":
                     case "delete":
-                        return this._canCreateOrders;
-                    case "read":
-                        return this._canReadOrders;                    
                     // Order specific actions
                     case "setCustomer":
                     case "clearCustomer":
@@ -446,34 +437,44 @@ define([], function () {
                     case "clearField":
                     case "extend":
                     case "checkoutAgain":
-                        return this._canCreateOrders;
+                        return can(["ORDERS_WRITER", "ORDERS_WRITER_RESTRICTED", "ORDERS_OWN_WRITER"]);
+                    case "read":
+                        return can(["ORDERS_READER", "ORDERS_READER_RESTRICTED", "ORDERS_OWN_READER"])                  
+                    
                     // Generic actions
+                    case "attach":
                     case "addAttachment":
+                        return can(["ORDERS_ATTACHMENTS_OWN_WRITER", "ORDERS_OWN_ATTACHMENTS_OWN_WRITER"]);
+                    case "detach":
+                    case "removeAttachment":
+                        return can(["ORDERS_ATTACHMENTS_DELETER", "ORDERS_ATTACHMENTS_OWN_DELETER", "ORDERS_OWN_ATTACHMENTS_OWN_DELETER"]);
                     case "addComment":
                     case "updateComment":
+                        return can(["ORDERS_COMMENTS_WRITER", "ORDERS_COMMENTS_OWN_WRITER", "ORDERS_OWN_COMMENTS_OWN_WRITER"]);
                     case "removeComment":
+                        return can(["ORDERS_COMMENTS_DELETER", "ORDERS_COMMENTS_OWN_DELETER", "ORDERS_OWN_COMMENTS_OWN_DELETER"]);
+                    case "setLabel":
+                    case "clearLabel":
+                        return can(["RESERVATIONS_LABELER", "RESERVATIONS_LABELER_RESTRICTED", "RESERVATIONS_OWN_LABELER"]);
                     case "export":
-                        return this._useOrders;
+                        return can(["ORDERS_EXPORTER"]);
                     case "archive":
                     case "undoArchive":
-                        return this._useOrders && this._isRootOrAdmin;
-                    // Permissions for flags
-                    case "setFlag":
-                        return this._useFlags && this._canSetFlag;
-                    case "clearFlag":
-                        return this._useFlags && this._canClearFlag;
+                        return can(["ORDERS_ARCHIVER", "ORDERS_ARCHIVER_RESTRICTED", "ORDERS_OWN_ARCHIVER"]);
                     // Other
                     case "generateDocument":
-                        return this._usePdf && this._canCreateOrders;
+                        return can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_OWN_DOCUMENT_GENERATOR"]);
                     case "checkinAt":
-                        return this._canCreateOrders && this._useCheckinLocation;
+                        return this._useCheckinLocation && this.hasCheckoutPermission("checkin");
                     case "forceCheckListCheckin":
-                        return this.profile.forceCheckListCheckin;
+                        return this.profile.forceCheckListCheckin && this.hasCheckoutPermission("checkin");
                     case "ignoreConflicts":
-                        return this._canOrderConflict;
+                        return can(["ORDERS_CONFLICT_CREATOR"]);
                 }
                 break;
             case "reservations":
+                if(!this._useReservations) return false;
+
                 switch (action) {
                     default:
                         return false;
@@ -482,10 +483,12 @@ define([], function () {
                     case "create":
                     case "update":
                     case "delete":
-                        return this._canCreateReservations;
+                        return can(["RESERVATIONS_WRITER", "RESERVATIONS_WRITER_RESTRICTED", "RESERVATIONS_OWN_WRITER"])
 
+                    case "search":
+                    case "list":
                     case "read":
-                        return this._canReadReservations;
+                        return can(["RESERVATIONS_READER", "RESERVATIONS_READER_RESTRICTED", "RESERVATIONS_OWN_READER"]);
 
                     // Reservation specific actions
                     case "setFromToDate":
@@ -498,9 +501,6 @@ define([], function () {
                     case "swapItems":
                     case "reserve":
                     case "undoReserve":
-                    case "cancel":
-                    case "undoCancel":
-                    case "switchToOrder":
                     case "reserveAgain":
                     case "reserveRepeat":
 
@@ -508,33 +508,37 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
+                        return this.hasReservationPermission("update");
+                    case "attach":
                     case "addAttachment":
+                        return can(["RESERVATIONS_ATTACHMENTS_OWN_WRITER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER"]);
+                    case "detach":
+                    case "removeAttachment":
+                        return can(["RESERVATIONS_ATTACHMENTS_DELETER", "RESERVATIONS_ATTACHMENTS_OWN_DELETER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER"]);
                     case "addComment":
                     case "updateComment":
+                        return can(["RESERVATIONS_COMMENTS_OWN_WRITER", "RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]);
                     case "removeComment":
+                        return can([]);
                     case "export":
-                        return this._canCreateReservations;
-
+                        return can(["RESERVATIONS_EXPORTER"]);
+                    case "switchToOrder":
                     case "makeOrder":
-                        return this._canCreateOrders;
-                        
+                        return this.hasCheckoutPermission("create");
+                    case "cancel":
+                    case "undoCancel":
+                        return can(["RESERVATIONS_CANCELER", "RESERVATIONS_CANCELER_RESTRICTED", "RESERVATIONS_OWN_CANCELER"]);
                     case "archive":
                     case "undoArchive":
-                        return this._useReservations && this._isRootOrAdmin;
-                    
-                    // Permissions for flags
-                    case "setFlag":
-                        return this._useFlags && this._canSetFlag;
-                    case "clearFlag":
-                        return this._useFlags && this._canClearFlag;
+                        return can([ "RESERVATIONS_ARCHIVER", "RESERVATIONS_ARCHIVER_RESTRICTED", "RESERVATIONS_OWN_ARCHIVER"]);
                     // Other
                     case "generateDocument":
-                        return this._usePdf && this._canCreateReservations;
+                        return can(["RESERVATIONS_DOCUMENT_GENERATOR", "RESERVATIONS_DOCUMENT_GENERATOR_RESTRICTED", "RESERVATIONS_OWN_DOCUMENT_GENERATOR"]);
                     case "ignoreConflicts":
-                        return this._canReservationConflict;
+                        return can(["RESERVATIONS_CONFLICT_CREATOR"]);
                     case "close":
                     case "undoClose":
-                        return this._useReservationsClose;
+                        return this._useReservationsClose && can(["RESERVATIONS_CLOSER", "RESERVATIONS_CLOSER_RESTRICTED", "RESERVATIONS_OWN_CLOSER"]);
                 }
                 break;
             case "customers":
@@ -543,6 +547,10 @@ define([], function () {
                     default:
                         return false;
                     case "read":
+                    case "get":
+                    case "list":
+                    case "search":
+                        return can(["CUSTOMERS_READER", "CUSTOMERS_OWN_READER"]);
                     case "create":
                     case "update":
                     case "delete":
@@ -551,26 +559,29 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
-                    case "addAttachment":
+                    case "addAttachment":                                    
+                        return can(["CUSTOMERS_ADMIN"]);
                     case "addComment":
                     case "updateComment":
-                    case "removeComment":
+                        return can(["CUSTOMERS_COMMENTS_OWN_WRITER", "CUSTOMERS_OWN_COMMENTS_OWN_WRITER"]);
+                    case "removeComment":   
+                        return can(["CUSTOMERS_COMMENTS_DELETER", "CUSTOMERS_COMMENTS_OWN_DELETER", "CUSTOMERS_OWN_COMMENTS_OWN_DELETER"]);
                     case "import":
+                    case "importAnalyze":
+                    case "importSpreadsheet":
+                    case "importSample":
+                    case "importValidate":
+                        return can(["CUSTOMERS_IMPORTER"]);
                     case "export":
-                        return this._isRootOrAdminOrUser;
-                    // Permissions for flags
-                    case "setFlag":
-                        return this._useFlags && this._canSetFlag;
-                    case "clearFlag":
-                        return this._useFlags && this._canClearFlag;
+                        return can(["CUSTOMERS_EXPORTER"])
                     // Other
                     case "printLabel":
                         return this._isRootOrAdmin;
                     case "generateDocument":
-                        return this._usePdf;
+                        return can(["CUSTOMERS_DOCUMENT_GENERATOR", "CUSTOMERS_OWN_DOCUMENT_GENERATOR"]);
                     case "block":
                     case "undoBlock":
-                        return this._canBlockContacts;
+                        return can(["CUSTOMERS_BLOCK_ADMIN"]);
                 }
                 break;
             case "users":
@@ -578,7 +589,7 @@ define([], function () {
                     default:
                         return false;
                     case "read":
-                        return true;
+                        return can(["USERS_READER"]);
                     case "create":
                     case "update":
                     case "delete":
@@ -591,79 +602,100 @@ define([], function () {
                     case "activate":
                     case "deactivate":
                     case "clearSync":
-                        return this._isRootOrAdmin;
+                        return can(["USERS_ADMIN"]);
                     case "changeAccountOwner":
-                        return this._isOwner;
+                        return can(["ROOT"]);
                 }
                 break;
             case "categories":
+                switch(action){
+                    default:
+                        return false;
+                    case "read":
+                        return can(["CATEGORIES_READER"]);
+                    case "create":
+                    case "update":
+                    case "delete":
+                        return can(["CATEGORIES_ADMIN"]);
+                }
+
             case "locations":
                 switch (action) {
                     default:
                         return false;
                     case "read":
-                        return true;
+                        return can(["LOCATIONS_READER", "LOCATIONS_READER_RESTRICTED"]);
                     case "create":
                     case "update":
                     case "delete":
                     case "archive":
-                        return this._isRootOrAdmin;
+                        return can(["LOCATIONS_ADMIN"]);
                 }
                 break;
             case "syncs":
+                if(!this._useUserSync) return false;
+
                 switch (action) {
                     default:
                         return false;
                     case "read":
+                        return can(["USER_SYNCS_READER"]);
                     case "create":
                     case "update":
                     case "delete":
                     case "clone":
                     case "testConnection":
                     case "syncUsers":
-                        return this._useUserSync && this._isRootOrAdmin;
+                        return can(["USER_SYNCS_ADMIN"]);
                 }
                 break;
             case "notifications":
+                if(!this._useNotifications) return false;
+
                 switch (action) {
                     default:
                         return false;
                     case "read":
+                        return can(["NOTIFICATIONS_READER"]);
                     case "create":
                     case "update":
                     case "delete":
-                        return this._useNotifications && this._isRootOrAdmin;
+                        return can(["NOTIFICATIONS_ADMIN"]);
                 }
                 break;
             case "webhooks":
+                if(!this._useWebhooks) return false;
+
                 switch (action) {
                     default:
-                        return false;
+                        return can(["WEBHOOKS_READER"]);
                     case "read":
                     case "create":
                     case "update":
                     case "delete":
-                        return this._useWebhooks && this._isRootOrAdmin;
+                        return can(["WEBHOOKS_ADMIN"]);
                 }
                 break;
             case "account":
-                switch (action) {
-                    default:
-                        return this._isRootOrAdmin;
-                    case "reset":
-                    case "cancelPlan":
-                    case "changePlan":
-                        return this._isOwner;
-                }
-                break;
             case "subscription":
             case "invoices":
             case "billing":
+                switch (action) {
+                    default:
+                        return can(["ACCOUNT_SUBSCRIPTIONS_READER"]);
+                    case "reset":
+                    case "cancelPlan":
+                    case "changePlan":
+                    case "upgrade":
+                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]);
+                }
+                break;
             case "templates":
                 switch (action) {
                     default:
                         return false;
                     case "read":
+                        return can(["TEMPLATES_READER"]);
                     case "create":
                     case "update":
                     case "delete":
@@ -672,13 +704,7 @@ define([], function () {
                     case "activate":
                     case "deactivate":
                     case "clone":
-                        return this._isRootOrAdmin;
-                }
-                break;
-            case "asset-tags":
-                switch (action) {
-                    default:
-                        return this._isRootOrAdmin;
+                        return can(["TEMPLATES_ADMIN"]);
                 }
                 break;
         }

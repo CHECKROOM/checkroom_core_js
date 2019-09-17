@@ -6411,11 +6411,15 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
    * Update item fields based on the given Field objects
    * @param {Array} fields    array of Field objects
    */
-  Base.prototype.setSortedFields = function (fields) {
+  Base.prototype.setSortedFields = function (fields, isUpdate) {
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
       if (field.isEmpty()) {
-        delete this.fields[field.name];
+        if (isUpdate) {
+          this.fields[field.name] = null;
+        } else {
+          delete this.fields[field.name];
+        }
       } else {
         this.fields[field.name] = field.value;
       }
@@ -7335,11 +7339,15 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
    * Update item fields based on the given Field objects
    * @param {Array} fields    array of Field objects
    */
-  Base.prototype.setSortedFields = function (fields) {
+  Base.prototype.setSortedFields = function (fields, isUpdate) {
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
       if (field.isEmpty()) {
-        delete this.fields[field.name];
+        if (isUpdate) {
+          this.fields[field.name] = null;
+        } else {
+          delete this.fields[field.name];
+        }
       } else {
         this.fields[field.name] = field.value;
       }
@@ -9997,7 +10005,7 @@ Item = function ($, common, Base) {
       warrantyDate: null,
       purchaseDate: null,
       purchasePrice: null,
-      residualValue: null,
+      residualValue: 0,
       location: '',
       category: '',
       geo: [

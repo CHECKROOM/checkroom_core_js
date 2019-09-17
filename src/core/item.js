@@ -20,7 +20,7 @@ define([
             warrantyDate: null,
             purchaseDate: null,
             purchasePrice: null,
-            residualValue: null,
+            residualValue: 0,
             location: "",
             category: "",
             geo: [DEFAULT_LAT,DEFAULT_LONG],

@@ -15,6 +15,10 @@ define([], function () {
         this.limits = limits;
         this.permissions = permissions;
 
+        // TODO: remove this
+        // Temporary role to granular permissions transition code
+        this.ensureRolePermissions();
+
         // Helper booleans that mix a bunch of role stuff and profile / limits stuff
         this._isBlockedContact =      (user.customer && user.customer.status == "blocked");        
         this._useWebhooks =           (limits.allowWebhooks) &&             (profile.useWebhooks);
@@ -44,12 +48,78 @@ define([], function () {
         this._useSpotcheck =           (limits.allowSpotcheck) &&           (profile.useSpotcheck);
     };
 
+    PermissionHandler.prototype.ensureRolePermissions = function(){
+        var user = this.user,
+            profile = this.profile,
+            permissions = this.permissions;
+
+        switch(user.role){
+            case "selfservice":
+                if(profile.selfServiceCanSetFlag){
+                    permissions.push("ITEMS_FLAGGER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ITEMS_FLAGGER"; });
+                }
+                if(profile.selfServiceCanClearFlag){
+                    permissions.push("ITEMS_UNFLAGGER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ITEMS_UNFLAGGER"; });
+                }
+                if(profile.selfServiceCanSetLabel){
+                    permissions.push("ORDERS_LABELER");
+                    permissions.push("RESERVATIONS_LABELER");
+                }else{
+                    permissions = permissions.filter(function(p){ return ["ORDERS_LABELER", "RESERVATIONS_LABELER"].indexOf(p) == -1; });
+                }
+                if(profile.selfServiceCanSeeOwnOrders){
+                    permissions.push("ORDERS_OWN_READER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ORDERS_OWN_READER"; });
+                }
+                if(profile.selfServiceCanOrder && !this._isBlockedContact){
+                    permissions.push("ORDERS_OWN_WRITER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ORDERS_OWN_WRITER"; });
+                }
+                if(profile.selfServiceCanOrderConflict){
+                    permissions.push("ORDERS_CONFLICT_CREATOR");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
+                }
+                if(profile.selfServiceCanReserve && !this._isBlockedContact){
+                    permissions.push("RESERVATIONS_OWN_READER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_OWN_READER"; });
+                }
+                if(profile.selfServiceCanReservationConflict){
+                    permissions.push("RESERVATIONS_CONFLICT_CREATOR");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_CONFLICT_CREATOR"; });
+                }
+                if(profile.selfServiceCanCustody && !this._isBlockedContact){
+                    permissions.push("ITEMS_CUSTODY_TAKER");
+                    permissions.push("ITEMS_CUSTODY_OWN_READER");
+                    permissions.push("ITEMS_CUSTODY_OWN_RELEASER");
+                    permissions.push("ITEMS_CUSTODY_OWN_TRANSFERER");
+                }else{
+                    permissions = permissions.filter(function(p){ return ["ITEMS_CUSTODY_TAKER", "ITEMS_CUSTODY_OWN_READER", "ITEMS_CUSTODY_OWN_RELEASER", "ITEMS_CUSTODY_OWN_TRANSFERER"].indexOf(p) == -1; });
+                }
+                break;
+            case "admin":
+                break;
+            case "user":
+                break;
+        }
+
+        this.permissions = permissions;
+    };
+
     // 
     // Module helpers
     // 
     PermissionHandler.prototype.canUseItemCustody = function(){
         return this.limits.allowCustody;    
-    }
+    };
     PermissionHandler.prototype.canUseItemDepreciation = function(){
         return this.limits.allowDepreciations;
     };
@@ -170,7 +240,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasContactReadOtherPermission = function(action, data, location) {
-        return (!this._isSelfService);
+        return this.permissions.indexOf("CUSTOMERS_OWN_READER") == -1;
     };
 
     PermissionHandler.prototype.hasBlockContactsPermission = function(action, data, location) {
@@ -242,13 +312,14 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasPermission = function(action, collection, data, location) {
-        if( (this._isSelfService) && 
+        /*if( (this._isSelfService) && 
             (!this._useSelfService)) {
             return false;
-        }
+        }*/
 
+        var permissions = this.permissions;
         var can = function(arr){
-            return permissions.some(perm => arr.includes(perm));
+            return permissions.some(function(perm){ return arr.includes(perm) });
         }
 
         switch (collection) {
@@ -550,7 +621,7 @@ define([], function () {
                     case "get":
                     case "list":
                     case "search":
-                        return can(["CUSTOMERS_READER", "CUSTOMERS_OWN_READER"]);
+                        return can(["CUSTOMERS_READER"]);
                     case "create":
                     case "update":
                     case "delete":
@@ -575,8 +646,6 @@ define([], function () {
                     case "export":
                         return can(["CUSTOMERS_EXPORTER"])
                     // Other
-                    case "printLabel":
-                        return this._isRootOrAdmin;
                     case "generateDocument":
                         return can(["CUSTOMERS_DOCUMENT_GENERATOR", "CUSTOMERS_OWN_DOCUMENT_GENERATOR"]);
                     case "block":
@@ -604,7 +673,7 @@ define([], function () {
                     case "clearSync":
                         return can(["USERS_ADMIN"]);
                     case "changeAccountOwner":
-                        return can(["ROOT"]);
+                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]);
                 }
                 break;
             case "categories":

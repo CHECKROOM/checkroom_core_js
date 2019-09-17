@@ -140,9 +140,9 @@ define([
         if (this.existsInDb()) {
             return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
         }
-        if (this.isEmpty()) {
+        /*if (this.isEmpty()) {
             return $.Deferred().reject(new Error("Cannot create empty document"));
-        }
+        }*/
         if (!this.isValid()) {
             return $.Deferred().reject(new Error("Cannot create, invalid document"));
         }

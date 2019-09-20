@@ -1059,7 +1059,14 @@ common_code = {
    * @return {string}      
    */
   getQRCodeUrl: function (urlApi, code, size) {
-    return urlApi + '/qrcode?code=' + code + '&size=' + size;
+    var sizes = {
+      'XS': 1,
+      'S': 2,
+      'M': 3,
+      'L': 4,
+      'XL': 5
+    };
+    return urlApi + '?code=' + code + '&scale=' + sizes[size];
   },
   /**
    * getBarcodeUrl 
@@ -1074,7 +1081,7 @@ common_code = {
    * @return {string}      
    */
   getBarcodeUrl: function (urlApi, code, width, height) {
-    return urlApi + '/barcode?code=' + code + '&width=' + width + (height ? '&height=' + height : '');
+    return urlApi + '?code=' + code + '&width=' + width + (height ? '&height=' + height : '');
   }
 };
 common_order = function (moment) {

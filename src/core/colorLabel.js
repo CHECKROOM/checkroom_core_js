@@ -10,7 +10,8 @@ define(['jquery'], /** ColorLabel */ function ($) {
         name: '',
         color: 'Gold',
         readonly: false,
-        selected: false
+        selected: false,
+        default: false
     };
 
     /**
@@ -29,6 +30,7 @@ define(['jquery'], /** ColorLabel */ function ($) {
         this.color = spec.color || DEFAULTS.color;
         this.readonly = spec.readonly || DEFAULTS.readonly;
         this.selected = spec.selected || DEFAULTS.selected;
+        this.default = spec.default || DEFAULTS.default;
     };
 
     /**
@@ -64,6 +66,7 @@ define(['jquery'], /** ColorLabel */ function ($) {
         this.color = data.color || DEFAULTS.color;
         this.selected = data.selected || DEFAULTS.selected;
         this.readonly = data.readonly || DEFAULTS.readonly;
+        this.default = data.default || DEFAULTS.default;
 
         return $.Deferred().resolve();
     };
@@ -80,7 +83,8 @@ define(['jquery'], /** ColorLabel */ function ($) {
             name: this.name,
             color: this.color,
             selected: this.selected,
-            readonly: this.readonly
+            readonly: this.readonly,
+            default: this.default
         };
     };
  

@@ -5052,7 +5052,8 @@ colorLabel = function ($) {
     name: '',
     color: 'Gold',
     readonly: false,
-    selected: false
+    selected: false,
+    default: false
   };
   /**
    * @name  ColorLabel
@@ -5068,6 +5069,7 @@ colorLabel = function ($) {
     this.color = spec.color || DEFAULTS.color;
     this.readonly = spec.readonly || DEFAULTS.readonly;
     this.selected = spec.selected || DEFAULTS.selected;
+    this.default = spec.default || DEFAULTS.default;
   };
   /**
    * isDirty
@@ -5099,6 +5101,7 @@ colorLabel = function ($) {
     this.color = data.color || DEFAULTS.color;
     this.selected = data.selected || DEFAULTS.selected;
     this.readonly = data.readonly || DEFAULTS.readonly;
+    this.default = data.default || DEFAULTS.default;
     return $.Deferred().resolve();
   };
   /**
@@ -5113,7 +5116,8 @@ colorLabel = function ($) {
       name: this.name,
       color: this.color,
       selected: this.selected,
-      readonly: this.readonly
+      readonly: this.readonly,
+      default: this.default
     };
   };
   return ColorLabel;
@@ -9576,10 +9580,11 @@ Group = function ($, common, api, Document) {
    * @param collection (items, kits, customers, reservations, orders)
    * @param labelColor
    * @param labelName
+   * @param labelDefault
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.createLabel = function (collection, labelColor, labelName, skipRead) {
+  Group.prototype.createLabel = function (collection, labelColor, labelName, labelDefault, skipRead) {
     return this._doApiCall({
       pk: this.id,
       method: 'createLabel',
@@ -9587,7 +9592,8 @@ Group = function ($, common, api, Document) {
       params: {
         collection: collection,
         labelColor: labelColor,
-        labelName: labelName
+        labelName: labelName,
+        labelDefault: labelDefault
       }
     });
   };
@@ -9600,7 +9606,7 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, skipRead) {
+  Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, labelDefault, skipRead) {
     return this._doApiCall({
       pk: this.id,
       method: 'updateLabel',
@@ -9609,7 +9615,8 @@ Group = function ($, common, api, Document) {
         collection: collection,
         labelId: labelId,
         labelColor: labelColor,
-        labelName: labelName
+        labelName: labelName,
+        labelDefault: labelDefault
       }
     });
   };
@@ -9978,6 +9985,9 @@ Group = function ($, common, api, Document) {
       if (labelsKey == 'orderLabels') {
         that[labelsKey].push(that._getColorLabel({
           readonly: true,
+          default: !data[labelsKey].some(function (l) {
+            return l.default === true;
+          }),
           name: 'Unlabeled',
           color: 'SlateGray'
         }, options));
@@ -9985,6 +9995,9 @@ Group = function ($, common, api, Document) {
       if (labelsKey == 'reservationLabels') {
         that[labelsKey].push(that._getColorLabel({
           readonly: true,
+          default: !data[labelsKey].some(function (l) {
+            return l.default === true;
+          }),
           name: 'Unlabeled',
           color: 'LimeGreen'
         }, options));
@@ -17390,7 +17403,8 @@ ColorLabel = function ($) {
     name: '',
     color: 'Gold',
     readonly: false,
-    selected: false
+    selected: false,
+    default: false
   };
   /**
    * @name  ColorLabel
@@ -17406,6 +17420,7 @@ ColorLabel = function ($) {
     this.color = spec.color || DEFAULTS.color;
     this.readonly = spec.readonly || DEFAULTS.readonly;
     this.selected = spec.selected || DEFAULTS.selected;
+    this.default = spec.default || DEFAULTS.default;
   };
   /**
    * isDirty
@@ -17437,6 +17452,7 @@ ColorLabel = function ($) {
     this.color = data.color || DEFAULTS.color;
     this.selected = data.selected || DEFAULTS.selected;
     this.readonly = data.readonly || DEFAULTS.readonly;
+    this.default = data.default || DEFAULTS.default;
     return $.Deferred().resolve();
   };
   /**
@@ -17451,7 +17467,8 @@ ColorLabel = function ($) {
       name: this.name,
       color: this.color,
       selected: this.selected,
-      readonly: this.readonly
+      readonly: this.readonly,
+      default: this.default
     };
   };
   return ColorLabel;

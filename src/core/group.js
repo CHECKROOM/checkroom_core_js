@@ -259,10 +259,11 @@ define([
      * @param collection (items, kits, customers, reservations, orders)
      * @param labelColor
      * @param labelName
+     * @param labelDefault
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.createLabel = function(collection, labelColor, labelName, skipRead) {
+    Group.prototype.createLabel = function(collection, labelColor, labelName, labelDefault, skipRead) {
         return this._doApiCall({
             pk: this.id,
             method: "createLabel",
@@ -270,7 +271,8 @@ define([
             params: {
                 collection: collection,
                 labelColor: labelColor,
-                labelName: labelName
+                labelName: labelName,
+                labelDefault: labelDefault
             }
         });
     };
@@ -284,7 +286,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, skipRead) {
+    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, labelDefault, skipRead) {
         return this._doApiCall({
             pk: this.id,
             method: "updateLabel",
@@ -293,7 +295,8 @@ define([
                 collection: collection,
                 labelId: labelId,
                 labelColor: labelColor,
-                labelName: labelName
+                labelName: labelName,
+                labelDefault: labelDefault
             }
         });
     };
@@ -667,10 +670,10 @@ define([
             that[labelsKey] = DEFAULTS[labelsKey].slice();
             
             if(labelsKey == "orderLabels"){
-                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "SlateGray" }, options));
+                that[labelsKey].push(that._getColorLabel({ readonly: true, default: !data[labelsKey].some(function(l){ return l.default === true; }), name: "Unlabeled", color: "SlateGray" }, options));
             }
             if(labelsKey == "reservationLabels"){
-                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "LimeGreen" }, options));
+                that[labelsKey].push(that._getColorLabel({ readonly: true, default: !data[labelsKey].some(function(l){ return l.default === true; }), name: "Unlabeled", color: "LimeGreen" }, options));
             }
 
             if( (data[labelsKey]) &&

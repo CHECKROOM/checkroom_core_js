@@ -167,6 +167,8 @@ define([], function () {
                 this.hasPermission("create", "syncs");
     };
 
+
+
     PermissionHandler.prototype.hasDashboardPermission = function(action, data, location) {
         // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
         if(this._isSelfService){
@@ -200,7 +202,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasItemDepreciationPermission = function() {
-        return this._isRootOrAdmin && this._useDepreciations;
+        return this._useDepreciations && this.hasItemPermission("getDepreciation");
     };
 
     PermissionHandler.prototype.hasUserSyncPermission = function(){
@@ -212,7 +214,14 @@ define([], function () {
     };
     
     PermissionHandler.prototype.hasReportingPermission = function() {
-        return this._isRootOrAdmin && this._useReporting;
+        return this._useReporting && (
+                this.hasPermission("getReport", "items") ||
+                this.hasPermission("getReport", "kits") ||
+                this.hasPermission("getReport", "customers") ||
+                this.hasPermission("getReport", "users") ||
+                this.hasPermission("getReport", "orders") ||
+                this.hasPermission("getReport", "reservations")
+            );
     };
 
     PermissionHandler.prototype.hasLabelPermission = function() {
@@ -337,11 +346,9 @@ define([], function () {
                     case "getByCode":
                     case "getChangeLog":
                     case "getConflicts":
-                    case "getDepreciation":
                     case "getImage":
                     case "getLastItemNumber":
                     case "getMultiple":
-                    case "getReport":
                     case "getSummary":
                     case "getTransactions":
                     case "list":
@@ -365,6 +372,7 @@ define([], function () {
                     case "detach":
                     case "addAttachment":
                     // Other update/delete actions
+                    case "getDepreciation":
                     case "changeLocation":
                     case "updatePermissions":
                     case "updateGeo":
@@ -424,6 +432,8 @@ define([], function () {
                         return this.hasItemPermission("takeCustody") && this.hasItemPermission("transferCustody");
                     case "releaseCustodyAt":
                         return this.hasItemPermission("releaseCustody") && this._useReleaseAtLocation;
+                    case "getReport":
+                        return this.hasItemPermission(["ITEMS_REPORTER", "ITEMS_REPORTER_RESTRICTED"]);
                 }
                 break;
             case "kits":
@@ -479,6 +489,8 @@ define([], function () {
                         return this.hasKitPermission("takeCustody") && this.hasKitPermission("transferCustody");
                     case "releaseCustodyAt":
                         return this.hasKitPermission("releaseCustody") && this._useReleaseAtLocation;
+                    case "getReport":
+                        return this.hasItemPermission("getReport");
                 }
                 break;
             case "orders":
@@ -541,6 +553,8 @@ define([], function () {
                         return this.profile.forceCheckListCheckin && this.hasCheckoutPermission("checkin");
                     case "ignoreConflicts":
                         return can(["ORDERS_CONFLICT_CREATOR"]);
+                    case "getReport":
+                        return can(["ORDERS_REPORTER", "ORDERS_REPORTER_RESTRICTED", "ORDERS_OWN_REPORTER"]);
                 }
                 break;
             case "reservations":
@@ -610,6 +624,8 @@ define([], function () {
                     case "close":
                     case "undoClose":
                         return this._useReservationsClose && can(["RESERVATIONS_CLOSER", "RESERVATIONS_CLOSER_RESTRICTED", "RESERVATIONS_OWN_CLOSER"]);
+                    case "getReport":
+                        return can(["RESERVATIONS_REPORTER", "RESERVATIONS_REPORTER_RESTRICTED", "RESERVATIONS_OWN_REPORTER"]);
                 }
                 break;
             case "customers":
@@ -651,6 +667,8 @@ define([], function () {
                     case "block":
                     case "undoBlock":
                         return can(["CUSTOMERS_BLOCK_ADMIN"]);
+                    case "getReport":
+                        return can(["CUSTOMERS_REPORTER"]);
                 }
                 break;
             case "users":
@@ -671,9 +689,13 @@ define([], function () {
                     case "activate":
                     case "deactivate":
                     case "clearSync":
+                    case "restrictLocations":
                         return can(["USERS_ADMIN"]);
+                    case "referFriend":
                     case "changeAccountOwner":
                         return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]);
+                    case "getReport":
+                        return can(["USERS_REPORTER", "USERS_OWN_REPORTER"]);
                 }
                 break;
             case "categories":

@@ -13886,7 +13886,7 @@ PermissionHandler = function () {
     return this._useGeo;
   };
   PermissionHandler.prototype.hasItemDepreciationPermission = function () {
-    return this._isRootOrAdmin && this._useDepreciations;
+    return this._useDepreciations && this.hasItemPermission('getDepreciation');
   };
   PermissionHandler.prototype.hasUserSyncPermission = function () {
     return this.hasAccountUserSyncPermission('read');
@@ -13895,7 +13895,7 @@ PermissionHandler = function () {
     return this._useSelfService;
   };
   PermissionHandler.prototype.hasReportingPermission = function () {
-    return this._isRootOrAdmin && this._useReporting;
+    return this._useReporting && (this.hasPermission('getReport', 'items') || this.hasPermission('getReport', 'kits') || this.hasPermission('getReport', 'customers') || this.hasPermission('getReport', 'users') || this.hasPermission('getReport', 'orders') || this.hasPermission('getReport', 'reservations'));
   };
   PermissionHandler.prototype.hasLabelPermission = function () {
     return this._canSetLabel && this._canClearLabel;
@@ -13993,11 +13993,9 @@ PermissionHandler = function () {
       case 'getByCode':
       case 'getChangeLog':
       case 'getConflicts':
-      case 'getDepreciation':
       case 'getImage':
       case 'getLastItemNumber':
       case 'getMultiple':
-      case 'getReport':
       case 'getSummary':
       case 'getTransactions':
       case 'list':
@@ -14024,6 +14022,7 @@ PermissionHandler = function () {
       case 'detach':
       case 'addAttachment':
       // Other update/delete actions
+      case 'getDepreciation':
       case 'changeLocation':
       case 'updatePermissions':
       case 'updateGeo':
@@ -14112,6 +14111,11 @@ PermissionHandler = function () {
         return this.hasItemPermission('takeCustody') && this.hasItemPermission('transferCustody');
       case 'releaseCustodyAt':
         return this.hasItemPermission('releaseCustody') && this._useReleaseAtLocation;
+      case 'getReport':
+        return this.hasItemPermission([
+          'ITEMS_REPORTER',
+          'ITEMS_REPORTER_RESTRICTED'
+        ]);
       }
       break;
     case 'kits':
@@ -14199,6 +14203,8 @@ PermissionHandler = function () {
         return this.hasKitPermission('takeCustody') && this.hasKitPermission('transferCustody');
       case 'releaseCustodyAt':
         return this.hasKitPermission('releaseCustody') && this._useReleaseAtLocation;
+      case 'getReport':
+        return this.hasItemPermission('getReport');
       }
       break;
     case 'orders':
@@ -14294,6 +14300,12 @@ PermissionHandler = function () {
         return this.profile.forceCheckListCheckin && this.hasCheckoutPermission('checkin');
       case 'ignoreConflicts':
         return can(['ORDERS_CONFLICT_CREATOR']);
+      case 'getReport':
+        return can([
+          'ORDERS_REPORTER',
+          'ORDERS_REPORTER_RESTRICTED',
+          'ORDERS_OWN_REPORTER'
+        ]);
       }
       break;
     case 'reservations':
@@ -14393,6 +14405,12 @@ PermissionHandler = function () {
           'RESERVATIONS_CLOSER_RESTRICTED',
           'RESERVATIONS_OWN_CLOSER'
         ]);
+      case 'getReport':
+        return can([
+          'RESERVATIONS_REPORTER',
+          'RESERVATIONS_REPORTER_RESTRICTED',
+          'RESERVATIONS_OWN_REPORTER'
+        ]);
       }
       break;
     case 'customers':
@@ -14444,6 +14462,8 @@ PermissionHandler = function () {
       case 'block':
       case 'undoBlock':
         return can(['CUSTOMERS_BLOCK_ADMIN']);
+      case 'getReport':
+        return can(['CUSTOMERS_REPORTER']);
       }
       break;
     case 'users':
@@ -14464,9 +14484,16 @@ PermissionHandler = function () {
       case 'activate':
       case 'deactivate':
       case 'clearSync':
+      case 'restrictLocations':
         return can(['USERS_ADMIN']);
+      case 'referFriend':
       case 'changeAccountOwner':
         return can(['ACCOUNT_SUBSCRIPTIONS_ADMIN']);
+      case 'getReport':
+        return can([
+          'USERS_REPORTER',
+          'USERS_OWN_REPORTER'
+        ]);
       }
       break;
     case 'categories':

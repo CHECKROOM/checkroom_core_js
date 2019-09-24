@@ -6,7 +6,7 @@
  */
 define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmentHelper) {
 
-    var PREVIEWS = ['jpg', 'jpeg', 'png', 'gif', 'doc', 'docx', 'pdf'];
+    var PREVIEWS = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
     var DEFAULTS = {
         fileName: '',
         fileSize: 0,
@@ -34,6 +34,7 @@ define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmen
         this.by = spec.by || DEFAULTS.by;
         this.isCover = (spec.isCover!=null) ? spec.isCover : DEFAULTS.isCover;
         this.canBeCover = (spec.canBeCover!=null) ? spec.canBeCover : DEFAULTS.canBeCover;
+        this.forKind = spec.forKind;
     };
 
     /**

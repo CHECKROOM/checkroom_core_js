@@ -5557,8 +5557,6 @@ Attachment = function ($, attachmentHelper) {
     'jpeg',
     'png',
     'gif',
-    'doc',
-    'docx',
     'pdf'
   ];
   var DEFAULTS = {
@@ -5587,6 +5585,7 @@ Attachment = function ($, attachmentHelper) {
     this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
+    this.forKind = spec.forKind;
   };
   /**
    * Gets the url of a thumbnail
@@ -5767,8 +5766,6 @@ attachment = function ($, attachmentHelper) {
     'jpeg',
     'png',
     'gif',
-    'doc',
-    'docx',
     'pdf'
   ];
   var DEFAULTS = {
@@ -5797,6 +5794,7 @@ attachment = function ($, attachmentHelper) {
     this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
+    this.forKind = spec.forKind;
   };
   /**
    * Gets the url of a thumbnail
@@ -6567,7 +6565,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     this.attachments = DEFAULTS.attachments.slice();
     if (data.attachments && data.attachments.length > 0) {
       $.each(data.attachments, function (i, att) {
-        obj = that._getAttachment(att, options);
+        obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
         if (obj) {
           that.attachments.push(obj);
         }
@@ -7491,7 +7489,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     this.attachments = DEFAULTS.attachments.slice();
     if (data.attachments && data.attachments.length > 0) {
       $.each(data.attachments, function (i, att) {
-        obj = that._getAttachment(att, options);
+        obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
         if (obj) {
           that.attachments.push(obj);
         }
@@ -14254,8 +14252,7 @@ PermissionHandler = function () {
         ]);
       case 'detach':
       case 'removeAttachment':
-        return can([
-          'ORDERS_ATTACHMENTS_DELETER',
+        return can(['ORDERS_ATTACHMENTS_DELETER']) || data.own && can([
           'ORDERS_ATTACHMENTS_OWN_DELETER',
           'ORDERS_OWN_ATTACHMENTS_OWN_DELETER'
         ]);
@@ -14357,8 +14354,7 @@ PermissionHandler = function () {
         ]);
       case 'detach':
       case 'removeAttachment':
-        return can([
-          'RESERVATIONS_ATTACHMENTS_DELETER',
+        return can(['RESERVATIONS_ATTACHMENTS_DELETER']) || data.own && can([
           'RESERVATIONS_ATTACHMENTS_OWN_DELETER',
           'RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER'
         ]);

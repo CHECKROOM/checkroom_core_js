@@ -634,7 +634,7 @@ define([
         if( (data.attachments) &&
             (data.attachments.length>0)) {
             $.each(data.attachments, function(i, att) {
-                obj = that._getAttachment(att, options);
+                obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
                 if (obj) {
                     that.attachments.push(obj);
                 }

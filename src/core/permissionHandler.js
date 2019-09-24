@@ -425,13 +425,13 @@ define([], function () {
                     case "takeCustody":
                         return this._useCustody && can(["ITEMS_CUSTODY_TAKER", "ITEMS_CUSTODY_TAKER_RESTRICTED"]);
                     case "releaseCustody":
-                        return this._useCustody && can(["ITEMS_CUSTODY_RELEASER", "ITEMS_CUSTODY_RELEASER_RESTRICTED", "ITEMS_CUSTODY_OWN_RELEASER"]);
+                        return this._useCustody && (can(["ITEMS_CUSTODY_RELEASER", "ITEMS_CUSTODY_RELEASER_RESTRICTED"]) || (data.own && can(["ITEMS_CUSTODY_OWN_RELEASER"])));
                     case "transferCustody":
-                        return this._useCustody && can(["ITEMS_CUSTODY_TRANSFERER", "ITEMS_CUSTODY_TRANSFERER_RESTRICTED", "ITEMS_CUSTODY_OWN_TRANSFERER"]);
+                        return this._useCustody && (can(["ITEMS_CUSTODY_TRANSFERER", "ITEMS_CUSTODY_TRANSFERER_RESTRICTED"]) || (data.own can(["ITEMS_CUSTODY_OWN_TRANSFERER"])));
                     case "giveCustody":
-                        return this.hasItemPermission("takeCustody") && this.hasItemPermission("transferCustody");
+                        return this.hasItemPermission("takeCustody", data) && this.hasItemPermission("transferCustody", data);
                     case "releaseCustodyAt":
-                        return this.hasItemPermission("releaseCustody") && this._useReleaseAtLocation;
+                        return this.hasItemPermission("releaseCustody", data) && this._useReleaseAtLocation;
                     case "getReport":
                         return this.hasItemPermission(["ITEMS_REPORTER", "ITEMS_REPORTER_RESTRICTED"]);
                 }
@@ -482,13 +482,13 @@ define([], function () {
                     case "takeCustody":
                         return this._useCustody && can(["KITS_CUSTODY_TAKER", "KITS_CUSTODY_TAKER_RESTRICTED"]);
                     case "releaseCustody":
-                        return this._useCustody && can(["KITS_CUSTODY_RELEASER", "KITS_CUSTODY_RELEASER_RESTRICTED", "KITS_CUSTODY_OWN_RELEASER"]);
+                        return this._useCustody && (can(["KITS_CUSTODY_RELEASER", "KITS_CUSTODY_RELEASER_RESTRICTED"]) || (data.own && can(["KITS_CUSTODY_OWN_RELEASER"])));
                     case "transferCustody":
-                        return this._useCustody && can(["KITS_CUSTODY_TRANSFERER", "KITS_CUSTODY_TRANSFERER_RESTRICTED", "KITS_CUSTODY_OWN_TRANSFERER"]);
+                        return this._useCustody && (can(["KITS_CUSTODY_TRANSFERER", "KITS_CUSTODY_TRANSFERER_RESTRICTED"]) ||  (data.own && can(["KITS_CUSTODY_OWN_TRANSFERER"])));
                     case "giveCustody":
-                        return this.hasKitPermission("takeCustody") && this.hasKitPermission("transferCustody");
+                        return this.hasKitPermission("takeCustody", data) && this.hasKitPermission("transferCustody", data);
                     case "releaseCustodyAt":
-                        return this.hasKitPermission("releaseCustody") && this._useReleaseAtLocation;
+                        return this.hasKitPermission("releaseCustody", data) && this._useReleaseAtLocation;
                     case "getReport":
                         return this.hasItemPermission("getReport");
                 }
@@ -530,7 +530,7 @@ define([], function () {
                         return can(["ORDERS_ATTACHMENTS_OWN_WRITER", "ORDERS_OWN_ATTACHMENTS_OWN_WRITER"]);
                     case "detach":
                     case "removeAttachment":
-                        return can(["ORDERS_ATTACHMENTS_DELETER", "ORDERS_ATTACHMENTS_OWN_DELETER", "ORDERS_OWN_ATTACHMENTS_OWN_DELETER"]);
+                        return can(["ORDERS_ATTACHMENTS_DELETER"]) || (data.own && can(["ORDERS_ATTACHMENTS_OWN_DELETER", "ORDERS_OWN_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
                     case "updateComment":
                         return can(["ORDERS_COMMENTS_WRITER", "ORDERS_COMMENTS_OWN_WRITER", "ORDERS_OWN_COMMENTS_OWN_WRITER"]);
@@ -599,7 +599,7 @@ define([], function () {
                         return can(["RESERVATIONS_ATTACHMENTS_OWN_WRITER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER"]);
                     case "detach":
                     case "removeAttachment":
-                        return can(["RESERVATIONS_ATTACHMENTS_DELETER", "RESERVATIONS_ATTACHMENTS_OWN_DELETER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER"]);
+                        return can(["RESERVATIONS_ATTACHMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_ATTACHMENTS_OWN_DELETER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
                     case "updateComment":
                         return can(["RESERVATIONS_COMMENTS_OWN_WRITER", "RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]);

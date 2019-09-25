@@ -15,6 +15,8 @@ define([], function () {
         this.limits = limits;
         this.permissions = permissions;
 
+        this._isOwner = user.isOwner;
+
         // TODO: remove this
         // Temporary role to granular permissions transition code
         this.ensureRolePermissions();
@@ -98,11 +100,20 @@ define([], function () {
                 }
                 if(profile.selfServiceCanCustody && !this._isBlockedContact){
                     permissions.push("ITEMS_CUSTODY_TAKER");
+                    permissions.push("ITEMS_CUSTODY_TRANSFERER");
                     permissions.push("ITEMS_CUSTODY_OWN_READER");
                     permissions.push("ITEMS_CUSTODY_OWN_RELEASER");
-                    permissions.push("ITEMS_CUSTODY_OWN_TRANSFERER");
                 }else{
-                    permissions = permissions.filter(function(p){ return ["ITEMS_CUSTODY_TAKER", "ITEMS_CUSTODY_OWN_READER", "ITEMS_CUSTODY_OWN_RELEASER", "ITEMS_CUSTODY_OWN_TRANSFERER"].indexOf(p) == -1; });
+                    permissions = permissions.filter(function(p){ return [
+                        "ITEMS_CUSTODY_TAKER", 
+                        "ITEMS_CUSTODY_TRANSFERER",
+                        "ITEMS_CUSTODY_RELEASER",
+                        "ITEMS_CUSTODY_OWN_READER", 
+                        "ITEMS_CUSTODY_OWN_RELEASER", 
+                        "ITEMS_CUSTODY_OWN_TRANSFERER",
+                        "ITEMS_CUSTODY_TAKER_RESTRICTED",
+                        "ITEMS_CUSTODY_TRANSFERER_RESTRICTED",
+                        "ITEMS_CUSTODY_RELEASER_RESTRICTED"].indexOf(p) == -1; });
                 }
                 break;
             case "admin":
@@ -193,6 +204,10 @@ define([], function () {
         return this._useCustody || this._canReadOwnCustody;
     };
 
+    PermissionHandler.prototype.hasReleaseCustodyAtLocationPermission = function(){
+        return this._useCustody && this._useReleaseAtLocation;
+    }
+
     PermissionHandler.prototype.hasItemFlagPermission = function() {
         return this._useFlags;
     };
@@ -214,14 +229,7 @@ define([], function () {
     };
     
     PermissionHandler.prototype.hasReportingPermission = function() {
-        return this._useReporting && (
-                this.hasPermission("getReport", "items") ||
-                this.hasPermission("getReport", "kits") ||
-                this.hasPermission("getReport", "customers") ||
-                this.hasPermission("getReport", "users") ||
-                this.hasPermission("getReport", "orders") ||
-                this.hasPermission("getReport", "reservations")
-            );
+        return this._useReporting && this.permissions.indexOf("ACCOUNT_REPORTER") != -1;
     };
 
     PermissionHandler.prototype.hasLabelPermission = function() {
@@ -249,7 +257,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasContactReadOtherPermission = function(action, data, location) {
-        return this.permissions.indexOf("CUSTOMERS_OWN_READER") == -1;
+        return this.permissions.indexOf("CUSTOMERS_READER") != -1;
     };
 
     PermissionHandler.prototype.hasBlockContactsPermission = function(action, data, location) {
@@ -321,6 +329,8 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasPermission = function(action, collection, data, location) {
+        data = data || {};
+
         /*if( (this._isSelfService) && 
             (!this._useSelfService)) {
             return false;
@@ -427,9 +437,9 @@ define([], function () {
                     case "releaseCustody":
                         return this._useCustody && (can(["ITEMS_CUSTODY_RELEASER", "ITEMS_CUSTODY_RELEASER_RESTRICTED"]) || (data.own && can(["ITEMS_CUSTODY_OWN_RELEASER"])));
                     case "transferCustody":
-                        return this._useCustody && (can(["ITEMS_CUSTODY_TRANSFERER", "ITEMS_CUSTODY_TRANSFERER_RESTRICTED"]) || (data.own can(["ITEMS_CUSTODY_OWN_TRANSFERER"])));
+                        return this._useCustody && (can(["ITEMS_CUSTODY_TRANSFERER", "ITEMS_CUSTODY_TRANSFERER_RESTRICTED"]) || (data.own && can(["ITEMS_CUSTODY_OWN_TRANSFERER"])));
                     case "giveCustody":
-                        return this.hasItemPermission("takeCustody", data) && this.hasItemPermission("transferCustody", data);
+                        return this.hasContactReadOtherPermission() && this.hasItemPermission("takeCustody", data) && this.hasItemPermission("transferCustody", data);
                     case "releaseCustodyAt":
                         return this.hasItemPermission("releaseCustody", data) && this._useReleaseAtLocation;
                     case "getReport":
@@ -693,7 +703,7 @@ define([], function () {
                         return can(["USERS_ADMIN"]);
                     case "referFriend":
                     case "changeAccountOwner":
-                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]);
+                        return this._isOwner;
                     case "getReport":
                         return can(["USERS_REPORTER", "USERS_OWN_REPORTER"]);
                 }

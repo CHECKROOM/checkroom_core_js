@@ -209,10 +209,11 @@ define([
 	 * 
 	 * @param  item          
 	 * @param  permissionHandler
-	 * @param  dateHelper        
+	 * @param  dateHelper
+	 * @param  user        
 	 * @return {promise}                   
 	 */
-	that.getItemMessages = function(item, getDataSource, permissionHandler, dateHelper){
+	that.getItemMessages = function(item, getDataSource, permissionHandler, dateHelper, user){
 		var messages = [],
 			MessagePriority = {
                 'Critical': 0,
@@ -228,6 +229,11 @@ define([
 
 		var formatDate = function(date){
 	        return date.format('MMMM Do' + (date.year() == moment().year()?'':' YYYY'));
+	    }
+	    var isOwn = function(contact){
+	    	contact = typeof(contact) !== 'string'?contact || {}:{ _id: contact };
+	    	user = user || { customer: {} };
+	    	return contact._id == user.customer._id;
 	    }
 
 		// Check-out message?
@@ -326,7 +332,7 @@ define([
 	        }
 
             dfd.then(function(contact, since){
-           		var message = "Item is <strong>in custody</strong>" + (contact?(" of " + contact.name + " <span class='text-muted'>since " + formatDate(since) + "</span>"):"");
+           		var message = "Item is <strong>in " + (isOwn(item.custody)?"your":"") + " custody</strong>" + (contact && !isOwn(item.custody)?(" of " + contact.name + " <span class='text-muted'>since " + formatDate(since) + "</span>"):"");
 
                 messages.push({
                     kind: "custody",

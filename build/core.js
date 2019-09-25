@@ -1596,10 +1596,11 @@ common_item = function (moment, orderHelper, reservationHelper) {
   * 
   * @param  item          
   * @param  permissionHandler
-  * @param  dateHelper        
+  * @param  dateHelper
+  * @param  user        
   * @return {promise}                   
   */
-  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper) {
+  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper, user) {
     var messages = [], MessagePriority = {
         'Critical': 0,
         'High': 1,
@@ -1608,6 +1609,11 @@ common_item = function (moment, orderHelper, reservationHelper) {
       }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
     var formatDate = function (date) {
       return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    var isOwn = function (contact) {
+      contact = typeof contact !== 'string' ? contact || {} : { _id: contact };
+      user = user || { customer: {} };
+      return contact._id == user.customer._id;
     };
     // Check-out message?
     if (item.status == 'checkedout' || item.status == 'await_checkout') {
@@ -1697,7 +1703,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
         });
       }
       dfd.then(function (contact, since) {
-        var message = 'Item is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        var message = 'Item is <strong>in ' + (isOwn(item.custody) ? 'your' : '') + ' custody</strong>' + (contact && !isOwn(item.custody) ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
         messages.push({
           kind: 'custody',
           priority: MessagePriority.High,
@@ -4241,7 +4247,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
    * @param  dateHelper        
    * @return {promise}                   
    */
-  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper) {
+  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper, user) {
     var messages = [], MessagePriority = {
         'Critical': 0,
         'High': 1,
@@ -13697,6 +13703,7 @@ PermissionHandler = function () {
     this.profile = profile;
     this.limits = limits;
     this.permissions = permissions;
+    this._isOwner = user.isOwner;
     // TODO: remove this
     // Temporary role to granular permissions transition code
     this.ensureRolePermissions();
@@ -13795,16 +13802,21 @@ PermissionHandler = function () {
       }
       if (profile.selfServiceCanCustody && !this._isBlockedContact) {
         permissions.push('ITEMS_CUSTODY_TAKER');
+        permissions.push('ITEMS_CUSTODY_TRANSFERER');
         permissions.push('ITEMS_CUSTODY_OWN_READER');
         permissions.push('ITEMS_CUSTODY_OWN_RELEASER');
-        permissions.push('ITEMS_CUSTODY_OWN_TRANSFERER');
       } else {
         permissions = permissions.filter(function (p) {
           return [
             'ITEMS_CUSTODY_TAKER',
+            'ITEMS_CUSTODY_TRANSFERER',
+            'ITEMS_CUSTODY_RELEASER',
             'ITEMS_CUSTODY_OWN_READER',
             'ITEMS_CUSTODY_OWN_RELEASER',
-            'ITEMS_CUSTODY_OWN_TRANSFERER'
+            'ITEMS_CUSTODY_OWN_TRANSFERER',
+            'ITEMS_CUSTODY_TAKER_RESTRICTED',
+            'ITEMS_CUSTODY_TRANSFERER_RESTRICTED',
+            'ITEMS_CUSTODY_RELEASER_RESTRICTED'
           ].indexOf(p) == -1;
         });
       }
@@ -13877,6 +13889,9 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
     return this._useCustody || this._canReadOwnCustody;
   };
+  PermissionHandler.prototype.hasReleaseCustodyAtLocationPermission = function () {
+    return this._useCustody && this._useReleaseAtLocation;
+  };
   PermissionHandler.prototype.hasItemFlagPermission = function () {
     return this._useFlags;
   };
@@ -13893,7 +13908,7 @@ PermissionHandler = function () {
     return this._useSelfService;
   };
   PermissionHandler.prototype.hasReportingPermission = function () {
-    return this._useReporting && (this.hasPermission('getReport', 'items') || this.hasPermission('getReport', 'kits') || this.hasPermission('getReport', 'customers') || this.hasPermission('getReport', 'users') || this.hasPermission('getReport', 'orders') || this.hasPermission('getReport', 'reservations'));
+    return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
   };
   PermissionHandler.prototype.hasLabelPermission = function () {
     return this._canSetLabel && this._canClearLabel;
@@ -13914,7 +13929,7 @@ PermissionHandler = function () {
     return this.hasPermission(action || 'read', 'contacts', data, location);
   };
   PermissionHandler.prototype.hasContactReadOtherPermission = function (action, data, location) {
-    return this.permissions.indexOf('CUSTOMERS_OWN_READER') == -1;
+    return this.permissions.indexOf('CUSTOMERS_READER') != -1;
   };
   PermissionHandler.prototype.hasBlockContactsPermission = function (action, data, location) {
     return this._useBlockContacts;
@@ -13966,6 +13981,7 @@ PermissionHandler = function () {
     return this.hasAnyAdminPermission();
   };
   PermissionHandler.prototype.hasPermission = function (action, collection, data, location) {
+    data = data || {};
     /*if( (this._isSelfService) && 
         (!this._useSelfService)) {
         return false;
@@ -14094,21 +14110,19 @@ PermissionHandler = function () {
           'ITEMS_CUSTODY_TAKER_RESTRICTED'
         ]);
       case 'releaseCustody':
-        return this._useCustody && can([
+        return this._useCustody && (can([
           'ITEMS_CUSTODY_RELEASER',
-          'ITEMS_CUSTODY_RELEASER_RESTRICTED',
-          'ITEMS_CUSTODY_OWN_RELEASER'
-        ]);
+          'ITEMS_CUSTODY_RELEASER_RESTRICTED'
+        ]) || data.own && can(['ITEMS_CUSTODY_OWN_RELEASER']));
       case 'transferCustody':
-        return this._useCustody && can([
+        return this._useCustody && (can([
           'ITEMS_CUSTODY_TRANSFERER',
-          'ITEMS_CUSTODY_TRANSFERER_RESTRICTED',
-          'ITEMS_CUSTODY_OWN_TRANSFERER'
-        ]);
+          'ITEMS_CUSTODY_TRANSFERER_RESTRICTED'
+        ]) || data.own && can(['ITEMS_CUSTODY_OWN_TRANSFERER']));
       case 'giveCustody':
-        return this.hasItemPermission('takeCustody') && this.hasItemPermission('transferCustody');
+        return this.hasContactReadOtherPermission() && this.hasItemPermission('takeCustody', data) && this.hasItemPermission('transferCustody', data);
       case 'releaseCustodyAt':
-        return this.hasItemPermission('releaseCustody') && this._useReleaseAtLocation;
+        return this.hasItemPermission('releaseCustody', data) && this._useReleaseAtLocation;
       case 'getReport':
         return this.hasItemPermission([
           'ITEMS_REPORTER',
@@ -14186,21 +14200,19 @@ PermissionHandler = function () {
           'KITS_CUSTODY_TAKER_RESTRICTED'
         ]);
       case 'releaseCustody':
-        return this._useCustody && can([
+        return this._useCustody && (can([
           'KITS_CUSTODY_RELEASER',
-          'KITS_CUSTODY_RELEASER_RESTRICTED',
-          'KITS_CUSTODY_OWN_RELEASER'
-        ]);
+          'KITS_CUSTODY_RELEASER_RESTRICTED'
+        ]) || data.own && can(['KITS_CUSTODY_OWN_RELEASER']));
       case 'transferCustody':
-        return this._useCustody && can([
+        return this._useCustody && (can([
           'KITS_CUSTODY_TRANSFERER',
-          'KITS_CUSTODY_TRANSFERER_RESTRICTED',
-          'KITS_CUSTODY_OWN_TRANSFERER'
-        ]);
+          'KITS_CUSTODY_TRANSFERER_RESTRICTED'
+        ]) || data.own && can(['KITS_CUSTODY_OWN_TRANSFERER']));
       case 'giveCustody':
-        return this.hasKitPermission('takeCustody') && this.hasKitPermission('transferCustody');
+        return this.hasKitPermission('takeCustody', data) && this.hasKitPermission('transferCustody', data);
       case 'releaseCustodyAt':
-        return this.hasKitPermission('releaseCustody') && this._useReleaseAtLocation;
+        return this.hasKitPermission('releaseCustody', data) && this._useReleaseAtLocation;
       case 'getReport':
         return this.hasItemPermission('getReport');
       }
@@ -14484,7 +14496,7 @@ PermissionHandler = function () {
         return can(['USERS_ADMIN']);
       case 'referFriend':
       case 'changeAccountOwner':
-        return can(['ACCOUNT_SUBSCRIPTIONS_ADMIN']);
+        return this._isOwner;
       case 'getReport':
         return can([
           'USERS_REPORTER',

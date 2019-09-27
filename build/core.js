@@ -4333,12 +4333,32 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
         dfd.resolve(null);
       } else {
         getDataSource('kits').call(kit.id, 'getChangeLog', {
-          action__in: ['takeCustody'],
+          action__in: [
+            'takeCustody',
+            'transferCustody'
+          ],
           limit: 1,
           skip: 0
         }).then(function (resp) {
-          getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
-            dfd.resolve(contact, resp[0].created);
+          var dfdFallback = $.Deferred();
+          if (resp.length == 0) {
+            getDataSource('items').call(kit.items[0]._id, 'getChangeLog', {
+              action__in: [
+                'takeCustody',
+                'transferCustody'
+              ],
+              limit: 1,
+              skip: 0
+            }).then(function (resp) {
+              dfdFallback.resolve(resp);
+            });
+          } else {
+            dfdFallback.resolve(resp);
+          }
+          dfdFallback.then(function (resp) {
+            getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+              dfd.resolve(contact, resp[0].created);
+            });
           });
         });
       }

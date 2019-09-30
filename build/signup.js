@@ -1603,10 +1603,11 @@ common_item = function (moment, orderHelper, reservationHelper) {
   * 
   * @param  item          
   * @param  permissionHandler
-  * @param  dateHelper        
+  * @param  dateHelper
+  * @param  user        
   * @return {promise}                   
   */
-  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper) {
+  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper, user) {
     var messages = [], MessagePriority = {
         'Critical': 0,
         'High': 1,
@@ -1615,6 +1616,11 @@ common_item = function (moment, orderHelper, reservationHelper) {
       }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
     var formatDate = function (date) {
       return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    var isOwn = function (contact) {
+      contact = typeof contact !== 'string' ? contact || {} : { _id: contact };
+      user = user || { customer: {} };
+      return contact._id == user.customer._id;
     };
     // Check-out message?
     if (item.status == 'checkedout' || item.status == 'await_checkout') {
@@ -1704,7 +1710,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
         });
       }
       dfd.then(function (contact, since) {
-        var message = 'Item is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        var message = 'Item is <strong>in ' + (isOwn(item.custody) ? 'your' : '') + ' custody</strong>' + (contact && !isOwn(item.custody) ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
         messages.push({
           kind: 'custody',
           priority: MessagePriority.High,
@@ -4248,7 +4254,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
    * @param  dateHelper        
    * @return {promise}                   
    */
-  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper) {
+  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper, user) {
     var messages = [], MessagePriority = {
         'Critical': 0,
         'High': 1,

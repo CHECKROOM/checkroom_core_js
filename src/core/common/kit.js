@@ -220,7 +220,7 @@ define([
      * @param  dateHelper        
      * @return {promise}                   
      */
-    that.getKitMessages = function(kit, getDataSource, permissionHandler, dateHelper){
+    that.getKitMessages = function(kit, getDataSource, permissionHandler, dateHelper, user){
         var messages = [],
             MessagePriority = {
                 'Critical': 0,

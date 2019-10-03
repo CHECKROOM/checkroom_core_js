@@ -9469,11 +9469,11 @@ Group = function ($, common, api, Document) {
     var spec = $.extend({}, opt);
     Document.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
-    this.itemFlags = spec.itemFlags || DEFAULTS.itemFlags.slice();
-    this.kitFlags = spec.kitFlags || DEFAULTS.kitFlags.slice();
-    this.customerFlags = spec.customerFlags || DEFAULTS.customerFlags.slice();
-    this.orderFlags = spec.orderFlags || DEFAULTS.orderFlags.slice();
-    this.reservationFlags = spec.reservationFlags || DEFAULTS.reservationFlags.slice();
+    this.itemFlags = this.getFlags(spec.itemFlags || DEFAULTS.itemFlags.slice());
+    this.kitFlags = this.getFlags(spec.kitFlags || DEFAULTS.kitFlags.slice());
+    this.customerFlags = this.getFlags(spec.customerFlags || DEFAULTS.customerFlags.slice());
+    this.orderFlags = this.getFlags(spec.orderFlags || DEFAULTS.orderFlags.slice());
+    this.reservationFlags = this.getFlags(spec.reservationFlags || DEFAULTS.reservationFlags.slice());
     this.itemFields = spec.itemFields || DEFAULTS.itemFields.slice();
     this.kitFields = spec.kitFields || DEFAULTS.kitFields.slice();
     this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
@@ -9816,20 +9816,31 @@ Group = function ($, common, api, Document) {
   Group.prototype.getFlagsForCollection = function (coll) {
     switch (coll) {
     case 'items':
-      return this.itemFlags;
+      return this.getFlags(this.itemFlags);
     case 'kits':
-      return this.kitFlags;
+      return this.getFlags(this.kitFlags);
     case 'contacts':
     case 'customers':
-      return this.customerFlags;
+      return this.getFlags(this.customerFlags);
     case 'reservations':
-      return this.reservationFlags;
+      return this.getFlags(this.reservationFlags);
     case 'checkouts':
     case 'orders':
-      return this.orderFlags;
+      return this.getFlags(this.orderFlags);
     default:
-      return [];
+      return this.getFlags([]);
     }
+  };
+  Group.prototype.getFlags = function (flags) {
+    return flags.map(function (f) {
+      if (typeof f === 'string') {
+        f = {
+          _id: f,
+          name: f
+        };
+      }
+      return f;
+    });
   };
   /**
    * Helper method that returns the business days
@@ -10000,11 +10011,11 @@ Group = function ($, common, api, Document) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
       that.name = data.name || DEFAULTS.name;
-      that.itemFlags = data.itemFlags || DEFAULTS.itemFlags.slice();
-      that.kitFlags = data.kitFlags || DEFAULTS.kitFlags.slice();
-      that.customerFlags = data.customerFlags || DEFAULTS.customerFlags.slice();
-      that.orderFlags = data.orderFlags || DEFAULTS.orderFlags.slice();
-      that.reservationFlags = data.reservationFlags || DEFAULTS.reservationFlags.slice();
+      that.itemFlags = that.getFlags(data.itemFlags || DEFAULTS.itemFlags.slice());
+      that.kitFlags = that.getFlags(data.kitFlags || DEFAULTS.kitFlags.slice());
+      that.customerFlags = that.getFlags(data.customerFlags || DEFAULTS.customerFlags.slice());
+      that.orderFlags = that.getFlags(data.orderFlags || DEFAULTS.orderFlags.slice());
+      that.reservationFlags = that.getFlags(data.reservationFlags || DEFAULTS.reservationFlags.slice());
       that.itemFields = data.itemFields || DEFAULTS.itemFields.slice();
       that.kitFields = data.kitFields || DEFAULTS.kitFields.slice();
       that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();

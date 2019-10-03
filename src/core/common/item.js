@@ -232,7 +232,10 @@ define([
 	    }
 	    var isOwn = function(contact){
 	    	contact = typeof(contact) !== 'string'?contact || {}:{ _id: contact };
-	    	user = user || { customer: {} };
+	    	user = user || {};
+	    	if(!user.customer){
+	    		user.customer = {};
+	    	}
 	    	return contact._id == user.customer._id;
 	    }
 

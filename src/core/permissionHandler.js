@@ -89,9 +89,10 @@ define([], function () {
                     permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
                 }
                 if(profile.selfServiceCanReserve && !this._isBlockedContact){
-                    permissions.push("RESERVATIONS_OWN_READER");
+                    permissions.push("RESERVATIONS_OWN_WRITER");
+                    permissions.push("RESERVATIONS_OWN_READER")
                 }else{
-                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_OWN_READER"; });
+                    permissions = permissions.filter(function(p){ return ["RESERVATIONS_OWN_WRITER", "RESERVATIONS_OWN_READER"].indexOf(p) == -1; });
                 }
                 if(profile.selfServiceCanReservationConflict){
                     permissions.push("RESERVATIONS_CONFLICT_CREATOR");
@@ -117,8 +118,49 @@ define([], function () {
                 }
                 break;
             case "admin":
+                if(profile.adminCanOrderConflict){
+                    permissions.push("ORDERS_CONFLICT_CREATOR");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
+                }
+                if(profile.adminCanReservationConflict){
+                    permissions.push("RESERVATIONS_CONFLICT_CREATOR");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_CONFLICT_CREATOR"; });
+                }
                 break;
             case "user":
+                if(profile.userCanOrderConflict){
+                    permissions.push("ORDERS_CONFLICT_CREATOR");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
+                }
+                if(profile.userCanReservationConflict){
+                    permissions.push("RESERVATIONS_CONFLICT_CREATOR");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_CONFLICT_CREATOR"; });
+                }
+                if(profile.userCanSetFlag){
+                    permissions.push("ITEMS_FLAGGER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ITEMS_FLAGGER"; });
+                }
+                if(profile.userCanClearFlag){
+                    permissions.push("ITEMS_UNFLAGGER");
+                }else{
+                    permissions = permissions.filter(function(p){ return p != "ITEMS_UNFLAGGER"; });
+                }
+                if(profile.userCanSetLabel){
+                    permissions.push("ORDERS_LABELER");
+                    permissions.push("RESERVATIONS_LABELER");
+                }else{
+                    permissions = permissions.filter(function(p){ return ["ORDERS_LABELER", "RESERVATIONS_LABELER"].indexOf(p) == -1; });
+                }
+                if(profile.userCanBlock){
+                    permissions.push("CUSTOMERS_BLOCK_ADMIN");
+                }else{
+                    permissions = permissions.filter(function(p){ return ["CUSTOMERS_BLOCK_ADMIN"].indexOf(p) == -1; });
+                }
                 break;
         }
 
@@ -233,7 +275,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasLabelPermission = function() {
-        return this._canSetLabel && this._canClearLabel;
+        return this.hasCheckoutPermission("setLabel");
     };
 
     PermissionHandler.prototype.hasSlackPermission = function(){
@@ -377,10 +419,6 @@ define([], function () {
                     // Change category actions
                     case "changeCategory":
                     case "canChangeCategory":
-                    // Attachment actions
-                    case "attach":
-                    case "detach":
-                    case "addAttachment":
                     // Other update/delete actions
                     case "getDepreciation":
                     case "changeLocation":
@@ -401,6 +439,12 @@ define([], function () {
                     case "setCatalog":
                     case "setCover":
                         return can(["ITEMS_ADMIN", "ITEMS_ADMIN_RESTRICTED"]);
+                    case "attach":
+                    case "addAttachment":
+                        return can(["ITEMS_ATTACHMENTS_OWN_WRITER"]);
+                    case "detach":
+                    case "removeAttachment":
+                        return can(["ITEMS_ATTACHMENTS_DELETER"]) || (data.own && can(["ITEMS_ATTACHMENTS_OWN_DELETER"]));
                     // Import actions
                     case "import":
                     case "importAnalyze":
@@ -412,12 +456,12 @@ define([], function () {
                         return can(["ITEMS_EXPORTER", "ITEMS_EXPORTER_RESTRICTED"]);
                     case "addComment":
                     case "updateComment":
-                        return can(["ITEMS_COMMENTER"]);
+                        return can(["ITEMS_COMMENTS_WRITER", "ITEMS_COMMENTS_OWN_WRITER"]);
                     case "removeComment":
                         return can(["ITEMS_COMMENTS_DELETER", "ITEMS_COMMENTS_OWN_DELETER"]);
                     // Permissings for asset labels
                     case "printLabel":
-                        return can(["ITEMS_DOCUMENT_GENERATOR"]);
+                        return can(["ITEMS_LABEL_PRINTER", "ITEMS_LABEL_PRINTER_RESTRICTED"]);
                     // Permissions for flags
                     case "setFlag":
                         return this._useFlags && can(["ITEMS_FLAGGER", "ITEMS_FLAGGER_RESTRICTED"]);
@@ -443,7 +487,7 @@ define([], function () {
                     case "releaseCustodyAt":
                         return this.hasItemPermission("releaseCustody", data) && this._useReleaseAtLocation;
                     case "getReport":
-                        return this.hasItemPermission(["ITEMS_REPORTER", "ITEMS_REPORTER_RESTRICTED"]);
+                        return can(["ITEMS_REPORTER", "ITEMS_REPORTER_RESTRICTED"]);
                 }
                 break;
             case "kits":
@@ -464,8 +508,14 @@ define([], function () {
                     case "addItems":
                     case "removeItems":
                     case "moveItem":
-                    case "addAttachment":
+                    case "setCover":
                         return can(["KITS_ADMIN", "KITS_ADMIN_RESTRICTED"]);
+                    case "attach":
+                    case "addAttachment":
+                        return can(["KITS_ATTACHMENTS_OWN_WRITER"]);
+                    case "detach":
+                    case "removeAttachment":
+                        return can(["KITS_ATTACHMENTS_DELETER"]) || (data.own && can(["KITS_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
                     case "updateComment":
                         return can(["KITS_COMMENTS_WRITER", "KITS_COMMENTS_OWN_WRITER"]);
@@ -479,7 +529,9 @@ define([], function () {
                         return can(["KITS_EXPORTER", "KITS_EXPORTER_RESTRICTED"]);
                     // Permissings for asset labels
                     case "printLabel":
-                        return can(["KITS_DOCUMENT_GENERATOR"]);
+                        return can(["KITS_LABEL_PRINTER", "KITS_LABEL_PRINTER_RESTRICTED"]);
+                    case "takeApart":
+                        return this.hasReservationPermission("create") || this.hasCheckoutPermission("create");
                     // Reservation
                     case "reserve":
                         return this.hasReservationPermission("create");
@@ -548,15 +600,15 @@ define([], function () {
                         return can(["ORDERS_COMMENTS_DELETER", "ORDERS_COMMENTS_OWN_DELETER", "ORDERS_OWN_COMMENTS_OWN_DELETER"]);
                     case "setLabel":
                     case "clearLabel":
-                        return can(["RESERVATIONS_LABELER", "RESERVATIONS_LABELER_RESTRICTED", "RESERVATIONS_OWN_LABELER"]);
+                        return can(["ORDERS_LABELER", "ORDERS_LABELER_RESTRICTED", "ORDERS_OWN_LABELER"]);
                     case "export":
-                        return can(["ORDERS_EXPORTER"]);
+                        return can(["ORDERS_EXPORTER", "ORDERS_EXPORTER_RESTRICTED"]);
                     case "archive":
                     case "undoArchive":
                         return can(["ORDERS_ARCHIVER", "ORDERS_ARCHIVER_RESTRICTED", "ORDERS_OWN_ARCHIVER"]);
                     // Other
                     case "generateDocument":
-                        return can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_OWN_DOCUMENT_GENERATOR"]);
+                        return can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_DOCUMENT_GENERATOR_RESTRICTED", "ORDERS_OWN_DOCUMENT_GENERATOR"]);
                     case "checkinAt":
                         return this._useCheckinLocation && this.hasCheckoutPermission("checkin");
                     case "forceCheckListCheckin":
@@ -616,7 +668,7 @@ define([], function () {
                     case "removeComment":
                         return can([]);
                     case "export":
-                        return can(["RESERVATIONS_EXPORTER"]);
+                        return can(["RESERVATIONS_EXPORTER", "RESERVATIONS_EXPORTER_RESTRICTED"]);
                     case "switchToOrder":
                     case "makeOrder":
                         return this.hasCheckoutPermission("create");
@@ -636,6 +688,9 @@ define([], function () {
                         return this._useReservationsClose && can(["RESERVATIONS_CLOSER", "RESERVATIONS_CLOSER_RESTRICTED", "RESERVATIONS_OWN_CLOSER"]);
                     case "getReport":
                         return can(["RESERVATIONS_REPORTER", "RESERVATIONS_REPORTER_RESTRICTED", "RESERVATIONS_OWN_REPORTER"]);
+                    case "setLabel":
+                    case "clearLabel":
+                        return can(["RESERVATIONS_LABELER", "RESERVATIONS_LABELER_RESTRICTED", "RESERVATIONS_OWN_LABELER"]);
                 }
                 break;
             case "customers":

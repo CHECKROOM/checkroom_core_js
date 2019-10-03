@@ -1619,7 +1619,10 @@ common_item = function (moment, orderHelper, reservationHelper) {
     };
     var isOwn = function (contact) {
       contact = typeof contact !== 'string' ? contact || {} : { _id: contact };
-      user = user || { customer: {} };
+      user = user || {};
+      if (!user.customer) {
+        user.customer = {};
+      }
       return contact._id == user.customer._id;
     };
     // Check-out message?
@@ -3506,6 +3509,48 @@ common_inflection = function () {
       }
       return undefined;
     };
+  }
+  // https://tc39.github.io/ecma262/#sec-array.prototype.includes
+  if (!Array.prototype.includes) {
+    Object.defineProperty(Array.prototype, 'includes', {
+      value: function (searchElement, fromIndex) {
+        if (this == null) {
+          throw new TypeError('"this" is null or not defined');
+        }
+        // 1. Let O be ? ToObject(this value).
+        var o = Object(this);
+        // 2. Let len be ? ToLength(? Get(O, "length")).
+        var len = o.length >>> 0;
+        // 3. If len is 0, return false.
+        if (len === 0) {
+          return false;
+        }
+        // 4. Let n be ? ToInteger(fromIndex).
+        //    (If fromIndex is undefined, this step produces the value 0.)
+        var n = fromIndex | 0;
+        // 5. If n ≥ 0, then
+        //  a. Let k be n.
+        // 6. Else n < 0,
+        //  a. Let k be len + n.
+        //  b. If k < 0, let k be 0.
+        var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+        function sameValueZero(x, y) {
+          return x === y || typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y);
+        }
+        // 7. Repeat, while k < len
+        while (k < len) {
+          // a. Let elementK be the result of ? Get(O, ! ToString(k)).
+          // b. If SameValueZero(searchElement, elementK) is true, return true.
+          if (sameValueZero(o[k], searchElement)) {
+            return true;
+          }
+          // c. Increase k by 1.
+          k++;
+        }
+        // 8. Return false
+        return false;
+      }
+    });
   }
   if (!Object.values) {
     Object.values = function (obj) {
@@ -13835,10 +13880,14 @@ PermissionHandler = function () {
         });
       }
       if (profile.selfServiceCanReserve && !this._isBlockedContact) {
+        permissions.push('RESERVATIONS_OWN_WRITER');
         permissions.push('RESERVATIONS_OWN_READER');
       } else {
         permissions = permissions.filter(function (p) {
-          return p != 'RESERVATIONS_OWN_READER';
+          return [
+            'RESERVATIONS_OWN_WRITER',
+            'RESERVATIONS_OWN_READER'
+          ].indexOf(p) == -1;
         });
       }
       if (profile.selfServiceCanReservationConflict) {
@@ -13870,8 +13919,68 @@ PermissionHandler = function () {
       }
       break;
     case 'admin':
+      if (profile.adminCanOrderConflict) {
+        permissions.push('ORDERS_CONFLICT_CREATOR');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return p != 'ORDERS_CONFLICT_CREATOR';
+        });
+      }
+      if (profile.adminCanReservationConflict) {
+        permissions.push('RESERVATIONS_CONFLICT_CREATOR');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return p != 'RESERVATIONS_CONFLICT_CREATOR';
+        });
+      }
       break;
     case 'user':
+      if (profile.userCanOrderConflict) {
+        permissions.push('ORDERS_CONFLICT_CREATOR');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return p != 'ORDERS_CONFLICT_CREATOR';
+        });
+      }
+      if (profile.userCanReservationConflict) {
+        permissions.push('RESERVATIONS_CONFLICT_CREATOR');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return p != 'RESERVATIONS_CONFLICT_CREATOR';
+        });
+      }
+      if (profile.userCanSetFlag) {
+        permissions.push('ITEMS_FLAGGER');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return p != 'ITEMS_FLAGGER';
+        });
+      }
+      if (profile.userCanClearFlag) {
+        permissions.push('ITEMS_UNFLAGGER');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return p != 'ITEMS_UNFLAGGER';
+        });
+      }
+      if (profile.userCanSetLabel) {
+        permissions.push('ORDERS_LABELER');
+        permissions.push('RESERVATIONS_LABELER');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return [
+            'ORDERS_LABELER',
+            'RESERVATIONS_LABELER'
+          ].indexOf(p) == -1;
+        });
+      }
+      if (profile.userCanBlock) {
+        permissions.push('CUSTOMERS_BLOCK_ADMIN');
+      } else {
+        permissions = permissions.filter(function (p) {
+          return ['CUSTOMERS_BLOCK_ADMIN'].indexOf(p) == -1;
+        });
+      }
       break;
     }
     this.permissions = permissions;
@@ -13959,7 +14068,7 @@ PermissionHandler = function () {
     return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
   };
   PermissionHandler.prototype.hasLabelPermission = function () {
-    return this._canSetLabel && this._canClearLabel;
+    return this.hasCheckoutPermission('setLabel');
   };
   PermissionHandler.prototype.hasSlackPermission = function () {
     return this._useSlack;
@@ -14079,10 +14188,6 @@ PermissionHandler = function () {
       // Change category actions
       case 'changeCategory':
       case 'canChangeCategory':
-      // Attachment actions
-      case 'attach':
-      case 'detach':
-      case 'addAttachment':
       // Other update/delete actions
       case 'getDepreciation':
       case 'changeLocation':
@@ -14106,6 +14211,12 @@ PermissionHandler = function () {
           'ITEMS_ADMIN',
           'ITEMS_ADMIN_RESTRICTED'
         ]);
+      case 'attach':
+      case 'addAttachment':
+        return can(['ITEMS_ATTACHMENTS_OWN_WRITER']);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['ITEMS_ATTACHMENTS_DELETER']) || data.own && can(['ITEMS_ATTACHMENTS_OWN_DELETER']);
       // Import actions
       case 'import':
       case 'importAnalyze':
@@ -14123,7 +14234,10 @@ PermissionHandler = function () {
         ]);
       case 'addComment':
       case 'updateComment':
-        return can(['ITEMS_COMMENTER']);
+        return can([
+          'ITEMS_COMMENTS_WRITER',
+          'ITEMS_COMMENTS_OWN_WRITER'
+        ]);
       case 'removeComment':
         return can([
           'ITEMS_COMMENTS_DELETER',
@@ -14131,7 +14245,10 @@ PermissionHandler = function () {
         ]);
       // Permissings for asset labels
       case 'printLabel':
-        return can(['ITEMS_DOCUMENT_GENERATOR']);
+        return can([
+          'ITEMS_LABEL_PRINTER',
+          'ITEMS_LABEL_PRINTER_RESTRICTED'
+        ]);
       // Permissions for flags
       case 'setFlag':
         return this._useFlags && can([
@@ -14172,7 +14289,7 @@ PermissionHandler = function () {
       case 'releaseCustodyAt':
         return this.hasItemPermission('releaseCustody', data) && this._useReleaseAtLocation;
       case 'getReport':
-        return this.hasItemPermission([
+        return can([
           'ITEMS_REPORTER',
           'ITEMS_REPORTER_RESTRICTED'
         ]);
@@ -14199,11 +14316,17 @@ PermissionHandler = function () {
       case 'addItems':
       case 'removeItems':
       case 'moveItem':
-      case 'addAttachment':
+      case 'setCover':
         return can([
           'KITS_ADMIN',
           'KITS_ADMIN_RESTRICTED'
         ]);
+      case 'attach':
+      case 'addAttachment':
+        return can(['KITS_ATTACHMENTS_OWN_WRITER']);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['KITS_ATTACHMENTS_DELETER']) || data.own && can(['KITS_ATTACHMENTS_OWN_DELETER']);
       case 'addComment':
       case 'updateComment':
         return can([
@@ -14232,7 +14355,12 @@ PermissionHandler = function () {
         ]);
       // Permissings for asset labels
       case 'printLabel':
-        return can(['KITS_DOCUMENT_GENERATOR']);
+        return can([
+          'KITS_LABEL_PRINTER',
+          'KITS_LABEL_PRINTER_RESTRICTED'
+        ]);
+      case 'takeApart':
+        return this.hasReservationPermission('create') || this.hasCheckoutPermission('create');
       // Reservation
       case 'reserve':
         return this.hasReservationPermission('create');
@@ -14332,12 +14460,15 @@ PermissionHandler = function () {
       case 'setLabel':
       case 'clearLabel':
         return can([
-          'RESERVATIONS_LABELER',
-          'RESERVATIONS_LABELER_RESTRICTED',
-          'RESERVATIONS_OWN_LABELER'
+          'ORDERS_LABELER',
+          'ORDERS_LABELER_RESTRICTED',
+          'ORDERS_OWN_LABELER'
         ]);
       case 'export':
-        return can(['ORDERS_EXPORTER']);
+        return can([
+          'ORDERS_EXPORTER',
+          'ORDERS_EXPORTER_RESTRICTED'
+        ]);
       case 'archive':
       case 'undoArchive':
         return can([
@@ -14349,6 +14480,7 @@ PermissionHandler = function () {
       case 'generateDocument':
         return can([
           'ORDERS_DOCUMENT_GENERATOR',
+          'ORDERS_DOCUMENT_GENERATOR_RESTRICTED',
           'ORDERS_OWN_DOCUMENT_GENERATOR'
         ]);
       case 'checkinAt':
@@ -14427,7 +14559,10 @@ PermissionHandler = function () {
       case 'removeComment':
         return can([]);
       case 'export':
-        return can(['RESERVATIONS_EXPORTER']);
+        return can([
+          'RESERVATIONS_EXPORTER',
+          'RESERVATIONS_EXPORTER_RESTRICTED'
+        ]);
       case 'switchToOrder':
       case 'makeOrder':
         return this.hasCheckoutPermission('create');
@@ -14466,6 +14601,13 @@ PermissionHandler = function () {
           'RESERVATIONS_REPORTER',
           'RESERVATIONS_REPORTER_RESTRICTED',
           'RESERVATIONS_OWN_REPORTER'
+        ]);
+      case 'setLabel':
+      case 'clearLabel':
+        return can([
+          'RESERVATIONS_LABELER',
+          'RESERVATIONS_LABELER_RESTRICTED',
+          'RESERVATIONS_OWN_LABELER'
         ]);
       }
       break;

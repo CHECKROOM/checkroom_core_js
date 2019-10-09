@@ -290,21 +290,25 @@ api = function ($, moment) {
   api.ApiUser = function (spec) {
     spec = spec || {};
     this.userId = spec.userId || '';
+    this.userEmail = spec.userEmail || '';
     this.userToken = spec.userToken || '';
     this.tokenType = spec.tokenType || '';
   };
   api.ApiUser.prototype.fromStorage = function () {
     this.userId = window.localStorage.getItem('userId') || '';
+    this.userEmail = window.localStorage.getItem('userEmail') || '';
     this.userToken = window.localStorage.getItem('userToken') || '';
     this.tokenType = window.localStorage.getItem('tokenType') || '';
   };
   api.ApiUser.prototype.toStorage = function () {
     window.localStorage.setItem('userId', this.userId);
+    window.localStorage.setItem('userEmail', this.userEmail);
     window.localStorage.setItem('userToken', this.userToken);
     window.localStorage.setItem('tokenType', this.tokenType);
   };
   api.ApiUser.prototype.removeFromStorage = function () {
     window.localStorage.removeItem('userId');
+    window.localStorage.removeItem('userEmail');
     window.localStorage.removeItem('userToken');
     window.localStorage.removeItem('tokenType');
   };
@@ -320,6 +324,7 @@ api = function ($, moment) {
     this.userId = '';
     this.userToken = '';
     this.tokenType = '';
+    this.userEmail = '';
   };
   //*************
   // ApiAuth

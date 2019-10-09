@@ -540,17 +540,17 @@ define([], function () {
                         return this.hasCheckoutPermission("create");
                     // Custody
                     case "seeOwnCustody":
-                        return this._useCustody && can(["KITS_CUSTODY_OWN_READER"]);
+                        return this.hasItemPermission("seeOwnCustody", data);
                     case "takeCustody":
-                        return this._useCustody && can(["KITS_CUSTODY_TAKER", "KITS_CUSTODY_TAKER_RESTRICTED"]);
+                        return this.hasItemPermission("takeCustody", data);
                     case "releaseCustody":
-                        return this._useCustody && (can(["KITS_CUSTODY_RELEASER", "KITS_CUSTODY_RELEASER_RESTRICTED"]) || (data.own && can(["KITS_CUSTODY_OWN_RELEASER"])));
+                        return this.hasItemPermission("releaseCustody", data);
                     case "transferCustody":
-                        return this._useCustody && (can(["KITS_CUSTODY_TRANSFERER", "KITS_CUSTODY_TRANSFERER_RESTRICTED"]) ||  (data.own && can(["KITS_CUSTODY_OWN_TRANSFERER"])));
+                        return this.hasItemPermission("transferCustody", data);
                     case "giveCustody":
-                        return this.hasKitPermission("takeCustody", data) && this.hasKitPermission("transferCustody", data);
+                        return this.hasItemPermission("giveCustody", data)
                     case "releaseCustodyAt":
-                        return this.hasKitPermission("releaseCustody", data) && this._useReleaseAtLocation;
+                        return this.hasItemPermission("releaseCustody", data);
                     case "getReport":
                         return this.hasItemPermission("getReport");
                 }

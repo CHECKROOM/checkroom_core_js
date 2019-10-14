@@ -416,7 +416,6 @@ define([
             dfdCategory = $.Deferred(),
             dfdLocation = $.Deferred(),
             dfdFields = $.Deferred(),
-            dfdFlags = $.Deferred(),
             dfdPermissions = $.Deferred(),
             dfdBasic = $.Deferred();
 
@@ -454,16 +453,6 @@ define([
                     dfdFields.resolve();
                 }
 
-                if (that._isDirtyFlag()) {
-                    if ((that.flag=="") || (that.flag==null)) {
-                        dfdFlags = that.clearFlag();
-                    } else {                        
-                        dfdFlags = that.setFlag(that.flag);
-                    }
-                } else {
-                    dfdFlags.resolve();
-                }
-
                 if( (that._isDirtyName()) ||
                     (that._isDirtyBrand()) ||
                     (that._isDirtyModel()) ||
@@ -482,7 +471,7 @@ define([
                     dfdPermissions.resolve();
                 }
 
-                return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
+                return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
             });
     };
 

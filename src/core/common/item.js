@@ -213,7 +213,7 @@ define([
 	 * @param  user        
 	 * @return {promise}                   
 	 */
-	that.getItemMessages = function(item, getDataSource, permissionHandler, dateHelper, user){
+	that.getItemMessages = function(item, getDataSource, permissionHandler, dateHelper, user, group){
 		var messages = [],
 			MessagePriority = {
                 'Critical': 0,
@@ -354,70 +354,78 @@ define([
         var canReserve = perm.hasItemPermission("reserve") && item.allowReserve,
         	canCheckout = perm.hasItemPermission("checkout") && item.allowCheckout,
         	canCustody = perm.hasItemPermission("takeCustody") && item.allowCustody;
+		var flag = group.itemFlags.find(function(f){ return f.id == item.flag }),
+			hasUnavailableFlag = flag && !flag.available;
+         
 
-            if(!item.allowReserve || !item.allowCheckout || !item.allowCustody){
-	            var notAllowedActions = [],
-	                allowedActions = [];
 
-	            if((perm.hasReservationPermission("read") && perm.hasCheckoutPermission("read")) && ((!canReserve && !canCheckout) || (canReserve && canCheckout))){
-	                if(canReserve && canCheckout){
-	                    allowedActions.push("Bookings");
-	                }else{
-	                	// modules enabled?d
-	                	if(perm.hasCheckoutPermission("read") && perm.hasReservationPermission("read")){
-	                    	notAllowedActions.push("Bookings");
-	                	}
-	                }
-	            }else{
-	                if(canReserve){
-	                    allowedActions.push("Reservation");
-	                }else{
-	                	if(perm.hasReservationPermission("read")){
-	                    	notAllowedActions.push("Reservation");
-	                	}
-	                }
-	                if(canCheckout){
-	                    allowedActions.push("Check-out");  
-	                }else{
-	                	// module enabled
-	                	if(perm.hasCheckoutPermission("read")){
-	                    	notAllowedActions.push("Check-out");
-	                	}
-	                }
-	            }
-	            if(canCustody){
-	            	allowedActions.push("Custody");
-	            }else{
-	            	// module enabled?
-	            	if(perm.hasItemPermission("takeCustody")){
-	               		notAllowedActions.push("Custody"); 
-	               	}
-	            }
+        if((!item.allowReserve || !item.allowCheckout || !item.allowCustody) && !hasUnavailableFlag){
+            var notAllowedActions = [],
+                allowedActions = [];
 
-	            var message = "",
-	                unavailable = !canReserve && !canCheckout && !canCustody;
-	            if(unavailable){
-	            	message = "Item is <strong>unavailable</strong> for " + notAllowedActions.joinAdvanced(", ", ' and ');
-	            }else{
-	                message = "Item is <strong>available</strong> for " + allowedActions.joinAdvanced(', ', ' and ') + "<span class='text-muted'>, not for " + notAllowedActions.joinAdvanced(', ', ' and ') + "</span>";
-	            }
+            if((perm.hasReservationPermission("read") && perm.hasCheckoutPermission("read")) && ((!canReserve && !canCheckout) || (canReserve && canCheckout))){
+                if(canReserve && canCheckout){
+                    allowedActions.push("Bookings");
+                }else{
+                	// modules enabled?d
+                	if(perm.hasCheckoutPermission("read") && perm.hasReservationPermission("read")){
+                    	notAllowedActions.push("Bookings");
+                	}
+                }
+            }else{
+                if(canReserve){
+                    allowedActions.push("Reservation");
+                }else{
+                	if(perm.hasReservationPermission("read")){
+                    	notAllowedActions.push("Reservation");
+                	}
+                }
+                if(canCheckout){
+                    allowedActions.push("Check-out");  
+                }else{
+                	// module enabled
+                	if(perm.hasCheckoutPermission("read")){
+                    	notAllowedActions.push("Check-out");
+                	}
+                }
+            }
+            if(canCustody){
+            	allowedActions.push("Custody");
+            }else{
+            	// module enabled?
+            	if(perm.hasItemPermission("takeCustody")){
+               		notAllowedActions.push("Custody"); 
+               	}
+            }
 
-	            messages.push({
-	                kind: "permission",
-	                priority: MessagePriority.Medium,
-	                message: message
-	            });    
-	        }
+            var message = "",
+                unavailable = (!canReserve && !canCheckout && !canCustody);
+            if(unavailable){
+            	message = "Item is <strong>unavailable</strong> for " + notAllowedActions.joinAdvanced(", ", ' and ');
+            }else{
+                message = "Item is <strong>available</strong> for " + allowedActions.joinAdvanced(', ', ' and ') + "<span class='text-muted'>, not for " + notAllowedActions.joinAdvanced(', ', ' and ') + "</span>";
+            }
+
+            messages.push({
+                kind: "permission",
+                priority: MessagePriority.Medium,
+                message: message
+            });    
+	    }
     	
-
         // Flag message?
         if(item.flag){
-            var message = "Item was <strong>flagged</strong> as " + item.flag + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
+        	var message = "Item was <strong>flagged</strong> as " + flag.name + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
+        	
+        	if(hasUnavailableFlag){
+        		message = "Item is <strong>unavailable</strong> because of flag " + flag.name + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
+        	}
 
             messages.push({
                 kind: "flag",
-                priority: MessagePriority.Medium,
-                message: message
+                priority: hasUnavailableFlag?MessagePriority.High:MessagePriority.Medium,
+                message: message,
+                flag: flag
             })    
         }
 

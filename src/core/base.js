@@ -365,10 +365,14 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.setFlag = function(flag, skipRead) {
+    Base.prototype.setFlag = function(flag, message, attachments, skipRead) {
         return this._doApiCall({
             method: 'setFlag',
-            params: { flag: flag },
+            params: { 
+                flag: flag,
+                message: message,
+                attachments: attachments
+            },
             skipRead: skipRead});
     };
 
@@ -378,10 +382,13 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.clearFlag = function (skipRead) {
+    Base.prototype.clearFlag = function (message, attachments, skipRead) {
         return this._doApiCall({
             method: 'clearFlag',
-            params: {},
+            params: {
+                message: message,
+                attachments: attachments
+            },
             skipRead: skipRead
         });
     };

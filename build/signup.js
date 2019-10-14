@@ -1612,7 +1612,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
   * @param  user        
   * @return {promise}                   
   */
-  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper, user) {
+  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper, user, group) {
     var messages = [], MessagePriority = {
         'Critical': 0,
         'High': 1,
@@ -1732,7 +1732,10 @@ common_item = function (moment, orderHelper, reservationHelper) {
     }
     // Permission message?
     var canReserve = perm.hasItemPermission('reserve') && item.allowReserve, canCheckout = perm.hasItemPermission('checkout') && item.allowCheckout, canCustody = perm.hasItemPermission('takeCustody') && item.allowCustody;
-    if (!item.allowReserve || !item.allowCheckout || !item.allowCustody) {
+    var flag = group.itemFlags.find(function (f) {
+        return f.id == item.flag;
+      }), hasUnavailableFlag = flag && !flag.available;
+    if ((!item.allowReserve || !item.allowCheckout || !item.allowCustody) && !hasUnavailableFlag) {
       var notAllowedActions = [], allowedActions = [];
       if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (!canReserve && !canCheckout || canReserve && canCheckout)) {
         if (canReserve && canCheckout) {
@@ -1782,11 +1785,15 @@ common_item = function (moment, orderHelper, reservationHelper) {
     }
     // Flag message?
     if (item.flag) {
-      var message = 'Item was <strong>flagged</strong> as ' + item.flag + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      var message = 'Item was <strong>flagged</strong> as ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      if (hasUnavailableFlag) {
+        message = 'Item is <strong>unavailable</strong> because of flag ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      }
       messages.push({
         kind: 'flag',
-        priority: MessagePriority.Medium,
-        message: message
+        priority: hasUnavailableFlag ? MessagePriority.High : MessagePriority.Medium,
+        message: message,
+        flag: flag
       });
     }
     if (item.warrantyDate) {

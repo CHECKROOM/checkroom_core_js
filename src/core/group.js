@@ -466,6 +466,10 @@ define([
                     name: f
                 }
             };
+
+            // Also add _id param (bugfix)
+            if(!f._id) f._id = f.id;
+
             return f;
         })
     }

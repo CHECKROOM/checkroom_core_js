@@ -414,7 +414,7 @@ define([
 	    }
     	
         // Flag message?
-        if(item.flag){
+        if(flag){
         	var message = "Item was <strong>flagged</strong> as " + flag.name + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
         	
         	if(hasUnavailableFlag){

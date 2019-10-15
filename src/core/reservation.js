@@ -371,6 +371,7 @@ define([
             var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
             var showPermissionConflicts = true; // always show permission conflicts (canReserve)
+            var showFlagConflicts = true; // always show flag conflicts (flag unavailable settings)
 
             return this.ds.call(this.id, "getConflicts")
                 .then(function(cnflcts) {
@@ -400,7 +401,15 @@ define([
                                 locationDesired: conflict.locationDesired
                             }));
                         } else {
-                            if( (showPermissionConflicts) &&
+                            if( (showFlagConflicts) &&
+                                (this.unavailableFlagHelper(item.flag))){
+                                conflicts.push(new Conflict({
+                                    kind: "flag",
+                                    item: item._id,
+                                    flag: item.flag,
+                                    doc: item.order
+                                }))
+                            } else if( (showPermissionConflicts) &&
                                 (item.canReserve=="unavailable_allow")){
                                 conflicts.push(new Conflict({
                                     kind: "not_allowed_reservation",

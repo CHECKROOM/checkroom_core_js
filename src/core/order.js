@@ -502,7 +502,14 @@ define([
             // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
             if(item.order != that.id) return true;
 
-            if(item.canOrder==="unavailable_allow"){
+            if(that.unavailableFlagHelper(item.flag)){
+                conflicts.push(new Conflict({
+                    kind: "flag",
+                    item: item._id,
+                    flag: item.flag,
+                    doc: item.order
+                }))
+            }else if(item.canOrder==="unavailable_allow"){
                 conflicts.push(new Conflict({
                     kind: "not_allowed_order",
                     item: item._id,

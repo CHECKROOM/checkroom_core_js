@@ -1784,7 +1784,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
       });
     }
     // Flag message?
-    if (item.flag) {
+    if (flag) {
       var message = 'Item was <strong>flagged</strong> as ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
       if (hasUnavailableFlag) {
         message = 'Item is <strong>unavailable</strong> because of flag ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
@@ -1856,6 +1856,8 @@ common_conflicts = {
       return 'Item cannot be reserved';
     case 'not_allowed_order':
       return 'Item cannot be checked out';
+    case 'flag':
+      return 'Item is flagged';
     default:
       return '';
     }
@@ -12127,6 +12129,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.dateHelper = spec.dateHelper || new DateHelper();
     this.helper = spec.helper || new Helper();
+    this.unavailableFlagHelper = spec.unavailableFlagHelper || function (flag) {
+      return false;
+    };
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -13408,7 +13413,14 @@ Order = function ($, api, Transaction, Conflict, common) {
       // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
       if (item.order != that.id)
         return true;
-      if (item.canOrder === 'unavailable_allow') {
+      if (that.unavailableFlagHelper(item.flag)) {
+        conflicts.push(new Conflict({
+          kind: 'flag',
+          item: item._id,
+          flag: item.flag,
+          doc: item.order
+        }));
+      } else if (item.canOrder === 'unavailable_allow') {
         conflicts.push(new Conflict({
           kind: 'not_allowed_order',
           item: item._id,
@@ -15123,6 +15135,8 @@ Reservation = function ($, api, Transaction, Conflict, common) {
       // always show conflicts for expired, custody
       var showPermissionConflicts = true;
       // always show permission conflicts (canReserve)
+      var showFlagConflicts = true;
+      // always show flag conflicts (flag unavailable settings)
       return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
         cnflcts = cnflcts || [];
         // Now we have 0 or more conflicts for this reservation
@@ -15147,7 +15161,14 @@ Reservation = function ($, api, Transaction, Conflict, common) {
               locationDesired: conflict.locationDesired
             }));
           } else {
-            if (showPermissionConflicts && item.canReserve == 'unavailable_allow') {
+            if (showFlagConflicts && this.unavailableFlagHelper(item.flag)) {
+              conflicts.push(new Conflict({
+                kind: 'flag',
+                item: item._id,
+                flag: item.flag,
+                doc: item.order
+              }));
+            } else if (showPermissionConflicts && item.canReserve == 'unavailable_allow') {
               conflicts.push(new Conflict({
                 kind: 'not_allowed_reservation',
                 item: item._id,
@@ -16016,6 +16037,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.dateHelper = spec.dateHelper || new DateHelper();
     this.helper = spec.helper || new Helper();
+    this.unavailableFlagHelper = spec.unavailableFlagHelper || function (flag) {
+      return false;
+    };
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;

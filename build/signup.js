@@ -1784,7 +1784,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
       });
     }
     // Flag message?
-    if (item.flag) {
+    if (flag) {
       var message = 'Item was <strong>flagged</strong> as ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
       if (hasUnavailableFlag) {
         message = 'Item is <strong>unavailable</strong> because of flag ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
@@ -1856,6 +1856,8 @@ common_conflicts = {
       return 'Item cannot be reserved';
     case 'not_allowed_order':
       return 'Item cannot be checked out';
+    case 'flag':
+      return 'Item is flagged';
     default:
       return '';
     }

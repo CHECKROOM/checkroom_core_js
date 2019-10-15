@@ -62,6 +62,7 @@ define([
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.dateHelper = spec.dateHelper || new DateHelper();
         this.helper = spec.helper || new Helper();
+        this.unavailableFlagHelper = spec.unavailableFlagHelper || function(flag){ return false; };
 
         this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
         this.from = spec.from || DEFAULTS.from;                           // a date in the future

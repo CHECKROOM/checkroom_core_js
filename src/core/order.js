@@ -371,7 +371,9 @@ define([
                          // Don't include conflicts for items that are no longer part of the order anymore
                         var itemsInOrder = that.items.filter(function(item){
                              return that.helper.ensureId(item.order) == that.id; 
-                        }).map(function(item){ return item._id; });
+                        }).map(function(item){ 
+                            return item._id; 
+                        });
                         return conflicts.concat(serverConflicts.filter(function(c){ 
                             return itemsInOrder.indexOf(c.item) != -1; 
                         }));
@@ -389,7 +391,8 @@ define([
      * @private
      */
     Order.prototype._getConflicts = function() {
-        var conflicts = [];
+        var that = this,
+            conflicts = [];
 
         // Only orders which are incomplete,
         // but have items and / or due date can have conflicts
@@ -409,7 +412,15 @@ define([
                     this.id,  // orderId
                     this.helper.ensureId(this.reservation))  // reservationId
                     .then(function(serverConflicts) {
-                        return conflicts.concat(serverConflicts);
+                        // Don't include conflicts for items that are no longer part of the order anymore
+                        var itemsInOrder = that.items.filter(function(item){
+                             return that.helper.ensureId(item.order) == that.id; 
+                        }).map(function(item){ 
+                            return item._id; 
+                        });
+                        return conflicts.concat(serverConflicts.filter(function(c){ 
+                            return itemsInOrder.indexOf(c.item) != -1; 
+                        }));
                     });
             }
         }
@@ -438,7 +449,8 @@ define([
                 // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
                 // Don't want to show conflicts for items that arn't part of the order anymore
                 return (item.order == that.id);
-            }));
+            })),
+            showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
 
         // Get the availabilities for these items
         return this.dsItems.call(null, "getAvailabilities", {
@@ -472,6 +484,8 @@ define([
                             kind = kind || ((av.order) ? "order" : "");
                             kind = kind || ((av.reservation) ? "reservation" : "");
 
+                            if(kind == "flag" && !showFlagConflicts) return true;
+
                             conflicts.push(new Conflict({
                                 kind: kind,
                                 item: transItem._id,
@@ -496,13 +510,15 @@ define([
         // - has order permission
         var that = this,
             conflicts = [],
-            locId = this.helper.ensureId(this.location || "");
+            locId = this.helper.ensureId(this.location || ""),
+            showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
 
         $.each(this.items, function(i, item) {
             // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
             if(item.order != that.id) return true;
 
-            if(that.unavailableFlagHelper(item.flag)){
+            if(that.unavailableFlagHelper(item.flag) &&
+                showFlagConflicts){
                 conflicts.push(new Conflict({
                     kind: "flag",
                     item: item._id,

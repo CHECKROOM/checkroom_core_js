@@ -269,7 +269,7 @@ define([
                     .then(function(user) {
                         if(storeInLocalStorage){
                             // Already store the login token in localStorage
-                            var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
+                            var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
                             tmpUser.toStorage();
                         }
 

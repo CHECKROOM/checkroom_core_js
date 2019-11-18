@@ -734,6 +734,8 @@ define([], function () {
                         return can(["CUSTOMERS_BLOCK_ADMIN"]);
                     case "getReport":
                         return can(["CUSTOMERS_REPORTER"]);
+                    case "changeKind":
+                        return can(["CUSTOMERS_MAINTENANCE_ADMIN"]);
                 }
                 break;
             case "users":
@@ -843,7 +845,7 @@ define([], function () {
                     case "cancelPlan":
                     case "changePlan":
                     case "upgrade":
-                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]);
+                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]) && this._isOwner;
                 }
                 break;
             case "templates":

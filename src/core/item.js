@@ -322,7 +322,7 @@ define([
     };
 
     Item.prototype._isDirtyLocation = function() {
-        if (this.raw && this.status != 'in_custody') {
+        if (this.raw) {
             var locId = DEFAULTS.location;
             if (this.raw.location) {
                 locId = (this.raw.location._id) ? this.raw.location._id : this.raw.location;
@@ -439,9 +439,7 @@ define([
                 } else {
                     dfdCategory.resolve();
                 }
-
-                // Skip update location if item is in custody
-                if (that._isDirtyLocation() && that.status != "in_custody") {
+                if (that._isDirtyLocation()) {
                     dfdLocation = that.changeLocation(that.location);
                 } else {
                     dfdLocation.resolve();

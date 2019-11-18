@@ -233,7 +233,11 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              * @return {string}       
              */
             ensureId: function(obj){
-                return this.ensureValue(obj, "_id");
+                if(obj && obj.hasOwnProperty("id")){
+                    return this.ensureValue(obj, "id");
+                }else{
+                    return this.ensureValue(obj, "_id");
+                }
             }       
         };
     };

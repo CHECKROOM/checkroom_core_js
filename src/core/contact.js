@@ -177,6 +177,18 @@ define([
     };
 
     /**
+     * Change contact kind
+     * @name Contact#changeKind
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.changeKind = function(kind, skipRead) {
+        return this._doApiCall({method: "changeKind", params: {
+            kind: kind
+        }, skipRead: skipRead});
+    };
+
+    /**
      * Archive a contact
      * @name Contact#archive
      * @param skipRead
@@ -267,7 +279,7 @@ define([
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
-            isDirty = this._isDirtyStringProperty("name") || this._isDirtyStringProperty("email");
+            isDirty = this._isDirtyStringProperty("name") || this._isDirtyStringProperty("email") || this._isDirtyStringProperty("kind");
         }
         return isDirty;
     };
@@ -280,6 +292,8 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.email = this.email || DEFAULTS.email;
+        data.kind = this.kind || DEFAULTS.kind;
+
         return data;
     };
 
@@ -330,9 +344,18 @@ define([
             data["email"] = that.email;
         }
 
+        var dfdKind;
+        if(this._isDirtyStringProperty("kind")){
+            dfdKind = this.changeKind(that.kind, true);
+        }else{
+            dfdKind = $.Deferred().resolve();
+        }
+
         return this.ds.update(this.id, data, this._fields)
             .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
+                return dfdKind.then(function(){
+                     return (skipRead==true) ? data : that._fromJson(data);
+                });               
             });
     };
 

@@ -4624,19 +4624,19 @@ common_contact = function (imageHelper, attachmentHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageUrl = function (ds, contact, size, bustCache) {
-    // Show profile picture of user?
-    if (contact.user && contact.user.picture)
-      return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
     // Show contact image
     if (contact.cover) {
+      if (contact.cover.indexOf('data:image') != -1 || contact.cover.indexOf('file:') != -1) {
+        return contact.cover;
+      }
       // Bugfix don't show pdf preview images as contact image
       if (attachmentHelper.isImage(contact.cover)) {
         return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
       }
     }
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
@@ -4651,17 +4651,64 @@ common_contact = function (imageHelper, attachmentHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
-    // Show profile picture of user?
-    if (contact.user && contact.user.picture)
-      return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
     // Show contact image
     if (contact.cover)
       return imageHelper.getImageCDNUrl(settings, groupid, contact.cover, size, bustCache);
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
+    // Show profile picture of user?
+    if (contact.user && contact.user.picture)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
+  };
+  /**
+  * getContactMessages
+  *
+  * @memberOf common
+  * @name  common#getContactMessages
+  * @method
+  * 
+  * @param  item          
+  * @param  permissionHandler
+  * @param  dateHelper
+  * @param  user        
+  * @return {promise}                   
+  */
+  that.getContactMessages = function (contact, getDataSource, permissionHandler, dateHelper, user, group) {
+    var dfd = $.Deferred(), messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler;
+    // Maintenance message
+    if (contact.kind == 'maintenance') {
+      var message = 'Contact can <strong>maintenance / repair</strong>';
+      messages.push({
+        kind: 'maintenance',
+        priority: MessagePriority.Low,
+        message: message,
+        contact: {
+          kind: 'maintenance',
+          name: ''
+        }
+      });
+    }
+    // Blocked message
+    if (contact.status == 'blocked') {
+      var message = 'Contact was <strong>blocked</strong> ' + (contact.blocked ? '<span class=\'text-muted\'>' + contact.blocked.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'blocked',
+        priority: MessagePriority.High,
+        message: message
+      });
+    }
+    dfd.resolve();
+    // Sort by priority High > Low
+    return dfd.then(function () {
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
   };
   return that;
 }(common_image, common_attachment);
@@ -6004,7 +6051,7 @@ attachment = function ($, attachmentHelper) {
   };
   return Attachment;
 }(jquery, common_attachment);
-field = function ($, common) {
+field = function ($, validationHelper) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -6050,25 +6097,25 @@ field = function ($, common) {
     case 'float':
     case 'decimal':
     case 'currency':
-      return common.isNumeric(value);
+      return validationHelper.isNumeric(value);
     case 'int':
-      return common.isNumeric(value, true);
+      return validationHelper.isNumeric(value, true);
     case 'date':
     case 'datetime':
-      return common.isValidDate(value);
+      return validationHelper.isValidDate(value);
     case 'string':
     case 'select':
       if (this.editor == 'phone') {
-        return common.isValidPhone(value);
+        return validationHelper.isValidPhone(value);
       }
       if (this.editor == 'email') {
-        return common.isValidEmail(value);
+        return validationHelper.isValidEmail(value);
       }
       if (this.editor == 'url') {
-        return common.isValidURL(value);
+        return validationHelper.isValidURL(value);
       }
       if (this.editor == 'number') {
-        return common.isNumeric(value);
+        return validationHelper.isNumeric(value);
       }
       return value != '';
     default:
@@ -6094,7 +6141,7 @@ field = function ($, common) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery, common);
+}(jquery, common_validation);
 Base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Some constant values
   var DEFAULTS = {
@@ -8239,7 +8286,11 @@ helper = function ($, defaultSettings, common) {
        * @return {string}       
        */
       ensureId: function (obj) {
-        return this.ensureValue(obj, '_id');
+        if (obj && obj.hasOwnProperty('id')) {
+          return this.ensureValue(obj, 'id');
+        } else {
+          return this.ensureValue(obj, '_id');
+        }
       }
     };
   };
@@ -8394,6 +8445,19 @@ Contact = function ($, Base, common, User, Helper) {
     return common.contactCanDelete(this);
   };
   /**
+   * Change contact kind
+   * @name Contact#changeKind
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.changeKind = function (kind, skipRead) {
+    return this._doApiCall({
+      method: 'changeKind',
+      params: { kind: kind },
+      skipRead: skipRead
+    });
+  };
+  /**
    * Archive a contact
    * @name Contact#archive
    * @param skipRead
@@ -8495,7 +8559,7 @@ Contact = function ($, Base, common, User, Helper) {
   Contact.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this._isDirtyStringProperty('name') || this._isDirtyStringProperty('email');
+      isDirty = this._isDirtyStringProperty('name') || this._isDirtyStringProperty('email') || this._isDirtyStringProperty('kind');
     }
     return isDirty;
   };
@@ -8506,6 +8570,7 @@ Contact = function ($, Base, common, User, Helper) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
+    data.kind = this.kind || DEFAULTS.kind;
     return data;
   };
   Contact.prototype._fromJson = function (data, options) {
@@ -8544,8 +8609,16 @@ Contact = function ($, Base, common, User, Helper) {
     if (this._isDirtyStringProperty('email')) {
       data['email'] = that.email;
     }
+    var dfdKind;
+    if (this._isDirtyStringProperty('kind')) {
+      dfdKind = this.changeKind(that.kind, true);
+    } else {
+      dfdKind = $.Deferred().resolve();
+    }
     return this.ds.update(this.id, data, this._fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
+      return dfdKind.then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   return Contact;
@@ -10380,7 +10453,7 @@ Item = function ($, common, Base) {
     return this._isDirtyProperty('residualValue');
   };
   Item.prototype._isDirtyLocation = function () {
-    if (this.raw && this.status != 'in_custody') {
+    if (this.raw) {
       var locId = DEFAULTS.location;
       if (this.raw.location) {
         locId = this.raw.location._id ? this.raw.location._id : this.raw.location;
@@ -10475,8 +10548,7 @@ Item = function ($, common, Base) {
       } else {
         dfdCategory.resolve();
       }
-      // Skip update location if item is in custody
-      if (that._isDirtyLocation() && that.status != 'in_custody') {
+      if (that._isDirtyLocation()) {
         dfdLocation = that.changeLocation(that.location);
       } else {
         dfdLocation.resolve();
@@ -13326,7 +13398,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @private
    */
   Order.prototype._getConflicts = function () {
-    var conflicts = [];
+    var that = this, conflicts = [];
     // Only orders which are incomplete,
     // but have items and / or due date can have conflicts
     if (this.status == 'creating' && this.items.length > 0) {
@@ -13338,7 +13410,15 @@ Order = function ($, api, Transaction, Conflict, common) {
         return this._getServerConflicts(this.items, this.from, this.due, this.id, // orderId
         this.helper.ensureId(this.reservation))  // reservationId
 .then(function (serverConflicts) {
-          return conflicts.concat(serverConflicts);
+          // Don't include conflicts for items that are no longer part of the order anymore
+          var itemsInOrder = that.items.filter(function (item) {
+            return that.helper.ensureId(item.order) == that.id;
+          }).map(function (item) {
+            return item._id;
+          });
+          return conflicts.concat(serverConflicts.filter(function (c) {
+            return itemsInOrder.indexOf(c.item) != -1;
+          }));
         });
       }
     }
@@ -13362,7 +13442,7 @@ Order = function ($, api, Transaction, Conflict, common) {
         // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
         // Don't want to show conflicts for items that arn't part of the order anymore
         return item.order == that.id;
-      }));
+      })), showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
     // Get the availabilities for these items
     return this.dsItems.call(null, 'getAvailabilities', {
       items: itemIds,
@@ -13388,6 +13468,8 @@ Order = function ($, api, Transaction, Conflict, common) {
             kind = '';
             kind = kind || (av.order ? 'order' : '');
             kind = kind || (av.reservation ? 'reservation' : '');
+            if (kind == 'flag' && !showFlagConflicts)
+              return true;
             conflicts.push(new Conflict({
               kind: kind,
               item: transItem._id,
@@ -13408,12 +13490,12 @@ Order = function ($, api, Transaction, Conflict, common) {
     // - at the right location
     // - not expired
     // - has order permission
-    var that = this, conflicts = [], locId = this.helper.ensureId(this.location || '');
+    var that = this, conflicts = [], locId = this.helper.ensureId(this.location || ''), showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
     $.each(this.items, function (i, item) {
       // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
       if (item.order != that.id)
         return true;
-      if (that.unavailableFlagHelper(item.flag)) {
+      if (that.unavailableFlagHelper(item.flag) && showFlagConflicts) {
         conflicts.push(new Conflict({
           kind: 'flag',
           item: item._id,
@@ -14696,6 +14778,8 @@ PermissionHandler = function () {
         return can(['CUSTOMERS_BLOCK_ADMIN']);
       case 'getReport':
         return can(['CUSTOMERS_REPORTER']);
+      case 'changeKind':
+        return can(['CUSTOMERS_MAINTENANCE_ADMIN']);
       }
       break;
     case 'users':
@@ -14810,7 +14894,7 @@ PermissionHandler = function () {
       case 'cancelPlan':
       case 'changePlan':
       case 'upgrade':
-        return can(['ACCOUNT_SUBSCRIPTIONS_ADMIN']);
+        return can(['ACCOUNT_SUBSCRIPTIONS_ADMIN']) && this._isOwner;
       }
       break;
     case 'templates':
@@ -15135,8 +15219,8 @@ Reservation = function ($, api, Transaction, Conflict, common) {
       // always show conflicts for expired, custody
       var showPermissionConflicts = true;
       // always show permission conflicts (canReserve)
-      var showFlagConflicts = true;
-      // always show flag conflicts (flag unavailable settings)
+      var showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
+      // always show flag conflicts except for maintenance contact (flag unavailable settings)
       return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
         cnflcts = cnflcts || [];
         // Now we have 0 or more conflicts for this reservation
@@ -15150,6 +15234,9 @@ Reservation = function ($, api, Transaction, Conflict, common) {
             var kind = conflict.kind || '';
             kind = kind || (conflict.order ? 'order' : '');
             kind = kind || (conflict.reservation ? 'reservation' : '');
+            // skip to next
+            if (kind == 'flag' && !showFlagConflicts)
+              return true;
             conflicts.push(new Conflict({
               kind: kind,
               item: item._id,
@@ -15161,7 +15248,7 @@ Reservation = function ($, api, Transaction, Conflict, common) {
               locationDesired: conflict.locationDesired
             }));
           } else {
-            if (showFlagConflicts && this.unavailableFlagHelper(item.flag)) {
+            if (showFlagConflicts && that.unavailableFlagHelper(item.flag)) {
               conflicts.push(new Conflict({
                 kind: 'flag',
                 item: item._id,
@@ -17990,7 +18077,7 @@ ColorLabel = function ($) {
   };
   return ColorLabel;
 }(jquery);
-Field = function ($, common) {
+Field = function ($, validationHelper) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -18036,25 +18123,25 @@ Field = function ($, common) {
     case 'float':
     case 'decimal':
     case 'currency':
-      return common.isNumeric(value);
+      return validationHelper.isNumeric(value);
     case 'int':
-      return common.isNumeric(value, true);
+      return validationHelper.isNumeric(value, true);
     case 'date':
     case 'datetime':
-      return common.isValidDate(value);
+      return validationHelper.isValidDate(value);
     case 'string':
     case 'select':
       if (this.editor == 'phone') {
-        return common.isValidPhone(value);
+        return validationHelper.isValidPhone(value);
       }
       if (this.editor == 'email') {
-        return common.isValidEmail(value);
+        return validationHelper.isValidEmail(value);
       }
       if (this.editor == 'url') {
-        return common.isValidURL(value);
+        return validationHelper.isValidURL(value);
       }
       if (this.editor == 'number') {
-        return common.isNumeric(value);
+        return validationHelper.isNumeric(value);
       }
       return value != '';
     default:
@@ -18080,7 +18167,7 @@ Field = function ($, common) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery, common);
+}(jquery, common_validation);
 core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
   var core = {};
   // namespaces

@@ -371,7 +371,7 @@ define([
             var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
             var showPermissionConflicts = true; // always show permission conflicts (canReserve)
-            var showFlagConflicts = true; // always show flag conflicts (flag unavailable settings)
+            var showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance'); // always show flag conflicts except for maintenance contact (flag unavailable settings)
 
             return this.ds.call(this.id, "getConflicts")
                 .then(function(cnflcts) {
@@ -390,6 +390,9 @@ define([
                             kind = kind || (conflict.order ? "order" : "");
                             kind = kind || (conflict.reservation ? "reservation" : "");
 
+                            // skip to next
+                            if(kind == "flag" && !showFlagConflicts) return true;
+
                             conflicts.push(new Conflict({
                                 kind: kind,
                                 item: item._id,
@@ -402,7 +405,7 @@ define([
                             }));
                         } else {
                             if( (showFlagConflicts) &&
-                                (this.unavailableFlagHelper(item.flag))){
+                                (that.unavailableFlagHelper(item.flag))){
                                 conflicts.push(new Conflict({
                                     kind: "flag",
                                     item: item._id,

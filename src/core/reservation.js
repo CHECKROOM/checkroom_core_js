@@ -419,6 +419,12 @@ define([
                                     item: item._id,
                                     itemName: item.name
                                 }));
+                            } else if(that.status == 'open' && showPermissionConflicts && item.canOrder=="unavailable_allow"){
+                                conflicts.push(new Conflict({
+                                    kind: "not_allowed_order",
+                                    item: item._id,
+                                    itemName: item.name
+                                }));
                             } else if( (showStatusConflicts) &&
                                 (item.status=="expired")) {
                                 conflicts.push(new Conflict({

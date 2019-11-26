@@ -6,9 +6,7 @@ define([
 	'common/slimdown',
 	'moment'
 ], function(codeHelper, imageHelper, attachmentHelper, keyValueHelper, slimdownHelper, moment){
-	var that = {
-		mailDictionary: {}
-	};
+	var that = {};
 
 	var sd = new Slimdown();
 
@@ -220,13 +218,12 @@ define([
                     name: 'CHEQROOM'
                 }
 
-                that.mailDictionary[evt.id] = evt;
-
-                var body = $(".container-padding", arg.request.body).text(),
+                var id = evt.obj,
+                	body = $(".container-padding", arg.request.body).text(),
                 	to = arg.request.to, 
                 	subject = arg.request.subject;
 
-                evt.friendlyText = "Sent mail to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-subject'>" + subject + "</div><div class='mail-body multiline-text-truncate'>" + body + "</div><div><a href='javascript:void(0)' class='open-email' data-id='{{id}}'>View email</a></div></li></ul>";
+                evt.friendlyText = "Sent mail to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-subject'>" + subject + "</div><div class='mail-body multiline-text-truncate'>" + body + "</div><div><a href='javascript:void(0)' class='open-email' data-id='" + id + "'>View email</a></div></li></ul>";
                 break;
             case "block":
             case "undoBlock":
@@ -293,9 +290,9 @@ define([
 	                if(due){
 	                    var duration = moment.duration(due.diff(evt.created));
 	                    if(to.isAfter(due)){
-	                        summary = duration.humanize(true) + " late";
+	                        summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " late";
 	                    }else if(to.isBefore(due)){
-	                        summary = duration.humanize(true) + " early";
+	                        summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " early";
 	                    }   
 	                }
 	                var dueDate = due?due.format("D MMM " + hoursFormat):"Unknown";
@@ -304,7 +301,9 @@ define([
 	                    return checkedInItems.indexOf(it._id) != -1; 
 	                });
 
-	                evt.friendlyText = "";
+                    evt.friendlyText = byName + " checked in equipment " + summary + getMessagesBlock(items.map(function(it){
+                        return "<div class='media'><div class='media-left'><img class='item-image' src='" + it.imageUrl + "' /></div><div class='media-body'><a href='#items/"+ it._id + "'>" + it.name + "</a><br /><small class='text-muted text-truncate item-info'>" + it.codes.map(function(code){ return "<i class='fa fa-qrcode'></i> " + code; }) + it.barcodes.map(function(code){ return "<i class='fa fa-barcode'></i> " + code; }) + "</small></div></div>";
+                    }));
 	            }
             	break;
             case "order.undoCheckout":
@@ -341,7 +340,11 @@ define([
             	break;
             case "reservation.makeOrder":
             case "makeOrder":
-            	evt.friendlyText = byName + " created " + getCheckoutLink(evt.obj, "check-out");
+                if(evt.action == "makeOrder"){
+                    evt.friendlyText = byName + " converted reservation to " + getCheckoutLink(evt.obj, "check-out");
+                }else{
+            	    evt.friendlyText = byName + " created check-out from " + getReservationLink(evt.obj, "reservation");
+                }
             	break;
             case "reserve":
             case "reservation.reserve":
@@ -578,7 +581,7 @@ define([
                 }else if(arg.hasOwnProperty("kind") && arg.kind == "importer"){
                     evt.friendlyText = byName + " updated " + evt.kind + " from import";
                 }else{
-                    switch(event.kind) {
+                    switch(evt.kind) {
                         case "item":
                             if(arg.hasOwnProperty("purchasePrice")){
                                 arg.field = "Purchase price";
@@ -607,7 +610,12 @@ define([
                                     arg.value = arg.model;
                                 }
                             }
-                            event.friendlyText = byName + " set " + evt.kind + " field" + getMessageBlock("<small class='text-muted'>" + arg.field + "</small><br />" + arg.value);
+
+                            if(!arg.value){
+                                evt.friendlyText =  byName + " cleared " + arg.field + " field";
+                            }else{
+                                evt.friendlyText = byName + " set " + evt.kind + " field" + getMessageBlock("<small class='text-muted'>" + arg.field + "</small><br />" + arg.value);
+                            }
                             break;
                         case "contact":
                             if(arg.hasOwnProperty("email")){

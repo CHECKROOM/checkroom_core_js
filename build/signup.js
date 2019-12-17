@@ -293,24 +293,28 @@ api = function ($, moment) {
     this.userEmail = spec.userEmail || '';
     this.userToken = spec.userToken || '';
     this.tokenType = spec.tokenType || '';
+    this.impersonated = spec.impersonated || false;
   };
   api.ApiUser.prototype.fromStorage = function () {
     this.userId = window.localStorage.getItem('userId') || '';
     this.userEmail = window.localStorage.getItem('userEmail') || '';
     this.userToken = window.localStorage.getItem('userToken') || '';
     this.tokenType = window.localStorage.getItem('tokenType') || '';
+    this.impersonated = window.localStorage.getItem('impersonated') === 'true';
   };
   api.ApiUser.prototype.toStorage = function () {
     window.localStorage.setItem('userId', this.userId);
     window.localStorage.setItem('userEmail', this.userEmail);
     window.localStorage.setItem('userToken', this.userToken);
     window.localStorage.setItem('tokenType', this.tokenType);
+    window.localStorage.setItem('impersonated', this.impersonated);
   };
   api.ApiUser.prototype.removeFromStorage = function () {
     window.localStorage.removeItem('userId');
     window.localStorage.removeItem('userEmail');
     window.localStorage.removeItem('userToken');
     window.localStorage.removeItem('tokenType');
+    window.localStorage.removeItem('impersonated');
   };
   api.ApiUser.prototype.clearToken = function () {
     window.localStorage.setItem('userToken', null);
@@ -325,6 +329,7 @@ api = function ($, moment) {
     this.userToken = '';
     this.tokenType = '';
     this.userEmail = '';
+    this.impersonated = false;
   };
   //*************
   // ApiAuth
@@ -364,7 +369,7 @@ api = function ($, moment) {
           'cancelled_expired',
           'archived'
         ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
-        dfd.resolve(resp.data);
+        dfd.resolve(resp.data, resp.is_impersonated === true);
       } else {
         dfd.reject(resp);
       }
@@ -927,7 +932,7 @@ common_validation = function (moment) {
      * @returns {boolean}
      */
     isFreeEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
       return m == null;
     },
     /**
@@ -3218,7 +3223,7 @@ common_utils = function ($) {
     var csvFile;
     var downloadLink;
     // CSV file
-    csvFile = new Blob([csv], { type: 'text/csv' });
+    csvFile = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     // BUGFIX IE Access is denied.
     // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
     if (window.navigator && window.navigator.msSaveOrOpenBlob) {

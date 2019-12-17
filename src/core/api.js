@@ -248,6 +248,7 @@ define([
         this.userEmail = spec.userEmail || '';
         this.userToken = spec.userToken || '';
         this.tokenType = spec.tokenType || '';
+        this.impersonated = spec.impersonated || false;
     };
 
     api.ApiUser.prototype.fromStorage = function() {
@@ -255,6 +256,7 @@ define([
         this.userEmail = window.localStorage.getItem("userEmail") || '';
         this.userToken = window.localStorage.getItem("userToken") || '';
         this.tokenType = window.localStorage.getItem("tokenType") || '';
+        this.impersonated = window.localStorage.getItem("impersonated") === "true";
     };
 
     api.ApiUser.prototype.toStorage = function() {
@@ -262,6 +264,7 @@ define([
         window.localStorage.setItem("userEmail", this.userEmail);
         window.localStorage.setItem("userToken", this.userToken);
         window.localStorage.setItem("tokenType", this.tokenType);
+        window.localStorage.setItem("impersonated", this.impersonated);
     };
 
     api.ApiUser.prototype.removeFromStorage = function() {
@@ -269,6 +272,7 @@ define([
         window.localStorage.removeItem("userEmail");
         window.localStorage.removeItem("userToken");
         window.localStorage.removeItem("tokenType");
+        window.localStorage.removeItem("impersonated");
     };
 
     api.ApiUser.prototype.clearToken = function() {
@@ -286,6 +290,7 @@ define([
         this.userToken = '';
         this.tokenType = '';
         this.userEmail = '';
+        this.impersonated = false;
     };
 
     //*************
@@ -328,7 +333,7 @@ define([
                 // - mobile doesn't allow expired logins also not for owners
                 if ((resp.status=="OK") && 
                     (['expired', 'cancelled_expired', 'archived'].indexOf(resp.subscription) != -1?that.allowAccountOwner:true)) {
-                    dfd.resolve(resp.data);
+                    dfd.resolve(resp.data, resp.is_impersonated === true);
                 } else {
                     dfd.reject(resp);
                 }

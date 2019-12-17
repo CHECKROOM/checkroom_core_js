@@ -204,6 +204,9 @@ define([
         if(select && select.length > 0){
             params.select = select;
         }
+        if(name != newName){
+            params.newName = newName;
+        }
 
         return this._doApiCall({
             pk: this.id,

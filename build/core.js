@@ -293,24 +293,28 @@ api = function ($, moment) {
     this.userEmail = spec.userEmail || '';
     this.userToken = spec.userToken || '';
     this.tokenType = spec.tokenType || '';
+    this.impersonated = spec.impersonated || false;
   };
   api.ApiUser.prototype.fromStorage = function () {
     this.userId = window.localStorage.getItem('userId') || '';
     this.userEmail = window.localStorage.getItem('userEmail') || '';
     this.userToken = window.localStorage.getItem('userToken') || '';
     this.tokenType = window.localStorage.getItem('tokenType') || '';
+    this.impersonated = window.localStorage.getItem('impersonated') === 'true';
   };
   api.ApiUser.prototype.toStorage = function () {
     window.localStorage.setItem('userId', this.userId);
     window.localStorage.setItem('userEmail', this.userEmail);
     window.localStorage.setItem('userToken', this.userToken);
     window.localStorage.setItem('tokenType', this.tokenType);
+    window.localStorage.setItem('impersonated', this.impersonated);
   };
   api.ApiUser.prototype.removeFromStorage = function () {
     window.localStorage.removeItem('userId');
     window.localStorage.removeItem('userEmail');
     window.localStorage.removeItem('userToken');
     window.localStorage.removeItem('tokenType');
+    window.localStorage.removeItem('impersonated');
   };
   api.ApiUser.prototype.clearToken = function () {
     window.localStorage.setItem('userToken', null);
@@ -325,6 +329,7 @@ api = function ($, moment) {
     this.userToken = '';
     this.tokenType = '';
     this.userEmail = '';
+    this.impersonated = false;
   };
   //*************
   // ApiAuth
@@ -364,7 +369,7 @@ api = function ($, moment) {
           'cancelled_expired',
           'archived'
         ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
-        dfd.resolve(resp.data);
+        dfd.resolve(resp.data, resp.is_impersonated === true);
       } else {
         dfd.reject(resp);
       }
@@ -3638,7 +3643,7 @@ common_validation = function (moment) {
      * @returns {boolean}
      */
     isFreeEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
       return m == null;
     },
     /**
@@ -3915,7 +3920,7 @@ common_utils = function ($) {
     var csvFile;
     var downloadLink;
     // CSV file
-    csvFile = new Blob([csv], { type: 'text/csv' });
+    csvFile = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     // BUGFIX IE Access is denied.
     // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
     if (window.navigator && window.navigator.msSaveOrOpenBlob) {
@@ -5185,7 +5190,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       by: evt.by,
       kind: evt.kind
     };
-    if (evt.by.name != arg.customerName) {
+    if (arg.customerName && evt.by.name != arg.customerName) {
       params.contact = {
         id: arg.customerId,
         name: arg.customerName || unknownText
@@ -5370,7 +5375,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         kind: 'email',
         name: 'CHEQROOM'
       };
-      var id = evt.obj, body = $('.container-padding', arg.request.body).text(), to = arg.request.to, subject = arg.request.subject;
+      var id = evt.id, body = $('.container-padding', arg.request.body).text(), to = arg.request.to, subject = arg.request.subject;
       evt.friendlyText = 'Sent mail to ' + to + ' <ul class=\'list-group field-group\'><li class=\'list-group-item\'><div class=\'mail-subject\'>' + subject + '</div><div class=\'mail-body multiline-text-truncate\'>' + body + '</div><div><a href=\'javascript:void(0)\' class=\'open-email\' data-id=\'' + id + '\'>View email</a></div></li></ul>';
       break;
     case 'block':
@@ -5396,7 +5401,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     case 'order.checkout':
     case 'checkout':
     case 'checkoutAgain':
-      var id = evt.obj, contact = params.contact || {};
+      var id = evt.obj, contact = params.contact;
       if (evt.action == 'order.checkout') {
         switch (evt.kind) {
         case 'item':
@@ -5412,7 +5417,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'order.checkin':
     case 'checkin':
-      var id = evt.obj, contact = params.contact || {};
+      var id = evt.obj, contact = params.contact;
       if (evt.action == 'order.checkin') {
         switch (evt.kind) {
         case 'item':
@@ -5448,7 +5453,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'order.undoCheckout':
     case 'undoCheckout':
-      var id = evt.obj, contact = params.contact || {};
+      var id = evt.obj, contact = params.contact;
       if (evt.action == 'undoCheckout') {
         evt.friendlyText = byName + ' undid check-out';
       } else {
@@ -5464,7 +5469,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'order.extend':
     case 'extend':
-      var id = evt.obj, contact = params.contact || {}, dueDate = arg.due.format('MMM DD');
+      var id = evt.obj, contact = params.contact, dueDate = arg.due.format('MMM DD');
       if (evt.action == 'extend') {
         evt.friendlyText = byName + ' extended check-out until ' + dueDate;
       } else {
@@ -5484,7 +5489,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'reserve':
     case 'reservation.reserve':
-      var id = evt.obj, contact = params.contact || {};
+      var id = evt.obj, contact = params.contact;
       if (evt.action == 'reserve') {
         evt.friendlyText = byName + ' reserved equipment';
       } else {
@@ -5496,7 +5501,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'cancel':
     case 'reservation.cancel':
-      var id = evt.obj, contact = params.contact || {}, message = arg ? arg.message : null;
+      var id = evt.obj, contact = params.contact, message = arg ? arg.message : null;
       if (evt.action == 'cancel') {
         evt.friendlyText = byName + ' cancelled reservation' + getMessageBlock(message);
       } else {
@@ -5507,7 +5512,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'undoReserve':
     case 'reservation.undoReserve':
-      var id = evt.obj, contact = params.contact || {};
+      var id = evt.obj, contact = params.contact;
       if (evt.action == 'undoReserve') {
         evt.friendlyText = byName + ' undid reservation';
       } else {
@@ -5518,7 +5523,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'close':
     case 'reservation.close':
-      var id = evt.obj, message = arg ? arg.message : null, contact = params.contact || {};
+      var id = evt.obj, message = arg ? arg.message : null, contact = params.contact;
       if (evt.action == 'close') {
         evt.friendlyText = byName + ' closed reservation' + getMessageBlock(message);
       } else {
@@ -5529,7 +5534,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'undoClose':
     case 'reservation.undoClose':
-      var id = evt.obj, contact = params.contact || {};
+      var id = evt.obj, contact = params.contact;
       if (evt.action == 'undoClose') {
         evt.friendlyText = byName + ' undid close reservation';
       } else {
@@ -5647,12 +5652,21 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         return key.capitalize();
       };
       var fields = Object.keys(arg).filter(function (fieldKey) {
+        var fieldValue = arg[fieldKey] || '';
+        if (!fieldValue)
+          return false;
         if (evt.kind != 'item') {
           if ([
               'check-out',
               'reservation'
             ].indexOf(evt.kind) != -1) {
             return false;
+          }
+          if (evt.kind == 'contact') {
+            return [
+              'category',
+              'user'
+            ].indexOf(fieldKey) == -1;
           }
           return [
             'category',
@@ -5793,20 +5807,24 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       evt.friendlyText = byName + ' set <span class=\'label-tag\' style=\'background-color:' + label.color + ';\'></span> ' + label.name;
       break;
     case 'spotchecks.close':
-      var id = evt.obj, allFound = arg.numChecked == arg.numTotal && arg.numUnchecked == 0 && arg.numUnexpected == 0, numCheckedProgress = arg.numChecked > 0 ? Math.round(arg.numChecked / arg.numTotal * 100) : 0, numUncheckedProgress = arg.numUnchecked > 0 ? Math.round(arg.numUnchecked / arg.numTotal * 100) : 0, numUnexpectedProgress = arg.numUnexpected > 0 ? Math.round(arg.numUnexpected / arg.numTotal * 100) : 0, numChecked = arg.numChecked, numUnchecked = arg.numUnchecked, numTotal = arg.numTotal, numUnexpected = arg.numUnexpected, checked = arg.items.checked_scanner && arg.items.checked_scanner.slice(0, 2).map(function (it) {
+      var id = evt.obj, allFound = arg.numChecked == arg.numTotal && arg.numUnchecked == 0 && arg.numUnexpected == 0, numCheckedProgress = arg.numChecked > 0 ? Math.round(arg.numChecked / arg.numTotal * 100) : 0, numUncheckedProgress = arg.numUnchecked > 0 ? Math.round(arg.numUnchecked / arg.numTotal * 100) : 0, numUnexpectedProgress = arg.numUnexpected > 0 ? Math.round(arg.numUnexpected / arg.numTotal * 100) : 0, numChecked = arg.numChecked, numUnchecked = arg.numUnchecked, numTotal = arg.numTotal, numUnexpected = arg.numUnexpected, checked = arg.items ? arg.items.checked_scanner && arg.items.checked_scanner.slice(0, 2).map(function (it) {
           return getItemImageUrl(it, 'XS');
-        }).concat(arg.numChecked > 2 ? imageHelper.getTextImage('+' + (arg.numChecked - 2), 'S') : []), unchecked = arg.items.unchecked && arg.items.unchecked.slice(0, 2).map(function (it) {
+        }).concat(arg.numChecked > 2 ? imageHelper.getTextImage('+' + (arg.numChecked - 2), 'S') : []) : [], unchecked = arg.items ? arg.items.unchecked && arg.items.unchecked.slice(0, 2).map(function (it) {
           return getItemImageUrl(it, 'XS');
-        }).concat(arg.numUnchecked > 2 ? imageHelper.getTextImage('+' + (arg.numUnchecked - 2), 'S') : []), unexpected = arg.items.unexpected && arg.items.unexpected.slice(0, 2).map(function (it) {
+        }).concat(arg.numUnchecked > 2 ? imageHelper.getTextImage('+' + (arg.numUnchecked - 2), 'S') : []) : [], unexpected = arg.items ? arg.items.unexpected && arg.items.unexpected.slice(0, 2).map(function (it) {
           return getItemImageUrl(it, 'XS');
-        }).concat(arg.numUnexpected > 2 ? imageHelper.getTextImage('+' + (arg.numUnexpected - 2), 'S') : []);
-      evt.friendlyText = byName + ' did a spotcheck <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'><div class=\'title\'>' + (allFound ? '<div class=\'success\'><i class=\'fa fa-check-circle\'></i> All ' + numTotal + ' Items checked</div>' : '<div class=\'warning\'><i class=\'fa fa-exclamation-circle\'></i> ' + numUnchecked + ' of ' + numTotal + ' Items unchecked</div>') + '</div><div class=\'multi-progress\'><div class=\'found-progress\' style=\'width:' + numCheckedProgress + '%\'></div><div class=\'missing-progress\' style=\'width:' + numUncheckedProgress + '%\'></div><div class=\'unexpected-progress\' style=\'width:' + numUnexpectedProgress + '%\'></div></div> ' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + checked.map(function (src) {
-        return '<img class=\'item-image\' src=\'' + src + '\' />';
-      }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' items</div></div></div>' : '') + (numUnchecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unchecked.map(function (src) {
-        return '<img class=\'item-image\' src=\'' + src + '\' />';
-      }).join('') + '</div><div>Unchecked</div><div class=\'text-muted\'>' + numUnchecked + ' items</div></div></div>' : '') + (numUnexpected ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color gray\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unexpected.map(function (src) {
-        return '<img class=\'item-image\' src=\'' + src + '\' />';
-      }).join('') + '</div><div>Unexpected</div><div class=\'text-muted\'>' + numUnexpected + ' items</div></div></div>' : '') + '</li></ul>';
+        }).concat(arg.numUnexpected > 2 ? imageHelper.getTextImage('+' + (arg.numUnexpected - 2), 'S') : []) : [];
+      if (evt.kind == 'item') {
+        evt.friendlyText = byName + ' did a <a href=\'javascript:void(0)\' class=\'spotcheck\' data-id=\'' + id + '\'>spotcheck</a>';
+      } else {
+        evt.friendlyText = byName + ' did a spotcheck <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'><div class=\'title\'>' + (allFound ? '<div class=\'success\'><i class=\'fa fa-check-circle\'></i> All ' + numTotal + ' Items checked</div>' : '<div class=\'warning\'><i class=\'fa fa-exclamation-circle\'></i> ' + numUnchecked + ' of ' + numTotal + ' Items unchecked</div>') + '</div><div class=\'multi-progress\'><div class=\'found-progress\' style=\'width:' + numCheckedProgress + '%\'></div><div class=\'missing-progress\' style=\'width:' + numUncheckedProgress + '%\'></div><div class=\'unexpected-progress\' style=\'width:' + numUnexpectedProgress + '%\'></div></div> ' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + checked.map(function (src) {
+          return '<img class=\'item-image\' src=\'' + src + '\' />';
+        }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' items</div></div></div>' : '') + (numUnchecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unchecked.map(function (src) {
+          return '<img class=\'item-image\' src=\'' + src + '\' />';
+        }).join('') + '</div><div>Unchecked</div><div class=\'text-muted\'>' + numUnchecked + ' items</div></div></div>' : '') + (numUnexpected ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color gray\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unexpected.map(function (src) {
+          return '<img class=\'item-image\' src=\'' + src + '\' />';
+        }).join('') + '</div><div>Unexpected</div><div class=\'text-muted\'>' + numUnexpected + ' items</div></div></div>' : '') + '</li></ul>';
+      }
       break;
     case 'changeLocation':
       var loc = arg.name || unknownText;
@@ -5818,7 +5836,10 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       });
       evt.friendlyText = byName + ' updated geo position to ' + getMessageBlock('<address>' + address.map(function (line) {
         return '<span>' + line + '</span>';
-      }) + '</address>');
+      }).join('') + '</address>');
+      break;
+    case 'changeKind':
+      evt.friendlyText = byName + ' changed kind to ' + arg.kind;
       break;
     }
     return evt;
@@ -10352,6 +10373,9 @@ Group = function ($, common, api, Document) {
     if (select && select.length > 0) {
       params.select = select;
     }
+    if (name != newName) {
+      params.newName = newName;
+    }
     return this._doApiCall({
       pk: this.id,
       method: 'updateField',
@@ -11657,7 +11681,9 @@ Item = function ($, common, Base) {
 Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
+    description: '',
     items: [],
+    itemSummary: '',
     status: 'unknown',
     cover: '',
     canReserve: 'available',
@@ -11686,7 +11712,9 @@ Kit = function ($, Base, common) {
     }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
+    this.description = spec.description || DEFAULTS.description;
     this.items = spec.items || DEFAULTS.items.slice();
+    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
     this.codes = [];
     this.conflicts = [];
     this.status = spec.status || DEFAULTS.status;
@@ -11988,6 +12016,7 @@ Kit = function ($, Base, common) {
   Kit.prototype._toJson = function (options) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
+    data.description = this.description || DEFAULTS.description;
     //data.items --> not via update
     return data;
   };
@@ -11995,7 +12024,9 @@ Kit = function ($, Base, common) {
     var that = this;
     return Base.prototype._fromJson.call(this, data, options).then(function (data) {
       that.name = data.name || DEFAULTS.name;
+      that.description = data.description || DEFAULTS.description;
       that.items = data.items || DEFAULTS.items.slice();
+      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       that.codes = data.codes || [];
       that.status = data.status || DEFAULTS.status;
       that.cover = data.cover || DEFAULTS.cover;
@@ -15400,6 +15431,15 @@ PermissionHandler = function () {
       case 'clearField':
       case 'addAttachment':
         return can(['CUSTOMERS_ADMIN']);
+      case 'attach':
+      case 'addAttachment':
+        return can([
+          'CUSTOMERS_ATTACHMENTS_OWN_WRITER',
+          'CUSTOMERS_ATTACHMENTS_WRITER'
+        ]);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['CUSTOMERS_ATTACHMENTS_DELETER']) || data.own && can(['CUSTOMERS_ATTACHMENTS_OWN_DELETER']);
       case 'addComment':
       case 'updateComment':
         return can([

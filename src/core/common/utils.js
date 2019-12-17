@@ -230,7 +230,7 @@ define(['jquery'], function ($) {
         var downloadLink;
 
         // CSV file
-        csvFile = new Blob([csv], {type: "text/csv"});
+        csvFile = new Blob([csv], {type: "text/csv;charset=utf-8;"});
 
         // BUGFIX IE Access is denied.
         // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974

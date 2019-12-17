@@ -713,6 +713,14 @@ define([], function () {
                     case "clearField":
                     case "addAttachment":                                    
                         return can(["CUSTOMERS_ADMIN"]);
+
+                    case "attach":
+                    case "addAttachment":
+                        return can(["CUSTOMERS_ATTACHMENTS_OWN_WRITER", "CUSTOMERS_ATTACHMENTS_WRITER"]);
+                    case "detach":
+                    case "removeAttachment":
+                        return can(["CUSTOMERS_ATTACHMENTS_DELETER"]) || (data.own && can(["CUSTOMERS_ATTACHMENTS_OWN_DELETER"]));
+                    
                     case "addComment":
                     case "updateComment":
                         return can(["CUSTOMERS_COMMENTS_OWN_WRITER", "CUSTOMERS_OWN_COMMENTS_OWN_WRITER"]);

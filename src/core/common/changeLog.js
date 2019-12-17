@@ -23,7 +23,7 @@ define([
 			by: evt.by,
 			kind: evt.kind
 		}
-		if(evt.by.name != arg.customerName){
+		if(arg.customerName && evt.by.name != arg.customerName){
             params.contact = { id: arg.customerId, name: arg.customerName || unknownText };
         };
 
@@ -218,7 +218,7 @@ define([
                     name: 'CHEQROOM'
                 }
 
-                var id = evt.obj,
+                var id = evt.id,
                 	body = $(".container-padding", arg.request.body).text(),
                 	to = arg.request.to, 
                 	subject = arg.request.subject;
@@ -251,7 +251,7 @@ define([
             case "checkout":
             case "checkoutAgain":
             	var id = evt.obj,
-            		contact = params.contact || {};
+            		contact = params.contact;
 
             	if(evt.action == "order.checkout"){
 	            	switch(evt.kind){
@@ -269,7 +269,7 @@ define([
             case "order.checkin":
             case "checkin":
             	var id = evt.obj,
-            		contact = params.contact || {};
+            		contact = params.contact;
 
             	if(evt.action == "order.checkin"){
 	            	switch(evt.kind){
@@ -309,7 +309,7 @@ define([
             case "order.undoCheckout":
            	case "undoCheckout":
             	var id = evt.obj,
-            		contact = params.contact || {};
+            		contact = params.contact;
 
             	if(evt.action == "undoCheckout"){
             		evt.friendlyText = byName + " undid check-out";
@@ -327,7 +327,7 @@ define([
             case "order.extend":
             case "extend":
             	var id = evt.obj,
-            		contact = params.contact || {},
+            		contact = params.contact,
             		dueDate = arg.due.format("MMM DD");
 
             	if(evt.action == "extend"){
@@ -349,7 +349,7 @@ define([
             case "reserve":
             case "reservation.reserve":
             	var id = evt.obj,
-            		contact = params.contact || {};
+            		contact = params.contact;
 
             	if(evt.action == "reserve"){
             		evt.friendlyText = byName + " reserved equipment";
@@ -363,7 +363,7 @@ define([
             case "cancel":
             case "reservation.cancel":
             	var id = evt.obj,
-            		contact = params.contact || {},
+            		contact = params.contact,
             		message = arg?arg.message:null;
 
             	if(evt.action == "cancel"){
@@ -376,7 +376,7 @@ define([
             case "undoReserve":
            	case "reservation.undoReserve":
            		var id = evt.obj,
-           			contact = params.contact || {}; 
+           			contact = params.contact; 
 
            		if(evt.action == "undoReserve"){
            			evt.friendlyText = byName + " undid reservation";
@@ -389,7 +389,7 @@ define([
         	case "reservation.close":
         		var id = evt.obj,
         			message = arg?arg.message:null,
-        			contact = params.contact || {};
+        			contact = params.contact;
 
         		if(evt.action == "close"){
             		evt.friendlyText = byName + " closed reservation" + getMessageBlock(message);
@@ -401,7 +401,7 @@ define([
             case "undoClose":
             case "reservation.undoClose":
             	var id = evt.obj,
-        			contact = params.contact || {};
+        			contact = params.contact;
 
             	if(evt.action == "undoClose"){
             		evt.friendlyText = byName + " undid close reservation";
@@ -538,10 +538,18 @@ define([
             	}
 
             	var fields = Object.keys(arg).filter(function(fieldKey){
+                    var fieldValue = arg[fieldKey] || "";
+
+                    if(!fieldValue) return false;
+
             		if(evt.kind != "item"){
             			if(['check-out', 'reservation'].indexOf(evt.kind) != -1){
 	            			return false;
 	            		}
+
+                        if(evt.kind == 'contact'){
+                            return ['category', 'user'].indexOf(fieldKey) == -1
+                        }
 
             			return ['category', 'kind'].indexOf(fieldKey) == -1;
             		}
@@ -696,17 +704,21 @@ define([
                     numUnchecked = arg.numUnchecked,
                     numTotal = arg.numTotal,
                     numUnexpected = arg.numUnexpected,
-                    checked = arg.items.checked_scanner && arg.items.checked_scanner.slice(0,2).map(function(it){
+                    checked = arg.items?arg.items.checked_scanner && arg.items.checked_scanner.slice(0,2).map(function(it){
                          return getItemImageUrl(it, "XS");
-                    }).concat(arg.numChecked > 2?imageHelper.getTextImage("+" + (arg.numChecked-2), 'S'):[]),
-                    unchecked = arg.items.unchecked && arg.items.unchecked.slice(0,2).map(function(it){
+                    }).concat(arg.numChecked > 2?imageHelper.getTextImage("+" + (arg.numChecked-2), 'S'):[]):[],
+                    unchecked = arg.items?arg.items.unchecked && arg.items.unchecked.slice(0,2).map(function(it){
                          return getItemImageUrl(it, "XS");
-                    }).concat(arg.numUnchecked > 2?imageHelper.getTextImage("+" + (arg.numUnchecked-2), 'S'):[]),
-                    unexpected = arg.items.unexpected && arg.items.unexpected.slice(0,2).map(function(it){
+                    }).concat(arg.numUnchecked > 2?imageHelper.getTextImage("+" + (arg.numUnchecked-2), 'S'):[]):[],
+                    unexpected = arg.items?arg.items.unexpected && arg.items.unexpected.slice(0,2).map(function(it){
                          return getItemImageUrl(it, "XS");
-                    }).concat(arg.numUnexpected > 2?imageHelper.getTextImage("+" + (arg.numUnexpected-2), 'S'):[]);
+                    }).concat(arg.numUnexpected > 2?imageHelper.getTextImage("+" + (arg.numUnexpected-2), 'S'):[]):[];
 
-                evt.friendlyText = byName + " did a spotcheck <ul class='list-group field-group spotcheck' data-id='"+ id +"'><li class='list-group-item'><div class='title'>" + (allFound?"<div class='success'><i class='fa fa-check-circle'></i> All " + numTotal + " Items checked</div>":"<div class='warning'><i class='fa fa-exclamation-circle'></i> " + numUnchecked + " of "+ numTotal +" Items unchecked</div>") + "</div><div class='multi-progress'><div class='found-progress' style='width:"+ numCheckedProgress +"%'></div><div class='missing-progress' style='width:"+ numUncheckedProgress +"%'></div><div class='unexpected-progress' style='width:" + numUnexpectedProgress + "%'></div></div> " + (numChecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color success'></span></div><div class='media-body'><div class='item-images'>" + (checked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) + "</div><div>Checked</div><div class='text-muted'>" + numChecked + " items</div></div></div>":"") + (numUnchecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color warning'></span></div><div class='media-body'><div class='item-images'>"+ (unchecked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Unchecked</div><div class='text-muted'>"+ numUnchecked + " items</div></div></div>":"") + (numUnexpected?"<div class='media legend-item'><div class='media-left'><span class='legend-color gray'></span></div><div class='media-body'><div class='item-images'>"+ (unexpected.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Unexpected</div><div class='text-muted'>"+ numUnexpected + " items</div></div></div>":"") + "</li></ul>";
+                if(evt.kind == "item"){
+                    evt.friendlyText = byName + " did a <a href='javascript:void(0)' class='spotcheck' data-id='" + id + "'>spotcheck</a>";
+                }else{
+                    evt.friendlyText = byName + " did a spotcheck <ul class='list-group field-group spotcheck' data-id='"+ id +"'><li class='list-group-item'><div class='title'>" + (allFound?"<div class='success'><i class='fa fa-check-circle'></i> All " + numTotal + " Items checked</div>":"<div class='warning'><i class='fa fa-exclamation-circle'></i> " + numUnchecked + " of "+ numTotal +" Items unchecked</div>") + "</div><div class='multi-progress'><div class='found-progress' style='width:"+ numCheckedProgress +"%'></div><div class='missing-progress' style='width:"+ numUncheckedProgress +"%'></div><div class='unexpected-progress' style='width:" + numUnexpectedProgress + "%'></div></div> " + (numChecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color success'></span></div><div class='media-body'><div class='item-images'>" + (checked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) + "</div><div>Checked</div><div class='text-muted'>" + numChecked + " items</div></div></div>":"") + (numUnchecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color warning'></span></div><div class='media-body'><div class='item-images'>"+ (unchecked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Unchecked</div><div class='text-muted'>"+ numUnchecked + " items</div></div></div>":"") + (numUnexpected?"<div class='media legend-item'><div class='media-left'><span class='legend-color gray'></span></div><div class='media-body'><div class='item-images'>"+ (unexpected.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Unexpected</div><div class='text-muted'>"+ numUnexpected + " items</div></div></div>":"") + "</li></ul>";
+                }
             	break;
             case "changeLocation":
             	var loc = arg.name || unknownText;
@@ -714,8 +726,11 @@ define([
             	break;
             case "updateGeo":
             	var address = (arg.address || unknownText).split(",").map(function(v){ return $.trim(v); });
-            	evt.friendlyText = byName + " updated geo position to " + getMessageBlock("<address>" + address.map(function(line){ return "<span>" + line + "</span>"; }) + "</address>");
+            	evt.friendlyText = byName + " updated geo position to " + getMessageBlock("<address>" + address.map(function(line){ return "<span>" + line + "</span>"; }).join("") + "</address>");
             	break;
+            case "changeKind":
+                evt.friendlyText = byName + " changed kind to " + arg.kind;
+                break;
         }
 
         return evt;

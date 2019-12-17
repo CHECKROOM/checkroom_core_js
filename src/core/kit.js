@@ -11,7 +11,9 @@ define([
 
     var DEFAULTS = {
         name: "",
+        description: "",
         items: [],
+        itemSummary: "",
         status: "unknown",
         cover: "",
         canReserve: "available",
@@ -42,7 +44,9 @@ define([
         Base.call(this, spec);
 
         this.name = spec.name || DEFAULTS.name;
+        this.description = spec.description || DEFAULTS.description;
         this.items = spec.items || DEFAULTS.items.slice();
+        this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
         this.codes = [];
         this.conflicts = [];
         this.status = spec.status || DEFAULTS.status;
@@ -349,6 +353,8 @@ define([
     Kit.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
+        data.description = this.description || DEFAULTS.description;
+
         //data.items --> not via update
         return data;
     };
@@ -358,7 +364,9 @@ define([
         return Base.prototype._fromJson.call(this, data, options)
             .then(function(data) {
                 that.name = data.name || DEFAULTS.name;
+                that.description = data.description || DEFAULTS.description;
                 that.items = data.items || DEFAULTS.items.slice();
+                that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
                 that.codes = data.codes || [];
                 that.status = data.status || DEFAULTS.status;
                 that.cover = data.cover || DEFAULTS.cover;

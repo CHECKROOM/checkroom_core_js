@@ -5163,6 +5163,55 @@ common_transaction = function (moment, keyValues) {
     var duration = that.getReservationDuration(transaction);
     return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
   };
+  /**
+   * getMessages
+   *
+   * @memberOf common
+   * @name  common#getMessages
+   * @method
+   * 
+   * @param  transaction          
+   * @param  permissionHandler
+   * @param  dateHelper        
+   * @return {promise}                   
+   */
+  that.getMessages = function (transaction, getDataSource, permissionHandler, dateHelper, user, group) {
+    var dfd = $.Deferred();
+    messages = [], MessagePriority = {
+      'Critical': 0,
+      'High': 1,
+      'Medium': 2,
+      'Low': 3
+    }, group = group.raw ? group.raw : group, perm = permissionHandler;
+    // Cleanup message?
+    if (transaction.status == 'creating') {
+      var cleanup = group.cleanup || {}, deleteIn = cleanup.deleteReservationsCreating;
+      if (deleteIn > 0) {
+        var deleteTime = transaction.modified.clone().add(deleteIn, 'minutes'), now = moment(), isPassed = deleteTime.isBefore(now);
+        var getDeleteTime = function () {
+          return deleteTime.fromNow();
+        };
+        var message = 'Reservation will be deleted <strong>' + deleteTime.fromNow() + '</strong>';
+        if (isPassed) {
+          message = 'Reservation will be deleted <strong>in a few seconds</strong>';
+        }
+        messages.push({
+          kind: 'cleanup',
+          priority: MessagePriority.Critical,
+          message: message,
+          deleteTime: deleteTime,
+          isPassed: isPassed
+        });
+      }
+    }
+    dfd.resolve();
+    return dfd.then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
 }(moment, common_keyValues);
 common_pubsub = function ($) {
@@ -5217,6 +5266,18 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     var getLabelById = function (labels, labelId) {
       return group[labels].find(function (l) {
         return l.id == labelId;
+      });
+    };
+    var getFieldById = function (fieldName) {
+      var fieldDictionary = {
+        'check-out': 'orderFields',
+        'reservation': 'reservationFields',
+        'item': 'itemFields',
+        'contact': 'customerFields',
+        'kit': 'kitFields'
+      };
+      return group[fieldDictionary[evt.kind]].find(function (f) {
+        return f.name == fieldName;
       });
     };
     var getAttachmentImageUrl = function (attachment, size) {
@@ -5613,11 +5674,12 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     case 'clearField':
     case 'renameField':
       var field = arg.field || unknownText;
+      var fieldDef = getFieldById(field) || {};
       switch (evt.action) {
       case 'setField':
         var fieldValue = arg.value;
         var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
-        var value = isDate ? moment(arg.value).format('MMM DD YYYY') : sd.render(arg.value);
+        var value = isDate ? moment(arg.value).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(arg.value);
         evt.friendlyText = byName + ' set ' + evt.kind + ' field ' + getMessageBlock('<small class=\'text-muted\'>' + field + '</small><br />' + value);
         break;
       case 'clearField':
@@ -5631,10 +5693,11 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     case 'setFields':
       var fields = Object.keys(arg).map(function (fieldKey) {
         var fieldValue = arg[fieldKey] || '';
+        var fieldDef = getFieldById(fieldKey) || {};
         var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
         return {
           name: fieldKey,
-          value: isDate ? moment(arg[fieldKey]).format('MMM DD YYYY') : sd.render(arg[fieldKey])
+          value: isDate ? moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(arg[fieldKey])
         };
       });
       evt.friendlyText = byName + ' set ' + evt.kind + ' field'.pluralize(fields.length > 1) + getMessagesBlock(fields.map(function (f) {
@@ -5678,8 +5741,9 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         var fieldValue = arg[fieldKey] || '';
         var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
         var value = '';
+        var fieldDef = getFieldById(fieldKey) || {};
         if (isDate) {
-          value = moment(arg[fieldKey]).format('MMM DD YYYY');
+          value = moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : ''));
         } else if (fieldKey == 'category') {
           value = keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize();
         } else if (fieldKey == 'location') {
@@ -12851,6 +12915,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     conflicts: [],
     by: null,
     archived: null,
+    modified: null,
     itemSummary: null,
     name: null
   };
@@ -13152,6 +13217,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.archived = data.archived || DEFAULTS.archived;
       that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       that.name = data.name || DEFAULTS.name;
+      that.modified = data.modified || DEFAULTS.modified;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -14152,6 +14218,7 @@ Order = function ($, api, Transaction, Conflict, common) {
             kind = '';
             kind = kind || (av.order ? 'order' : '');
             kind = kind || (av.reservation ? 'reservation' : '');
+            kind = kind || av.kind;
             if (kind == 'flag' && !showFlagConflicts)
               return true;
             conflicts.push(new Conflict({
@@ -15079,22 +15146,16 @@ PermissionHandler = function () {
       case 'seeOwnCustody':
         return this._useCustody && can(['ITEMS_CUSTODY_OWN_READER']);
       case 'takeCustody':
-        return this._useCustody && can([
-          'ITEMS_CUSTODY_TAKER',
-          'ITEMS_CUSTODY_TAKER_RESTRICTED'
-        ]);
+        return this._useCustody && (can(['ITEMS_CUSTODY_TAKER']) || (data.restrict === false ? false : can(['ITEMS_CUSTODY_TAKER_RESTRICTED'])));
       case 'releaseCustody':
         return this._useCustody && (can([
           'ITEMS_CUSTODY_RELEASER',
           'ITEMS_CUSTODY_RELEASER_RESTRICTED'
         ]) || data.own && can(['ITEMS_CUSTODY_OWN_RELEASER']));
       case 'transferCustody':
-        return this._useCustody && (can([
-          'ITEMS_CUSTODY_TRANSFERER',
-          'ITEMS_CUSTODY_TRANSFERER_RESTRICTED'
-        ]) || data.own && can(['ITEMS_CUSTODY_OWN_TRANSFERER']));
+        return this._useCustody && (can(['ITEMS_CUSTODY_TRANSFERER']) || (data.restrict === false ? false : can(['ITEMS_CUSTODY_TRANSFERER_RESTRICTED'])) || data.own && can(['ITEMS_CUSTODY_OWN_TRANSFERER']));
       case 'giveCustody':
-        return this.hasContactReadOtherPermission() && this.hasItemPermission('takeCustody', data) && this.hasItemPermission('transferCustody', data);
+        return this.hasContactReadOtherPermission() && this.hasItemPermission('takeCustody', $.extend(data, { restrict: false })) && this.hasItemPermission('transferCustody', $.extend(data, { restrict: false }));
       case 'releaseCustodyAt':
         return this.hasItemPermission('releaseCustody', data) && this._useReleaseAtLocation;
       case 'getReport':
@@ -15922,6 +15983,9 @@ Reservation = function ($, api, Transaction, Conflict, common) {
           conflict = cnflcts.find(function (conflictObj) {
             return conflictObj.item == item._id;
           });
+          if (conflict && conflict.kind == 'flag' && !showFlagConflicts) {
+            conflict = null;
+          }
           // Does this item have a server-side conflict?
           if (conflict) {
             var kind = conflict.kind || '';
@@ -16789,6 +16853,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     conflicts: [],
     by: null,
     archived: null,
+    modified: null,
     itemSummary: null,
     name: null
   };
@@ -17090,6 +17155,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.archived = data.archived || DEFAULTS.archived;
       that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       that.name = data.name || DEFAULTS.name;
+      that.modified = data.modified || DEFAULTS.modified;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });

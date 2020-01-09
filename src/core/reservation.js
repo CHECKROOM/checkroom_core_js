@@ -384,6 +384,10 @@ define([
                             return conflictObj.item == item._id;
                         });
 
+                        if(conflict && conflict.kind == "flag" && !showFlagConflicts){
+                            conflict = null;
+                        }
+
                         // Does this item have a server-side conflict?
                         if (conflict) {
                             var kind = conflict.kind || "";

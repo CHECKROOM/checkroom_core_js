@@ -483,6 +483,7 @@ define([
                             kind = "";
                             kind = kind || ((av.order) ? "order" : "");
                             kind = kind || ((av.reservation) ? "reservation" : "");
+                            kind = kind || av.kind;
 
                             if(kind == "flag" && !showFlagConflicts) return true;
 

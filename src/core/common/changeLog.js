@@ -50,6 +50,20 @@ define([
         	});
         }
 
+        var getFieldById = function(fieldName){
+            var fieldDictionary = {
+                'check-out': 'orderFields',
+                'reservation': 'reservationFields',
+                'item': 'itemFields',
+                'contact': 'customerFields',
+                'kit': 'kitFields'
+            };
+
+            return group[fieldDictionary[evt.kind]].find(function(f){
+                return f.name == fieldName;
+            })
+        }
+
         var getAttachmentImageUrl = function(attachment, size){
         	// is url
             if(typeof attachment === "string" && attachment.indexOf('http') == 0) return attachment;
@@ -491,13 +505,14 @@ define([
             case "clearField":
             case "renameField":
               	var field = arg.field || unknownText;
-           
+                var fieldDef = getFieldById(field) || {};
+
            		switch(evt.action){
            			case "setField":
 		           		var fieldValue = arg.value;
 		                var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
 		               
-		                var value = (isDate?moment(arg.value).format("MMM DD YYYY"):sd.render(arg.value));
+		                var value = (isDate?moment(arg.value).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(arg.value));
 
 		                evt.friendlyText = byName + " set " + evt.kind + " field " + getMessageBlock("<small class='text-muted'>" + field + "</small><br />" + value);
 		                break;
@@ -513,11 +528,13 @@ define([
                 var fields = Object.keys(arg).map(function(fieldKey){ 
                     var fieldValue = arg[fieldKey] || "";
 
+                    var fieldDef = getFieldById(fieldKey) || {};
+
                     var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
 
                     return { 
                         name: fieldKey, 
-                        value: isDate?moment(arg[fieldKey]).format("MMM DD YYYY"):sd.render(arg[fieldKey]) 
+                        value: isDate?moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(arg[fieldKey]) 
                     } 
                 });
 
@@ -560,9 +577,10 @@ define([
 
                     var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
                    	var value = "";
+                    var fieldDef = getFieldById(fieldKey) || {};
 
                    	if(isDate){
-                   		value = moment(arg[fieldKey]).format("MMM DD YYYY");
+                   		value = moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:''));
                    	}else if(fieldKey == "category"){
                    		value = keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize();
                    	}else if(fieldKey == "location"){

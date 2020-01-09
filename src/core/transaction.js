@@ -26,6 +26,7 @@ define([
         conflicts: [],
         by: null,
         archived: null,
+        modified: null,
         itemSummary: null,
         name: null
     };
@@ -366,6 +367,7 @@ define([
                 that.archived = data.archived || DEFAULTS.archived;
                 that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
                 that.name = data.name || DEFAULTS.name;
+                that.modified = data.modified || DEFAULTS.modified;
 
                 return that._getConflicts()
                     .then(function(conflicts) {

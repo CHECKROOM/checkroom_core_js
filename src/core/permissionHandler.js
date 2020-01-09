@@ -477,13 +477,13 @@ define([], function () {
                     case "seeOwnCustody":
                         return this._useCustody && can(["ITEMS_CUSTODY_OWN_READER"]);
                     case "takeCustody":
-                        return this._useCustody && can(["ITEMS_CUSTODY_TAKER", "ITEMS_CUSTODY_TAKER_RESTRICTED"]);
+                        return this._useCustody && (can(["ITEMS_CUSTODY_TAKER"]) || (data.restrict === false?false:can(["ITEMS_CUSTODY_TAKER_RESTRICTED"])));
                     case "releaseCustody":
                         return this._useCustody && (can(["ITEMS_CUSTODY_RELEASER", "ITEMS_CUSTODY_RELEASER_RESTRICTED"]) || (data.own && can(["ITEMS_CUSTODY_OWN_RELEASER"])));
                     case "transferCustody":
-                        return this._useCustody && (can(["ITEMS_CUSTODY_TRANSFERER", "ITEMS_CUSTODY_TRANSFERER_RESTRICTED"]) || (data.own && can(["ITEMS_CUSTODY_OWN_TRANSFERER"])));
+                        return this._useCustody && (can(["ITEMS_CUSTODY_TRANSFERER"]) || (data.restrict === false?false:can(["ITEMS_CUSTODY_TRANSFERER_RESTRICTED"])) || (data.own && can(["ITEMS_CUSTODY_OWN_TRANSFERER"])));
                     case "giveCustody":
-                        return this.hasContactReadOtherPermission() && this.hasItemPermission("takeCustody", data) && this.hasItemPermission("transferCustody", data);
+                        return this.hasContactReadOtherPermission() && this.hasItemPermission("takeCustody", $.extend(data, { restrict: false })) && this.hasItemPermission("transferCustody", $.extend(data, { restrict: false }));
                     case "releaseCustodyAt":
                         return this.hasItemPermission("releaseCustody", data) && this._useReleaseAtLocation;
                     case "getReport":

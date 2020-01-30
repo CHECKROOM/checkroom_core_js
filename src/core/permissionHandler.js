@@ -17,10 +17,6 @@ define([], function () {
 
         this._isOwner = user.isOwner;
 
-        // TODO: remove this
-        // Temporary role to granular permissions transition code
-        this.ensureRolePermissions();
-
         // Helper booleans that mix a bunch of role stuff and profile / limits stuff
         this._isBlockedContact =      (user.customer && user.customer.status == "blocked");        
         this._useWebhooks =           (limits.allowWebhooks) &&             (profile.useWebhooks);
@@ -48,123 +44,6 @@ define([], function () {
         this._useApi =                (limits.allowAPI);
         this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation !== undefined?profile.custodyCanChangeLocation:true); // TODO change this update fallback (mobile)
         this._useSpotcheck =           (limits.allowSpotcheck) &&           (profile.useSpotcheck);
-    };
-
-    PermissionHandler.prototype.ensureRolePermissions = function(){
-        var user = this.user,
-            profile = this.profile,
-            permissions = this.permissions;
-
-        switch(user.role){
-            case "selfservice":
-                if(profile.selfServiceCanSetFlag){
-                    permissions.push("ITEMS_FLAGGER");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ITEMS_FLAGGER"; });
-                }
-                if(profile.selfServiceCanClearFlag){
-                    permissions.push("ITEMS_UNFLAGGER");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ITEMS_UNFLAGGER"; });
-                }
-                if(profile.selfServiceCanSetLabel){
-                    permissions.push("ORDERS_LABELER");
-                    permissions.push("RESERVATIONS_LABELER");
-                }else{
-                    permissions = permissions.filter(function(p){ return ["ORDERS_LABELER", "RESERVATIONS_LABELER"].indexOf(p) == -1; });
-                }
-                if(profile.selfServiceCanSeeOwnOrders){
-                    permissions.push("ORDERS_OWN_READER");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ORDERS_OWN_READER"; });
-                }
-                if(profile.selfServiceCanOrder && !this._isBlockedContact){
-                    permissions.push("ORDERS_OWN_WRITER");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ORDERS_OWN_WRITER"; });
-                }
-                if(profile.selfServiceCanOrderConflict){
-                    permissions.push("ORDERS_CONFLICT_CREATOR");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
-                }
-                if(profile.selfServiceCanReserve && !this._isBlockedContact){
-                    permissions.push("RESERVATIONS_OWN_WRITER");
-                    permissions.push("RESERVATIONS_OWN_READER")
-                }else{
-                    permissions = permissions.filter(function(p){ return ["RESERVATIONS_OWN_WRITER", "RESERVATIONS_OWN_READER"].indexOf(p) == -1; });
-                }
-                if(profile.selfServiceCanReservationConflict){
-                    permissions.push("RESERVATIONS_CONFLICT_CREATOR");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_CONFLICT_CREATOR"; });
-                }
-                if(profile.selfServiceCanCustody && !this._isBlockedContact){
-                    permissions.push("ITEMS_CUSTODY_TAKER");
-                    permissions.push("ITEMS_CUSTODY_TRANSFERER");
-                    permissions.push("ITEMS_CUSTODY_OWN_READER");
-                    permissions.push("ITEMS_CUSTODY_OWN_RELEASER");
-                }else{
-                    permissions = permissions.filter(function(p){ return [
-                        "ITEMS_CUSTODY_TAKER", 
-                        "ITEMS_CUSTODY_TRANSFERER",
-                        "ITEMS_CUSTODY_RELEASER",
-                        "ITEMS_CUSTODY_OWN_READER", 
-                        "ITEMS_CUSTODY_OWN_RELEASER", 
-                        "ITEMS_CUSTODY_OWN_TRANSFERER",
-                        "ITEMS_CUSTODY_TAKER_RESTRICTED",
-                        "ITEMS_CUSTODY_TRANSFERER_RESTRICTED",
-                        "ITEMS_CUSTODY_RELEASER_RESTRICTED"].indexOf(p) == -1; });
-                }
-                break;
-            case "admin":
-                if(profile.adminCanOrderConflict){
-                    permissions.push("ORDERS_CONFLICT_CREATOR");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
-                }
-                if(profile.adminCanReservationConflict){
-                    permissions.push("RESERVATIONS_CONFLICT_CREATOR");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_CONFLICT_CREATOR"; });
-                }
-                break;
-            case "user":
-                if(profile.userCanOrderConflict){
-                    permissions.push("ORDERS_CONFLICT_CREATOR");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ORDERS_CONFLICT_CREATOR"; });
-                }
-                if(profile.userCanReservationConflict){
-                    permissions.push("RESERVATIONS_CONFLICT_CREATOR");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "RESERVATIONS_CONFLICT_CREATOR"; });
-                }
-                if(profile.userCanSetFlag){
-                    permissions.push("ITEMS_FLAGGER");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ITEMS_FLAGGER"; });
-                }
-                if(profile.userCanClearFlag){
-                    permissions.push("ITEMS_UNFLAGGER");
-                }else{
-                    permissions = permissions.filter(function(p){ return p != "ITEMS_UNFLAGGER"; });
-                }
-                if(profile.userCanSetLabel){
-                    permissions.push("ORDERS_LABELER");
-                    permissions.push("RESERVATIONS_LABELER");
-                }else{
-                    permissions = permissions.filter(function(p){ return ["ORDERS_LABELER", "RESERVATIONS_LABELER"].indexOf(p) == -1; });
-                }
-                if(profile.userCanBlock){
-                    permissions.push("CUSTOMERS_BLOCK_ADMIN");
-                }else{
-                    permissions = permissions.filter(function(p){ return ["CUSTOMERS_BLOCK_ADMIN"].indexOf(p) == -1; });
-                }
-                break;
-        }
-
-        this.permissions = permissions;
     };
 
     // 
@@ -765,6 +644,9 @@ define([], function () {
                     case "deactivate":
                     case "clearSync":
                     case "restrictLocations":
+                    case "addRole":
+                    case "deleteRole":
+                    case "editRole":
                         return can(["USERS_ADMIN"]);
                     case "referFriend":
                     case "changeAccountOwner":

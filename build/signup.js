@@ -29,7 +29,15 @@ api = function ($, moment) {
   };
   // Disable caching AJAX requests in IE
   // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
-  $.ajaxSetup({ cache: false });
+  $.ajaxSetup({
+    beforeSend: function (xhr, call) {
+      if (call.type == 'GET') {
+        call.url += (call.url.indexOf('?') == -1 ? '?' : '&') + '_=' + new Date().getTime();
+      } else {
+        call.data['_'] = new Date().getTime();
+      }
+    }
+  });
   var api = {};
   //*************
   // ApiErrors

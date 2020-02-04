@@ -29,7 +29,15 @@ api = function ($, moment) {
   };
   // Disable caching AJAX requests in IE
   // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
-  $.ajaxSetup({ cache: false });
+  $.ajaxSetup({
+    beforeSend: function (xhr, call) {
+      if (call.type == 'GET') {
+        call.url += (call.url.indexOf('?') == -1 ? '?' : '&') + '_=' + new Date().getTime();
+      } else {
+        call.data['_'] = new Date().getTime();
+      }
+    }
+  });
   var api = {};
   //*************
   // ApiErrors
@@ -1638,31 +1646,27 @@ common_item = function (moment, orderHelper, reservationHelper) {
     // Check-out message?
     if (item.status == 'checkedout' || item.status == 'await_checkout') {
       var message = '', dfd = $.Deferred();
-      if (isSelfservice) {
-        dfd.resolve(null);
-      } else {
-        getDataSource('orders').search({
-          _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
-          _restrict: !isSelfservice,
-          _sort: 'started',
-          status: item.status == 'checkedout' ? 'open' : 'creating',
-          _limit: 1,
-          _skip: 0,
-          items__contains: item.id
-        }).then(function (resp) {
-          if (resp && resp.count > 0) {
-            dfd.resolve(resp.docs[0]);
-          }
-        });
-      }
+      getDataSource('orders').search({
+        _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'started',
+        status: item.status == 'checkedout' ? 'open' : 'creating',
+        _limit: 1,
+        _skip: 0,
+        items__contains: item.id
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          dfd.resolve(resp.docs[0]);
+        }
+      });
       dfd.then(function (checkout) {
         if (item.status == 'await_checkout') {
           message = 'Item is currently <strong>awaiting checkout</strong>';
         } else {
           if (checkout && orderHelper.isOrderOverdue(checkout)) {
-            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + ' from ' + checkout.customer.name;
+            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + (!isSelfservice ? ' from ' + checkout.customer.name : '');
           } else {
-            message = 'Item is <strong>checked out</strong>' + (checkout ? ' to ' + checkout.customer.name + ' until ' + formatDate(checkout.due) : '');
+            message = 'Item is <strong>checked out</strong>' + (checkout ? (!isSelfservice ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due) : '');
           }
         }
         messages.push({

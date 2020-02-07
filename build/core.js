@@ -8766,7 +8766,6 @@ user = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
     return data;
   };
@@ -14758,7 +14757,7 @@ PermissionHandler = function () {
     return this.hasPermission(action || 'read', 'items', data, location);
   };
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
-    return this._useCustody || this._canReadOwnCustody;
+    return this._useCustody;
   };
   PermissionHandler.prototype.hasReleaseCustodyAtLocationPermission = function () {
     return this._useCustody && this._useReleaseAtLocation;
@@ -14779,7 +14778,7 @@ PermissionHandler = function () {
     return this._useSelfService;
   };
   PermissionHandler.prototype.hasReportingPermission = function () {
-    return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
+    return this._useReporting;
   };
   PermissionHandler.prototype.hasLabelPermission = function () {
     return this.hasCheckoutPermission('setLabel');
@@ -17870,7 +17869,6 @@ User = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
     return data;
   };

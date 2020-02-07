@@ -122,7 +122,7 @@ define([], function () {
     };
 
     PermissionHandler.prototype.hasItemCustodyPermission = function() {
-        return this._useCustody || this._canReadOwnCustody;
+        return this._useCustody;
     };
 
     PermissionHandler.prototype.hasReleaseCustodyAtLocationPermission = function(){

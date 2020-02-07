@@ -388,7 +388,6 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.email = this.email || DEFAULTS.email;
-        data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
 
         return data;

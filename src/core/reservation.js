@@ -271,21 +271,6 @@ define([
     }
 
     /**
-     * Checks if the reservation can be reserved again (based on status)
-     * @method
-     * @name Reservation#canReserveAgain
-     * @returns {boolean}
-     */
-    Reservation.prototype.canReserveAgain = function() {
-        return ((this.status == "open") || 
-                (this.status == "closed") || 
-                (this.status == "closed_manually") ||
-                (this.status == "cancelled")) &&
-               ((this.contact) &&
-                (this.contact.status == "active"));
-    };
-
-    /**
      * Checks if the reservation can be into recurring reservations (based on status)
      * @method
      * @name Reservation#canReserveRepeat
@@ -887,6 +872,20 @@ define([
     };
 
     /**
+     * Checks if reservation can be reserved again
+     * @method
+     * @name Reservation#canReserveAgain
+     * @param skipRead
+     * @returns {promise}
+     */
+    Reservation.prototype.canReserveAgain = function() {
+        var params =  {
+            _fields: "null" //hack
+        };
+        return this._doApiLongCall({method: "canReserveAgain", params: params, skipRead: true});
+    };
+
+    /**
      * Creates a new, incomplete reservation with the same info
      * as the original reservation but other fromDate, toDate
      * Important; the response will be another Reservation document!
@@ -899,20 +898,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Reservation.prototype.reserveAgain = function(fromDate, toDate, customer, location, skipRead) {
-        var params =  {
-            location: location,
-            customer: customer
-        };
-
-        if(fromDate){
-            params.fromDate = fromDate;
-        }
-
-        if(toDate){
-            params.toDate = toDate;
-        }
-
+    Reservation.prototype.reserveAgain = function(params, skipRead) {
         return this._doApiLongCall({method: "reserveAgain", params: params, skipRead: skipRead});
     };
 

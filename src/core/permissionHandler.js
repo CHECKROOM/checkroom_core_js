@@ -739,7 +739,7 @@ define([], function () {
                         return can(["CUSTOMERS_DOCUMENT_GENERATOR", "CUSTOMERS_OWN_DOCUMENT_GENERATOR"]);
                     case "block":
                     case "undoBlock":
-                        return can(["CUSTOMERS_BLOCK_ADMIN"]);
+                        return this._useBlockContacts && can(["CUSTOMERS_BLOCK_ADMIN"]);
                     case "getReport":
                         return can(["CUSTOMERS_REPORTER"]);
                     case "changeKind":

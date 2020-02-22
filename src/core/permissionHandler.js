@@ -96,18 +96,16 @@ define([], function () {
                 this.hasPermission("create", "webhooks") ||
                 this.hasPermission("create", "users") ||
                 this.hasPermission("create", "templates") ||
-                this.hasPermission("create", "syncs");
+                this.hasPermission("create", "syncs") ||
+                this.hasPermission("changePlan", "account") ||
+                this.hasPermission("create", "notifications") ||
+                this.hasPermission("update", "settings");                 
     };
 
 
 
     PermissionHandler.prototype.hasDashboardPermission = function(action, data, location) {
-        // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
-        if(this._isSelfService){
-            return this.hasReservationPermission("read") || this.hasCheckoutPermission("read");
-        }
-
-        return true;
+        return this.hasReservationPermission("read") || this.hasCheckoutPermission("read");
     };
 
 
@@ -302,7 +300,6 @@ define([], function () {
                     case "getDepreciation":
                     case "changeLocation":
                     case "updatePermissions":
-                    case "updateGeo":
                     case "addBarcode":
                     case "removeBarcode":
                     case "addCodes":
@@ -318,6 +315,8 @@ define([], function () {
                     case "setCatalog":
                     case "setCover":
                         return can(["ITEMS_ADMIN", "ITEMS_ADMIN_RESTRICTED"]);
+                    case "updateGeo":
+                        return can(["ITEMS_GEO_ADMIN", "ITEMS_GEO_ADMIN_RESTRICTED"]);
                     case "attach":
                     case "addAttachment":
                         return can(["ITEMS_ATTACHMENTS_OWN_WRITER"]);
@@ -334,10 +333,11 @@ define([], function () {
                     case "export":
                         return can(["ITEMS_EXPORTER", "ITEMS_EXPORTER_RESTRICTED"]);
                     case "addComment":
+                        return can(["ITEMS_COMMENTS_OWN_WRITER"]);
                     case "updateComment":
-                        return can(["ITEMS_COMMENTS_WRITER", "ITEMS_COMMENTS_OWN_WRITER"]);
+                        return (data.own && can(["ITEMS_COMMENTS_OWN_WRITER"]));
                     case "removeComment":
-                        return can(["ITEMS_COMMENTS_DELETER", "ITEMS_COMMENTS_OWN_DELETER"]);
+                        return can(["ITEMS_COMMENTS_DELETER"]) || (data.own && can(["ITEMS_COMMENTS_OWN_DELETER"]));
                     // Permissings for asset labels
                     case "printLabel":
                         return can(["ITEMS_LABEL_PRINTER", "ITEMS_LABEL_PRINTER_RESTRICTED"]);
@@ -362,7 +362,7 @@ define([], function () {
                     case "transferCustody":
                         return this._useCustody && (can(["ITEMS_CUSTODY_TRANSFERER"]) || (data.restrict === false?false:can(["ITEMS_CUSTODY_TRANSFERER_RESTRICTED"])) || (data.own && can(["ITEMS_CUSTODY_OWN_TRANSFERER"])));
                     case "giveCustody":
-                        return this.hasContactReadOtherPermission() && this.hasItemPermission("takeCustody", $.extend(data, { restrict: false })) && this.hasItemPermission("transferCustody", $.extend(data, { restrict: false }));
+                        return this.hasContactReadOtherPermission() && this.hasItemPermission("takeCustody", data) && this.hasItemPermission("transferCustody", data);
                     case "releaseCustodyAt":
                         return this.hasItemPermission("releaseCustody", data) && this._useReleaseAtLocation;
                     case "getReport":
@@ -396,10 +396,11 @@ define([], function () {
                     case "removeAttachment":
                         return can(["KITS_ATTACHMENTS_DELETER"]) || (data.own && can(["KITS_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
+                        return can(["KITS_COMMENTS_OWN_WRITER"]);
                     case "updateComment":
-                        return can(["KITS_COMMENTS_WRITER", "KITS_COMMENTS_OWN_WRITER"]);
+                        return (data.own && can(["KITS_COMMENTS_OWN_WRITER"]));
                     case "removeComment":
-                        return can(["KITS_COMMENTS_DELETER", "KITS_COMMENTS_OWN_DELETER"]);
+                        return can(["KITS_COMMENTS_DELETER"]) || (data.own && can(["KITS_COMMENTS_OWN_DELETER"]));
                     case "updatePermissions":
                         return can(["KITS_ADMIN", "KITS_ADMIN_RESTRICTED"]);
                     case "import":
@@ -443,6 +444,8 @@ define([], function () {
                         return false;
                     // CRUD
                     case "create":
+                        return this.hasCheckoutPermission("update", { own: true });
+
                     case "update":
                     case "delete":
                     // Order specific actions
@@ -459,12 +462,15 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
-                    case "extend":
                     case "checkoutAgain":
-                        return can(["ORDERS_WRITER", "ORDERS_WRITER_RESTRICTED", "ORDERS_OWN_WRITER"]);
+                        return can(["ORDERS_WRITER", "ORDERS_WRITER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_WRITER"]));
+                    case "extend":
+                        return can(["ORDERS_EXTENDER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_EXTENDER"]));
                     case "read":
-                        return can(["ORDERS_READER", "ORDERS_READER_RESTRICTED", "ORDERS_OWN_READER"])                  
-                    
+                        return this.hasCheckoutPermission("readAll") || can(["ORDERS_OWN_READER"])                  
+                    case "readAll":
+                        return can(["ORDERS_READER", "ORDERS_READER_RESTRICTED"]);
+
                     // Generic actions
                     case "attach":
                     case "addAttachment":
@@ -473,21 +479,22 @@ define([], function () {
                     case "removeAttachment":
                         return can(["ORDERS_ATTACHMENTS_DELETER"]) || (data.own && can(["ORDERS_ATTACHMENTS_OWN_DELETER", "ORDERS_OWN_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
+                        return can(["ORDERS_COMMENTS_OWN_WRITER"]) || (data.own && can(["ORDERS_OWN_COMMENTS_OWN_WRITER"]));
                     case "updateComment":
-                        return can(["ORDERS_COMMENTS_WRITER", "ORDERS_COMMENTS_OWN_WRITER", "ORDERS_OWN_COMMENTS_OWN_WRITER"]);
+                        return (data.own && can(["ORDERS_COMMENTS_OWN_WRITER", "ORDERS_OWN_COMMENTS_OWN_WRITER"]));
                     case "removeComment":
-                        return can(["ORDERS_COMMENTS_DELETER", "ORDERS_COMMENTS_OWN_DELETER", "ORDERS_OWN_COMMENTS_OWN_DELETER"]);
+                        return can(["ORDERS_COMMENTS_DELETER"]) || (data.own && can(["ORDERS_COMMENTS_OWN_DELETER", "ORDERS_OWN_COMMENTS_OWN_DELETER"]));
                     case "setLabel":
                     case "clearLabel":
-                        return can(["ORDERS_LABELER", "ORDERS_LABELER_RESTRICTED", "ORDERS_OWN_LABELER"]);
+                        return can(["ORDERS_LABELER", "ORDERS_LABELER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_LABELER"]));
                     case "export":
                         return can(["ORDERS_EXPORTER", "ORDERS_EXPORTER_RESTRICTED"]);
                     case "archive":
                     case "undoArchive":
-                        return can(["ORDERS_ARCHIVER", "ORDERS_ARCHIVER_RESTRICTED", "ORDERS_OWN_ARCHIVER"]);
+                        return can(["ORDERS_ARCHIVER", "ORDERS_ARCHIVER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_ARCHIVER"]));
                     // Other
                     case "generateDocument":
-                        return can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_DOCUMENT_GENERATOR_RESTRICTED", "ORDERS_OWN_DOCUMENT_GENERATOR"]);
+                        return can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_DOCUMENT_GENERATOR_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_DOCUMENT_GENERATOR"]));
                     case "checkinAt":
                         return this._useCheckinLocation && this.hasCheckoutPermission("checkin");
                     case "forceCheckListCheckin":
@@ -507,19 +514,23 @@ define([], function () {
                     
                     // CRUD
                     case "create":
+                        return this.hasReservationPermission("update", { own: true });
+
                     case "update":
                     case "delete":
-                        return can(["RESERVATIONS_WRITER", "RESERVATIONS_WRITER_RESTRICTED", "RESERVATIONS_OWN_WRITER"])
+                        return can(["RESERVATIONS_WRITER", "RESERVATIONS_WRITER_RESTRICTED"]) || (data.own && can(["RESERVATIONS_OWN_WRITER"]))
 
                     case "search":
                     case "list":
                     case "read":
-                        return can(["RESERVATIONS_READER", "RESERVATIONS_READER_RESTRICTED", "RESERVATIONS_OWN_READER"]);
+                        return this.hasReservationPermission("readAll") || can(["RESERVATIONS_OWN_READER"]);
+                    case "readAll":
+                        return can(["RESERVATIONS_READER", "RESERVATIONS_READER_RESTRICTED"]);
 
                     // Reservation specific actions
-                    case "setFromToDate":
                     case "setCustomer":
                     case "clearCustomer":
+                    case "setFromToDate":
                     case "setLocation":
                     case "clearLocation":
                     case "addItems":
@@ -534,29 +545,30 @@ define([], function () {
                     case "setFields":
                     case "setField":
                     case "clearField":
-                        return this.hasReservationPermission("update");
+                        return this.hasReservationPermission("update", data);
                     case "attach":
                     case "addAttachment":
-                        return can(["RESERVATIONS_ATTACHMENTS_OWN_WRITER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER"]);
+                        return can(["RESERVATIONS_ATTACHMENTS_OWN_WRITER"]) || (data.own && can(["RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER"]));
                     case "detach":
                     case "removeAttachment":
                         return can(["RESERVATIONS_ATTACHMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_ATTACHMENTS_OWN_DELETER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
+                        return can(["RESERVATIONS_COMMENTS_OWN_WRITER"]) || (data.own && can(["RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]));
                     case "updateComment":
-                        return can(["RESERVATIONS_COMMENTS_OWN_WRITER", "RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]);
+                        return (data.own && can(["RESERVATIONS_COMMENTS_OWN_WRITER", "RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]));
                     case "removeComment":
-                        return can([]);
+                        return can(["RESERVATIONS_COMMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_COMMENTS_OWN_DELETER", "RESERVATIONS_OWN_COMMENTS_OWN_DELETER"]));
                     case "export":
                         return can(["RESERVATIONS_EXPORTER", "RESERVATIONS_EXPORTER_RESTRICTED"]);
                     case "switchToOrder":
                     case "makeOrder":
-                        return this.hasCheckoutPermission("create");
+                        return this.hasCheckoutPermission("create", data);
                     case "cancel":
                     case "undoCancel":
-                        return can(["RESERVATIONS_CANCELER", "RESERVATIONS_CANCELER_RESTRICTED", "RESERVATIONS_OWN_CANCELER"]);
+                        return can(["RESERVATIONS_CANCELER", "RESERVATIONS_CANCELER_RESTRICTED"]) || (data.own && can(["RESERVATIONS_OWN_CANCELER"]));
                     case "archive":
                     case "undoArchive":
-                        return can([ "RESERVATIONS_ARCHIVER", "RESERVATIONS_ARCHIVER_RESTRICTED", "RESERVATIONS_OWN_ARCHIVER"]);
+                        return can([ "RESERVATIONS_ARCHIVER", "RESERVATIONS_ARCHIVER_RESTRICTED"]) || (data.own && can(["RESERVATIONS_OWN_ARCHIVER"]));
                     // Other
                     case "generateDocument":
                         return can(["RESERVATIONS_DOCUMENT_GENERATOR", "RESERVATIONS_DOCUMENT_GENERATOR_RESTRICTED", "RESERVATIONS_OWN_DOCUMENT_GENERATOR"]);
@@ -564,12 +576,12 @@ define([], function () {
                         return can(["RESERVATIONS_CONFLICT_CREATOR"]);
                     case "close":
                     case "undoClose":
-                        return this._useReservationsClose && can(["RESERVATIONS_CLOSER", "RESERVATIONS_CLOSER_RESTRICTED", "RESERVATIONS_OWN_CLOSER"]);
+                        return this._useReservationsClose && (can(["RESERVATIONS_CLOSER", "RESERVATIONS_CLOSER_RESTRICTED"]) || (data.own && can(["RESERVATIONS_OWN_CLOSER"])));
                     case "getReport":
                         return can(["RESERVATIONS_REPORTER", "RESERVATIONS_REPORTER_RESTRICTED", "RESERVATIONS_OWN_REPORTER"]);
                     case "setLabel":
                     case "clearLabel":
-                        return can(["RESERVATIONS_LABELER", "RESERVATIONS_LABELER_RESTRICTED", "RESERVATIONS_OWN_LABELER"]);
+                        return can(["RESERVATIONS_LABELER", "RESERVATIONS_LABELER_RESTRICTED"]) || (data.own && can(["RESERVATIONS_OWN_LABELER"]));
                 }
                 break;
             case "customers":
@@ -589,8 +601,7 @@ define([], function () {
                     case "undoArchive":
                     case "setFields":
                     case "setField":
-                    case "clearField":
-                    case "addAttachment":                                    
+                    case "clearField":                                  
                         return can(["CUSTOMERS_ADMIN"]);
 
                     case "attach":
@@ -598,13 +609,15 @@ define([], function () {
                         return can(["CUSTOMERS_ATTACHMENTS_OWN_WRITER", "CUSTOMERS_ATTACHMENTS_WRITER"]);
                     case "detach":
                     case "removeAttachment":
-                        return can(["CUSTOMERS_ATTACHMENTS_DELETER"]) || (data.own && can(["CUSTOMERS_ATTACHMENTS_OWN_DELETER"]));
-                    
+                        return can(["CUSTOMERS_ATTACHMENTS_DELETER"]) || (data.own && can(["CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER"]));
+                    case "printLabel":
+                        return can(["CUSTOMERS_LABEL_PRINTER", "CUSTOMERS_LABEL_PRINTER_RESTRICTED"]);
                     case "addComment":
+                        return (can(["CUSTOMERS_COMMENTS_OWN_WRITER"]));
                     case "updateComment":
-                        return can(["CUSTOMERS_COMMENTS_OWN_WRITER", "CUSTOMERS_OWN_COMMENTS_OWN_WRITER"]);
-                    case "removeComment":   
-                        return can(["CUSTOMERS_COMMENTS_DELETER", "CUSTOMERS_COMMENTS_OWN_DELETER", "CUSTOMERS_OWN_COMMENTS_OWN_DELETER"]);
+                        return (data.own && can(["CUSTOMERS_COMMENTS_OWN_WRITER"]));
+                    case "removeComment":
+                        return can(["CUSTOMERS_COMMENTS_DELETER"]) || (data.own && can(["CUSTOMERS_OWN_COMMENTS_OWN_DELETER"]));
                     case "import":
                     case "importAnalyze":
                     case "importSpreadsheet":
@@ -618,7 +631,7 @@ define([], function () {
                         return can(["CUSTOMERS_DOCUMENT_GENERATOR", "CUSTOMERS_OWN_DOCUMENT_GENERATOR"]);
                     case "block":
                     case "undoBlock":
-                        return can(["CUSTOMERS_BLOCK_ADMIN"]);
+                        return this._useBlockContacts && can(["CUSTOMERS_BLOCK_ADMIN"]);
                     case "getReport":
                         return can(["CUSTOMERS_REPORTER"]);
                     case "changeKind":
@@ -647,8 +660,8 @@ define([], function () {
                     case "addRole":
                     case "deleteRole":
                     case "editRole":
-                        return can(["USERS_ADMIN"]);
                     case "referFriend":
+                        return can(["USERS_ADMIN"]);
                     case "changeAccountOwner":
                         return this._isOwner;
                     case "getReport":
@@ -730,12 +743,13 @@ define([], function () {
             case "billing":
                 switch (action) {
                     default:
-                        return can(["ACCOUNT_SUBSCRIPTIONS_READER"]);
+                        return can(["ACCOUNT_SUBSCRIPTIONS_READER", "ACCOUNT_BILLING_READER"]);
                     case "reset":
-                    case "cancelPlan":
                     case "changePlan":
                     case "upgrade":
-                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN"]) && this._isOwner;
+                        return can(["ACCOUNT_SUBSCRIPTIONS_ADMIN", "ACCOUNT_BILLING_ADMIN"]);
+                    case "cancelPlan":
+                        return this._isOwner;
                 }
                 break;
             case "templates":
@@ -755,6 +769,15 @@ define([], function () {
                         return can(["TEMPLATES_ADMIN"]);
                 }
                 break;
+            case "settings":
+                switch(action){
+                    default:
+                        return false;
+                    case "read":
+                        return can(["ACCOUNT_SETTINGS_READER"]);
+                    case "update":
+                        return can(["ACCOUNT_SETTINGS_ADMIN"]);
+                }
         }
     };
 

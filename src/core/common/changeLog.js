@@ -10,7 +10,7 @@ define([
 
 	var sd = new Slimdown();
 
-	that.getChangeLogEvent =  function(evt, doc, user, locations, group, profile, settings, getDataSource){
+	that.getChangeLogEvent =  function(evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler){
 		var unknownText = "Unknown",
 			hoursFormat = (profile.timeFormat24) ? "H:mm" : "h:mma";
 
@@ -29,8 +29,9 @@ define([
 
         var location = locations.find(function(loc){ return loc._id == (arg.location || arg.locationId); }) || {};
         var activeLocations = locations.filter(function(loc){ return loc.status == "active"; });
-        var locationName = activeLocations.length > 0?" at " + (location.name || unknownText) :"";
+        var locationName = activeLocations.length > 1?" at " + (location.name || unknownText) :"";
         var byName = evt.by.name;
+        var perm = getPermissionHandler();
 
         var getLocationById = function(locId){
         	return locations.find(function(l){
@@ -77,18 +78,26 @@ define([
         }
 
         var getCheckoutLink = function(id, text){
+            if(!perm.hasCheckoutPermission("read")) return text;
+
         	return "<a href='#check-outs/" + id + "' class='transaction-link' data-kind='order' data-id='" + id + "'>" + text + "</a>";
         }
         var getReservationLink = function(id, text){
+            if(!perm.hasReservationPermission("read")) return text;
+
         	return "<a href='#reservations/" + id + "' class='transaction-link' data-kind='reservation' data-id='" + id + "'>" + text +  "</a>";
         }
         var getLink = function(href, text){
         	return "<a href='" + href + "'>" + text + "</a>";
         }
         var getContactLink = function(id, text){
+            if(!perm.hasContactReadOtherPermission()) return text;
+
         	return getLink("#contacts/" + id, text);
         }   
         var getKitLink = function(id, text){
+            if(!perm.hasKitPermission()) return text;
+
         	return getLink("#kits/" + id, text);
         } 
         var getMessagesBlock = function(messages){
@@ -570,6 +579,10 @@ define([
 
             			return ['category', 'kind'].indexOf(fieldKey) == -1;
             		}
+                    if(activeLocations.length == 1 && fieldKey == "location"){
+                        return false;
+                    }
+
 
             		return true;
             	}).map(function(fieldKey){ 

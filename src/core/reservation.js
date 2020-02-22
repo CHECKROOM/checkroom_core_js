@@ -305,7 +305,7 @@ define([
      * @returns {boolean}
      */
     Reservation.prototype.canGenerateDocument = function() {
-        return (this.status=="open") || (this.status=="closed") || (this.status=="closed_manually");
+        return (this.status=="open") || (this.status=="closed");
     };
 
     //

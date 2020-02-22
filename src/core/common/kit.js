@@ -237,6 +237,14 @@ define([
         var formatDate = function(date){
             return date.format('MMMM Do' + (date.year() == moment().year()?'':' YYYY'));
         }
+        var isOwn = function(contact){
+            contact = typeof(contact) !== 'string'?contact || {}:{ _id: contact };
+            user = user || {};
+            if(!user.customer){
+                user.customer = {};
+            }
+            return contact._id == user.customer._id;
+        }
 
         // Check-out message?
         if((perm.hasCheckoutPermission("read")) && 
@@ -245,9 +253,6 @@ define([
             var message = "",
                 dfd = $.Deferred();
 
-                if(isSelfservice){
-                    dfd.resolve(null);
-                }else{
                     getDataSource("orders").search({
                         _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
                         _restrict: !isSelfservice,
@@ -262,16 +267,23 @@ define([
                             dfd.resolve(resp.docs[0]);
                         }
                     });
-                }
+                
                 
                  dfd.then(function(checkout){
+                    checkout = checkout || {};
+
+                    if(isOwn(checkout.customer)){
+                        checkout.customer = user.customer;
+                        checkout.customer.user = user;
+                    }
+
                     if(kit.status == "await_checkout"){
                         message = "Kit is currently <strong>awaiting checkout</strong>";
                     }else{
                         if(checkout && orderHelper.isOrderOverdue(checkout)){
-                            message = "Kit was <strong>due back</strong> " + checkout.due.fromNow() + " from " + checkout.customer.name;
+                            message = "Kit was <strong>due back</strong> " + checkout.due.fromNow() + (typeof checkout.customer !== "string"?" from " + checkout.customer.name:"");
                         }else{
-                            message = "Kit is <strong>checked out</strong>" + (checkout?(" to " + checkout.customer.name + " until " + formatDate(checkout.due)):"");
+                            message = "Kit is <strong>checked out</strong>" + (typeof checkout.customer !== "string"?" to " + checkout.customer.name:"") + " until " + formatDate(checkout.due);
                         }
                     }
 
@@ -279,7 +291,7 @@ define([
                         kind: "checkout",
                         priority: MessagePriority.Critical,
                         message: message,
-                        checkout: checkout || {}
+                        checkout: !isOwn(checkout.customer) && isSelfservice?{}:checkout
                     });
 
                     dfdCheckouts.resolve(); 
@@ -308,6 +320,7 @@ define([
                         kind: "reservation",
                         priority: MessagePriority.High,
                         reservation: reservation,
+                        isOwn: isOwn(reservation.customer),
                         message: message
                     });
                 } 

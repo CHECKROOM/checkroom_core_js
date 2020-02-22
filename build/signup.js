@@ -3506,6 +3506,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
           // Already store the login token in localStorage
           var tmpUser = new api.ApiUser({
             userId: that.login,
+            userEmail: that.email,
             userToken: user.data.token
           });
           tmpUser.toStorage();
@@ -3537,6 +3538,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
           // Already store the login token in localStorage
           var tmpUser = new api.ApiUser({
             userId: that.login,
+            userEmail: that.email,
             userToken: user.data.token
           });
           tmpUser.toStorage();

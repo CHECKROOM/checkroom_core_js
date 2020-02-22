@@ -22,7 +22,7 @@ define([
         missingUsers: "ignore",
         overwriteLocalUsers: true,
         autoSync: false,
-        role: "selfservice",
+        role: "",
         query: "(cn=*)",
         base: "ou=team,dc=yourdomain,dc=com",
         loginField: "uid",
@@ -109,17 +109,6 @@ define([
         return (this.name.length>=3);
     };
 
-    UserSync.prototype.isValidRole = function() {
-        switch(this.role) {
-            case "user":
-            case "admin":
-            case "selfservice":
-                return true;
-            default:
-                return false;
-        }
-    };
-
     /**
      * Checks if the usersync is valid
      * @method
@@ -127,9 +116,7 @@ define([
      * @returns {boolean}
      */
     UserSync.prototype.isValid = function() {
-        return (
-            this.isValidName() &&
-            this.isValidRole());
+        return this.isValidName();
     };
 
     /**

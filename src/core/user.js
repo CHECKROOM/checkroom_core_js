@@ -71,18 +71,6 @@ define([
         return common.isValidEmail(this.email);
     };
 
-    User.prototype.isValidRole = function() {
-        switch(this.role) {
-            case "user":
-            case "admin":
-            case "root":
-            case "selfservice":
-                return true;
-            default:
-                return false;
-        }
-    };
-
     User.prototype.emailExists = function() {
         if (this.isValidEmail()) {
             // Don't check for emailExists for exisiting user
@@ -111,8 +99,8 @@ define([
     User.prototype.isValid = function() {
         return (
             this.isValidName() &&
-            this.isValidEmail() &&
-            this.isValidRole());
+            this.isValidEmail()
+            );
     };
 
     /**
@@ -400,7 +388,6 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.email = this.email || DEFAULTS.email;
-        data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
 
         return data;

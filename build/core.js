@@ -1660,20 +1660,25 @@ common_item = function (moment, orderHelper, reservationHelper) {
         }
       });
       dfd.then(function (checkout) {
+        checkout = checkout || {};
+        if (isOwn(checkout.customer)) {
+          checkout.customer = user.customer;
+          checkout.customer.user = user;
+        }
         if (item.status == 'await_checkout') {
           message = 'Item is currently <strong>awaiting checkout</strong>';
         } else {
           if (checkout && orderHelper.isOrderOverdue(checkout)) {
-            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + (!isSelfservice ? ' from ' + checkout.customer.name : '');
+            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + (typeof checkout.customer !== 'string' ? ' from ' + checkout.customer.name : '');
           } else {
-            message = 'Item is <strong>checked out</strong>' + (checkout ? (!isSelfservice ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due) : '');
+            message = 'Item is <strong>checked out</strong>' + (typeof checkout.customer !== 'string' ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due);
           }
         }
         messages.push({
           kind: 'checkout',
           priority: MessagePriority.Critical,
           message: message,
-          checkout: checkout || {}
+          checkout: !isOwn(checkout.customer) && isSelfservice ? {} : checkout
         });
         dfdCheckouts.resolve();
       });
@@ -1699,6 +1704,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
             kind: 'reservation',
             priority: MessagePriority.High,
             reservation: reservation,
+            isOwn: isOwn(reservation.customer),
             message: message
           });
         }
@@ -4332,41 +4338,50 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
     var formatDate = function (date) {
       return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
     };
+    var isOwn = function (contact) {
+      contact = typeof contact !== 'string' ? contact || {} : { _id: contact };
+      user = user || {};
+      if (!user.customer) {
+        user.customer = {};
+      }
+      return contact._id == user.customer._id;
+    };
     // Check-out message?
     if (perm.hasCheckoutPermission('read') && (kit.status == 'checkedout' || kit.status == 'await_checkout')) {
       var message = '', dfd = $.Deferred();
-      if (isSelfservice) {
-        dfd.resolve(null);
-      } else {
-        getDataSource('orders').search({
-          _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
-          _restrict: !isSelfservice,
-          _sort: 'started',
-          status: kit.status == 'checkedout' ? 'open' : 'creating',
-          _limit: 1,
-          _skip: 0,
-          items__in: itemHelpers.getItemIds(kit.items)
-        }).then(function (resp) {
-          if (resp && resp.count > 0) {
-            dfd.resolve(resp.docs[0]);
-          }
-        });
-      }
+      getDataSource('orders').search({
+        _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'started',
+        status: kit.status == 'checkedout' ? 'open' : 'creating',
+        _limit: 1,
+        _skip: 0,
+        items__in: itemHelpers.getItemIds(kit.items)
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          dfd.resolve(resp.docs[0]);
+        }
+      });
       dfd.then(function (checkout) {
+        checkout = checkout || {};
+        if (isOwn(checkout.customer)) {
+          checkout.customer = user.customer;
+          checkout.customer.user = user;
+        }
         if (kit.status == 'await_checkout') {
           message = 'Kit is currently <strong>awaiting checkout</strong>';
         } else {
           if (checkout && orderHelper.isOrderOverdue(checkout)) {
-            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + ' from ' + checkout.customer.name;
+            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + (typeof checkout.customer !== 'string' ? ' from ' + checkout.customer.name : '');
           } else {
-            message = 'Kit is <strong>checked out</strong>' + (checkout ? ' to ' + checkout.customer.name + ' until ' + formatDate(checkout.due) : '');
+            message = 'Kit is <strong>checked out</strong>' + (typeof checkout.customer !== 'string' ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due);
           }
         }
         messages.push({
           kind: 'checkout',
           priority: MessagePriority.Critical,
           message: message,
-          checkout: checkout || {}
+          checkout: !isOwn(checkout.customer) && isSelfservice ? {} : checkout
         });
         dfdCheckouts.resolve();
       });
@@ -4392,6 +4407,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
             kind: 'reservation',
             priority: MessagePriority.High,
             reservation: reservation,
+            isOwn: isOwn(reservation.customer),
             message: message
           });
         }
@@ -5233,7 +5249,7 @@ common_pubsub = function ($) {
 common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValueHelper, slimdownHelper, moment) {
   var that = {};
   var sd = new Slimdown();
-  that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource) {
+  that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler) {
     var unknownText = 'Unknown', hoursFormat = profile.timeFormat24 ? 'H:mm' : 'h:mma';
     evt.friendlyText = evt.action;
     evt.by = evt.by || {};
@@ -5255,8 +5271,9 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     var activeLocations = locations.filter(function (loc) {
       return loc.status == 'active';
     });
-    var locationName = activeLocations.length > 0 ? ' at ' + (location.name || unknownText) : '';
+    var locationName = activeLocations.length > 1 ? ' at ' + (location.name || unknownText) : '';
     var byName = evt.by.name;
+    var perm = getPermissionHandler();
     var getLocationById = function (locId) {
       return locations.find(function (l) {
         return l._id == locId;
@@ -5295,18 +5312,26 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       return imageHelper.getImageCDNUrl(settings, group.id, typeof item == 'string' ? item : item.cover || item._id || item.id, size);
     };
     var getCheckoutLink = function (id, text) {
+      if (!perm.hasCheckoutPermission('read'))
+        return text;
       return '<a href=\'#check-outs/' + id + '\' class=\'transaction-link\' data-kind=\'order\' data-id=\'' + id + '\'>' + text + '</a>';
     };
     var getReservationLink = function (id, text) {
+      if (!perm.hasReservationPermission('read'))
+        return text;
       return '<a href=\'#reservations/' + id + '\' class=\'transaction-link\' data-kind=\'reservation\' data-id=\'' + id + '\'>' + text + '</a>';
     };
     var getLink = function (href, text) {
       return '<a href=\'' + href + '\'>' + text + '</a>';
     };
     var getContactLink = function (id, text) {
+      if (!perm.hasContactReadOtherPermission())
+        return text;
       return getLink('#contacts/' + id, text);
     };
     var getKitLink = function (id, text) {
+      if (!perm.hasKitPermission())
+        return text;
       return getLink('#kits/' + id, text);
     };
     var getMessagesBlock = function (messages) {
@@ -5739,6 +5764,9 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
             'category',
             'kind'
           ].indexOf(fieldKey) == -1;
+        }
+        if (activeLocations.length == 1 && fieldKey == 'location') {
+          return false;
         }
         return true;
       }).map(function (fieldKey) {
@@ -8480,17 +8508,6 @@ user = function ($, Base, common) {
     this.email = $.trim(this.email);
     return common.isValidEmail(this.email);
   };
-  User.prototype.isValidRole = function () {
-    switch (this.role) {
-    case 'user':
-    case 'admin':
-    case 'root':
-    case 'selfservice':
-      return true;
-    default:
-      return false;
-    }
-  };
   User.prototype.emailExists = function () {
     if (this.isValidEmail()) {
       // Don't check for emailExists for exisiting user
@@ -8513,7 +8530,7 @@ user = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.isValid = function () {
-    return this.isValidName() && this.isValidEmail() && this.isValidRole();
+    return this.isValidName() && this.isValidEmail();
   };
   /**
    * Checks if the user is empty
@@ -8773,7 +8790,6 @@ user = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
     return data;
   };
@@ -13188,7 +13204,6 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var data = Base.prototype._toJson.call(this, options);
     //data.started = this.from;  // VT: Will be set during checkout
     //data.finished = this.to;  // VT: Will be set during final checkin
-    data.due = this.due;
     if (this.location) {
       // Make sure we send the location as id, not the entire object
       data.location = this._getId(this.location);
@@ -13889,8 +13904,8 @@ Order = function ($, api, Transaction, Conflict, common) {
     // and never be called on order update
     // since most updates are done via setter methods
     var data = Transaction.prototype._toJson.call(this, options);
-    data.fromDate = this.fromDate != null ? this.fromDate.toJSONDate() : 'null';
-    data.toDate = this.toDate != null ? this.toDate.toJSONDate() : 'null';
+    //data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
+    //data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
     data.due = this.due != null ? this.due.toJSONDate() : 'null';
     return data;
   };
@@ -14677,9 +14692,6 @@ PermissionHandler = function () {
     this.limits = limits;
     this.permissions = permissions;
     this._isOwner = user.isOwner;
-    // TODO: remove this
-    // Temporary role to granular permissions transition code
-    this.ensureRolePermissions();
     // Helper booleans that mix a bunch of role stuff and profile / limits stuff
     this._isBlockedContact = user.customer && user.customer.status == 'blocked';
     this._useWebhooks = limits.allowWebhooks && profile.useWebhooks;
@@ -14708,162 +14720,6 @@ PermissionHandler = function () {
     this._useReleaseAtLocation = this._useCustody && (profile.custodyCanChangeLocation !== undefined ? profile.custodyCanChangeLocation : true);
     // TODO change this update fallback (mobile)
     this._useSpotcheck = limits.allowSpotcheck && profile.useSpotcheck;
-  };
-  PermissionHandler.prototype.ensureRolePermissions = function () {
-    var user = this.user, profile = this.profile, permissions = this.permissions;
-    switch (user.role) {
-    case 'selfservice':
-      if (profile.selfServiceCanSetFlag) {
-        permissions.push('ITEMS_FLAGGER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ITEMS_FLAGGER';
-        });
-      }
-      if (profile.selfServiceCanClearFlag) {
-        permissions.push('ITEMS_UNFLAGGER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ITEMS_UNFLAGGER';
-        });
-      }
-      if (profile.selfServiceCanSetLabel) {
-        permissions.push('ORDERS_LABELER');
-        permissions.push('RESERVATIONS_LABELER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return [
-            'ORDERS_LABELER',
-            'RESERVATIONS_LABELER'
-          ].indexOf(p) == -1;
-        });
-      }
-      if (profile.selfServiceCanSeeOwnOrders) {
-        permissions.push('ORDERS_OWN_READER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ORDERS_OWN_READER';
-        });
-      }
-      if (profile.selfServiceCanOrder && !this._isBlockedContact) {
-        permissions.push('ORDERS_OWN_WRITER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ORDERS_OWN_WRITER';
-        });
-      }
-      if (profile.selfServiceCanOrderConflict) {
-        permissions.push('ORDERS_CONFLICT_CREATOR');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ORDERS_CONFLICT_CREATOR';
-        });
-      }
-      if (profile.selfServiceCanReserve && !this._isBlockedContact) {
-        permissions.push('RESERVATIONS_OWN_WRITER');
-        permissions.push('RESERVATIONS_OWN_READER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return [
-            'RESERVATIONS_OWN_WRITER',
-            'RESERVATIONS_OWN_READER'
-          ].indexOf(p) == -1;
-        });
-      }
-      if (profile.selfServiceCanReservationConflict) {
-        permissions.push('RESERVATIONS_CONFLICT_CREATOR');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'RESERVATIONS_CONFLICT_CREATOR';
-        });
-      }
-      if (profile.selfServiceCanCustody && !this._isBlockedContact) {
-        permissions.push('ITEMS_CUSTODY_TAKER');
-        permissions.push('ITEMS_CUSTODY_TRANSFERER');
-        permissions.push('ITEMS_CUSTODY_OWN_READER');
-        permissions.push('ITEMS_CUSTODY_OWN_RELEASER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return [
-            'ITEMS_CUSTODY_TAKER',
-            'ITEMS_CUSTODY_TRANSFERER',
-            'ITEMS_CUSTODY_RELEASER',
-            'ITEMS_CUSTODY_OWN_READER',
-            'ITEMS_CUSTODY_OWN_RELEASER',
-            'ITEMS_CUSTODY_OWN_TRANSFERER',
-            'ITEMS_CUSTODY_TAKER_RESTRICTED',
-            'ITEMS_CUSTODY_TRANSFERER_RESTRICTED',
-            'ITEMS_CUSTODY_RELEASER_RESTRICTED'
-          ].indexOf(p) == -1;
-        });
-      }
-      break;
-    case 'admin':
-      if (profile.adminCanOrderConflict) {
-        permissions.push('ORDERS_CONFLICT_CREATOR');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ORDERS_CONFLICT_CREATOR';
-        });
-      }
-      if (profile.adminCanReservationConflict) {
-        permissions.push('RESERVATIONS_CONFLICT_CREATOR');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'RESERVATIONS_CONFLICT_CREATOR';
-        });
-      }
-      break;
-    case 'user':
-      if (profile.userCanOrderConflict) {
-        permissions.push('ORDERS_CONFLICT_CREATOR');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ORDERS_CONFLICT_CREATOR';
-        });
-      }
-      if (profile.userCanReservationConflict) {
-        permissions.push('RESERVATIONS_CONFLICT_CREATOR');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'RESERVATIONS_CONFLICT_CREATOR';
-        });
-      }
-      if (profile.userCanSetFlag) {
-        permissions.push('ITEMS_FLAGGER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ITEMS_FLAGGER';
-        });
-      }
-      if (profile.userCanClearFlag) {
-        permissions.push('ITEMS_UNFLAGGER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return p != 'ITEMS_UNFLAGGER';
-        });
-      }
-      if (profile.userCanSetLabel) {
-        permissions.push('ORDERS_LABELER');
-        permissions.push('RESERVATIONS_LABELER');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return [
-            'ORDERS_LABELER',
-            'RESERVATIONS_LABELER'
-          ].indexOf(p) == -1;
-        });
-      }
-      if (profile.userCanBlock) {
-        permissions.push('CUSTOMERS_BLOCK_ADMIN');
-      } else {
-        permissions = permissions.filter(function (p) {
-          return ['CUSTOMERS_BLOCK_ADMIN'].indexOf(p) == -1;
-        });
-      }
-      break;
-    }
-    this.permissions = permissions;
   };
   // 
   // Module helpers
@@ -14907,14 +14763,10 @@ PermissionHandler = function () {
     return this.hasAccountPermission('upgrade');
   };
   PermissionHandler.prototype.hasAnyAdminPermission = function () {
-    return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs');
+    return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs') || this.hasPermission('changePlan', 'account') || this.hasPermission('create', 'notifications') || this.hasPermission('update', 'settings');
   };
   PermissionHandler.prototype.hasDashboardPermission = function (action, data, location) {
-    // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
-    if (this._isSelfService) {
-      return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
-    }
-    return true;
+    return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
   };
   PermissionHandler.prototype.hasCalendarPermission = function (action, data, location) {
     // Calendar permission depends on reservation or checkout permission
@@ -14924,7 +14776,7 @@ PermissionHandler = function () {
     return this.hasPermission(action || 'read', 'items', data, location);
   };
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
-    return this._useCustody || this._canReadOwnCustody;
+    return this._useCustody;
   };
   PermissionHandler.prototype.hasReleaseCustodyAtLocationPermission = function () {
     return this._useCustody && this._useReleaseAtLocation;
@@ -15072,7 +14924,6 @@ PermissionHandler = function () {
       case 'getDepreciation':
       case 'changeLocation':
       case 'updatePermissions':
-      case 'updateGeo':
       case 'addBarcode':
       case 'removeBarcode':
       case 'addCodes':
@@ -15090,6 +14941,11 @@ PermissionHandler = function () {
         return can([
           'ITEMS_ADMIN',
           'ITEMS_ADMIN_RESTRICTED'
+        ]);
+      case 'updateGeo':
+        return can([
+          'ITEMS_GEO_ADMIN',
+          'ITEMS_GEO_ADMIN_RESTRICTED'
         ]);
       case 'attach':
       case 'addAttachment':
@@ -15113,16 +14969,11 @@ PermissionHandler = function () {
           'ITEMS_EXPORTER_RESTRICTED'
         ]);
       case 'addComment':
+        return can(['ITEMS_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return can([
-          'ITEMS_COMMENTS_WRITER',
-          'ITEMS_COMMENTS_OWN_WRITER'
-        ]);
+        return data.own && can(['ITEMS_COMMENTS_OWN_WRITER']);
       case 'removeComment':
-        return can([
-          'ITEMS_COMMENTS_DELETER',
-          'ITEMS_COMMENTS_OWN_DELETER'
-        ]);
+        return can(['ITEMS_COMMENTS_DELETER']) || data.own && can(['ITEMS_COMMENTS_OWN_DELETER']);
       // Permissings for asset labels
       case 'printLabel':
         return can([
@@ -15159,7 +15010,7 @@ PermissionHandler = function () {
       case 'transferCustody':
         return this._useCustody && (can(['ITEMS_CUSTODY_TRANSFERER']) || (data.restrict === false ? false : can(['ITEMS_CUSTODY_TRANSFERER_RESTRICTED'])) || data.own && can(['ITEMS_CUSTODY_OWN_TRANSFERER']));
       case 'giveCustody':
-        return this.hasContactReadOtherPermission() && this.hasItemPermission('takeCustody', $.extend(data, { restrict: false })) && this.hasItemPermission('transferCustody', $.extend(data, { restrict: false }));
+        return this.hasContactReadOtherPermission() && this.hasItemPermission('takeCustody', data) && this.hasItemPermission('transferCustody', data);
       case 'releaseCustodyAt':
         return this.hasItemPermission('releaseCustody', data) && this._useReleaseAtLocation;
       case 'getReport':
@@ -15202,16 +15053,11 @@ PermissionHandler = function () {
       case 'removeAttachment':
         return can(['KITS_ATTACHMENTS_DELETER']) || data.own && can(['KITS_ATTACHMENTS_OWN_DELETER']);
       case 'addComment':
+        return can(['KITS_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return can([
-          'KITS_COMMENTS_WRITER',
-          'KITS_COMMENTS_OWN_WRITER'
-        ]);
+        return data.own && can(['KITS_COMMENTS_OWN_WRITER']);
       case 'removeComment':
-        return can([
-          'KITS_COMMENTS_DELETER',
-          'KITS_COMMENTS_OWN_DELETER'
-        ]);
+        return can(['KITS_COMMENTS_DELETER']) || data.own && can(['KITS_COMMENTS_OWN_DELETER']);
       case 'updatePermissions':
         return can([
           'KITS_ADMIN',
@@ -15267,6 +15113,7 @@ PermissionHandler = function () {
         return false;
       // CRUD
       case 'create':
+        return this.hasCheckoutPermission('update', { own: true });
       case 'update':
       case 'delete':
       // Order specific actions
@@ -15283,18 +15130,19 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
-      case 'extend':
       case 'checkoutAgain':
         return can([
           'ORDERS_WRITER',
-          'ORDERS_WRITER_RESTRICTED',
-          'ORDERS_OWN_WRITER'
-        ]);
+          'ORDERS_WRITER_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_WRITER']);
+      case 'extend':
+        return can(['ORDERS_EXTENDER_RESTRICTED']) || data.own && can(['ORDERS_OWN_EXTENDER']);
       case 'read':
+        return this.hasCheckoutPermission('readAll') || can(['ORDERS_OWN_READER']);
+      case 'readAll':
         return can([
           'ORDERS_READER',
-          'ORDERS_READER_RESTRICTED',
-          'ORDERS_OWN_READER'
+          'ORDERS_READER_RESTRICTED'
         ]);
       // Generic actions
       case 'attach':
@@ -15310,15 +15158,14 @@ PermissionHandler = function () {
           'ORDERS_OWN_ATTACHMENTS_OWN_DELETER'
         ]);
       case 'addComment':
+        return can(['ORDERS_COMMENTS_OWN_WRITER']) || data.own && can(['ORDERS_OWN_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return can([
-          'ORDERS_COMMENTS_WRITER',
+        return data.own && can([
           'ORDERS_COMMENTS_OWN_WRITER',
           'ORDERS_OWN_COMMENTS_OWN_WRITER'
         ]);
       case 'removeComment':
-        return can([
-          'ORDERS_COMMENTS_DELETER',
+        return can(['ORDERS_COMMENTS_DELETER']) || data.own && can([
           'ORDERS_COMMENTS_OWN_DELETER',
           'ORDERS_OWN_COMMENTS_OWN_DELETER'
         ]);
@@ -15326,9 +15173,8 @@ PermissionHandler = function () {
       case 'clearLabel':
         return can([
           'ORDERS_LABELER',
-          'ORDERS_LABELER_RESTRICTED',
-          'ORDERS_OWN_LABELER'
-        ]);
+          'ORDERS_LABELER_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_LABELER']);
       case 'export':
         return can([
           'ORDERS_EXPORTER',
@@ -15338,16 +15184,14 @@ PermissionHandler = function () {
       case 'undoArchive':
         return can([
           'ORDERS_ARCHIVER',
-          'ORDERS_ARCHIVER_RESTRICTED',
-          'ORDERS_OWN_ARCHIVER'
-        ]);
+          'ORDERS_ARCHIVER_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_ARCHIVER']);
       // Other
       case 'generateDocument':
         return can([
           'ORDERS_DOCUMENT_GENERATOR',
-          'ORDERS_DOCUMENT_GENERATOR_RESTRICTED',
-          'ORDERS_OWN_DOCUMENT_GENERATOR'
-        ]);
+          'ORDERS_DOCUMENT_GENERATOR_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_DOCUMENT_GENERATOR']);
       case 'checkinAt':
         return this._useCheckinLocation && this.hasCheckoutPermission('checkin');
       case 'forceCheckListCheckin':
@@ -15370,25 +15214,26 @@ PermissionHandler = function () {
         return false;
       // CRUD
       case 'create':
+        return this.hasReservationPermission('update', { own: true });
       case 'update':
       case 'delete':
         return can([
           'RESERVATIONS_WRITER',
-          'RESERVATIONS_WRITER_RESTRICTED',
-          'RESERVATIONS_OWN_WRITER'
-        ]);
+          'RESERVATIONS_WRITER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_WRITER']);
       case 'search':
       case 'list':
       case 'read':
+        return this.hasReservationPermission('readAll') || can(['RESERVATIONS_OWN_READER']);
+      case 'readAll':
         return can([
           'RESERVATIONS_READER',
-          'RESERVATIONS_READER_RESTRICTED',
-          'RESERVATIONS_OWN_READER'
+          'RESERVATIONS_READER_RESTRICTED'
         ]);
       // Reservation specific actions
-      case 'setFromToDate':
       case 'setCustomer':
       case 'clearCustomer':
+      case 'setFromToDate':
       case 'setLocation':
       case 'clearLocation':
       case 'addItems':
@@ -15402,13 +15247,10 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
-        return this.hasReservationPermission('update');
+        return this.hasReservationPermission('update', data);
       case 'attach':
       case 'addAttachment':
-        return can([
-          'RESERVATIONS_ATTACHMENTS_OWN_WRITER',
-          'RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER'
-        ]);
+        return can(['RESERVATIONS_ATTACHMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER']);
       case 'detach':
       case 'removeAttachment':
         return can(['RESERVATIONS_ATTACHMENTS_DELETER']) || data.own && can([
@@ -15416,13 +15258,17 @@ PermissionHandler = function () {
           'RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER'
         ]);
       case 'addComment':
+        return can(['RESERVATIONS_COMMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return can([
+        return data.own && can([
           'RESERVATIONS_COMMENTS_OWN_WRITER',
           'RESERVATIONS_OWN_COMMENTS_OWN_WRITER'
         ]);
       case 'removeComment':
-        return can([]);
+        return can(['RESERVATIONS_COMMENTS_DELETER']) || data.own && can([
+          'RESERVATIONS_COMMENTS_OWN_DELETER',
+          'RESERVATIONS_OWN_COMMENTS_OWN_DELETER'
+        ]);
       case 'export':
         return can([
           'RESERVATIONS_EXPORTER',
@@ -15430,21 +15276,19 @@ PermissionHandler = function () {
         ]);
       case 'switchToOrder':
       case 'makeOrder':
-        return this.hasCheckoutPermission('create');
+        return this.hasCheckoutPermission('create', data);
       case 'cancel':
       case 'undoCancel':
         return can([
           'RESERVATIONS_CANCELER',
-          'RESERVATIONS_CANCELER_RESTRICTED',
-          'RESERVATIONS_OWN_CANCELER'
-        ]);
+          'RESERVATIONS_CANCELER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_CANCELER']);
       case 'archive':
       case 'undoArchive':
         return can([
           'RESERVATIONS_ARCHIVER',
-          'RESERVATIONS_ARCHIVER_RESTRICTED',
-          'RESERVATIONS_OWN_ARCHIVER'
-        ]);
+          'RESERVATIONS_ARCHIVER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_ARCHIVER']);
       // Other
       case 'generateDocument':
         return can([
@@ -15456,11 +15300,10 @@ PermissionHandler = function () {
         return can(['RESERVATIONS_CONFLICT_CREATOR']);
       case 'close':
       case 'undoClose':
-        return this._useReservationsClose && can([
+        return this._useReservationsClose && (can([
           'RESERVATIONS_CLOSER',
-          'RESERVATIONS_CLOSER_RESTRICTED',
-          'RESERVATIONS_OWN_CLOSER'
-        ]);
+          'RESERVATIONS_CLOSER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_CLOSER']));
       case 'getReport':
         return can([
           'RESERVATIONS_REPORTER',
@@ -15471,9 +15314,8 @@ PermissionHandler = function () {
       case 'clearLabel':
         return can([
           'RESERVATIONS_LABELER',
-          'RESERVATIONS_LABELER_RESTRICTED',
-          'RESERVATIONS_OWN_LABELER'
-        ]);
+          'RESERVATIONS_LABELER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_LABELER']);
       }
       break;
     case 'customers':
@@ -15494,7 +15336,6 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
-      case 'addAttachment':
         return can(['CUSTOMERS_ADMIN']);
       case 'attach':
       case 'addAttachment':
@@ -15504,19 +15345,18 @@ PermissionHandler = function () {
         ]);
       case 'detach':
       case 'removeAttachment':
-        return can(['CUSTOMERS_ATTACHMENTS_DELETER']) || data.own && can(['CUSTOMERS_ATTACHMENTS_OWN_DELETER']);
+        return can(['CUSTOMERS_ATTACHMENTS_DELETER']) || data.own && can(['CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER']);
+      case 'printLabel':
+        return can([
+          'CUSTOMERS_LABEL_PRINTER',
+          'CUSTOMERS_LABEL_PRINTER_RESTRICTED'
+        ]);
       case 'addComment':
+        return can(['CUSTOMERS_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return can([
-          'CUSTOMERS_COMMENTS_OWN_WRITER',
-          'CUSTOMERS_OWN_COMMENTS_OWN_WRITER'
-        ]);
+        return data.own && can(['CUSTOMERS_COMMENTS_OWN_WRITER']);
       case 'removeComment':
-        return can([
-          'CUSTOMERS_COMMENTS_DELETER',
-          'CUSTOMERS_COMMENTS_OWN_DELETER',
-          'CUSTOMERS_OWN_COMMENTS_OWN_DELETER'
-        ]);
+        return can(['CUSTOMERS_COMMENTS_DELETER']) || data.own && can(['CUSTOMERS_OWN_COMMENTS_OWN_DELETER']);
       case 'import':
       case 'importAnalyze':
       case 'importSpreadsheet':
@@ -15559,8 +15399,11 @@ PermissionHandler = function () {
       case 'deactivate':
       case 'clearSync':
       case 'restrictLocations':
-        return can(['USERS_ADMIN']);
+      case 'addRole':
+      case 'deleteRole':
+      case 'editRole':
       case 'referFriend':
+        return can(['USERS_ADMIN']);
       case 'changeAccountOwner':
         return this._isOwner;
       case 'getReport':
@@ -15647,12 +15490,19 @@ PermissionHandler = function () {
     case 'billing':
       switch (action) {
       default:
-        return can(['ACCOUNT_SUBSCRIPTIONS_READER']);
+        return can([
+          'ACCOUNT_SUBSCRIPTIONS_READER',
+          'ACCOUNT_BILLING_READER'
+        ]);
       case 'reset':
-      case 'cancelPlan':
       case 'changePlan':
       case 'upgrade':
-        return can(['ACCOUNT_SUBSCRIPTIONS_ADMIN']) && this._isOwner;
+        return can([
+          'ACCOUNT_SUBSCRIPTIONS_ADMIN',
+          'ACCOUNT_BILLING_ADMIN'
+        ]);
+      case 'cancelPlan':
+        return this._isOwner;
       }
       break;
     case 'templates':
@@ -15672,6 +15522,15 @@ PermissionHandler = function () {
         return can(['TEMPLATES_ADMIN']);
       }
       break;
+    case 'settings':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return can(['ACCOUNT_SETTINGS_READER']);
+      case 'update':
+        return can(['ACCOUNT_SETTINGS_ADMIN']);
+      }
     }
   };
   return PermissionHandler;
@@ -15909,7 +15768,7 @@ Reservation = function ($, api, Transaction, Conflict, common) {
    * @returns {boolean}
    */
   Reservation.prototype.canGenerateDocument = function () {
-    return this.status == 'open' || this.status == 'closed' || this.status == 'closed_manually';
+    return this.status == 'open' || this.status == 'closed';
   };
   //
   // Document overrides
@@ -17124,7 +16983,6 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var data = Base.prototype._toJson.call(this, options);
     //data.started = this.from;  // VT: Will be set during checkout
     //data.finished = this.to;  // VT: Will be set during final checkin
-    data.due = this.due;
     if (this.location) {
       // Make sure we send the location as id, not the entire object
       data.location = this._getId(this.location);
@@ -17749,17 +17607,6 @@ User = function ($, Base, common) {
     this.email = $.trim(this.email);
     return common.isValidEmail(this.email);
   };
-  User.prototype.isValidRole = function () {
-    switch (this.role) {
-    case 'user':
-    case 'admin':
-    case 'root':
-    case 'selfservice':
-      return true;
-    default:
-      return false;
-    }
-  };
   User.prototype.emailExists = function () {
     if (this.isValidEmail()) {
       // Don't check for emailExists for exisiting user
@@ -17782,7 +17629,7 @@ User = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.isValid = function () {
-    return this.isValidName() && this.isValidEmail() && this.isValidRole();
+    return this.isValidName() && this.isValidEmail();
   };
   /**
    * Checks if the user is empty
@@ -18042,7 +17889,6 @@ User = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
     return data;
   };
@@ -18087,7 +17933,7 @@ UserSync = function ($, Base, common) {
     missingUsers: 'ignore',
     overwriteLocalUsers: true,
     autoSync: false,
-    role: 'selfservice',
+    role: '',
     query: '(cn=*)',
     base: 'ou=team,dc=yourdomain,dc=com',
     loginField: 'uid',
@@ -18166,16 +18012,6 @@ UserSync = function ($, Base, common) {
     this.name = $.trim(this.name);
     return this.name.length >= 3;
   };
-  UserSync.prototype.isValidRole = function () {
-    switch (this.role) {
-    case 'user':
-    case 'admin':
-    case 'selfservice':
-      return true;
-    default:
-      return false;
-    }
-  };
   /**
    * Checks if the usersync is valid
    * @method
@@ -18183,7 +18019,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isValid = function () {
-    return this.isValidName() && this.isValidRole();
+    return this.isValidName();
   };
   /**
    * Checks if the user is empty

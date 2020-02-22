@@ -333,7 +333,6 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         //data.started = this.from;  // VT: Will be set during checkout
         //data.finished = this.to;  // VT: Will be set during final checkin
-        data.due = this.due;
         if (this.location) {
             // Make sure we send the location as id, not the entire object
             data.location = this._getId(this.location);

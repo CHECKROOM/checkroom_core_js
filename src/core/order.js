@@ -74,8 +74,8 @@ define([
         // and never be called on order update
         // since most updates are done via setter methods
         var data = Transaction.prototype._toJson.call(this, options);
-        data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
-        data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
+        //data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
+        //data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
         data.due = (this.due!=null) ? this.due.toJSONDate() : "null";
         return data;
     };

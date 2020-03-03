@@ -44,6 +44,7 @@ define([], function () {
         this._useApi =                (limits.allowAPI);
         this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation !== undefined?profile.custodyCanChangeLocation:true); // TODO change this update fallback (mobile)
         this._useSpotcheck =           (limits.allowSpotcheck) &&           (profile.useSpotcheck);
+        this._useCustomRoles =         (limits.allowCustomRoles);
     };
 
     // 
@@ -78,6 +79,9 @@ define([], function () {
     };
     PermissionHandler.prototype.canUseSpotcheck = function(){
         return this.limits.allowSpotcheck;
+    }
+    PermissionHandler.prototype.canUseCustomRoles = function(){
+        return this.limits.allowCustomRoles;
     }
 
     //
@@ -609,7 +613,7 @@ define([], function () {
                         return can(["CUSTOMERS_ATTACHMENTS_OWN_WRITER", "CUSTOMERS_ATTACHMENTS_WRITER"]);
                     case "detach":
                     case "removeAttachment":
-                        return can(["CUSTOMERS_ATTACHMENTS_DELETER"]) || (data.own && can(["CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER"]));
+                        return can(["CUSTOMERS_ATTACHMENTS_DELETER"]) || (data.own && can(["CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER", "CUSTOMERS_ATTACHMENTS_OWN_DELETER"]));
                     case "printLabel":
                         return can(["CUSTOMERS_LABEL_PRINTER", "CUSTOMERS_LABEL_PRINTER_RESTRICTED"]);
                     case "addComment":

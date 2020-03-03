@@ -8457,8 +8457,7 @@ user = function ($, Base, common) {
     // user, admin
     active: true,
     isOwner: false,
-    archived: null,
-    restrictLocations: []
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8492,7 +8491,6 @@ user = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
-    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -8540,7 +8538,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
   };
   User.prototype._isDirtyInfo = function () {
     if (this.raw) {
@@ -8552,18 +8550,6 @@ user = function ($, Base, common) {
     }
     return false;
   };
-  User.prototype._isDirtyRestrictLocations = function () {
-    if (this.raw) {
-      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-      // Check if other locations have been selected
-      return this.restrictLocations.filter(function (x) {
-        return restrictLocations.indexOf(x) < 0;
-      }).length > 0 || restrictLocations.filter(function (x) {
-        return that.restrictLocations.indexOf(x) < 0;
-      }).length > 0;
-    }
-    return false;
-  };
   /**
    * Checks if the user is dirty and needs saving
    * @method
@@ -8572,7 +8558,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
+    return isDirty || this._isDirtyInfo();
   };
   /**
    * Gets a url for a user avatar
@@ -8719,36 +8705,6 @@ user = function ($, Base, common) {
     });
   };
   /**
-   * Restrict user access to specific location(s)
-   * @param locations
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.setRestrictLocations = function (locations, skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'setRestrictLocations',
-      params: { restrictLocations: locations },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clear user location(s) access (makes all location accessible for the user)
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.clearRestrictLocations = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'clearRestrictLocations',
-      skipRead: skipRead
-    });
-  };
-  /**
    * Updates the user
    * @param skipRead
    * @returns {*}
@@ -8763,22 +8719,13 @@ user = function ($, Base, common) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid user'));
     }
-    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred();
+    var that = this, dfdInfo = $.Deferred();
     if (this._isDirtyInfo()) {
       dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
     } else {
       dfdInfo.resolve();
     }
-    if (this._isDirtyRestrictLocations()) {
-      if (this.restrictLocations.length != 0) {
-        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
-      } else {
-        dfdRestrictLocations = this.clearRestrictLocations(true);
-      }
-    } else {
-      dfdRestrictLocations.resolve();
-    }
-    return $.when(dfdInfo, dfdRestrictLocations);
+    return $.when(dfdInfo);
   };
   /**
    * Writes the user to a json object
@@ -8813,7 +8760,6 @@ user = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
-      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });
@@ -14720,6 +14666,7 @@ PermissionHandler = function () {
     this._useReleaseAtLocation = this._useCustody && (profile.custodyCanChangeLocation !== undefined ? profile.custodyCanChangeLocation : true);
     // TODO change this update fallback (mobile)
     this._useSpotcheck = limits.allowSpotcheck && profile.useSpotcheck;
+    this._useCustomRoles = limits.allowCustomRoles;
   };
   // 
   // Module helpers
@@ -14753,6 +14700,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.canUseSpotcheck = function () {
     return this.limits.allowSpotcheck;
+  };
+  PermissionHandler.prototype.canUseCustomRoles = function () {
+    return this.limits.allowCustomRoles;
   };
   //
   // Permission helpers
@@ -15345,7 +15295,10 @@ PermissionHandler = function () {
         ]);
       case 'detach':
       case 'removeAttachment':
-        return can(['CUSTOMERS_ATTACHMENTS_DELETER']) || data.own && can(['CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER']);
+        return can(['CUSTOMERS_ATTACHMENTS_DELETER']) || data.own && can([
+          'CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER',
+          'CUSTOMERS_ATTACHMENTS_OWN_DELETER'
+        ]);
       case 'printLabel':
         return can([
           'CUSTOMERS_LABEL_PRINTER',
@@ -17556,8 +17509,7 @@ User = function ($, Base, common) {
     // user, admin
     active: true,
     isOwner: false,
-    archived: null,
-    restrictLocations: []
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -17591,7 +17543,6 @@ User = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
-    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -17639,7 +17590,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
   };
   User.prototype._isDirtyInfo = function () {
     if (this.raw) {
@@ -17651,18 +17602,6 @@ User = function ($, Base, common) {
     }
     return false;
   };
-  User.prototype._isDirtyRestrictLocations = function () {
-    if (this.raw) {
-      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-      // Check if other locations have been selected
-      return this.restrictLocations.filter(function (x) {
-        return restrictLocations.indexOf(x) < 0;
-      }).length > 0 || restrictLocations.filter(function (x) {
-        return that.restrictLocations.indexOf(x) < 0;
-      }).length > 0;
-    }
-    return false;
-  };
   /**
    * Checks if the user is dirty and needs saving
    * @method
@@ -17671,7 +17610,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
+    return isDirty || this._isDirtyInfo();
   };
   /**
    * Gets a url for a user avatar
@@ -17818,36 +17757,6 @@ User = function ($, Base, common) {
     });
   };
   /**
-   * Restrict user access to specific location(s)
-   * @param locations
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.setRestrictLocations = function (locations, skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'setRestrictLocations',
-      params: { restrictLocations: locations },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clear user location(s) access (makes all location accessible for the user)
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.clearRestrictLocations = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'clearRestrictLocations',
-      skipRead: skipRead
-    });
-  };
-  /**
    * Updates the user
    * @param skipRead
    * @returns {*}
@@ -17862,22 +17771,13 @@ User = function ($, Base, common) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid user'));
     }
-    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred();
+    var that = this, dfdInfo = $.Deferred();
     if (this._isDirtyInfo()) {
       dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
     } else {
       dfdInfo.resolve();
     }
-    if (this._isDirtyRestrictLocations()) {
-      if (this.restrictLocations.length != 0) {
-        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
-      } else {
-        dfdRestrictLocations = this.clearRestrictLocations(true);
-      }
-    } else {
-      dfdRestrictLocations.resolve();
-    }
-    return $.when(dfdInfo, dfdRestrictLocations);
+    return $.when(dfdInfo);
   };
   /**
    * Writes the user to a json object
@@ -17912,7 +17812,6 @@ User = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
-      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });

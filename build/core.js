@@ -1,16 +1,24 @@
-(function (factory) {
+(function (root, factory) {
 if (typeof define === 'function' && define.amd) {
 define(['jquery', 'moment'], factory);
 } else {
-factory($, moment);
+ root.cheqroomCore = factory($, moment);
 }
-}(function (jquery, moment) {/**
- * Provides the classes needed to communicate with the CHECKROOM API
- * @module api
- * @namespace api
- * @copyright CHECKROOM NV 2015
- */
-var api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+}(this, function (jquery, moment) {//Queued AJAX requests
+//https://stackoverflow.com/questions/3034874/sequencing-ajax-requests/3035268#3035268
+//http://jsfiddle.net/p4zjH/1/
+var common_queue, api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common_changeLog, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+common_queue = function ($) {
+  $.fn.ajaxQueue = function () {
+    var previous = new $.Deferred().resolve();
+    return function (fn, fail) {
+      if (typeof fn !== 'function') {
+        throw 'must be a function';
+      }
+      return previous = previous.then(fn, fail || fn);
+    };
+  };
+}(jquery);
 api = function ($, moment) {
   var MAX_QUERYSTRING_LENGTH = 2048;
   //TODO change this
@@ -21,7 +29,15 @@ api = function ($, moment) {
   };
   // Disable caching AJAX requests in IE
   // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
-  $.ajaxSetup({ cache: false });
+  $.ajaxSetup({
+    beforeSend: function (xhr, call) {
+      if (call.type == 'GET') {
+        call.url += (call.url.indexOf('?') == -1 ? '?' : '&') + '_=' + new Date().getTime();
+      } else {
+        call.data['_'] = new Date().getTime();
+      }
+    }
+  });
   var api = {};
   //*************
   // ApiErrors
@@ -282,23 +298,31 @@ api = function ($, moment) {
   api.ApiUser = function (spec) {
     spec = spec || {};
     this.userId = spec.userId || '';
+    this.userEmail = spec.userEmail || '';
     this.userToken = spec.userToken || '';
     this.tokenType = spec.tokenType || '';
+    this.impersonated = spec.impersonated || false;
   };
   api.ApiUser.prototype.fromStorage = function () {
     this.userId = window.localStorage.getItem('userId') || '';
+    this.userEmail = window.localStorage.getItem('userEmail') || '';
     this.userToken = window.localStorage.getItem('userToken') || '';
     this.tokenType = window.localStorage.getItem('tokenType') || '';
+    this.impersonated = window.localStorage.getItem('impersonated') === 'true';
   };
   api.ApiUser.prototype.toStorage = function () {
     window.localStorage.setItem('userId', this.userId);
+    window.localStorage.setItem('userEmail', this.userEmail);
     window.localStorage.setItem('userToken', this.userToken);
     window.localStorage.setItem('tokenType', this.tokenType);
+    window.localStorage.setItem('impersonated', this.impersonated);
   };
   api.ApiUser.prototype.removeFromStorage = function () {
     window.localStorage.removeItem('userId');
+    window.localStorage.removeItem('userEmail');
     window.localStorage.removeItem('userToken');
     window.localStorage.removeItem('tokenType');
+    window.localStorage.removeItem('impersonated');
   };
   api.ApiUser.prototype.clearToken = function () {
     window.localStorage.setItem('userToken', null);
@@ -312,6 +336,8 @@ api = function ($, moment) {
     this.userId = '';
     this.userToken = '';
     this.tokenType = '';
+    this.userEmail = '';
+    this.impersonated = false;
   };
   //*************
   // ApiAuth
@@ -351,7 +377,7 @@ api = function ($, moment) {
           'cancelled_expired',
           'archived'
         ].indexOf(resp.subscription) != -1 ? that.allowAccountOwner : true)) {
-        dfd.resolve(resp.data);
+        dfd.resolve(resp.data, resp.is_impersonated === true);
       } else {
         dfd.reject(resp);
       }
@@ -387,17 +413,23 @@ api = function ($, moment) {
    * @param method
    * @param params
    * @param timeOut
-   * @param opt
+   * @param usePost
    * @returns {*}
    */
-  api.ApiAnonymous.prototype.call = function (method, params, timeOut, opt) {
+  api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
     system.log('ApiAnonymous: call ' + method);
     if (this.version) {
       params = params || {};
       params['_v'] = this.version;
     }
-    var url = this.urlApi + '/' + method + '?' + $.param(this.ajax._prepareDict(params));
-    return this.ajax.get(url, timeOut, opt);
+    var cmd = 'call.' + method;
+    var url = this.urlApi + '/' + method;
+    var getUrl = url + '?' + $.param(this.ajax._prepareDict(params));
+    if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
+      return this.ajax.post(url, params, timeOut);
+    } else {
+      return this.ajax.get(getUrl, timeOut);
+    }
   };
   /**
    * Makes a long call (timeout 60s) to the API which doesn't require a token
@@ -405,12 +437,12 @@ api = function ($, moment) {
    * @name ApiAnonymous#longCall
    * @param method
    * @param params
-   * @param opt
+   * @param usePost
    * @returns {*}
    */
-  api.ApiAnonymous.prototype.longCall = function (method, params, opt) {
+  api.ApiAnonymous.prototype.longCall = function (method, params, usePost) {
     system.log('ApiAnonymous: longCall ' + method);
-    return this.call(method, params, 60000, opt);
+    return this.call(method, params, 60000, usePost);
   };
   //*************
   // ApiDataSource
@@ -519,12 +551,33 @@ api = function ($, moment) {
   api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
     system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
     var cmd = 'getMultiple';
-    var url = this.getBaseUrl() + pks.join(',') + ',';
-    var p = this.getParamsDict(fields);
-    if (!$.isEmptyObject(p)) {
-      url += '?' + this.getParams(p);
-    }
-    return this._ajaxGet(cmd, url);
+    //BUGFIX url to long
+    var chunk_size = 100;
+    var groups = pks.map(function (e, i) {
+      return i % chunk_size === 0 ? pks.slice(i, i + chunk_size) : null;
+    }).filter(function (e) {
+      return e;
+    });
+    var that = this, returnArr = [];
+    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred();
+    $.each(groups, function (i, group) {
+      var url = that.getBaseUrl() + group.join(',');
+      var p = that.getParamsDict(fields);
+      if (!$.isEmptyObject(p)) {
+        url += '?' + that.getParams(p);
+      }
+      ajaxQueue(function () {
+        return that._ajaxGet(cmd, url).then(function (resp) {
+          // BUGFIX make sure that response is an array
+          resp = $.isArray(resp) ? resp : [resp];
+          returnArr = returnArr.concat(resp);
+        });
+      });
+    });
+    ajaxQueue(function () {
+      return dfdMultiple.resolve(returnArr);
+    });
+    return dfdMultiple;
   };
   /**
    * Deletes a document by its primary key
@@ -685,6 +738,33 @@ api = function ($, moment) {
   };
   api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
     var url = this.getBaseUrl() + 'search';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    url += '?' + this.getParams(p);
+    return url;
+  };
+  /**
+   * Export objects in the collection
+   * @method
+   * @name ApiDataSource#export
+   * @param params
+   * @param fields
+   * @param limit
+   * @param skip
+   * @param sort
+   * @param mimeType
+   * @returns {promise}
+   */
+  api.ApiDataSource.prototype.export = function (params, fields, limit, skip, sort, mimeType) {
+    system.log('ApiDataSource: ' + this.collection + ': export ' + params);
+    var cmd = 'export';
+    var url = this.exportUrl(params, fields, limit, skip, sort, mimeType);
+    return this._ajaxGet(cmd, url);
+  };
+  api.ApiDataSource.prototype.exportUrl = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'call/export';
     var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
     if (mimeType != null && mimeType.length > 0) {
       p['mimeType'] = mimeType;
@@ -882,7 +962,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^\S*([A-Z0-9 \-]{4,22})\S*$/i) != null;
+    return barCode && barCode.match(/^([A-Z0-9\s\-]{3,22})$/i) != null;
   },
   /**
    * isValidQRCode
@@ -997,7 +1077,14 @@ common_code = {
    * @return {string}      
    */
   getQRCodeUrl: function (urlApi, code, size) {
-    return urlApi + '/qrcode?code=' + code + '&size=' + size;
+    var sizes = {
+      'XS': 1,
+      'S': 2,
+      'M': 3,
+      'L': 4,
+      'XL': 5
+    };
+    return urlApi + '?code=' + code + '&scale=' + sizes[size];
   },
   /**
    * getBarcodeUrl 
@@ -1012,7 +1099,7 @@ common_code = {
    * @return {string}      
    */
   getBarcodeUrl: function (urlApi, code, width, height) {
-    return urlApi + '/barcode?code=' + code + '&width=' + width + (height ? '&height=' + height : '');
+    return urlApi + '?code=' + code + '&width=' + width + (height ? '&height=' + height : '');
   }
 };
 common_order = function (moment) {
@@ -1148,10 +1235,13 @@ common_order = function (moment) {
       if (this.isOrderOverdue(order, now)) {
         return 'label-overdue';
       } else if (this.isOrderArchived(order)) {
-        return this.getFriendlyOrderCss(order.status) + ' label-striped';
+        return 'label-archived';
       } else {
         return this.getFriendlyOrderCss(order.status);
       }
+    },
+    canOrderSpotcheck: function (order) {
+      return order.archived == null && ['closed'].indexOf(order.status) == -1;
     }
   };
 }(moment);
@@ -1173,6 +1263,8 @@ common_reservation = {
     case 'open':
       return 'label-open';
     case 'closed':
+      return 'label-converted';
+    case 'closed_manually':
       return 'label-closed';
     case 'cancelled':
       return 'label-cancelled';
@@ -1197,7 +1289,9 @@ common_reservation = {
     case 'open':
       return 'Booked';
     case 'closed':
-      return 'Completed';
+      return 'Converted';
+    case 'closed_manually':
+      return 'Closed';
     case 'cancelled':
       return 'Cancelled';
     default:
@@ -1290,29 +1384,44 @@ common_reservation = {
    * @return {string}       
    */
   getReservationCss: function (reservation) {
-    if (this.isOrderArchived(reservation)) {
-      return this.getFriendlyReservationCss(reservation.status) + ' label-striped';
+    if (this.isReservationArchived(reservation)) {
+      return 'label-archived';
     } else {
       return this.getFriendlyReservationCss(reservation.status);
     }
+  },
+  getReservationStatus: function (reservation) {
+    if (this.isReservationArchived(reservation)) {
+      return 'Archived';
+    } else {
+      return this.getFriendlyReservationStatus(reservation.status);
+    }
+  },
+  canReservationSpotcheck: function (reservation) {
+    return reservation.archived == null && [
+      'cancelled',
+      'closed'
+    ].indexOf(reservation.status) == -1;
   }
 };
-common_item = function () {
+common_item = function (moment, orderHelper, reservationHelper) {
   var that = {};
   that.itemCanTakeCustody = function (item) {
-    return item.status == 'available';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'available';
   };
   that.itemCanReleaseCustody = function (item) {
     return item.status == 'in_custody';
   };
   that.itemCanTransferCustody = function (item) {
-    return item.status == 'in_custody';
+    var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
+    return canCustody && item.status == 'in_custody';
   };
   that.itemCanReserve = function (item) {
-    return item.status != 'expired' && item.status != 'in_custody';
+    return item.canReserve !== undefined ? item.canReserve === 'available' : true;
   };
   that.itemCanCheckout = function (item) {
-    return item.status == 'available';
+    return item.canOrder !== undefined ? item.canOrder === 'available' : true;
   };
   that.itemCanGoToCheckout = function (item) {
     return item.status == 'checkedout' || item.status == 'await_checkout';
@@ -1467,7 +1576,9 @@ common_item = function () {
   * @return {Array}       
   */
   that.getAvailableItems = function (items) {
-    return this.getItemsByStatus(items, 'available');
+    return this.getItemsByStatus(items, 'available').filter(function (item) {
+      return item.canOrder === 'available';
+    });
   };
   /**
   * getActiveItems
@@ -1482,6 +1593,8 @@ common_item = function () {
   that.getActiveItems = function (items) {
     return this.getItemsByStatus(items, function (item) {
       return item.status != 'expired' && item.status != 'in_custody';
+    }).filter(function (item) {
+      return item.canReserve === 'available';
     });
   };
   /**
@@ -1499,8 +1612,238 @@ common_item = function () {
       return typeof item === 'string' ? item : item._id;
     });
   };
+  /**
+  * getItemMessages
+  *
+  * @memberOf common
+  * @name  common#getItemMessages
+  * @method
+  * 
+  * @param  item          
+  * @param  permissionHandler
+  * @param  dateHelper
+  * @param  user        
+  * @return {promise}                   
+  */
+  that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper, user, group) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
+    var formatDate = function (date) {
+      return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    var isOwn = function (contact) {
+      contact = typeof contact !== 'string' ? contact || {} : { _id: contact };
+      user = user || {};
+      if (!user.customer) {
+        user.customer = {};
+      }
+      return contact._id == user.customer._id;
+    };
+    // Check-out message?
+    if (item.status == 'checkedout' || item.status == 'await_checkout') {
+      var message = '', dfd = $.Deferred();
+      getDataSource('orders').search({
+        _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'started',
+        status: item.status == 'checkedout' ? 'open' : 'creating',
+        _limit: 1,
+        _skip: 0,
+        items__contains: item.id
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          dfd.resolve(resp.docs[0]);
+        }
+      });
+      dfd.then(function (checkout) {
+        checkout = checkout || {};
+        if (isOwn(checkout.customer)) {
+          checkout.customer = user.customer;
+          checkout.customer.user = user;
+        }
+        if (item.status == 'await_checkout') {
+          message = 'Item is currently <strong>awaiting checkout</strong>';
+        } else {
+          if (checkout && orderHelper.isOrderOverdue(checkout)) {
+            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + (typeof checkout.customer !== 'string' ? ' from ' + checkout.customer.name : '');
+          } else {
+            message = 'Item is <strong>checked out</strong>' + (typeof checkout.customer !== 'string' ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due);
+          }
+        }
+        messages.push({
+          kind: 'checkout',
+          priority: MessagePriority.Critical,
+          message: message,
+          checkout: !isOwn(checkout.customer) && isSelfservice ? {} : checkout
+        });
+        dfdCheckouts.resolve();
+      });
+    } else {
+      dfdCheckouts.resolve();
+    }
+    // Reservation message? 
+    if (perm.hasReservationPermission('read')) {
+      getDataSource('reservations').search({
+        status: 'open',
+        fromDate__gte: moment(),
+        _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'fromDate',
+        _limit: 1,
+        _skip: 0,
+        items__contains: item.id
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          var reservation = resp.docs[0];
+          message = 'Next <strong>reservation</strong> is ' + reservation.fromDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(reservation.fromDate) + '</span>';
+          messages.push({
+            kind: 'reservation',
+            priority: MessagePriority.High,
+            reservation: reservation,
+            isOwn: isOwn(reservation.customer),
+            message: message
+          });
+        }
+        dfdReservations.resolve();
+      });
+    } else {
+      dfdReservations.resolve();
+    }
+    // Custody message?
+    if (item.status == 'in_custody') {
+      var dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('items').call(item.id, 'getChangeLog', {
+          action__in: [
+            'takeCustody',
+            'transferCustody'
+          ],
+          limit: 1,
+          skip: 0
+        }).then(function (resp) {
+          getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+            dfd.resolve(contact, resp[0].created);
+          });
+        });
+      }
+      dfd.then(function (contact, since) {
+        var message = 'Item is <strong>in ' + (isOwn(item.custody) ? 'your' : '') + ' custody</strong>' + (contact && !isOwn(item.custody) ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        messages.push({
+          kind: 'custody',
+          priority: MessagePriority.High,
+          by: contact || {},
+          message: message
+        });
+        dfdCustody.resolve();
+      });
+    } else {
+      dfdCustody.resolve();
+    }
+    // Permission message?
+    var canReserve = perm.hasItemPermission('reserve') && item.allowReserve, canCheckout = perm.hasItemPermission('checkout') && item.allowCheckout, canCustody = perm.hasItemPermission('takeCustody') && item.allowCustody;
+    var flag = group.itemFlags.find(function (f) {
+        return f.id == item.flag;
+      }), hasUnavailableFlag = flag && !flag.available;
+    if ((!item.allowReserve || !item.allowCheckout || !item.allowCustody) && !hasUnavailableFlag) {
+      var notAllowedActions = [], allowedActions = [];
+      if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (!canReserve && !canCheckout || canReserve && canCheckout)) {
+        if (canReserve && canCheckout) {
+          allowedActions.push('Bookings');
+        } else {
+          // modules enabled?d
+          if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Bookings');
+          }
+        }
+      } else {
+        if (canReserve) {
+          allowedActions.push('Reservation');
+        } else {
+          if (perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Reservation');
+          }
+        }
+        if (canCheckout) {
+          allowedActions.push('Check-out');
+        } else {
+          // module enabled
+          if (perm.hasCheckoutPermission('read')) {
+            notAllowedActions.push('Check-out');
+          }
+        }
+      }
+      if (canCustody) {
+        allowedActions.push('Custody');
+      } else {
+        // module enabled?
+        if (perm.hasItemPermission('takeCustody')) {
+          notAllowedActions.push('Custody');
+        }
+      }
+      var message = '', unavailable = !canReserve && !canCheckout && !canCustody;
+      if (unavailable) {
+        message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+      } else {
+        message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + '<span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>';
+      }
+      messages.push({
+        kind: 'permission',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    // Flag message?
+    if (flag) {
+      var message = 'Item was <strong>flagged</strong> as ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      if (hasUnavailableFlag) {
+        message = 'Item is <strong>unavailable</strong> because of flag ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      }
+      messages.push({
+        kind: 'flag',
+        priority: hasUnavailableFlag ? MessagePriority.High : MessagePriority.Medium,
+        message: message,
+        flag: flag
+      });
+    }
+    if (item.warrantyDate) {
+      var message = '';
+      var inWarranty = Math.round(moment().diff(item.warrantyDate, 'days')) >= 0;
+      if (inWarranty) {
+        message = 'Went <strong>out of warranty</strong> ' + item.warrantyDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(item.warrantyDate) + '</span>';
+      } else {
+        message = 'Warranty <strong>expires</strong> ' + item.warrantyDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(item.warrantyDate) + '</span>';
+      }
+      messages.push({
+        kind: 'warranty',
+        priority: MessagePriority.Low,
+        message: message,
+        inWarranty: inWarranty
+      });
+    }
+    // Expired message?
+    if (item.status == 'expired') {
+      var message = 'Item was <strong>expired</strong> ' + (item.expired ? '<span class=\'text-muted\'>' + item.expired.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'expired',
+        priority: MessagePriority.Critical,
+        message: message
+      });
+    }
+    return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}();
+}(moment, common_order, common_reservation);
 common_conflicts = {
   /**
    * getFriendlyConflictKind
@@ -1524,6 +1867,12 @@ common_conflicts = {
       return 'Item is expired';
     case 'custody':
       return 'Item is in custody';
+    case 'not_allowed_reservation':
+      return 'Item cannot be reserved';
+    case 'not_allowed_order':
+      return 'Item cannot be checked out';
+    case 'flag':
+      return 'Item is flagged';
     default:
       return '';
     }
@@ -1867,7 +2216,7 @@ common_image = function ($) {
      */
     getImageCDNUrl: function (settings, groupId, attachmentId, size) {
       // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
-      var url = 'https://cheqroom-cdn.s3.amazonaws.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
+      var url = 'https://assets.cheqroomcdn.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
       if (size && size.length > 0) {
         var parts = url.split('.');
         var ext = attachmentId.indexOf('.') != -1 ? parts.pop() : '';
@@ -1882,6 +2231,12 @@ common_image = function ($) {
   };
 }(jquery);
 common_attachment = function (moment) {
+  var IMAGES = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif'
+  ];
   /**
    * Provides attachment related helper methods
    */
@@ -1935,6 +2290,34 @@ common_attachment = function (moment) {
         }
       }
       return '';
+    },
+    /**
+     * isImage
+     *
+     * @memberOf common
+     * @name  common#isImage
+     * @method
+     * 
+     * @param  fileName
+     * @return {boolean}  
+     */
+    isImage: function (fileName) {
+      var ext = this.getExt(fileName);
+      return $.inArray(ext, IMAGES) >= 0;
+    },
+    /**
+     * getExt
+     *
+     * @memberOf common
+     * @name  common#getExt
+     * @method
+     * 
+     * @param  fileName
+     * @return {string}  
+     */
+    getExt: function (fileName) {
+      var EXT = /(?:\.([^.]+))?$/;
+      return (EXT.exec(fileName)[1] || '').toLowerCase();
     }
   };
 }(moment);
@@ -3156,6 +3539,48 @@ common_inflection = function () {
       return undefined;
     };
   }
+  // https://tc39.github.io/ecma262/#sec-array.prototype.includes
+  if (!Array.prototype.includes) {
+    Object.defineProperty(Array.prototype, 'includes', {
+      value: function (searchElement, fromIndex) {
+        if (this == null) {
+          throw new TypeError('"this" is null or not defined');
+        }
+        // 1. Let O be ? ToObject(this value).
+        var o = Object(this);
+        // 2. Let len be ? ToLength(? Get(O, "length")).
+        var len = o.length >>> 0;
+        // 3. If len is 0, return false.
+        if (len === 0) {
+          return false;
+        }
+        // 4. Let n be ? ToInteger(fromIndex).
+        //    (If fromIndex is undefined, this step produces the value 0.)
+        var n = fromIndex | 0;
+        // 5. If n ≥ 0, then
+        //  a. Let k be n.
+        // 6. Else n < 0,
+        //  a. Let k be len + n.
+        //  b. If k < 0, let k be 0.
+        var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
+        function sameValueZero(x, y) {
+          return x === y || typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y);
+        }
+        // 7. Repeat, while k < len
+        while (k < len) {
+          // a. Let elementK be the result of ? Get(O, ! ToString(k)).
+          // b. If SameValueZero(searchElement, elementK) is true, return true.
+          if (sameValueZero(o[k], searchElement)) {
+            return true;
+          }
+          // c. Increase k by 1.
+          k++;
+        }
+        // 8. Return false
+        return false;
+      }
+    });
+  }
   if (!Object.values) {
     Object.values = function (obj) {
       var vals = [];
@@ -3216,8 +3641,8 @@ common_validation = function (moment) {
      * @return {Boolean}       
      */
     isValidEmail: function (email) {
-      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
-      return re.test(email);
+      var m = email.match(/^([\w-\+']+(?:\.[\w-\+']+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      return m != null && m.length > 0;
     },
     /**
      * isFreeEmail
@@ -3228,8 +3653,8 @@ common_validation = function (moment) {
      * @returns {boolean}
      */
     isFreeEmail: function (email) {
-      var re = /^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i;
-      return !re.test(email);
+      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
+      return m == null;
     },
     /**
      * isValidPhone
@@ -3240,11 +3665,14 @@ common_validation = function (moment) {
      * @return {Boolean}       
      */
     isValidPhone: function (phone) {
-      var isnum = /^\d{9,}$/.test(phone);
-      if (isnum) {
+      // stip all none ascii characters
+      // f.e "054-5237745‬4" --> "054-5237745%u202C4"
+      // https://stackoverflow.com/questions/20856197/remove-non-ascii-character-in-string
+      phone = phone.replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~]*/g, '');
+      if ($.isNumeric(phone)) {
         return true;
       }
-      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){10,20}(( x| ext)\d{1,5}){0,1}$/);
+      var m = phone.match(/^[\s()+-]*([0-9][\s()+-]*){7,20}(( x| ext)\d{1,5}){0,1}$/);
       return m != null && m.length > 0;
     },
     /**
@@ -3257,8 +3685,8 @@ common_validation = function (moment) {
      */
     isValidURL: function (url) {
       // http://stackoverflow.com/questions/1303872/trying-to-validate-url-using-javascript
-      var re = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
-      return re.test(url);
+      var m = url.match(/^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{1,}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_@\!-]+))*$/);
+      return m != null && m.length > 0;
     },
     /**
      * isValidPassword
@@ -3283,11 +3711,11 @@ common_validation = function (moment) {
      * @return {Boolean}    
      */
     isNumeric: function (value, onlyInteger) {
-      var isNumeric = !isNaN(parseFloat(value)) && isFinite(value);
+      var isNumeric = $.isNumeric(value);
       if (onlyInteger) {
-        return '' + value === '' + parseInt(value);
+        return (value ^ 0) === Number(value);
       }
-      return isNumeric;
+      return $.isNumeric(value);
     },
     /**
      * isValidDate
@@ -3298,6 +3726,10 @@ common_validation = function (moment) {
      * @return {Boolean}    
      */
     isValidDate: function (value) {
+      // make sure numbers are parsed as a number
+      if (!isNaN(value)) {
+        value = parseInt(value);
+      }
       return moment(value).isValid();
     }
   };
@@ -3404,7 +3836,14 @@ common_utils = function ($) {
    */
   utils.getLoginName = function (firstName, lastName) {
     var patt = /[\s-]*/gim;
-    return firstName.latinise().toLowerCase().replace(patt, '') + '.' + lastName.latinise().toLowerCase().replace(patt, '');
+    var parts = [];
+    if (firstName) {
+      parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
+    }
+    if (lastName) {
+      parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
+    }
+    return parts.join('.');
   };
   /**
    * Gets a parameter from the querystring (returns null if not found)
@@ -3412,14 +3851,15 @@ common_utils = function ($) {
    * @name  utils#getUrlParam
    * @method
    * @param  {string} name
-   * @param {string} default
+   * @param  {string} default
+   * @param  {string} url
    * @return {string}
    */
-  utils.getUrlParam = function (name, def) {
+  utils.getUrlParam = function (name, def, url) {
     name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
     var regexS = '[\\?&]' + name + '=([^&#]*)';
     var regex = new RegExp(regexS);
-    var results = regex.exec(window.location.href);
+    var results = regex.exec(url || window.location.href);
     return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : def;
   };
   // jQuery extension method
@@ -3437,6 +3877,9 @@ common_utils = function ($) {
       var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
       return customs.filter(function (cust, idx, arr) {
         return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
+      }).map(function (cust) {
+        // trim each line
+        return $.trim(cust);
       });
     } else {
       return [];
@@ -3472,7 +3915,40 @@ common_utils = function ($) {
     if (kind == 'select') {
       friendlyKind = 'dropdown list';
     }
+    if (kind == 'number') {
+      friendlyKind = 'numeric';
+    }
     return friendlyKind;
+  };
+  /**
+   * arrayToCSV
+   * https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
+   * @param  {array} csv      
+   * @param  {[type]} filename 
+   */
+  utils.arrayToCSV = function (csv, filename) {
+    var csvFile;
+    var downloadLink;
+    // CSV file
+    csvFile = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // BUGFIX IE Access is denied.
+    // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(csvFile, filename);
+    } else {
+      // Download link
+      downloadLink = window.document.createElement('a');
+      // File name
+      downloadLink.download = filename;
+      // Create a link to the file
+      downloadLink.href = window.URL.createObjectURL(csvFile);
+      // Hide download link
+      downloadLink.style.display = 'none';
+      // Add the link to DOM
+      window.document.body.appendChild(downloadLink);
+      // Click download link
+      downloadLink.click();
+    }
   };
   return utils;
 }(jquery);
@@ -3565,11 +4041,6 @@ common_slimdown = function () {
       },
       // horizontal rule
       {
-        regex: /(?:[^\n]|\n(?! *\n))+/g,
-        replacement: para
-      },
-      // add paragraphs
-      {
         regex: /<\/ul>\s?<ul>/g,
         replacement: ''
       },
@@ -3580,10 +4051,16 @@ common_slimdown = function () {
       },
       // fix extra ol
       {
+        regex: /(?:[^\n]|(?:<[^>].*>)\n(?! *\n))+/g,
+        replacement: para
+      },
+      // add paragraphs
+      {
         regex: /<\/blockquote><blockquote>/g,
         replacement: '\n'
       }  // fix extra blockquote
     ];
+    //(\w+)\n
     // Add a rule.
     this.addRule = function (regex, replacement) {
       regex.global = true;
@@ -3644,7 +4121,7 @@ common_slimdown = function () {
   };
   window.Slimdown = Slimdown;
 }();
-common_kit = function ($, itemHelpers) {
+common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
   var that = {};
   /**
    * Checks if a kit can be checked out (any items available)
@@ -3655,7 +4132,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanCheckout = function (kit) {
-    return common.getAvailableItems(kit.items || []).length > 0;
+    return kit.canOrder !== undefined ? kit.canOrder === 'available' || kit.canOrder === 'available_partially' : true;
   };
   /**
    * Checks if a kit can be reserved (any items active)
@@ -3666,7 +4143,7 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReserve = function (kit) {
-    return common.getActiveItems(kit.items || []).length > 0;
+    return kit.canReserve !== undefined ? kit.canReserve === 'available' || kit.canReserve === 'available_partially' : true;
   };
   /**
    * Checks if custody can be taken for a kit (based on status)
@@ -3677,7 +4154,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanTakeCustody = function (kit) {
-    return kit.status == 'available';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'available';
   };
   /**
    * Checks if custody can be released for a kit (based on status)
@@ -3688,7 +4166,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanReleaseCustody = function (kit) {
-    return kit.status == 'in_custody';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'in_custody';
   };
   /**
    * Checks if custody can be transferred for a kit (based on status)
@@ -3699,7 +4178,8 @@ common_kit = function ($, itemHelpers) {
    * @returns {boolean}
    */
   that.kitCanTransferCustody = function (kit) {
-    return kit.status == 'in_custody';
+    var canCustody = kit.canCustody !== undefined ? kit.canCustody === 'available' : true;
+    return canCustody && kit.status == 'in_custody';
   };
   /**
    * getKitStatus
@@ -3775,6 +4255,44 @@ common_kit = function ($, itemHelpers) {
     return itemHelpers.getItemStatusCss(status);
   };
   /**
+   * getKitStatusIcon
+   *
+   * @memberOf common
+   * @name  common#getKitStatusIcon
+   * @method
+   * 
+   * @param  status
+   * @return {string}       
+   */
+  that.getKitStatusIcon = function (status) {
+    switch (status) {
+    case 'available':
+      return 'fa fa-check-circle';
+    case 'checkedout':
+      return 'fa fa-times-circle';
+    case 'await_checkout':
+      return 'fa fa-ellipsis-h';
+    case 'incomplete':
+      return 'fa fa-warning';
+    case 'empty':
+      return 'fa fa-ellipsis-h';
+    case 'in_transit':
+      return 'fa fa-truck';
+    case 'in_custody':
+      return 'fa fa-exchange';
+    case 'maintenance':
+      return 'fa fa-wrench';
+    case 'repair':
+      return 'fa fa-wrench';
+    case 'inspection':
+      return 'fa fa-stethoscope';
+    case 'expired':
+      return 'fa fa-bug';
+    default:
+      return '';
+    }
+  };
+  /**
    * getKitIds
    *
    * @memberOf common
@@ -3798,9 +4316,289 @@ common_kit = function ($, itemHelpers) {
     });
     return ids;
   };
+  /**
+   * getKitMessages
+   *
+   * @memberOf common
+   * @name  common#getKitMessages
+   * @method
+   * 
+   * @param  kit          
+   * @param  permissionHandler
+   * @param  dateHelper        
+   * @return {promise}                   
+   */
+  that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper, user) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler, isSelfservice = !perm.hasContactReadOtherPermission(), dfdCheckouts = $.Deferred(), dfdReservations = $.Deferred(), dfdCustody = $.Deferred();
+    var formatDate = function (date) {
+      return date.format('MMMM Do' + (date.year() == moment().year() ? '' : ' YYYY'));
+    };
+    var isOwn = function (contact) {
+      contact = typeof contact !== 'string' ? contact || {} : { _id: contact };
+      user = user || {};
+      if (!user.customer) {
+        user.customer = {};
+      }
+      return contact._id == user.customer._id;
+    };
+    // Check-out message?
+    if (perm.hasCheckoutPermission('read') && (kit.status == 'checkedout' || kit.status == 'await_checkout')) {
+      var message = '', dfd = $.Deferred();
+      getDataSource('orders').search({
+        _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'started',
+        status: kit.status == 'checkedout' ? 'open' : 'creating',
+        _limit: 1,
+        _skip: 0,
+        items__in: itemHelpers.getItemIds(kit.items)
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          dfd.resolve(resp.docs[0]);
+        }
+      });
+      dfd.then(function (checkout) {
+        checkout = checkout || {};
+        if (isOwn(checkout.customer)) {
+          checkout.customer = user.customer;
+          checkout.customer.user = user;
+        }
+        if (kit.status == 'await_checkout') {
+          message = 'Kit is currently <strong>awaiting checkout</strong>';
+        } else {
+          if (checkout && orderHelper.isOrderOverdue(checkout)) {
+            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + (typeof checkout.customer !== 'string' ? ' from ' + checkout.customer.name : '');
+          } else {
+            message = 'Kit is <strong>checked out</strong>' + (typeof checkout.customer !== 'string' ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due);
+          }
+        }
+        messages.push({
+          kind: 'checkout',
+          priority: MessagePriority.Critical,
+          message: message,
+          checkout: !isOwn(checkout.customer) && isSelfservice ? {} : checkout
+        });
+        dfdCheckouts.resolve();
+      });
+    } else {
+      dfdCheckouts.resolve();
+    }
+    // Reservation message? 
+    if (perm.hasReservationPermission('read') && kit.items.length > 0) {
+      getDataSource('reservations').search({
+        status: 'open',
+        fromDate__gte: moment(),
+        _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
+        _restrict: !isSelfservice,
+        _sort: 'fromDate',
+        _limit: 1,
+        _skip: 0,
+        items__in: itemHelpers.getItemIds(kit.items)
+      }).then(function (resp) {
+        if (resp && resp.count > 0) {
+          var reservation = resp.docs[0];
+          message = 'Next <strong>reservation</strong> is ' + reservation.fromDate.fromNow() + ' <span class=\'text-muted\'>on ' + formatDate(reservation.fromDate) + '</span>';
+          messages.push({
+            kind: 'reservation',
+            priority: MessagePriority.High,
+            reservation: reservation,
+            isOwn: isOwn(reservation.customer),
+            message: message
+          });
+        }
+        dfdReservations.resolve();
+      });
+    } else {
+      dfdReservations.resolve();
+    }
+    // Custody message?
+    if (kit.status == 'in_custody') {
+      var dfd = $.Deferred();
+      if (isSelfservice) {
+        dfd.resolve(null);
+      } else {
+        getDataSource('kits').call(kit.id, 'getChangeLog', {
+          action__in: [
+            'takeCustody',
+            'transferCustody'
+          ],
+          limit: 1,
+          skip: 0
+        }).then(function (resp) {
+          var dfdFallback = $.Deferred();
+          if (resp.length == 0) {
+            getDataSource('items').call(kit.items[0]._id, 'getChangeLog', {
+              action__in: [
+                'takeCustody',
+                'transferCustody'
+              ],
+              limit: 1,
+              skip: 0
+            }).then(function (resp) {
+              dfdFallback.resolve(resp);
+            });
+          } else {
+            dfdFallback.resolve(resp);
+          }
+          dfdFallback.then(function (resp) {
+            getDataSource('contacts').get(resp[0].obj, 'name,cover,user.picture,kind').then(function (contact) {
+              dfd.resolve(contact, resp[0].created);
+            });
+          });
+        });
+      }
+      dfd.then(function (contact, since) {
+        var message = 'Kit is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        messages.push({
+          kind: 'custody',
+          priority: MessagePriority.High,
+          by: contact || {},
+          message: message
+        });
+        dfdCustody.resolve();
+      });
+    } else {
+      dfdCustody.resolve();
+    }
+    // Permission message?
+    var canReserve = perm.hasKitPermission('reserve') && (kit._canReserve || kit.canReserve), canCheckout = perm.hasKitPermission('checkout') && (kit._canOrder || kit.canOrder), canCustody = perm.hasKitPermission('takeCustody') && (kit._canCustody || kit.canCustody), kitCanReserve = canReserve === 'available' || canReserve === 'available_partially', kitCanCheckout = canCheckout === 'available' || canCheckout === 'available_partially', kitCanCustody = canCustody === 'available';
+    if (kitCanReserve || kitCanCheckout || kitCanCustody) {
+      var notAllowedActions = [], allowedActions = [];
+      if (perm.hasReservationPermission('read') && perm.hasCheckoutPermission('read') && (kitCanReserve && kitCanCheckout) || !kitCanReserve && !kitCanCheckout) {
+        if (kitCanReserve && kitCanCheckout) {
+          allowedActions.push('Bookings');
+        } else {
+          // modules enabled?d
+          if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Bookings');
+          }
+        }
+      } else {
+        if (kitCanReserve) {
+          allowedActions.push('Reservation');
+        } else {
+          // module enabled?
+          if (perm.hasReservationPermission('read')) {
+            notAllowedActions.push('Reservation');
+          }
+        }
+        if (kitCanCheckout) {
+          allowedActions.push('Check-out');
+        } else {
+          // module enabled
+          if (perm.hasCheckoutPermission('read')) {
+            notAllowedActions.push('Check-out');
+          }
+        }
+      }
+      if (kitCanCustody) {
+        allowedActions.push('Custody');
+      } else {
+        // module enabled?
+        if (perm.hasItemPermission('takeCustody')) {
+          notAllowedActions.push('Custody');
+        }
+      }
+      var message = '', unavailable = !kitCanReserve && !kitCanCustody && !kitCanCheckout;
+      if (unavailable) {
+        message = 'Kit is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+      } else {
+        message = 'Kit is <strong>' + (canReserve == 'available_partially' || canCheckout == 'available_partially' ? 'partially ' : '') + 'available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ') + (notAllowedActions.length > 0 ? '<span class=\'text-muted\'>, not for ' + notAllowedActions.joinAdvanced(', ', ' and ') + '</span>' : '');
+      }
+      messages.push({
+        kind: 'permission',
+        priority: MessagePriority.Medium,
+        message: message
+      });
+    }
+    // Empty message?
+    if (kit.status == 'empty') {
+      var message = 'Kit is <strong>empty</strong>';
+      messages.push({
+        kind: 'empty',
+        priority: MessagePriority.Low,
+        message: message
+      });
+    }
+    // Incomplete message?
+    if (kit.status == 'incomplete') {
+      var message = 'Kit is <strong>incomplete</strong>';
+      var items = kit.items;
+      // Group per status total
+      var statuses = {};
+      $.each(items, function (i, item) {
+        var status = item.status;
+        if (item.status == 'available') {
+          var canReserve = item.canReserve, canCheckout = item.canOrder;
+          if (canReserve !== 'available' && canReserve !== 'unavailable_status' && (canCheckout !== 'available' && canCheckout !== 'unavailable_status')) {
+            status = 'unavailable';
+          }
+        }
+        var count = statuses[status] || 0;
+        statuses[status] = count + 1;
+      });
+      var unavailableTotal = statuses['unavailable'] || 0;
+      var checkedOutTotal = statuses['checkedout'] || 0;
+      var awaitCheckoutTotal = statuses['await_checkout'] || 0;
+      var expiredTotal = statuses['expired'] || 0;
+      var availableTotal = statuses['available'] || 0;
+      var inCustodyTotal = statuses['in_custody'] || 0;
+      var itemsText = items.length + ' item'.pluralize(items.length);
+      // If status total is equal to items total
+      // only show # items
+      if (availableTotal == items.length || checkedOutTotal == items.length || awaitCheckoutTotal == items.length || expiredTotal == items.length || inCustodyTotal == items.length) {
+      } else {
+        var msg = [];
+        if (unavailableTotal > 0) {
+          msg.push(unavailableTotal + ' unavailable');
+        }
+        if (availableTotal > 0) {
+          msg.push(availableTotal + ' available');
+        }
+        if (checkedOutTotal > 0) {
+          msg.push(checkedOutTotal + ' checked out');
+        }
+        if (awaitCheckoutTotal > 0) {
+          msg.push(awaitCheckoutTotal + ' awaiting checkout');
+        }
+        if (expiredTotal > 0) {
+          msg.push(expiredTotal + ' expired');
+        }
+        if (inCustodyTotal > 0) {
+          msg.push(inCustodyTotal + ' in custody');
+        }
+        message += ' <span class=\'text-muted\'>(' + msg.joinAdvanced(', ', ' and ') + ')</span>';
+      }
+      messages.push({
+        kind: 'incomplete',
+        priority: MessagePriority.Low,
+        message: message
+      });
+    }
+    // Expired message?
+    if (kit.status == 'expired') {
+      var message = 'Kit is <strong>expired</strong>';
+      messages.push({
+        kind: 'expired',
+        priority: MessagePriority.Critical,
+        message: message
+      });
+    }
+    return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}(jquery, common_item);
-common_contact = function (imageHelper) {
+}(jquery, common_item, moment, common_order, common_reservation);
+common_contact = function (imageHelper, attachmentHelper) {
   var that = {};
   that.contactGetUserId = function (contact) {
     if (contact.user) {
@@ -3834,6 +4632,12 @@ common_contact = function (imageHelper) {
   that.contactCanDelete = function (contact) {
     return !that.contactGetUserSync(contact);
   };
+  that.contactCanBlock = function (contact) {
+    return contact.status == 'active';
+  };
+  that.contactCanUndoBlock = function (contact) {
+    return contact.status == 'blocked';
+  };
   /**
   * getContactImageUrl
   *
@@ -3845,9 +4649,16 @@ common_contact = function (imageHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageUrl = function (ds, contact, size, bustCache) {
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
+    // Show contact image
+    if (contact.cover) {
+      if (contact.cover.indexOf('data:image') != -1 || contact.cover.indexOf('file:') != -1) {
+        return contact.cover;
+      }
+      // Bugfix don't show pdf preview images as contact image
+      if (attachmentHelper.isImage(contact.cover)) {
+        return imageHelper.getImageUrl(ds, contact.cover, size, bustCache);
+      }
+    }
     // Show profile picture of user?
     if (contact.user && contact.user.picture)
       return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
@@ -3865,17 +4676,67 @@ common_contact = function (imageHelper) {
   * @return {string} image path or base64 image
   */
   that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
-    // Show maintenance avatar?
-    if (contact.kind == 'maintenance')
-      return imageHelper.getMaintenanceAvatar(size);
+    // Show contact image
+    if (contact.cover)
+      return imageHelper.getImageCDNUrl(settings, groupid, contact.cover, size, bustCache);
     // Show profile picture of user?
     if (contact.user && contact.user.picture)
       return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
     // Show avatar initials
     return imageHelper.getAvatarInitial(contact.name, size);
   };
+  /**
+  * getContactMessages
+  *
+  * @memberOf common
+  * @name  common#getContactMessages
+  * @method
+  * 
+  * @param  item          
+  * @param  permissionHandler
+  * @param  dateHelper
+  * @param  user        
+  * @return {promise}                   
+  */
+  that.getContactMessages = function (contact, getDataSource, permissionHandler, dateHelper, user, group) {
+    var dfd = $.Deferred(), messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      }, perm = permissionHandler;
+    // Maintenance message
+    if (contact.kind == 'maintenance') {
+      var message = 'Contact can <strong>maintenance / repair</strong>';
+      messages.push({
+        kind: 'maintenance',
+        priority: MessagePriority.Low,
+        message: message,
+        contact: {
+          kind: 'maintenance',
+          name: ''
+        }
+      });
+    }
+    // Blocked message
+    if (contact.status == 'blocked') {
+      var message = 'Contact was <strong>blocked</strong> ' + (contact.blocked ? '<span class=\'text-muted\'>' + contact.blocked.fromNow() + '</span>' : '');
+      messages.push({
+        kind: 'blocked',
+        priority: MessagePriority.High,
+        message: message
+      });
+    }
+    dfd.resolve();
+    // Sort by priority High > Low
+    return dfd.then(function () {
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
-}(common_image);
+}(common_image, common_attachment);
 common_user = function (imageHelper) {
   return {
     /**
@@ -3993,14 +4854,107 @@ common_template = function (moment) {
     getFriendlyTemplateSize: function (width, height, unit) {
       if (width == 0 || height == 0) {
         return '';
-      } else if (unit == 'inch' && width == 8.5 && height == 11) {
+      } else if (unit == 'inch' && (width == 8.5 && height == 11 || width == 11 && height == 8.5)) {
         return 'US Letter';
-      } else if (unit == 'mm' && width == 210 && height == 297) {
+      } else if (unit == 'inch' && (width == 11 && height == 17 || width == 17 && height == 11)) {
+        return 'US Tabloid';
+      } else if (unit == 'mm' && (width == 210 && height == 297 || width == 297 && height == 210)) {
+        return 'A4';
+      } else if (unit == 'cm' && (width == 21 && height == 29.7 || width == 29.7 && height == 21)) {
         return 'A4';
       } else {
         var friendlyUnit = unit == 'inch' ? '"' : unit;
         return width + friendlyUnit + ' x ' + height + friendlyUnit;
       }
+    },
+    /**
+    * getPageSizes
+    *
+    * @memberOf common
+    * @name  common#getPageSizes
+    * @method
+    * 
+    * @return {array}
+    */
+    getPageSizes: function () {
+      return [
+        {
+          id: 'letter',
+          name: 'US Letter',
+          width: 8.5,
+          height: 11,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 816,
+            height: 1056
+          }
+        },
+        {
+          id: 'a4',
+          name: 'A4',
+          width: 210,
+          height: 297,
+          unit: 'mm',
+          layout: 'portrait',
+          px: {
+            width: 793,
+            height: 1122
+          }
+        },
+        {
+          id: 'tabloid',
+          name: 'US Tabloid',
+          width: 11,
+          height: 17,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 1056,
+            height: 1632
+          }
+        },
+        {
+          id: 'label4x6',
+          name: '4" x 6" Shipping Label',
+          width: 4,
+          height: 6,
+          unit: 'inch',
+          layout: 'portrait',
+          px: {
+            width: 384,
+            height: 576
+          }
+        }
+      ];
+    },
+    /**
+    * getPageSize
+    *
+    * @memberOf common
+    * @name  common#getPageSize
+    * @method
+    * 
+    * @return {object}
+    */
+    getPageSize: function (unit, width, height) {
+      var pageSizes = this.getPageSizes(), pageSize = null;
+      // Portrait?
+      pageSize = pageSizes.find(function (size) {
+        return size.unit == unit && size.width == width && size.height == height;
+      });
+      if (pageSize)
+        return pageSize;
+      // Landscape?
+      pageSize = pageSizes.find(function (size) {
+        return size.unit == unit && size.width == height && size.height == width;
+      });
+      if (pageSize) {
+        pageSize.layout = 'landscape';
+        return pageSize;
+      }
+      // Unknown pagesize
+      return null;
     }
   };
 }(moment);
@@ -4171,11 +5125,10 @@ common_transaction = function (moment, keyValues) {
      * @returns {duration}
      */
   that.getOrderDuration = function (transaction) {
-    if (transaction.started != null) {
-      var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
-      if (to) {
-        return moment.duration(to - transaction.started);
-      }
+    var from = transaction.started || moment();
+    var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+    if (to) {
+      return moment.duration(to - from);
     }
     return null;
   };
@@ -4230,19 +5183,57 @@ common_transaction = function (moment, keyValues) {
     var duration = that.getReservationDuration(transaction);
     return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
   };
+  /**
+   * getMessages
+   *
+   * @memberOf common
+   * @name  common#getMessages
+   * @method
+   * 
+   * @param  transaction          
+   * @param  permissionHandler
+   * @param  dateHelper        
+   * @return {promise}                   
+   */
+  that.getMessages = function (transaction, getDataSource, permissionHandler, dateHelper, user, group) {
+    var dfd = $.Deferred();
+    messages = [], MessagePriority = {
+      'Critical': 0,
+      'High': 1,
+      'Medium': 2,
+      'Low': 3
+    }, group = group.raw ? group.raw : group, perm = permissionHandler;
+    // Cleanup message?
+    if (transaction.status == 'creating') {
+      var cleanup = group.cleanup || {}, deleteIn = cleanup.deleteReservationsCreating;
+      if (deleteIn > 0) {
+        var deleteTime = transaction.modified.clone().add(deleteIn, 'minutes'), now = moment(), isPassed = deleteTime.isBefore(now);
+        var getDeleteTime = function () {
+          return deleteTime.fromNow();
+        };
+        var message = 'Reservation will be deleted <strong>' + deleteTime.fromNow() + '</strong>';
+        if (isPassed) {
+          message = 'Reservation will be deleted <strong>in a few seconds</strong>';
+        }
+        messages.push({
+          kind: 'cleanup',
+          priority: MessagePriority.Critical,
+          message: message,
+          deleteTime: deleteTime,
+          isPassed: isPassed
+        });
+      }
+    }
+    dfd.resolve();
+    return dfd.then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
   return that;
 }(moment, common_keyValues);
-common_queue = function ($) {
-  $.fn.ajaxQueue = function () {
-    var previous = new $.Deferred().resolve();
-    return function (fn, fail) {
-      if (typeof fn !== 'function') {
-        throw 'must be a function';
-      }
-      return previous = previous.then(fn, fail || fn);
-    };
-  };
-}(jquery);
 common_pubsub = function ($) {
   var o = $({});
   $.subscribe = function () {
@@ -4255,19 +5246,716 @@ common_pubsub = function ($) {
     o.trigger.apply(o, arguments);
   };
 }(jquery);
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub) {
+common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValueHelper, slimdownHelper, moment) {
+  var that = {};
+  var sd = new Slimdown();
+  that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler) {
+    var unknownText = 'Unknown', hoursFormat = profile.timeFormat24 ? 'H:mm' : 'h:mma';
+    evt.friendlyText = evt.action;
+    evt.by = evt.by || {};
+    evt.by.name = evt.by.name || 'CHEQROOM';
+    var arg = evt.arg || {};
+    var params = {
+      by: evt.by,
+      kind: evt.kind
+    };
+    if (arg.customerName && evt.by.name != arg.customerName) {
+      params.contact = {
+        id: arg.customerId,
+        name: arg.customerName || unknownText
+      };
+    }
+    var location = locations.find(function (loc) {
+      return loc._id == (arg.location || arg.locationId);
+    }) || {};
+    var activeLocations = locations.filter(function (loc) {
+      return loc.status == 'active';
+    });
+    var locationName = activeLocations.length > 1 ? ' at ' + (location.name || unknownText) : '';
+    var byName = evt.by.name;
+    var perm = getPermissionHandler();
+    var getLocationById = function (locId) {
+      return locations.find(function (l) {
+        return l._id == locId;
+      });
+    };
+    var getFlagById = function (flagId) {
+      return group.itemFlags.find(function (flag) {
+        return flag.id == flagId;
+      });
+    };
+    var getLabelById = function (labels, labelId) {
+      return group[labels].find(function (l) {
+        return l.id == labelId;
+      });
+    };
+    var getFieldById = function (fieldName) {
+      var fieldDictionary = {
+        'check-out': 'orderFields',
+        'reservation': 'reservationFields',
+        'item': 'itemFields',
+        'contact': 'customerFields',
+        'kit': 'kitFields'
+      };
+      return group[fieldDictionary[evt.kind]].find(function (f) {
+        return f.name == fieldName;
+      });
+    };
+    var getAttachmentImageUrl = function (attachment, size) {
+      // is url
+      if (typeof attachment === 'string' && attachment.indexOf('http') == 0)
+        return attachment;
+      var attId = typeof attachment === 'string' ? attachment : attachment._id || attachment.id;
+      return imageHelper.getImageCDNUrl(settings, group.id, size ? attachmentHelper.makeFileNameJpg(attId) : attId, size);
+    };
+    var getItemImageUrl = function (item, size) {
+      return imageHelper.getImageCDNUrl(settings, group.id, typeof item == 'string' ? item : item.cover || item._id || item.id, size);
+    };
+    var getCheckoutLink = function (id, text) {
+      if (!perm.hasCheckoutPermission('read'))
+        return text;
+      return '<a href=\'#check-outs/' + id + '\' class=\'transaction-link\' data-kind=\'order\' data-id=\'' + id + '\'>' + text + '</a>';
+    };
+    var getReservationLink = function (id, text) {
+      if (!perm.hasReservationPermission('read'))
+        return text;
+      return '<a href=\'#reservations/' + id + '\' class=\'transaction-link\' data-kind=\'reservation\' data-id=\'' + id + '\'>' + text + '</a>';
+    };
+    var getLink = function (href, text) {
+      return '<a href=\'' + href + '\'>' + text + '</a>';
+    };
+    var getContactLink = function (id, text) {
+      if (!perm.hasContactReadOtherPermission())
+        return text;
+      return getLink('#contacts/' + id, text);
+    };
+    var getKitLink = function (id, text) {
+      if (!perm.hasKitPermission())
+        return text;
+      return getLink('#kits/' + id, text);
+    };
+    var getMessagesBlock = function (messages) {
+      if (messages.length == 0)
+        return '';
+      var temp = messages.map(function (m) {
+        return '<li class=\'list-group-item\'>' + m + '</li>';
+      }).join('');
+      return '<ul class=\'list-group field-group\'>' + temp + '</ul>';
+    };
+    var getMessageBlock = function (message) {
+      return message ? getMessagesBlock([message]) : '';
+    };
+    switch (evt.action) {
+    case 'changeCategory':
+      var category = arg.category ? arg.category.split('.').pop().replace(/_/gim, ' ').capitalize() : unknownText;
+      evt.friendlyText = byName + ' updated category to ' + category;
+      break;
+    case 'addCodes':
+    case 'removeCodes':
+      var code = arg.codes && arg.codes.length > 0 ? arg.codes[0] : unknownText;
+      switch (evt.action) {
+      case 'addCodes':
+        evt.friendlyText = byName + ' added qr code ' + code + ' <img class=\'qrcode\' title=\'' + code + '\' src=\'' + codeHelper.getQRCodeUrl(settings.qrCodeUtilsApi, code, 'S') + '\' />';
+        break;
+      case 'removeCodes':
+        evt.friendlyText = byName + ' removed qr code ' + code;
+        break;
+      }
+      break;
+    case 'addBarcode':
+    case 'removeBarcode':
+      var barcode = arg.barcode || unknownText;
+      switch (evt.action) {
+      case 'addBarcode':
+        evt.friendlyText = byName + ' added barcode ' + barcode + ' <img class=\'barcode\' title=\'' + barcode + '\' src=\'' + codeHelper.getQRCodeUrl(settings.barcodeUtilsApi, barcode, 'S') + '\' />';
+        break;
+      case 'removeBarcode':
+        evt.friendlyText = byName + ' removed barcode ' + barcode;
+        break;
+      }
+      break;
+    case 'archive':
+      var auto = !params.by._id;
+      evt.friendlyText = byName + (auto ? ' auto-' : ' ') + 'archived ' + evt.kind;
+      break;
+    case 'undoArchive':
+      evt.friendlyText = byName + ' unarchived ' + evt.kind;
+      break;
+    case 'takeCustody':
+    case 'item.takeCustody':
+    case 'kit.takeCustody':
+      var id = evt.obj, name = arg.custodyName || unknownText;
+      if (evt.action == 'takeCustody') {
+        evt.friendlyText = byName + ' placed ' + evt.kind + ' in custody of ' + getContactLink(evt.obj, name);
+      } else if (evt.action == 'item.takeCustody') {
+        evt.friendlyText = byName + ' took ' + getLink('#items/' + id, 'item') + ' custody';
+      } else {
+        evt.friendlyText = byName + ' took ' + getLink('#kits/' + id, 'kit') + ' custody';
+      }
+      break;
+    case 'transferCustody':
+    case 'item.transferCustody':
+    case 'kit.transferCustody':
+      var id = evt.obj;
+      if (evt.by != arg.hadCustodyName) {
+        var name = arg.hadCustodyName || unknownText;
+        if (evt.action == 'transferCustody') {
+          evt.friendlyText = byName + ' transfered ' + evt.kind + ' custody from ' + getContactLink(arg.hadCustody, name);
+        } else if (evt.action == 'item.transferCustody') {
+          evt.friendlyText = byName + ' transfered ' + getLink('#items/' + id, 'item') + ' custody from ' + getContactLink(arg.hadCustody, name);
+        } else {
+          evt.friendlyText = byName + ' transfered ' + getLink('#kits/' + id, 'kit') + ' custody from ' + getContactLink(arg.hadCustody, name);
+        }
+      } else {
+        var name = arg.custodyName || unknownText;
+        if (evt.action == 'transferCustody') {
+          evt.friendlyText = byName + ' transfered ' + evt.kind + ' custody to ' + getContactLink(arg.custody, name);
+        } else if (evt.action == 'item.transferCustody') {
+          evt.friendlyText = byName + ' transfered ' + getLink('#items/' + id, 'item') + ' custody to ' + getContactLink(arg.custody, name);
+        } else {
+          evt.friendlyText = byName + ' transfered ' + getLink('#kits/' + id, 'kit') + ' custody to ' + getContactLink(arg.custody, name);
+        }
+      }
+      break;
+    case 'releaseCustody':
+    case 'item.releaseCustody':
+    case 'kit.releaseCustody':
+      var id = evt.obj, name = arg.hadCustodyName || unknownText;
+      if (evt.action == 'releaseCustody') {
+        evt.friendlyText = byName + ' released ' + evt.kind + ' custody of ' + getContactLink(arg.hadCustody, name) + locationName;
+      } else if (evt.action == 'item.releaseCustody') {
+        evt.friendlyText = byName + ' released ' + getLink('#items/' + id, 'item') + ' custody';
+      } else {
+        evt.friendlyText = byName + ' released ' + getLink('#kits/' + id, 'kit') + ' custody';
+      }
+      break;
+    case 'setFlag':
+    case 'clearFlag':
+      var flag = getFlagById(evt.action == 'setFlag' ? arg.flag : arg.oldFlag) || {};
+      var flagName = flag.name || unknownText;
+      var flagColor = flag.color || 'orange';
+      var message = arg && arg.message ? arg.message : '';
+      var hasAttachments = arg && arg.attachments && arg.attachments.length > 0;
+      var attachments = arg && arg.attachments ? arg.attachments.map(function (att) {
+        return {
+          id: att,
+          url: getAttachmentImageUrl(att, 'XS')
+        };
+      }) : [];
+      evt.by = {
+        kind: 'flag',
+        name: evt.by.name,
+        color: evt.action == 'setFlag' ? flagColor : '#999'
+      };
+      switch (evt.action) {
+      case 'setFlag':
+        evt.friendlyText = byName + ' set flag <span style=\'color:' + flagColor + '\'><i class=\'fa fa-flag\'></i> ' + flagName + '</span>' + (message ? '<ul class=\'list-group field-group\'><li class=\'list-group-item\'><small class=\'text-muted\'>Message</small><br />' + message + '</li>' + (hasAttachments ? '<li class=\'list-group-item\'><small class=\'text-muted\'>Attachments</small><div>' + attachments.map(function (att) {
+          return '<img class=\'flag-attachment\' data-id=\'' + att.id + '\' src=\'' + att.url + '\' style=\'display:inline-block;margin-right:5px;\' />';
+        }).join('') + '</div></li>' : '') + '</ul>' : '');
+        break;
+      case 'clearFlag':
+        evt.friendlyText = byName + ' cleared flag <span style=\'text-decoration:line-through;\'><i class=\'fa fa-flag\'></i> ' + flagName + '</span>' + (message ? '<ul class=\'list-group field-group\'><li class=\'list-group-item\'><small class=\'text-muted\'>Message</small><br />' + message + '</li>' + (hasAttachments ? '<li class=\'list-group-item\'><small class=\'text-muted\'>Attachments</small><div>' + attachments.map(function (att) {
+          return '<img class=\'flag-attachment\' data-id=\'' + att.id + '\' src=\'' + att.url + '\' style=\'display:inline-block;margin-right:5px;\' />';
+        }).join('') + '</div></li>' : '') + '</ul>' : '');
+        break;
+      }
+      break;
+    case 'sendMessage':
+      evt.by = {
+        kind: 'email',
+        name: 'CHEQROOM'
+      };
+      var id = evt.id, body = $('.container-padding', arg.request.body).text(), to = arg.request.to, subject = arg.request.subject;
+      evt.friendlyText = 'Sent mail to ' + to + ' <ul class=\'list-group field-group\'><li class=\'list-group-item\'><div class=\'mail-subject\'>' + subject + '</div><div class=\'mail-body multiline-text-truncate\'>' + body + '</div><div><a href=\'javascript:void(0)\' class=\'open-email\' data-id=\'' + id + '\'>View email</a></div></li></ul>';
+      break;
+    case 'block':
+    case 'undoBlock':
+      var message = arg ? arg.message : null;
+      var friendlyAction = evt.action == 'block' ? 'blocked' : 'unblocked';
+      evt.friendlyText = byName + ' ' + friendlyAction + ' contact ' + getMessageBlock(message);
+      break;
+    case 'import':
+      evt.friendlyText = byName + ' created ' + evt.kind + ' from import';
+      break;
+    case 'attach':
+      var attachment = arg && arg.attachments.length > 0 && arg.attachments[0];
+      var attachmentId = typeof attachment === 'string' ? attachment : attachment.attachmentId;
+      var isPdf = attachmentId.indexOf('.pdf') != -1;
+      var attachmentUrl = arg && arg.attachments.length > 0 ? getAttachmentImageUrl(attachmentId, isPdf ? 'S' : 'XS') : null;
+      var downloadUrl = arg && arg.attachments.length > 0 ? getDataSource('attachments').getBaseUrl() + attachmentId + '?download=true' : 'javascript:void(0);';
+      evt.friendlyText = byName + ' added attachment ' + (downloadUrl ? '<a class=\'open-attachment\' data-id=\'' + attachmentId + '\' href=\'' + downloadUrl + '\' target=\'_blank\'>' : '') + (attachmentUrl ? '<img ' + (isPdf ? 'class=\'pdf\'' : '') + ' src=\'' + attachmentUrl + '\' />' : '') + (downloadUrl ? '</a>' : '');
+      break;
+    case 'detach':
+      evt.friendlyText = byName + ' removed attachment';
+      break;
+    case 'order.checkout':
+    case 'checkout':
+    case 'checkoutAgain':
+      var id = evt.obj, contact = params.contact;
+      if (evt.action == 'order.checkout') {
+        switch (evt.kind) {
+        case 'item':
+          evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked out') + ' item ' + (contact ? 'to ' + getContactLink(contact.id, contact.name) : '') + locationName;
+          break;
+        case 'contact':
+          evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked out') + ' equipment' + locationName;
+          break;
+        }
+      } else {
+        evt.friendlyText = byName + ' checked out equipment';
+      }
+      break;
+    case 'order.checkin':
+    case 'checkin':
+      var id = evt.obj, contact = params.contact;
+      if (evt.action == 'order.checkin') {
+        switch (evt.kind) {
+        case 'item':
+          evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked in') + ' item ' + (contact ? 'from ' + getContactLink(contact.id, contact.name) : '') + locationName;
+          break;
+        case 'contact':
+          evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked in') + ' equipment' + locationName;
+          break;
+        }
+      } else {
+        var due = doc.due, to = evt.created, summary = '', checkedInItems = arg.items || [], totalItems = checkedInItems.length;
+        if (due) {
+          var duration = moment.duration(due.diff(evt.created));
+          if (to.isAfter(due)) {
+            summary = duration.humanize(true).replace(' ago', '').replace('in ', '') + ' late';
+          } else if (to.isBefore(due)) {
+            summary = duration.humanize(true).replace(' ago', '').replace('in ', '') + ' early';
+          }
+        }
+        var dueDate = due ? due.format('D MMM ' + hoursFormat) : 'Unknown';
+        var items = doc.items.filter(function (it) {
+          it.imageUrl = getItemImageUrl(it, 'XS');
+          return checkedInItems.indexOf(it._id) != -1;
+        });
+        evt.friendlyText = byName + ' checked in equipment ' + summary + getMessagesBlock(items.map(function (it) {
+          return '<div class=\'media\'><div class=\'media-left\'><img class=\'item-image\' src=\'' + it.imageUrl + '\' /></div><div class=\'media-body\'><a href=\'#items/' + it._id + '\'>' + it.name + '</a><br /><small class=\'text-muted text-truncate item-info\'>' + it.codes.map(function (code) {
+            return '<i class=\'fa fa-qrcode\'></i> ' + code;
+          }) + it.barcodes.map(function (code) {
+            return '<i class=\'fa fa-barcode\'></i> ' + code;
+          }) + '</small></div></div>';
+        }));
+      }
+      break;
+    case 'order.undoCheckout':
+    case 'undoCheckout':
+      var id = evt.obj, contact = params.contact;
+      if (evt.action == 'undoCheckout') {
+        evt.friendlyText = byName + ' undid check-out';
+      } else {
+        switch (evt.kind) {
+        case 'item':
+          evt.friendlyText = byName + ' undid item ' + getCheckoutLink(id, 'check out') + (contact ? ' for ' + getContactLink(contact.id, contact.name) : '');
+          break;
+        case 'contact':
+          evt.friendlyText = byName + ' undid equipment ' + getCheckoutLink(id, 'check out');
+          break;
+        }
+      }
+      break;
+    case 'order.extend':
+    case 'extend':
+      var id = evt.obj, contact = params.contact, dueDate = arg.due.format('MMM DD');
+      if (evt.action == 'extend') {
+        evt.friendlyText = byName + ' extended check-out until ' + dueDate;
+      } else {
+        // Don't show contact info for contact kind
+        if (evt.kind == 'contact')
+          contact = null;
+        evt.friendlyText = byName + ' extended ' + getCheckoutLink(id, 'check out') + (contact ? ' from ' + getContactLink(contact.id, contact.name) : '') + ' until ' + dueDate;
+      }
+      break;
+    case 'reservation.makeOrder':
+    case 'makeOrder':
+      if (evt.action == 'makeOrder') {
+        evt.friendlyText = byName + ' converted reservation to ' + getCheckoutLink(evt.obj, 'check-out');
+      } else {
+        evt.friendlyText = byName + ' created check-out from ' + getReservationLink(evt.obj, 'reservation');
+      }
+      break;
+    case 'reserve':
+    case 'reservation.reserve':
+      var id = evt.obj, contact = params.contact;
+      if (evt.action == 'reserve') {
+        evt.friendlyText = byName + ' reserved equipment';
+      } else {
+        var friendlyKind = evt.kind == 'item' ? ' item ' : ' equipment ';
+        if (evt.kind == 'contact')
+          contact = null;
+        evt.friendlyText = byName + ' ' + getReservationLink(id, 'reserved') + friendlyKind + (contact ? 'for ' + getContactLink(contact.id, contact.name) : '') + locationName;
+      }
+      break;
+    case 'cancel':
+    case 'reservation.cancel':
+      var id = evt.obj, contact = params.contact, message = arg ? arg.message : null;
+      if (evt.action == 'cancel') {
+        evt.friendlyText = byName + ' cancelled reservation' + getMessageBlock(message);
+      } else {
+        if (evt.kind == 'contact')
+          contact = null;
+        evt.friendlyText = byName + ' cancelled ' + getReservationLink(id, 'reservation') + (contact ? ' for ' + getContactLink(contact.id, contact.name) : '') + locationName;
+      }
+      break;
+    case 'undoReserve':
+    case 'reservation.undoReserve':
+      var id = evt.obj, contact = params.contact;
+      if (evt.action == 'undoReserve') {
+        evt.friendlyText = byName + ' undid reservation';
+      } else {
+        if (evt.kind == 'contact')
+          contact = null;
+        evt.friendlyText = byName + ' undid ' + getReservationLink(id, 'reservation') + (contact ? ' from ' + getContactLink(contact.id, contact.name) : '') + locationName;
+      }
+      break;
+    case 'close':
+    case 'reservation.close':
+      var id = evt.obj, message = arg ? arg.message : null, contact = params.contact;
+      if (evt.action == 'close') {
+        evt.friendlyText = byName + ' closed reservation' + getMessageBlock(message);
+      } else {
+        if (evt.kind == 'contact')
+          contact = null;
+        evt.friendlyText = byName + ' closed ' + getReservationLink(id, 'reservation') + (contact ? ' for ' + getContactLink(contact.id, contact.name) : '') + locationName;
+      }
+      break;
+    case 'undoClose':
+    case 'reservation.undoClose':
+      var id = evt.obj, contact = params.contact;
+      if (evt.action == 'undoClose') {
+        evt.friendlyText = byName + ' undid close reservation';
+      } else {
+        if (evt.kind == 'contact')
+          contact = null;
+        evt.friendlyText = byName + ' undid close ' + getReservationLink(id, 'reservation') + (contact ? ' frop ' + getContactLink(contact.id, contact.name) : '') + locationName;
+      }
+      break;
+    case 'kit.addItems':
+    case 'addItems':
+      var id = evt.obj, items = arg && arg.items ? arg.items : [], count = items.length;
+      if (evt.action == 'addItems') {
+        evt.friendlyText = byName + ' added ' + count + ' item'.pluralize(items.length != -1);
+      } else {
+        evt.friendlyText = byName + ' added item to ' + getKitLink(id, 'kit');
+      }
+      break;
+    case 'kit.removeItems':
+    case 'removeItems':
+      var id = evt.obj, items = arg && arg.items ? arg.items : [], count = items.length;
+      if (evt.action == 'removeItems') {
+        evt.friendlyText = byName + ' removed ' + count + ' item'.pluralize(items.length != -1);
+      } else {
+        evt.friendlyText = byName + ' removed item from ' + getKitLink(id, 'kit');
+      }
+      break;
+    case 'kit.duplicate':
+      evt.friendlyText = byName + ' created kit from duplicate';
+      break;
+    case 'setName':
+      var value = arg.name || unknownText;
+      evt.friendlyText = byName + ' updated ' + evt.kind + ' name to ' + value;
+      break;
+    case 'addComment':
+    case 'updateComment':
+      var comment = arg.comment.replace(/\n/gim, '<br />');
+      evt.friendlyText = byName + ' wrote comment <div class=\'card comment-card\'><div class=\'card-block\'><span class=\'gu-truncate\'>' + comment + '</span></div></div>';
+      break;
+    case 'removeComment':
+      evt.friendlyText = byName + ' removed comment';
+      break;
+    case 'setAllowedActions':
+      var custodyChanged = arg.allowCustody != arg.oldAllowCustody, reserveChanged = arg.allowReserve != arg.oldAllowReserve, orderChanged = arg.allowOrder != arg.oldAllowOrder;
+      var available = [], unavailable = [];
+      if (custodyChanged) {
+        if (arg.allowCustody) {
+          available.push('Custody');
+        } else {
+          unavailable.push('Custody');
+        }
+      }
+      if (reserveChanged) {
+        if (arg.allowReserve) {
+          available.push('Reservations');
+        } else {
+          unavailable.push('Reservations');
+        }
+      }
+      if (orderChanged) {
+        if (arg.allowOrder) {
+          available.push('Check-outs');
+        } else {
+          unavailable.push('Check-outs');
+        }
+      }
+      var messages = [];
+      if (available.length > 0) {
+        messages.push('<small>Available for</small><br />' + available.joinAdvanced(',', ' and '));
+      }
+      if (unavailable.length > 0) {
+        messages.push('<small>Unavailable for</small><br />' + unavailable.joinAdvanced(',', ' and '));
+      }
+      evt.friendlyText = byName + ' changed ' + evt.kind + ' permission to' + getMessagesBlock(messages);
+      break;
+    case 'setField':
+    case 'clearField':
+    case 'renameField':
+      var field = arg.field || unknownText;
+      var fieldDef = getFieldById(field) || {};
+      switch (evt.action) {
+      case 'setField':
+        var fieldValue = arg.value;
+        var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
+        var value = isDate ? moment(arg.value).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(arg.value);
+        evt.friendlyText = byName + ' set ' + evt.kind + ' field ' + getMessageBlock('<small class=\'text-muted\'>' + field + '</small><br />' + value);
+        break;
+      case 'clearField':
+        evt.friendlyText = byName + ' cleared ' + field + ' field';
+        break;
+      case 'renameField':
+        evt.friendlyText = byName + ' renamed field ' + arg.oldName + ' to ' + arg.newName;
+        break;
+      }
+      break;
+    case 'setFields':
+      var fields = Object.keys(arg).map(function (fieldKey) {
+        var fieldValue = arg[fieldKey] || '';
+        var fieldDef = getFieldById(fieldKey) || {};
+        var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
+        return {
+          name: fieldKey,
+          value: isDate ? moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(arg[fieldKey])
+        };
+      });
+      evt.friendlyText = byName + ' set ' + evt.kind + ' field'.pluralize(fields.length > 1) + getMessagesBlock(fields.map(function (f) {
+        return '<small class=\'text-muted\'>' + f.name + '</small><br />' + f.value;
+      }));
+      break;
+    case 'create':
+      var getFieldName = function (key) {
+        if (key == 'residualValue') {
+          return 'Residual value';
+        }
+        if (key == 'warrantyDate') {
+          return 'Warranty date';
+        }
+        return key.capitalize();
+      };
+      var fields = Object.keys(arg).filter(function (fieldKey) {
+        var fieldValue = arg[fieldKey] || '';
+        if (!fieldValue)
+          return false;
+        if (evt.kind != 'item') {
+          if ([
+              'check-out',
+              'reservation'
+            ].indexOf(evt.kind) != -1) {
+            return false;
+          }
+          if (evt.kind == 'contact') {
+            return [
+              'category',
+              'user'
+            ].indexOf(fieldKey) == -1;
+          }
+          return [
+            'category',
+            'kind'
+          ].indexOf(fieldKey) == -1;
+        }
+        if (activeLocations.length == 1 && fieldKey == 'location') {
+          return false;
+        }
+        return true;
+      }).map(function (fieldKey) {
+        var fieldValue = arg[fieldKey] || '';
+        var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
+        var value = '';
+        var fieldDef = getFieldById(fieldKey) || {};
+        if (isDate) {
+          value = moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : ''));
+        } else if (fieldKey == 'category') {
+          value = keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize();
+        } else if (fieldKey == 'location') {
+          var loc = getLocationById(fieldValue) || {};
+          value = loc.name || unknownText;
+        } else {
+          value = sd.render(arg[fieldKey]);
+        }
+        return {
+          name: getFieldName(fieldKey),
+          value: value
+        };
+      });
+      evt.friendlyText = byName + ' created ' + evt.kind + getMessagesBlock(fields.map(function (f) {
+        return '<small class=\'text-muted\'>' + f.name + '</small><br />' + f.value;
+      }));
+      break;
+    case 'update':
+      if (arg.hasOwnProperty('name')) {
+        evt.friendlyText = byName + ' updated ' + evt.kind + ' name to ' + arg.name;
+      } else if (arg.hasOwnProperty('kind') && arg.kind == 'importer') {
+        evt.friendlyText = byName + ' updated ' + evt.kind + ' from import';
+      } else {
+        switch (evt.kind) {
+        case 'item':
+          if (arg.hasOwnProperty('purchasePrice')) {
+            arg.field = 'Purchase price';
+            if (arg.purchasePrice) {
+              arg.value = arg.purchasePrice + ' ' + profile.currency;
+            }
+          } else if (arg.hasOwnProperty('warrantyDate')) {
+            arg.field = 'Warranty date';
+            if (arg.warrantyDate) {
+              arg.value = arg.warrantyDate.format('MMM DD YYYY');
+            }
+          } else if (arg.hasOwnProperty('purchaseDate')) {
+            arg.field = 'Purchase date';
+            if (arg.purchaseDate) {
+              arg.value = arg.purchaseDate.format('MMM DD YYYY');
+            }
+          } else if (arg.hasOwnProperty('brand')) {
+            arg.field = 'Brand';
+            if (arg.brand) {
+              arg.value = arg.brand;
+            }
+          } else if (arg.hasOwnProperty('model')) {
+            arg.field = 'Model';
+            if (arg.model) {
+              arg.value = arg.model;
+            }
+          }
+          if (!arg.value) {
+            evt.friendlyText = byName + ' cleared ' + arg.field + ' field';
+          } else {
+            evt.friendlyText = byName + ' set ' + evt.kind + ' field' + getMessageBlock('<small class=\'text-muted\'>' + arg.field + '</small><br />' + arg.value);
+          }
+          break;
+        case 'contact':
+          if (arg.hasOwnProperty('email')) {
+            evt.friendlyText = byName + ' updated contact email to ' + arg.email;
+          } else {
+            evt.friendlyText = byName + ' updated contact';
+          }
+          break;
+        case 'kit':
+          evt.friendlyText = byName + ' updated kit name to ' + arg.name;
+          break;
+        }
+      }
+      break;
+    case 'duplicate':
+      evt.friendlyText = byName + ' duplicated item ' + arg.times + ' times';
+      break;
+    case 'expire':
+      var message = arg ? arg.message : null;
+      evt.friendlyText = byName + ' expired item' + getMessageBlock(message);
+      break;
+    case 'undoExpire':
+      evt.friendlyText = byName + ' unexpired item';
+      break;
+    case 'setCover':
+      evt.friendlyText = byName + ' updated cover image';
+      break;
+    case 'scanCode':
+      var code = arg.code || unknownText;
+      switch (arg.kind) {
+      case 'qrcode':
+        evt.friendlyText = byName + ' scanned QR code ' + code;
+        break;
+      case 'barcode':
+        evt.friendlyText = byName + ' scanned barcode ' + code;
+        break;
+      }
+      break;
+    case 'item.duplicate':
+      var id = evt.obj;
+      evt.friendlyText = byName + ' created ' + getLink('#items/' + id, 'item') + ' from duplicate';
+      break;
+    case 'setCatalog':
+      var fields = Object.keys(arg).map(function (fieldKey) {
+        var fieldValue = arg[fieldKey] || '';
+        return {
+          name: fieldKey,
+          value: arg[fieldKey]
+        };
+      });
+      evt.friendlyText = byName + ' set catalog' + getMessagesBlock(fields.map(function (f) {
+        return '<small class=\'text-muted\'>' + f.name + '</small><br />' + f.value;
+      }));
+      break;
+    case 'setLabel':
+    case 'clearLabel':
+      var labelId = arg.labelId;
+      var labelDictionary = {
+        'cheqroom.types.order': 'orderLabels',
+        'cheqroom.types.reservation': 'reservationLabels',
+        'cheqroom.types.item': 'itemLabels',
+        'cheqroom.types.customer': 'customerLabels',
+        'cheqroom.types.kit': 'kitLabels'
+      };
+      var label = getLabelById(labelDictionary[doc.crtype], labelId) || {
+        name: arg.labelName,
+        color: arg.labelColor
+      };
+      evt.friendlyText = byName + ' set <span class=\'label-tag\' style=\'background-color:' + label.color + ';\'></span> ' + label.name;
+      break;
+    case 'spotchecks.close':
+      var id = evt.obj, allFound = arg.numChecked == arg.numTotal && arg.numUnchecked == 0 && arg.numUnexpected == 0, numCheckedProgress = arg.numChecked > 0 ? Math.round(arg.numChecked / arg.numTotal * 100) : 0, numUncheckedProgress = arg.numUnchecked > 0 ? Math.round(arg.numUnchecked / arg.numTotal * 100) : 0, numUnexpectedProgress = arg.numUnexpected > 0 ? Math.round(arg.numUnexpected / arg.numTotal * 100) : 0, numChecked = arg.numChecked, numUnchecked = arg.numUnchecked, numTotal = arg.numTotal, numUnexpected = arg.numUnexpected, checked = arg.items ? arg.items.checked_scanner && arg.items.checked_scanner.slice(0, 2).map(function (it) {
+          return getItemImageUrl(it, 'XS');
+        }).concat(arg.numChecked > 2 ? imageHelper.getTextImage('+' + (arg.numChecked - 2), 'S') : []) : [], unchecked = arg.items ? arg.items.unchecked && arg.items.unchecked.slice(0, 2).map(function (it) {
+          return getItemImageUrl(it, 'XS');
+        }).concat(arg.numUnchecked > 2 ? imageHelper.getTextImage('+' + (arg.numUnchecked - 2), 'S') : []) : [], unexpected = arg.items ? arg.items.unexpected && arg.items.unexpected.slice(0, 2).map(function (it) {
+          return getItemImageUrl(it, 'XS');
+        }).concat(arg.numUnexpected > 2 ? imageHelper.getTextImage('+' + (arg.numUnexpected - 2), 'S') : []) : [];
+      if (evt.kind == 'item') {
+        evt.friendlyText = byName + ' did a <a href=\'javascript:void(0)\' class=\'spotcheck\' data-id=\'' + id + '\'>spotcheck</a>';
+      } else {
+        evt.friendlyText = byName + ' did a spotcheck <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'><div class=\'title\'>' + (allFound ? '<div class=\'success\'><i class=\'fa fa-check-circle\'></i> All ' + numTotal + ' Items checked</div>' : '<div class=\'warning\'><i class=\'fa fa-exclamation-circle\'></i> ' + numUnchecked + ' of ' + numTotal + ' Items unchecked</div>') + '</div><div class=\'multi-progress\'><div class=\'found-progress\' style=\'width:' + numCheckedProgress + '%\'></div><div class=\'missing-progress\' style=\'width:' + numUncheckedProgress + '%\'></div><div class=\'unexpected-progress\' style=\'width:' + numUnexpectedProgress + '%\'></div></div> ' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + checked.map(function (src) {
+          return '<img class=\'item-image\' src=\'' + src + '\' />';
+        }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' items</div></div></div>' : '') + (numUnchecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unchecked.map(function (src) {
+          return '<img class=\'item-image\' src=\'' + src + '\' />';
+        }).join('') + '</div><div>Unchecked</div><div class=\'text-muted\'>' + numUnchecked + ' items</div></div></div>' : '') + (numUnexpected ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color gray\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unexpected.map(function (src) {
+          return '<img class=\'item-image\' src=\'' + src + '\' />';
+        }).join('') + '</div><div>Unexpected</div><div class=\'text-muted\'>' + numUnexpected + ' items</div></div></div>' : '') + '</li></ul>';
+      }
+      break;
+    case 'changeLocation':
+      var loc = arg.name || unknownText;
+      evt.friendlyText = byName + ' updated location to ' + loc;
+      break;
+    case 'updateGeo':
+      var address = (arg.address || unknownText).split(',').map(function (v) {
+        return $.trim(v);
+      });
+      evt.friendlyText = byName + ' updated geo position to ' + getMessageBlock('<address>' + address.map(function (line) {
+        return '<span>' + line + '</span>';
+      }).join('') + '</address>');
+      break;
+    case 'changeKind':
+      evt.friendlyText = byName + ' changed kind to ' + arg.kind;
+      break;
+    }
+    return evt;
+  };
+  return that;
+}(common_code, common_image, common_attachment, common_keyValues, common_slimdown, moment);
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub, changeLog) {
   /**
    * Return common object with different helper methods
    */
-  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub);
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction, changeLog);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common_changeLog);
 colorLabel = function ($) {
   var DEFAULTS = {
     id: null,
     name: '',
     color: 'Gold',
     readonly: false,
-    selected: false
+    selected: false,
+    default: false
   };
   /**
    * @name  ColorLabel
@@ -4283,6 +5971,7 @@ colorLabel = function ($) {
     this.color = spec.color || DEFAULTS.color;
     this.readonly = spec.readonly || DEFAULTS.readonly;
     this.selected = spec.selected || DEFAULTS.selected;
+    this.default = spec.default || DEFAULTS.default;
   };
   /**
    * isDirty
@@ -4314,6 +6003,7 @@ colorLabel = function ($) {
     this.color = data.color || DEFAULTS.color;
     this.selected = data.selected || DEFAULTS.selected;
     this.readonly = data.readonly || DEFAULTS.readonly;
+    this.default = data.default || DEFAULTS.default;
     return $.Deferred().resolve();
   };
   /**
@@ -4328,7 +6018,8 @@ colorLabel = function ($) {
       name: this.name,
       color: this.color,
       selected: this.selected,
-      readonly: this.readonly
+      readonly: this.readonly,
+      default: this.default
     };
   };
   return ColorLabel;
@@ -4454,9 +6145,9 @@ document = function ($, common, api, ColorLabel) {
     if (this.existsInDb()) {
       return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
     }
-    if (this.isEmpty()) {
-      return $.Deferred().reject(new Error('Cannot create empty document'));
-    }
+    /*if (this.isEmpty()) {
+        return $.Deferred().reject(new Error("Cannot create empty document"));
+    }*/
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
@@ -4652,7 +6343,7 @@ document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiLongCall = function (spec) {
-    spec.timeOut = spec.timeOut || 30000;
+    spec.timeOut = spec.timeOut || 60000;
     return this._doApiCall(spec);
   };
   Document.prototype._getColorLabel = function (data, options) {
@@ -4773,21 +6464,12 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
-Attachment = function ($) {
-  var EXT = /(?:\.([^.]+))?$/;
-  var IMAGES = [
-    'jpg',
-    'jpeg',
-    'png',
-    'gif'
-  ];
+Attachment = function ($, attachmentHelper) {
   var PREVIEWS = [
     'jpg',
     'jpeg',
     'png',
     'gif',
-    'doc',
-    'docx',
     'pdf'
   ];
   var DEFAULTS = {
@@ -4816,6 +6498,7 @@ Attachment = function ($) {
     this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
+    this.forKind = spec.forKind;
   };
   /**
    * Gets the url of a thumbnail
@@ -4850,8 +6533,7 @@ Attachment = function ($) {
    * @returns {string}
    */
   Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.fileName;
-    return (EXT.exec(fileName)[1] || '').toLowerCase();
+    return attachmentHelper.getExt(fileName || this.fileName);
   };
   /**
    * Gets a friendly file size
@@ -4883,8 +6565,7 @@ Attachment = function ($) {
    * @returns {boolean}
    */
   Attachment.prototype.isImage = function () {
-    var ext = this.getExt(this.fileName);
-    return $.inArray(ext, IMAGES) >= 0;
+    return attachmentHelper.isImage(this.fileName);
   };
   /**
    * Checks if the attachment has a preview
@@ -4930,7 +6611,7 @@ Attachment = function ($) {
     return $.Deferred().resolve(data);
   };
   return Attachment;
-}(jquery);
+}(jquery, common_attachment);
 comment = function ($) {
   var DEFAULTS = {
     id: '',
@@ -4992,21 +6673,12 @@ comment = function ($) {
   };
   return Comment;
 }(jquery);
-attachment = function ($) {
-  var EXT = /(?:\.([^.]+))?$/;
-  var IMAGES = [
-    'jpg',
-    'jpeg',
-    'png',
-    'gif'
-  ];
+attachment = function ($, attachmentHelper) {
   var PREVIEWS = [
     'jpg',
     'jpeg',
     'png',
     'gif',
-    'doc',
-    'docx',
     'pdf'
   ];
   var DEFAULTS = {
@@ -5035,6 +6707,7 @@ attachment = function ($) {
     this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
     this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
+    this.forKind = spec.forKind;
   };
   /**
    * Gets the url of a thumbnail
@@ -5069,8 +6742,7 @@ attachment = function ($) {
    * @returns {string}
    */
   Attachment.prototype.getExt = function (fileName) {
-    fileName = fileName || this.fileName;
-    return (EXT.exec(fileName)[1] || '').toLowerCase();
+    return attachmentHelper.getExt(fileName || this.fileName);
   };
   /**
    * Gets a friendly file size
@@ -5102,8 +6774,7 @@ attachment = function ($) {
    * @returns {boolean}
    */
   Attachment.prototype.isImage = function () {
-    var ext = this.getExt(this.fileName);
-    return $.inArray(ext, IMAGES) >= 0;
+    return attachmentHelper.isImage(this.fileName);
   };
   /**
    * Checks if the attachment has a preview
@@ -5149,8 +6820,8 @@ attachment = function ($) {
     return $.Deferred().resolve(data);
   };
   return Attachment;
-}(jquery);
-field = function ($, common) {
+}(jquery, common_attachment);
+field = function ($, validationHelper) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -5196,19 +6867,28 @@ field = function ($, common) {
     case 'float':
     case 'decimal':
     case 'currency':
-      return common.isNumeric(value);
+      return validationHelper.isNumeric(value);
     case 'int':
-      return common.isNumeric(value, true);
+      return validationHelper.isNumeric(value, true);
     case 'date':
     case 'datetime':
-      return common.isValidDate(value);
+      return validationHelper.isValidDate(value);
     case 'string':
     case 'select':
+      if (this.editor == 'phone') {
+        return validationHelper.isValidPhone(value);
+      }
+      if (this.editor == 'email') {
+        return validationHelper.isValidEmail(value);
+      }
+      if (this.editor == 'url') {
+        return validationHelper.isValidURL(value);
+      }
+      if (this.editor == 'number') {
+        return validationHelper.isNumeric(value);
+      }
       return value != '';
     default:
-      if (this.editor == 'phone') {
-        return common.isValidPhone(value);
-      }
       return true;
     }
   };
@@ -5231,7 +6911,7 @@ field = function ($, common) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery, common);
+}(jquery, common_validation);
 Base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Some constant values
   var DEFAULTS = {
@@ -5403,7 +7083,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
     return this._doApiCall({
       method: 'setFields',
-      params: { fields: changedFields },
+      params: changedFields,
       skipRead: skipRead,
       usePost: true
     });
@@ -5418,6 +7098,9 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @returns {promise}
    */
   Base.prototype.setField = function (field, value, skipRead) {
+    if (!value) {
+      return this.clearField(field, skipRead);
+    }
     return this._doApiCall({
       method: 'setField',
       params: {
@@ -5563,10 +7246,14 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.setFlag = function (flag, skipRead) {
+  Base.prototype.setFlag = function (flag, message, attachments, skipRead) {
     return this._doApiCall({
       method: 'setFlag',
-      params: { flag: flag },
+      params: {
+        flag: flag,
+        message: message,
+        attachments: attachments
+      },
       skipRead: skipRead
     });
   };
@@ -5576,10 +7263,13 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.clearFlag = function (skipRead) {
+  Base.prototype.clearFlag = function (message, attachments, skipRead) {
     return this._doApiCall({
       method: 'clearFlag',
-      params: {},
+      params: {
+        message: message,
+        attachments: attachments
+      },
       skipRead: skipRead
     });
   };
@@ -5639,11 +7329,15 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
    * Update item fields based on the given Field objects
    * @param {Array} fields    array of Field objects
    */
-  Base.prototype.setSortedFields = function (fields) {
+  Base.prototype.setSortedFields = function (fields, isUpdate) {
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
       if (field.isEmpty()) {
-        delete this.fields[field.name];
+        if (isUpdate) {
+          this.fields[field.name] = null;
+        } else {
+          delete this.fields[field.name];
+        }
       } else {
         this.fields[field.name] = field.value;
       }
@@ -5795,7 +7489,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     this.attachments = DEFAULTS.attachments.slice();
     if (data.attachments && data.attachments.length > 0) {
       $.each(data.attachments, function (i, att) {
-        obj = that._getAttachment(att, options);
+        obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
         if (obj) {
           that.attachments.push(obj);
         }
@@ -6324,7 +8018,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     });
     return this._doApiCall({
       method: 'setFields',
-      params: { fields: changedFields },
+      params: changedFields,
       skipRead: skipRead,
       usePost: true
     });
@@ -6339,6 +8033,9 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @returns {promise}
    */
   Base.prototype.setField = function (field, value, skipRead) {
+    if (!value) {
+      return this.clearField(field, skipRead);
+    }
     return this._doApiCall({
       method: 'setField',
       params: {
@@ -6484,10 +8181,14 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.setFlag = function (flag, skipRead) {
+  Base.prototype.setFlag = function (flag, message, attachments, skipRead) {
     return this._doApiCall({
       method: 'setFlag',
-      params: { flag: flag },
+      params: {
+        flag: flag,
+        message: message,
+        attachments: attachments
+      },
       skipRead: skipRead
     });
   };
@@ -6497,10 +8198,13 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
    * @param skipRead
    * @returns {promise}
    */
-  Base.prototype.clearFlag = function (skipRead) {
+  Base.prototype.clearFlag = function (message, attachments, skipRead) {
     return this._doApiCall({
       method: 'clearFlag',
-      params: {},
+      params: {
+        message: message,
+        attachments: attachments
+      },
       skipRead: skipRead
     });
   };
@@ -6560,11 +8264,15 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
    * Update item fields based on the given Field objects
    * @param {Array} fields    array of Field objects
    */
-  Base.prototype.setSortedFields = function (fields) {
+  Base.prototype.setSortedFields = function (fields, isUpdate) {
     for (var i = 0; i < fields.length; i++) {
       var field = fields[i];
       if (field.isEmpty()) {
-        delete this.fields[field.name];
+        if (isUpdate) {
+          this.fields[field.name] = null;
+        } else {
+          delete this.fields[field.name];
+        }
       } else {
         this.fields[field.name] = field.value;
       }
@@ -6716,7 +8424,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     this.attachments = DEFAULTS.attachments.slice();
     if (data.attachments && data.attachments.length > 0) {
       $.each(data.attachments, function (i, att) {
-        obj = that._getAttachment(att, options);
+        obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
         if (obj) {
           that.attachments.push(obj);
         }
@@ -6749,8 +8457,7 @@ user = function ($, Base, common) {
     // user, admin
     active: true,
     isOwner: false,
-    archived: null,
-    restrictLocations: []
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -6784,7 +8491,6 @@ user = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
-    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -6799,17 +8505,6 @@ user = function ($, Base, common) {
   User.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
     return common.isValidEmail(this.email);
-  };
-  User.prototype.isValidRole = function () {
-    switch (this.role) {
-    case 'user':
-    case 'admin':
-    case 'root':
-    case 'selfservice':
-      return true;
-    default:
-      return false;
-    }
   };
   User.prototype.emailExists = function () {
     if (this.isValidEmail()) {
@@ -6833,7 +8528,7 @@ user = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.isValid = function () {
-    return this.isValidName() && this.isValidEmail() && this.isValidRole();
+    return this.isValidName() && this.isValidEmail();
   };
   /**
    * Checks if the user is empty
@@ -6843,7 +8538,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
   };
   User.prototype._isDirtyInfo = function () {
     if (this.raw) {
@@ -6855,18 +8550,6 @@ user = function ($, Base, common) {
     }
     return false;
   };
-  User.prototype._isDirtyRestrictLocations = function () {
-    if (this.raw) {
-      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-      // Check if other locations have been selected
-      return this.restrictLocations.filter(function (x) {
-        return restrictLocations.indexOf(x) < 0;
-      }).length > 0 || restrictLocations.filter(function (x) {
-        return that.restrictLocations.indexOf(x) < 0;
-      }).length > 0;
-    }
-    return false;
-  };
   /**
    * Checks if the user is dirty and needs saving
    * @method
@@ -6875,7 +8558,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
+    return isDirty || this._isDirtyInfo();
   };
   /**
    * Gets a url for a user avatar
@@ -7022,36 +8705,6 @@ user = function ($, Base, common) {
     });
   };
   /**
-   * Restrict user access to specific location(s)
-   * @param locations
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.setRestrictLocations = function (locations, skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'setRestrictLocations',
-      params: { restrictLocations: locations },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clear user location(s) access (makes all location accessible for the user)
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.clearRestrictLocations = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'clearRestrictLocations',
-      skipRead: skipRead
-    });
-  };
-  /**
    * Updates the user
    * @param skipRead
    * @returns {*}
@@ -7066,22 +8719,13 @@ user = function ($, Base, common) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid user'));
     }
-    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred();
+    var that = this, dfdInfo = $.Deferred();
     if (this._isDirtyInfo()) {
       dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
     } else {
       dfdInfo.resolve();
     }
-    if (this._isDirtyRestrictLocations()) {
-      if (this.restrictLocations.length != 0) {
-        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
-      } else {
-        dfdRestrictLocations = this.clearRestrictLocations(true);
-      }
-    } else {
-      dfdRestrictLocations.resolve();
-    }
-    return $.when(dfdInfo, dfdRestrictLocations);
+    return $.when(dfdInfo);
   };
   /**
    * Writes the user to a json object
@@ -7093,7 +8737,6 @@ user = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
     return data;
   };
@@ -7117,7 +8760,6 @@ user = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
-      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });
@@ -7235,7 +8877,7 @@ helper = function ($, defaultSettings, common) {
        * @return {string}      
        */
       getQRCodeUrl: function (code, size) {
-        return common.getQRCodeUrl(settings.urlApi, code, size);
+        return common.getQRCodeUrl(settings.qrCodeUtilsApi, code, size);
       },
       /**
        * getBarcodeUrl 
@@ -7249,7 +8891,7 @@ helper = function ($, defaultSettings, common) {
        * @return {string}      
        */
       getBarcodeUrl: function (code, width, height) {
-        return common.getBarcodeUrl(settings.urlApi, code, width, height);
+        return common.getBarcodeUrl(settings.barcodeUtilsApi, code, width, height);
       },
       /**
        * getNumItemsLeft
@@ -7348,7 +8990,11 @@ helper = function ($, defaultSettings, common) {
        * @return {string}       
        */
       ensureId: function (obj) {
-        return this.ensureValue(obj, '_id');
+        if (obj && obj.hasOwnProperty('id')) {
+          return this.ensureValue(obj, 'id');
+        } else {
+          return this.ensureValue(obj, '_id');
+        }
       }
     };
   };
@@ -7359,7 +9005,9 @@ Contact = function ($, Base, common, User, Helper) {
     email: '',
     status: 'active',
     user: {},
-    kind: 'contact'
+    kind: 'contact',
+    cover: '',
+    blocked: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -7385,6 +9033,8 @@ Contact = function ($, Base, common, User, Helper) {
     this.status = spec.status || DEFAULTS.status;
     this.user = spec.user || DEFAULTS.user;
     this.kind = spec.kind || DEFAULTS.kind;
+    this.cover = spec.cover || DEFAULTS.cover;
+    this.blocked = spec.blocked || DEFAULTS.blocked;
   };
   Contact.prototype = new tmp();
   Contact.prototype.constructor = Contact;
@@ -7475,12 +9125,41 @@ Contact = function ($, Base, common, User, Helper) {
     return common.contactCanUndoArchive(this);
   };
   /**
+   * Checks if a contact can be blocked
+   * @name Contact#canBlock
+   * @returns {boolean}
+   */
+  Contact.prototype.canBlock = function () {
+    return common.contactCanBlock(this);
+  };
+  /**
+   * Checks if a contact can be unblocked 
+   * @name Contact#canUndoBlock
+   * @returns {boolean}
+   */
+  Contact.prototype.canUndoBlock = function () {
+    return common.contactCanUndoBlock(this);
+  };
+  /**
    * Checks if a contact can be deleted (based on status and link to user)
    * @name Contact#canDelete
    * @returns {boolean}
    */
   Contact.prototype.canDelete = function () {
     return common.contactCanDelete(this);
+  };
+  /**
+   * Change contact kind
+   * @name Contact#changeKind
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.changeKind = function (kind, skipRead) {
+    return this._doApiCall({
+      method: 'changeKind',
+      params: { kind: kind },
+      skipRead: skipRead
+    });
   };
   /**
    * Archive a contact
@@ -7505,6 +9184,34 @@ Contact = function ($, Base, common, User, Helper) {
     return this._doApiCall({
       method: 'undoArchive',
       params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Blocks a contact
+   * @name Contact#block
+   * @param message
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.block = function (message, skipRead) {
+    return this._doApiCall({
+      method: 'block',
+      params: { message: message },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unblock a contact
+   * @name Contact#undoBlock
+   * @param message
+   * @param skipRead
+   * @returns {promise}
+   */
+  Contact.prototype.undoBlock = function (message, skipRead) {
+    return this._doApiCall({
+      method: 'undoBlock',
+      params: { message: message },
       skipRead: skipRead
     });
   };
@@ -7556,7 +9263,7 @@ Contact = function ($, Base, common, User, Helper) {
   Contact.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
     if (!isDirty && this.raw) {
-      isDirty = this._isDirtyStringProperty('name') || this._isDirtyStringProperty('email');
+      isDirty = this._isDirtyStringProperty('name') || this._isDirtyStringProperty('email') || this._isDirtyStringProperty('kind');
     }
     return isDirty;
   };
@@ -7567,6 +9274,7 @@ Contact = function ($, Base, common, User, Helper) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
+    data.kind = this.kind || DEFAULTS.kind;
     return data;
   };
   Contact.prototype._fromJson = function (data, options) {
@@ -7577,6 +9285,9 @@ Contact = function ($, Base, common, User, Helper) {
       that.status = data.status || DEFAULTS.status;
       that.user = data.user || DEFAULTS.user;
       that.kind = data.kind || DEFAULTS.kind;
+      that.blocked = data.blocked || DEFAULTS.blocked;
+      var cover = data.cover || DEFAULTS.cover;
+      that.cover = common.isImage(cover) ? cover : '';
       $.publish('contact.fromJson', data);
       return data;
     });
@@ -7602,8 +9313,16 @@ Contact = function ($, Base, common, User, Helper) {
     if (this._isDirtyStringProperty('email')) {
       data['email'] = that.email;
     }
+    var dfdKind;
+    if (this._isDirtyStringProperty('kind')) {
+      dfdKind = this.changeKind(that.kind, true);
+    } else {
+      dfdKind = $.Deferred().resolve();
+    }
     return this.ds.update(this.id, data, this._fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
+      return dfdKind.then(function () {
+        return skipRead == true ? data : that._fromJson(data);
+      });
     });
   };
   return Contact;
@@ -7687,6 +9406,8 @@ DateHelper = function ($, moment) {
     this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
     this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
     this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
+    this.businessHours = spec.businessHours || [];
+    this.weekStart = spec.weekStart || 1;
   };
   /**
    * @name parseDate
@@ -7816,7 +9537,9 @@ DateHelper = function ($, moment) {
         });
       }
     }
-    return ranges;
+    return ranges.filter(function (r) {
+      return global.dateHelper.isValidBusinessDate(r.to);
+    });
   };
   /**
    * getFriendlyFromTo
@@ -8095,11 +9818,70 @@ DateHelper = function ($, moment) {
       break;
     }
   };
+  DateHelper.prototype.isValidBusinessDate = function (d) {
+    var isValid = false;
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      $.each(this._getBusinessHours(d), function (i, h) {
+        var openTime = moment(moment.utc(moment.duration(h.openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm'), closeTime = moment(moment.utc(moment.duration(h.closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        var testDate = moment(d.clone().format('H:mm'), 'H:mm');
+        isValid = testDate.isBetween(openTime, closeTime) || testDate.isSame(openTime) || testDate.isSame(closeTime);
+        if (isValid)
+          return false;
+      });
+    } else {
+      isValid = true;
+    }
+    return isValid;
+  };
+  DateHelper.prototype.getValidBusinessDate = function (d) {
+    var that = this, now = this.getNow(), maxMinutes = 0;
+    //bugfix getValidBusinessDate only returns dates from now or in the future
+    if (d.isBefore(now)) {
+      d.date(now.date());
+    }
+    while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
+      d = d.add(that.roundMinutes, 'minutes');
+      // Prevent infinite loop by stopping after 1 full week
+      maxMinutes += that.roundMinutes;
+    }
+    return d;
+  };
+  DateHelper.prototype._getBusinessHours = function (d) {
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      return businessHours.filter(function (bh) {
+        return bh.isoWeekday == d.isoWeekday();
+      });
+    } else {
+      return [];
+    }
+  };
   DateHelper.prototype._makeStartOfBusinessDay = function (m) {
-    return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var startOfBusinessDay = m.clone().hour(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m);
+      if (businessHoursForDay.length > 0) {
+        var openTime = moment(moment.utc(moment.duration(businessHoursForDay[0].openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        startOfBusinessDay.hour(openTime.hour()).minute(openTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(startOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfBusinessDay = function (m) {
-    return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var endOfBusinessDay = m.clone().hour(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m).sort(function (a, b) {
+        return a.closeTime < b.closeTime;
+      });
+      if (businessHoursForDay.length > 0) {
+        var closeTime = moment(moment.utc(moment.duration(businessHoursForDay[0].closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        endOfBusinessDay.hour(closeTime.hour()).minute(closeTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(endOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfDay = function (m) {
     return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
@@ -8227,9 +10009,9 @@ Document = function ($, common, api, ColorLabel) {
     if (this.existsInDb()) {
       return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
     }
-    if (this.isEmpty()) {
-      return $.Deferred().reject(new Error('Cannot create empty document'));
-    }
+    /*if (this.isEmpty()) {
+        return $.Deferred().reject(new Error("Cannot create empty document"));
+    }*/
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot create, invalid document'));
     }
@@ -8425,7 +10207,7 @@ Document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiLongCall = function (spec) {
-    spec.timeOut = spec.timeOut || 30000;
+    spec.timeOut = spec.timeOut || 60000;
     return this._doApiCall(spec);
   };
   Document.prototype._getColorLabel = function (data, options) {
@@ -8454,7 +10236,9 @@ Group = function ($, common, api, Document) {
     customerLabels: [],
     reservationLabels: [],
     orderLabels: [],
-    cancelled: null
+    businessHours: [],
+    cancelled: null,
+    calendarTemplate: '{{number}}: {{name_or_summary}} - {{contact.name}}'
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -8481,6 +10265,8 @@ Group = function ($, common, api, Document) {
    * @property {array} customerLabels     the groups customer labels
    * @property {array} reservationLabels  the groups reservation labels
    * @property {array} orderLabels        the groups order labels
+   * @property {array} businessHours      the groups business hours
+   * @property {string} calendarTemplate  the group calendar event title template
    * @constructor
    * @extends Document
    */
@@ -8488,11 +10274,11 @@ Group = function ($, common, api, Document) {
     var spec = $.extend({}, opt);
     Document.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
-    this.itemFlags = spec.itemFlags || DEFAULTS.itemFlags.slice();
-    this.kitFlags = spec.kitFlags || DEFAULTS.kitFlags.slice();
-    this.customerFlags = spec.customerFlags || DEFAULTS.customerFlags.slice();
-    this.orderFlags = spec.orderFlags || DEFAULTS.orderFlags.slice();
-    this.reservationFlags = spec.reservationFlags || DEFAULTS.reservationFlags.slice();
+    this.itemFlags = this.getFlags(spec.itemFlags || DEFAULTS.itemFlags.slice());
+    this.kitFlags = this.getFlags(spec.kitFlags || DEFAULTS.kitFlags.slice());
+    this.customerFlags = this.getFlags(spec.customerFlags || DEFAULTS.customerFlags.slice());
+    this.orderFlags = this.getFlags(spec.orderFlags || DEFAULTS.orderFlags.slice());
+    this.reservationFlags = this.getFlags(spec.reservationFlags || DEFAULTS.reservationFlags.slice());
     this.itemFields = spec.itemFields || DEFAULTS.itemFields.slice();
     this.kitFields = spec.kitFields || DEFAULTS.kitFields.slice();
     this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
@@ -8503,6 +10289,8 @@ Group = function ($, common, api, Document) {
     this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
     this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
     this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
+    this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
+    this.calendarTemplate = spec.calendarTemplate || DEFAULTS.calendarTemplate;
   };
   Group.prototype = new tmp();
   Group.prototype.constructor = Group;
@@ -8562,7 +10350,7 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+  Group.prototype.createField = function (collection, name, kind, required, form, unit, editor, description, select, search, skipRead) {
     var params = {
       collection: collection,
       name: name,
@@ -8571,7 +10359,8 @@ Group = function ($, common, api, Document) {
       form: form,
       unit: unit,
       editor: editor,
-      description: description
+      description: description,
+      search: search
     };
     if (select && select.length > 0) {
       params.select = select;
@@ -8599,7 +10388,7 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, search, skipRead) {
     var params = {
       collection: collection,
       name: name,
@@ -8608,10 +10397,14 @@ Group = function ($, common, api, Document) {
       form: form,
       unit: unit,
       editor: editor,
-      description: description
+      description: description,
+      search: search
     };
     if (select && select.length > 0) {
       params.select = select;
+    }
+    if (name != newName) {
+      params.newName = newName;
     }
     return this._doApiCall({
       pk: this.id,
@@ -8664,10 +10457,11 @@ Group = function ($, common, api, Document) {
    * @param collection (items, kits, customers, reservations, orders)
    * @param labelColor
    * @param labelName
+   * @param labelDefault
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.createLabel = function (collection, labelColor, labelName, skipRead) {
+  Group.prototype.createLabel = function (collection, labelColor, labelName, labelDefault, skipRead) {
     return this._doApiCall({
       pk: this.id,
       method: 'createLabel',
@@ -8675,7 +10469,8 @@ Group = function ($, common, api, Document) {
       params: {
         collection: collection,
         labelColor: labelColor,
-        labelName: labelName
+        labelName: labelName,
+        labelDefault: labelDefault
       }
     });
   };
@@ -8688,7 +10483,7 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, skipRead) {
+  Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, labelDefault, skipRead) {
     return this._doApiCall({
       pk: this.id,
       method: 'updateLabel',
@@ -8697,7 +10492,8 @@ Group = function ($, common, api, Document) {
         collection: collection,
         labelId: labelId,
         labelColor: labelColor,
-        labelName: labelName
+        labelName: labelName,
+        labelDefault: labelDefault
       }
     });
   };
@@ -8746,14 +10542,15 @@ Group = function ($, common, api, Document) {
    * @param shipping
    * @returns {promise}
    */
-  Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping) {
+  Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping, coupon) {
     return this._doApiCall({
       pk: this.id,
       method: 'buyProducts',
       skipRead: true,
       params: {
         products: listOfProductQtyTuples,
-        shipping: shipping
+        shipping: shipping,
+        coupon: coupon
       }
     });
   };
@@ -8827,20 +10624,166 @@ Group = function ($, common, api, Document) {
   Group.prototype.getFlagsForCollection = function (coll) {
     switch (coll) {
     case 'items':
-      return this.itemFlags;
+      return this.getFlags(this.itemFlags);
     case 'kits':
-      return this.kitFlags;
+      return this.getFlags(this.kitFlags);
     case 'contacts':
     case 'customers':
-      return this.customerFlags;
+      return this.getFlags(this.customerFlags);
     case 'reservations':
-      return this.reservationFlags;
+      return this.getFlags(this.reservationFlags);
     case 'checkouts':
     case 'orders':
-      return this.orderFlags;
+      return this.getFlags(this.orderFlags);
     default:
-      return [];
+      return this.getFlags([]);
     }
+  };
+  Group.prototype.getFlags = function (flags) {
+    return flags.map(function (f) {
+      if (typeof f === 'string') {
+        f = {
+          _id: f,
+          name: f
+        };
+      }
+      // Also add _id param (bugfix)
+      if (!f._id)
+        f._id = f.id;
+      return f;
+    });
+  };
+  /**
+   * Helper method that returns the business days
+   * @returns {Array}
+   */
+  Group.prototype.getBusinessDays = function () {
+    return this.businessHours.map(function (bh) {
+      //server side: 0 => monday - 6 => sunday
+      //client side: 1 => monday - 7 => sunday
+      return bh.isoWeekday;
+    });
+  };
+  /**
+   * Helper method that returns the business hours for a given iso day
+   * @returns {Array}
+   */
+  Group.prototype.getBusinessHoursForIsoWeekday = function (isoDay) {
+    return this.businessHours.filter(function (bh) {
+      //server side: 0 => monday - 6 => sunday
+      //client side: 1 => monday - 7 => sunday
+      return bh.isoWeekday == isoDay;
+    });
+  };
+  /**
+   * setBusinessHours: translate iso weekdays back to server days
+   * @param {array} businessHours 
+   * @param {boolean} skipRead      
+   */
+  Group.prototype.setBusinessHours = function (businessHours, skipRead) {
+    var that = this;
+    businessHours = businessHours || [];
+    // Make copy of array
+    businessHours = businessHours.slice().map(function (bh) {
+      // BUGFIX clone object!!!!
+      var newBh = $.extend({}, bh);
+      newBh.dayOfWeek = bh.isoWeekday - 1;
+      //server side 0-6 Mon-Sun
+      delete newBh.isoWeekday;
+      return newBh;
+    });
+    return this._doApiCall({
+      method: 'setBusinessHours',
+      params: {
+        businessHours: businessHours,
+        _fields: this._fields
+      },
+      skipRead: skipRead,
+      usePost: true
+    });
+  };
+  /**
+   * getDefaultBusinessHours: in iso weekdays
+   * @return {array}
+   * setCalendarTemplate
+   * @param {string} template 
+   * @param {string} kind      
+   */
+  Group.prototype.getDefaultBusinessHours = function () {
+    return [
+      {
+        isoWeekday: 1,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 2,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 3,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 4,
+        openTime: 540,
+        closeTime: 1020
+      },
+      {
+        isoWeekday: 5,
+        openTime: 540,
+        closeTime: 1020
+      }
+    ];
+  };
+  /**
+   * setCalendarTemplate
+   * @param {string} template 
+   * @param {string} kind      
+   */
+  Group.prototype.setCalendarTemplate = function (template, kind) {
+    return this._doApiCall({
+      method: 'setCalendarTemplate',
+      params: {
+        template: template,
+        kind: kind
+      },
+      skipRead: true,
+      usePost: true
+    });
+  };
+  /**
+   * setCalendarTemplate      
+   */
+  Group.prototype.clearCalendarTemplate = function () {
+    return this._doApiCall({
+      method: 'clearCalendarTemplate',
+      skipRead: true
+    });
+  };
+  /**
+   * getCalendarTemplatePreview
+   * @param {string} template 
+   * @param {string} kind     
+   */
+  Group.prototype.getCalendarTemplatePreview = function (template, kind) {
+    return this._doApiCall({
+      method: 'getCalendarTemplatePreview',
+      params: {
+        template: template,
+        kind: kind
+      },
+      skipRead: true,
+      usePost: true
+    });
+  };
+  /**
+   * getDefaultCalendarTemplate
+   */
+  Group.prototype.getDefaultCalendarTemplate = function () {
+    return DEFAULTS.calendarTemplate;
   };
   //
   // Specific validators
@@ -8879,19 +10822,39 @@ Group = function ($, common, api, Document) {
     var that = this;
     return Document.prototype._fromJson.call(this, data, options).then(function () {
       that.name = data.name || DEFAULTS.name;
-      that.itemFlags = data.itemFlags || DEFAULTS.itemFlags.slice();
-      that.kitFlags = data.kitFlags || DEFAULTS.kitFlags.slice();
-      that.customerFlags = data.customerFlags || DEFAULTS.customerFlags.slice();
-      that.orderFlags = data.orderFlags || DEFAULTS.orderFlags.slice();
-      that.reservationFlags = data.reservationFlags || DEFAULTS.reservationFlags.slice();
+      that.itemFlags = that.getFlags(data.itemFlags || DEFAULTS.itemFlags.slice());
+      that.kitFlags = that.getFlags(data.kitFlags || DEFAULTS.kitFlags.slice());
+      that.customerFlags = that.getFlags(data.customerFlags || DEFAULTS.customerFlags.slice());
+      that.orderFlags = that.getFlags(data.orderFlags || DEFAULTS.orderFlags.slice());
+      that.reservationFlags = that.getFlags(data.reservationFlags || DEFAULTS.reservationFlags.slice());
       that.itemFields = data.itemFields || DEFAULTS.itemFields.slice();
       that.kitFields = data.kitFields || DEFAULTS.kitFields.slice();
       that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
       that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
       that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
       that.cancelled = data.cancelled || DEFAULTS.cancelled;
-      return that._fromColorLabelsJson(data, options);
+      that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
+      that.calendarTemplate = data.calendarTemplate || DEFAULTS.calendarTemplate;
+      return that._fromColorLabelsJson(data, options).then(function (data) {
+        return that._fromBusinessHoursJson(data, options);
+      });
     });
+  };
+  /**
+   * _fromBusinessHoursJson: client side uses iso weekdays
+   * @param  {object} data    
+   * @param  {object} options 
+   * @return {object}         
+   */
+  Group.prototype._fromBusinessHoursJson = function (data, options) {
+    data.businessHours = data.businessHours.map(function (bh) {
+      if (!bh.isoWeekday) {
+        bh.isoWeekday = bh.dayOfWeek + 1;  // 1-7 Mon - Sun
+      }
+      delete bh.dayOfWeek;
+      return bh;
+    });
+    return $.Deferred().resolve(data);
   };
   /**
    * _fromColorLabelsJson: reads the document labels
@@ -8913,6 +10876,9 @@ Group = function ($, common, api, Document) {
       if (labelsKey == 'orderLabels') {
         that[labelsKey].push(that._getColorLabel({
           readonly: true,
+          default: !data[labelsKey].some(function (l) {
+            return l.default === true;
+          }),
           name: 'Unlabeled',
           color: 'SlateGray'
         }, options));
@@ -8920,6 +10886,9 @@ Group = function ($, common, api, Document) {
       if (labelsKey == 'reservationLabels') {
         that[labelsKey].push(that._getColorLabel({
           readonly: true,
+          default: !data[labelsKey].some(function (l) {
+            return l.default === true;
+          }),
           name: 'Unlabeled',
           color: 'LimeGreen'
         }, options));
@@ -8947,7 +10916,7 @@ Item = function ($, common, Base) {
       warrantyDate: null,
       purchaseDate: null,
       purchasePrice: null,
-      residualValue: null,
+      residualValue: 0,
       location: '',
       category: '',
       geo: [
@@ -8959,7 +10928,15 @@ Item = function ($, common, Base) {
       kit: null,
       custody: null,
       cover: '',
-      catalog: null
+      catalog: null,
+      canReserve: 'available',
+      canOrder: 'available',
+      canCustody: 'available',
+      allowReserve: true,
+      allowOrder: true,
+      allowCustody: true,
+      flagged: null,
+      expired: null
     };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9017,6 +10994,12 @@ Item = function ($, common, Base) {
     this.custody = spec.custody || DEFAULTS.custody;
     this.cover = spec.cover || DEFAULTS.cover;
     this.catalog = spec.catalog || DEFAULTS.catalog;
+    this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+    this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+    this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
+    this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
+    this._canCheckout = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+    this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
   };
   Item.prototype = new tmp();
   Item.prototype.constructor = Item;
@@ -9051,7 +11034,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyResidualValue() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag();
+    return Base.prototype.isDirty.call(this) || this._isDirtyName() || this._isDirtyBrand() || this._isDirtyModel() || this._isDirtyWarrantyDate() || this._isDirtyPurchaseDate() || this._isDirtyPurchasePrice() || this._isDirtyResidualValue() || this._isDirtyCategory() || this._isDirtyLocation() || this._isDirtyGeo() || this._isDirtyFlag() || this._isDirtyPermissions();
   };
   Item.prototype._getDefaults = function () {
     return DEFAULTS;
@@ -9083,6 +11066,12 @@ Item = function ($, common, Base) {
   };
   Item.prototype._fromJson = function (data, options) {
     var that = this;
+    if (data.allowOrder === undefined)
+      data.allowOrder = DEFAULTS.allowOrder;
+    if (data.allowReserve === undefined)
+      data.allowReserve = DEFAULTS.allowReserve;
+    if (data.allowCustody === undefined)
+      data.allowCustody = DEFAULTS.allowCustody;
     return Base.prototype._fromJson.call(this, data, options).then(function () {
       that.name = data.name || DEFAULTS.name;
       that.status = data.status || DEFAULTS.status;
@@ -9097,6 +11086,8 @@ Item = function ($, common, Base) {
       that.geo = data.geo || DEFAULTS.geo.slice();
       that.cover = data.cover || DEFAULTS.cover;
       that.catalog = data.catalog || DEFAULTS.catalog;
+      that.flagged = data.flagged || DEFAULTS.flagged;
+      that.expired = data.expired || DEFAULTS.expired;
       // Depending on the fields we'll need to get the _id directly or from the dicts
       var locId = DEFAULTS.location;
       if (data.location) {
@@ -9123,6 +11114,12 @@ Item = function ($, common, Base) {
         custodyId = data.custody._id ? data.custody._id : data.custody;
       }
       that.custody = custodyId;
+      that._canReserve = data.canReserve !== undefined ? data.canReserve : DEFAULTS.canReserve;
+      that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+      that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+      that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+      that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+      that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
       $.publish('item.fromJson', data);
       return data;
     });
@@ -9163,7 +11160,7 @@ Item = function ($, common, Base) {
     return this._isDirtyProperty('residualValue');
   };
   Item.prototype._isDirtyLocation = function () {
-    if (this.raw && this.status != 'in_custody') {
+    if (this.raw) {
       var locId = DEFAULTS.location;
       if (this.raw.location) {
         locId = this.raw.location._id ? this.raw.location._id : this.raw.location;
@@ -9184,6 +11181,14 @@ Item = function ($, common, Base) {
       return false;
     }
   };
+  Item.prototype._isDirtyPermissions = function () {
+    if (this.raw) {
+      var allowReserve = this.raw.allowReserve, allowCheckout = this.raw.allowOrder, allowCustody = this.raw.allowCustody;
+      return this.allowReserve != allowReserve || this.allowCheckout != allowCheckout || this.allowCustody != allowCustody;
+    } else {
+      return false;
+    }
+  };
   Item.prototype._isDirtyGeo = function () {
     if (this.raw) {
       var address = this.raw.address || DEFAULTS.address;
@@ -9194,7 +11199,11 @@ Item = function ($, common, Base) {
     }
   };
   Item.prototype._isDirtyFlag = function () {
-    return this._isDirtyStringProperty('flag');
+    if (this.raw) {
+      return this.raw.flag != this.flag;
+    } else {
+      return false;
+    }
   };
   //
   // Business logic
@@ -9228,7 +11237,7 @@ Item = function ($, common, Base) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid document'));
     }
-    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdFlags = $.Deferred(), dfdBasic = $.Deferred();
+    var that = this, dfdCheck = $.Deferred(), dfdCategory = $.Deferred(), dfdLocation = $.Deferred(), dfdFields = $.Deferred(), dfdPermissions = $.Deferred(), dfdBasic = $.Deferred();
     if (this._isDirtyCategory()) {
       this.canChangeCategory(this.category).done(function (data) {
         if (data.result) {
@@ -9246,8 +11255,7 @@ Item = function ($, common, Base) {
       } else {
         dfdCategory.resolve();
       }
-      // Skip update location if item is in custody
-      if (that._isDirtyLocation() && that.status != 'in_custody') {
+      if (that._isDirtyLocation()) {
         dfdLocation = that.changeLocation(that.location);
       } else {
         dfdLocation.resolve();
@@ -9257,21 +11265,17 @@ Item = function ($, common, Base) {
       } else {
         dfdFields.resolve();
       }
-      if (that._isDirtyFlag()) {
-        if (that.flag == '' || that.flag == null) {
-          dfdFlags = that.clearFlag();
-        } else {
-          dfdFlags = that.setFlag(that.flag);
-        }
-      } else {
-        dfdFlags.resolve();
-      }
       if (that._isDirtyName() || that._isDirtyBrand() || that._isDirtyModel() || that._isDirtyWarrantyDate() || that._isDirtyPurchaseDate() || that._isDirtyPurchasePrice() || that._isDirtyResidualValue()) {
         dfdBasic = that.updateBasicFields(that.name, that.brand, that.model, that.warrantyDate, that.purchaseDate, that.purchasePrice, that.residualValue);
       } else {
         dfdBasic.resolve();
       }
-      return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
+      if (that._isDirtyPermissions()) {
+        dfdPermissions = that.updateAllowedActions(that.allowReserve, that.allowCheckout, that.allowCustody);
+      } else {
+        dfdPermissions.resolve();
+      }
+      return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
     });
   };
   /**
@@ -9360,22 +11364,6 @@ Item = function ($, common, Base) {
     });
   };
   /**
-   * Checks if an item can be reserved (based on status)
-   * @name Item#canReserve
-   * @returns {boolean}
-   */
-  Item.prototype.canReserve = function () {
-    return common.itemCanReserve(this);
-  };
-  /**
-   * Checks if an item can be checked out (based on status)
-   * @name Item#canCheckout
-   * @returns {boolean}
-   */
-  Item.prototype.canCheckout = function () {
-    return common.itemCanCheckout(this);
-  };
-  /**
    * Checks if we can go to the checkout of an item (based on status)
    * @name Item#canGoToCheckout
    * @returns {boolean}
@@ -9419,12 +11407,14 @@ Item = function ($, common, Base) {
   /**
    * Expires an item, puts it in the *expired* status
    * @name Item#expire
+   * @param message
    * @param skipRead
    * @returns {promise}
    */
-  Item.prototype.expire = function (skipRead) {
+  Item.prototype.expire = function (message, skipRead) {
     return this._doApiCall({
       method: 'expire',
+      params: { message: message || '' },
       skipRead: skipRead
     });
   };
@@ -9610,13 +11600,40 @@ Item = function ($, common, Base) {
       return skipRead == true ? data : that._fromJson(data[0]);
     });
   };
+  Item.prototype.updateAllowedActions = function (canReserve, canCheckout, canCustody, skipRead) {
+    return this._doApiCall({
+      method: 'setAllowedActions',
+      params: {
+        reserve: canReserve,
+        order: canCheckout,
+        custody: canCustody
+      },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Checks if an item can be reserved (based on status)
+   * @name Item#canReserve
+   * @returns {boolean}
+   */
+  Item.prototype.canReserve = function () {
+    return common.itemCanReserve(this.raw);
+  };
+  /**
+   * Checks if an item can be checked out (based on status)
+   * @name Item#canCheckout
+   * @returns {boolean}
+   */
+  Item.prototype.canCheckout = function () {
+    return common.itemCanCheckout(this.raw);
+  };
   /**
    * Checks if custody can be taken for an item (based on status)
    * @name Item#canTakeCustody
    * @returns {boolean}
    */
   Item.prototype.canTakeCustody = function () {
-    return common.itemCanTakeCustody(this);
+    return common.itemCanTakeCustody(this.raw);
   };
   /**
    * Checks if custody can be released for an item (based on status)
@@ -9624,7 +11641,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.canReleaseCustody = function () {
-    return common.itemCanReleaseCustody(this);
+    return common.itemCanReleaseCustody(this.raw);
   };
   /**
    * Checks if custody can be transferred for an item (based on status)
@@ -9632,7 +11649,7 @@ Item = function ($, common, Base) {
    * @returns {boolean}
    */
   Item.prototype.canTransferCustody = function () {
-    return common.itemCanTransferCustody(this);
+    return common.itemCanTransferCustody(this.raw);
   };
   /**
    * Takes custody of an item
@@ -9694,9 +11711,17 @@ Item = function ($, common, Base) {
 Kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
+    description: '',
     items: [],
+    itemSummary: '',
     status: 'unknown',
-    cover: ''
+    cover: '',
+    canReserve: 'available',
+    canOrder: 'available',
+    canCustody: 'available',
+    allowReserve: true,
+    allowOrder: true,
+    allowCustody: true
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -9717,11 +11742,19 @@ Kit = function ($, Base, common) {
     }, opt);
     Base.call(this, spec);
     this.name = spec.name || DEFAULTS.name;
+    this.description = spec.description || DEFAULTS.description;
     this.items = spec.items || DEFAULTS.items.slice();
+    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
     this.codes = [];
     this.conflicts = [];
     this.status = spec.status || DEFAULTS.status;
     this.cover = spec.cover || DEFAULTS.cover;
+    this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+    this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+    this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
+    this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
+    this._canOrder = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+    this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
   };
   Kit.prototype = new tmp();
   Kit.prototype.constructor = Kit;
@@ -9783,6 +11816,22 @@ Kit = function ($, Base, common) {
     return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
   };
   /**
+   * Checks if the Kit items is dirty
+   * @name Kit#isDirtyItems
+   * @returns {boolean}
+   * @override
+   */
+  Kit.prototype.isDirtyItems = function () {
+    var toItemArrayString = function (items) {
+      items = items || [];
+      return items.map(function (it) {
+        return it._id;
+      }).sort().join(',');
+    };
+    var raw = this.raw || {};
+    return toItemArrayString(this.items) != toItemArrayString(raw.items);
+  };
+  /**
    * Checks if the Kits is dirty and needs saving
    * @name Kit#isDirty
    * @returns {boolean}
@@ -9793,7 +11842,7 @@ Kit = function ($, Base, common) {
     if (!isDirty && this.raw) {
       isDirty = this._isDirtyStringProperty('name');
     }
-    return isDirty;
+    return isDirty || this.isDirtyItems();
   };
   //
   // Business logic
@@ -9806,7 +11855,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canCheckout = function () {
-    return common.kitCanCheckout(this);
+    return common.kitCanCheckout(this.raw);
   };
   /**
    * Checks if a Kit can be reserved (based on status)
@@ -9815,7 +11864,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canReserve = function () {
-    return common.kitCanReserve(this);
+    return common.kitCanReserve(this.raw);
   };
   /**
    * addItems; adds a bunch of Items to the transaction using a list of item ids
@@ -9925,7 +11974,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canTakeCustody = function () {
-    return common.kitCanTakeCustody(this);
+    return common.kitCanTakeCustody(this.raw);
   };
   /**
    * Checks if custody can be released for a kit (based on status)
@@ -9933,7 +11982,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canReleaseCustody = function () {
-    return common.kitCanReleaseCustody(this);
+    return common.kitCanReleaseCustody(this.raw);
   };
   /**
    * Checks if custody can be transferred for a kit (based on status)
@@ -9941,7 +11990,7 @@ Kit = function ($, Base, common) {
    * @returns {boolean}
    */
   Kit.prototype.canTransferCustody = function () {
-    return common.kitCanTransferCustody(this);
+    return common.kitCanTransferCustody(this.raw);
   };
   /**
    * Takes custody of a kit (and all items in it)
@@ -9997,6 +12046,7 @@ Kit = function ($, Base, common) {
   Kit.prototype._toJson = function (options) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
+    data.description = this.description || DEFAULTS.description;
     //data.items --> not via update
     return data;
   };
@@ -10004,10 +12054,18 @@ Kit = function ($, Base, common) {
     var that = this;
     return Base.prototype._fromJson.call(this, data, options).then(function (data) {
       that.name = data.name || DEFAULTS.name;
+      that.description = data.description || DEFAULTS.description;
       that.items = data.items || DEFAULTS.items.slice();
+      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       that.codes = data.codes || [];
       that.status = data.status || DEFAULTS.status;
       that.cover = data.cover || DEFAULTS.cover;
+      that._canReserve = data.canReserve !== undefined ? data.canReserve : DEFAULTS.canReserve;
+      that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+      that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+      that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+      that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+      that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
       that._loadConflicts(that.items);
       $.publish('Kit.fromJson', data);
       return data;
@@ -10328,6 +12386,8 @@ dateHelper = function ($, moment) {
     this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
     this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
     this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
+    this.businessHours = spec.businessHours || [];
+    this.weekStart = spec.weekStart || 1;
   };
   /**
    * @name parseDate
@@ -10457,7 +12517,9 @@ dateHelper = function ($, moment) {
         });
       }
     }
-    return ranges;
+    return ranges.filter(function (r) {
+      return global.dateHelper.isValidBusinessDate(r.to);
+    });
   };
   /**
    * getFriendlyFromTo
@@ -10736,11 +12798,70 @@ dateHelper = function ($, moment) {
       break;
     }
   };
+  DateHelper.prototype.isValidBusinessDate = function (d) {
+    var isValid = false;
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      $.each(this._getBusinessHours(d), function (i, h) {
+        var openTime = moment(moment.utc(moment.duration(h.openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm'), closeTime = moment(moment.utc(moment.duration(h.closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        var testDate = moment(d.clone().format('H:mm'), 'H:mm');
+        isValid = testDate.isBetween(openTime, closeTime) || testDate.isSame(openTime) || testDate.isSame(closeTime);
+        if (isValid)
+          return false;
+      });
+    } else {
+      isValid = true;
+    }
+    return isValid;
+  };
+  DateHelper.prototype.getValidBusinessDate = function (d) {
+    var that = this, now = this.getNow(), maxMinutes = 0;
+    //bugfix getValidBusinessDate only returns dates from now or in the future
+    if (d.isBefore(now)) {
+      d.date(now.date());
+    }
+    while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
+      d = d.add(that.roundMinutes, 'minutes');
+      // Prevent infinite loop by stopping after 1 full week
+      maxMinutes += that.roundMinutes;
+    }
+    return d;
+  };
+  DateHelper.prototype._getBusinessHours = function (d) {
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      return businessHours.filter(function (bh) {
+        return bh.isoWeekday == d.isoWeekday();
+      });
+    } else {
+      return [];
+    }
+  };
   DateHelper.prototype._makeStartOfBusinessDay = function (m) {
-    return m.clone().hours(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var startOfBusinessDay = m.clone().hour(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m);
+      if (businessHoursForDay.length > 0) {
+        var openTime = moment(moment.utc(moment.duration(businessHoursForDay[0].openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        startOfBusinessDay.hour(openTime.hour()).minute(openTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(startOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfBusinessDay = function (m) {
-    return m.clone().hours(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var endOfBusinessDay = m.clone().hour(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
+    var businessHours = this.businessHours;
+    if (businessHours.length > 0) {
+      var businessHoursForDay = this._getBusinessHours(m).sort(function (a, b) {
+        return a.closeTime < b.closeTime;
+      });
+      if (businessHoursForDay.length > 0) {
+        var closeTime = moment(moment.utc(moment.duration(businessHoursForDay[0].closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
+        endOfBusinessDay.hour(closeTime.hour()).minute(closeTime.minute());
+      }
+    }
+    return this.getValidBusinessDate(endOfBusinessDay);
   };
   DateHelper.prototype._makeEndOfDay = function (m) {
     return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
@@ -10760,6 +12881,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     conflicts: [],
     by: null,
     archived: null,
+    modified: null,
     itemSummary: null,
     name: null
   };
@@ -10794,6 +12916,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.dateHelper = spec.dateHelper || new DateHelper();
     this.helper = spec.helper || new Helper();
+    this.unavailableFlagHelper = spec.unavailableFlagHelper || function (flag) {
+      return false;
+    };
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -10841,11 +12966,12 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.getNextTimeSlot = function (d) {
     d = d || this.getNowRounded();
-    var next = moment(d).add(this._getDateHelper().roundMinutes, 'minutes');
+    var dateHelper = this._getDateHelper();
+    var next = moment(d).add(dateHelper.roundMinutes, 'minutes');
     if (next.isSame(d)) {
-      next = next.add(this._getDateHelper().roundMinutes, 'minutes');
+      next = next.add(dateHelper.roundMinutes, 'minutes');
     }
-    return next;
+    return dateHelper.getValidBusinessDate(next);
   };
   /**
    * Gets the lowest possible from date, by default now
@@ -11024,7 +13150,6 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var data = Base.prototype._toJson.call(this, options);
     //data.started = this.from;  // VT: Will be set during checkout
     //data.finished = this.to;  // VT: Will be set during final checkin
-    data.due = this.due;
     if (this.location) {
       // Make sure we send the location as id, not the entire object
       data.location = this._getId(this.location);
@@ -11057,6 +13182,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.archived = data.archived || DEFAULTS.archived;
       that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       that.name = data.name || DEFAULTS.name;
+      that.modified = data.modified || DEFAULTS.modified;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -11163,6 +13289,12 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
   Transaction.prototype.setDueDate = function (date, skipRead) {
     this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
+  };
+  Transaction.prototype.setLabel = function (labelId, skipRead) {
+    var that = this, dfdExists = this.existsInDb() ? $.Deferred().resolve() : this._createTransaction(skipRead);
+    return dfdExists.then(function () {
+      return Base.prototype.setLabel.call(that, labelId, skipRead);
+    });
   };
   // Location setters
   /**
@@ -11426,7 +13558,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canArchive = function () {
-    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   /**
    * Checks if we can unarchive a transaction (based on status)
@@ -11434,7 +13566,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canUndoArchive = function () {
-    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   Transaction.prototype.setField = function (field, value, skipRead) {
     var that = this;
@@ -11482,7 +13614,9 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // - at this location
     // - in the specified list (if any)
     params = params || {};
-    params.location = this._getId(this.location);
+    if (this.location) {
+      params.location = this._getId(this.location);
+    }
     if (listName != null && listName.length > 0) {
       params.listName = listName;
     }
@@ -11716,8 +13850,8 @@ Order = function ($, api, Transaction, Conflict, common) {
     // and never be called on order update
     // since most updates are done via setter methods
     var data = Transaction.prototype._toJson.call(this, options);
-    data.fromDate = this.fromDate != null ? this.fromDate.toJSONDate() : 'null';
-    data.toDate = this.toDate != null ? this.toDate.toJSONDate() : 'null';
+    //data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
+    //data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
     data.due = this.due != null ? this.due.toJSONDate() : 'null';
     return data;
   };
@@ -11725,7 +13859,7 @@ Order = function ($, api, Transaction, Conflict, common) {
     var that = this;
     // Already set the from, to and due dates
     // Transaction._fromJson might need it during _getConflicts
-    that.from = data.started == null || data.started == 'null' ? null : data.started;
+    that.from = data.started == null || data.started == 'null' ? this.getMinDateFrom() : data.started;
     that.to = data.finished == null || data.finished == 'null' ? null : data.finished;
     that.due = data.due == null || data.due == 'null' ? null : data.due;
     that.reservation = data.reservation || null;
@@ -11774,6 +13908,15 @@ Order = function ($, api, Transaction, Conflict, common) {
     return this.status == 'open';
   };
   /**
+   * Checks if the order can be spotchecked
+   * @method
+   * @name Order#canSpotcheck
+   * @returns {boolean}
+   */
+  Order.prototype.canSpotcheck = function () {
+    return common.canOrderSpotcheck(this.raw);
+  };
+  /**
    * Checks if the order has an reservation linked to it
    * @method
    * @name Order#canGoToReservation
@@ -11809,6 +13952,32 @@ Order = function ($, api, Transaction, Conflict, common) {
     }).length > 0);
   };
   /**
+   * Checks if the checkout can be checked out again (based on status)
+   * @method
+   * @name Order#canCheckoutAgain
+   * @returns {boolean}
+   */
+  Order.prototype.canCheckoutAgain = function () {
+    return this.status == 'closed' && (this.contact && this.contact.status == 'active') && this.items.filter(function (item) {
+      return item.status == 'available';
+    }).length == this.items.length;
+  };
+  /**
+   * Creates a new, draft check-out with the same info
+   * as the original check-out
+   * @method
+   * @name Reservation#checkoutAgain
+   * @param skipRead
+   * @returns {promise}
+   */
+  Order.prototype.checkoutAgain = function (skipRead) {
+    return this._doApiCall({
+      method: 'checkoutAgain',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
    * Checks if order can undo checkout
    * @method
    * @name Order#canUndoCheckout
@@ -11824,7 +13993,11 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @returns {boolean}
    */
   Order.prototype.canDelete = function () {
-    return this.status == 'creating';
+    var that = this;
+    // If order has partially checked in items, then it can't be deleted anymore
+    return this.status == 'creating' && this.items.filter(function (item) {
+      return item.order && item.order == that.id;
+    }).length == this.items.length;
   };
   /**
    * Checks if items can be added to the checkout (based on status)
@@ -11845,6 +14018,19 @@ Order = function ($, api, Transaction, Conflict, common) {
     return this.status == 'creating';
   };
   /**
+   * Checks if specific item can be removed from the checkout
+   * BUGFIX: prevent deleting item of a checkout that already has been partially checked in
+   * but checkout is afterwards undone by undoCheckout
+   * 
+   * @method
+   * @name Order#canRemoveItem
+   * @param item
+   * @returns {boolean}
+   */
+  Order.prototype.canRemoveItem = function (item) {
+    return item.status == 'await_checkout' && (item.order && item.order == this.id);
+  };
+  /**
    * Checks if items can be swapped in the checkout (based on status)
    * @method
    * @name Order#canSwapItems
@@ -11860,6 +14046,26 @@ Order = function ($, api, Transaction, Conflict, common) {
    */
   Order.prototype.canGenerateDocument = function () {
     return this.status == 'open' || this.status == 'closed';
+  };
+  /**
+   * Checks of order due date can be extended 
+   * @param  {moment} due (optional)
+   * @param  {bool} skipRead
+   * @return {promise}
+   */
+  Order.prototype.canExtendCheckout = function (due) {
+    // We can only extend orders which are open
+    // and for which their due date will be
+    // at least 1 timeslot from now
+    var can = true;
+    if (this.status != 'open' || due && due.isBefore(this.getNextTimeSlot())) {
+      can = false;
+    }
+    // Only orders with active contacts can be extended
+    if (this.contact && this.contact.status != 'active') {
+      can = false;
+    }
+    return can;
   };
   //
   // Base overrides
@@ -11886,7 +14092,15 @@ Order = function ($, api, Transaction, Conflict, common) {
         return this._getServerConflicts(this.items, this.from, this.due, this.id, // orderId
         this.helper.ensureId(this.reservation))  // reservationId
 .then(function (serverConflicts) {
-          return conflicts.concat(serverConflicts);
+          // Don't include conflicts for items that are no longer part of the order anymore
+          var itemsInOrder = that.items.filter(function (item) {
+            return that.helper.ensureId(item.order) == that.id;
+          }).map(function (item) {
+            return item._id;
+          });
+          return conflicts.concat(serverConflicts.filter(function (c) {
+            return itemsInOrder.indexOf(c.item) != -1;
+          }));
         });
       }
     }
@@ -11899,7 +14113,7 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @private
    */
   Order.prototype._getConflicts = function () {
-    var conflicts = [];
+    var that = this, conflicts = [];
     // Only orders which are incomplete,
     // but have items and / or due date can have conflicts
     if (this.status == 'creating' && this.items.length > 0) {
@@ -11911,7 +14125,15 @@ Order = function ($, api, Transaction, Conflict, common) {
         return this._getServerConflicts(this.items, this.from, this.due, this.id, // orderId
         this.helper.ensureId(this.reservation))  // reservationId
 .then(function (serverConflicts) {
-          return conflicts.concat(serverConflicts);
+          // Don't include conflicts for items that are no longer part of the order anymore
+          var itemsInOrder = that.items.filter(function (item) {
+            return that.helper.ensureId(item.order) == that.id;
+          }).map(function (item) {
+            return item._id;
+          });
+          return conflicts.concat(serverConflicts.filter(function (c) {
+            return itemsInOrder.indexOf(c.item) != -1;
+          }));
         });
       }
     }
@@ -11930,7 +14152,12 @@ Order = function ($, api, Transaction, Conflict, common) {
    * @private
    */
   Order.prototype._getServerConflicts = function (items, fromDate, dueDate, orderId, reservationId) {
-    var conflicts = [], kind = '', transItem = null, itemIds = common.getItemIds(items);
+    var that = this;
+    var conflicts = [], kind = '', transItem = null, itemIds = common.getItemIds(items.filter(function (item) {
+        // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+        // Don't want to show conflicts for items that arn't part of the order anymore
+        return item.order == that.id;
+      })), showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
     // Get the availabilities for these items
     return this.dsItems.call(null, 'getAvailabilities', {
       items: itemIds,
@@ -11949,13 +14176,16 @@ Order = function ($, api, Transaction, Conflict, common) {
         if (transItem && transItem.length > 0) {
           transItem = transItem[0];
         }
-        if (transItem != null && transItem.status != 'expired') {
+        if (transItem != null && transItem.status != 'expired' && transItem.status != 'in_custody') {
           // Order cannot conflict with itself
           // or with the Reservation from which it was created
           if (av.order != orderId && av.reservation != reservationId) {
             kind = '';
             kind = kind || (av.order ? 'order' : '');
             kind = kind || (av.reservation ? 'reservation' : '');
+            kind = kind || av.kind;
+            if (kind == 'flag' && !showFlagConflicts)
+              return true;
             conflicts.push(new Conflict({
               kind: kind,
               item: transItem._id,
@@ -11975,11 +14205,36 @@ Order = function ($, api, Transaction, Conflict, common) {
     // We can check if all the items are:
     // - at the right location
     // - not expired
-    var conflicts = [], locId = this.helper.ensureId(this.location || '');
+    // - has order permission
+    var that = this, conflicts = [], locId = this.helper.ensureId(this.location || ''), showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
     $.each(this.items, function (i, item) {
-      if (item.status == 'expired') {
+      // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+      if (item.order != that.id)
+        return true;
+      if (that.unavailableFlagHelper(item.flag) && showFlagConflicts) {
+        conflicts.push(new Conflict({
+          kind: 'flag',
+          item: item._id,
+          flag: item.flag,
+          doc: item.order
+        }));
+      } else if (item.canOrder === 'unavailable_allow') {
+        conflicts.push(new Conflict({
+          kind: 'not_allowed_order',
+          item: item._id,
+          itemName: item.name
+        }));
+      } else if (item.status == 'expired') {
         conflicts.push(new Conflict({
           kind: 'expired',
+          item: item._id,
+          itemName: item.name,
+          locationCurrent: item.location,
+          locationDesired: locId
+        }));
+      } else if (item.status == 'in_custody') {
+        conflicts.push(new Conflict({
+          kind: 'custody',
           item: item._id,
           itemName: item.name,
           locationCurrent: item.location,
@@ -12235,20 +14490,13 @@ Order = function ($, api, Transaction, Conflict, common) {
     });
   };
   /**
-   * Checks of order due date can be extended to given date
-   * @param  {moment} due
+   * Checks of order due date can be extended 
+   * @param  {moment} due (optional)
    * @param  {bool} skipRead
    * @return {promise}
    */
   Order.prototype.canExtend = function (due) {
-    // We can only extend orders which are open
-    // and for which their due date will be
-    // at least 1 timeslot from now
-    var can = true;
-    if (this.status != 'open' || due.isBefore(this.getNextTimeSlot())) {
-      can = false;
-    }
-    return $.Deferred().resolve({ result: can });
+    return $.Deferred().resolve({ result: this.canExtendCheckout(due) });
   };
   /**
    * Extends order due date
@@ -12384,15 +14632,14 @@ PermissionHandler = function () {
    * @param limits - a group limits dict
    * @constructor
    */
-  var PermissionHandler = function (user, profile, limits) {
+  var PermissionHandler = function (user, profile, limits, permissions) {
     this.user = user;
     this.profile = profile;
     this.limits = limits;
-    // Helper booleans that mix a bunch of role stuff and profile / limits stuff
+    this.permissions = permissions;
     this._isOwner = user.isOwner;
-    this._isRootOrAdmin = user.role == 'root' || user.role == 'admin';
-    this._isRootOrAdminOrUser = user.role == 'root' || user.role == 'admin' || user.role == 'user';
-    this._isSelfService = user.role == 'selfservice';
+    // Helper booleans that mix a bunch of role stuff and profile / limits stuff
+    this._isBlockedContact = user.customer && user.customer.status == 'blocked';
     this._useWebhooks = limits.allowWebhooks && profile.useWebhooks;
     this._useOrders = limits.allowOrders && profile.useOrders;
     this._useReservations = limits.allowReservations && profile.useReservations;
@@ -12412,49 +14659,64 @@ PermissionHandler = function () {
     this._useReporting = limits.allowReporting && profile.useReporting;
     this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
     this._useNotifications = limits.allowNotifications && profile.useNotifications;
-    this._canSetFlag = false;
-    this._canClearFlag = false;
-    switch (user.role) {
-    case 'selfservice':
-      this._canSetFlag = profile.selfServiceCanSetFlag;
-      this._canClearFlag = profile.selfServiceCanClearFlag;
-      this._canSetLabel = profile.selfServiceCanSetLabel;
-      this._canClearLabel = profile.selfServiceCanClearLabel;
-      this._canReadOrders = this._useOrders && profile.selfServiceCanSeeOwnOrders;
-      this._canCreateOrders = this._useOrders && profile.selfServiceCanOrder;
-      break;
-    case 'user':
-      this._canSetFlag = profile.userCanSetFlag;
-      this._canClearFlag = profile.userCanClearFlag;
-      this._canSetLabel = profile.userCanSetLabel;
-      this._canClearLabel = profile.userCanClearLabel;
-      this._canReadOrders = this._useOrders;
-      this._canCreateOrders = this._useOrders;
-      break;
-    default:
-      this._canSetFlag = true;
-      this._canClearFlag = true;
-      this._canSetLabel = true;
-      this._canClearLabel = true;
-      this._canReadOrders = this._useOrders;
-      this._canCreateOrders = this._useOrders;
-      break;
-    }
-    if (this._isSelfService) {
-      // Override some permissions for selfservice users
-      this._useReservations = this._useReservations && this._useSelfService && profile.selfServiceCanReserve;
-      this._useCustody = this._useCustody && this._useSelfService && profile.selfServiceCanCustody;
-    }
+    this._useBlockContacts = limits.allowBlockContacts && profile.useBlockContacts;
+    this._useReservationsClose = this._useReservations && profile.useReservationsClose;
+    this._useSlack = limits.allowIntegrationSlack && profile.useIntegrationSlack;
+    this._useApi = limits.allowAPI;
+    this._useReleaseAtLocation = this._useCustody && (profile.custodyCanChangeLocation !== undefined ? profile.custodyCanChangeLocation : true);
+    // TODO change this update fallback (mobile)
+    this._useSpotcheck = limits.allowSpotcheck && profile.useSpotcheck;
+    this._useCustomRoles = limits.allowCustomRoles;
+  };
+  // 
+  // Module helpers
+  // 
+  PermissionHandler.prototype.canUseItemCustody = function () {
+    return this.limits.allowCustody;
+  };
+  PermissionHandler.prototype.canUseItemDepreciation = function () {
+    return this.limits.allowDepreciations;
+  };
+  PermissionHandler.prototype.canUseReporting = function () {
+    return this.limits.allowReporting;
+  };
+  PermissionHandler.prototype.canUseWebhooks = function () {
+    return this.limits.allowWebhooks;
+  };
+  PermissionHandler.prototype.canUseUserSync = function () {
+    return this.limits.allowUserSync;
+  };
+  PermissionHandler.prototype.canUseRestrictLocations = function () {
+    return this.limits.allowRestrictLocations;
+  };
+  PermissionHandler.prototype.canUseBlockContacts = function () {
+    return this.limits.allowBlockContacts;
+  };
+  PermissionHandler.prototype.canUseBusinessHours = function () {
+    return this.limits.allowBusinessHours;
+  };
+  PermissionHandler.prototype.canUseSlack = function () {
+    return this.limits.allowIntegrationSlack;
+  };
+  PermissionHandler.prototype.canUseSpotcheck = function () {
+    return this.limits.allowSpotcheck;
+  };
+  PermissionHandler.prototype.canUseCustomRoles = function () {
+    return this.limits.allowCustomRoles;
+  };
+  //
+  // Permission helpers
+  //
+  // Specific web app permission method to check if we need to show module
+  // even if user has no permission (upgrade page)
+  PermissionHandler.prototype.hasUpgradePermission = function () {
+    return this.hasAccountPermission('upgrade');
   };
   PermissionHandler.prototype.hasAnyAdminPermission = function () {
-    return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs');
+    return this.hasPermission('create', 'locations') || this.hasPermission('create', 'categories') || this.hasPermission('create', 'webhooks') || this.hasPermission('create', 'users') || this.hasPermission('create', 'templates') || this.hasPermission('create', 'syncs') || this.hasPermission('changePlan', 'account') || this.hasPermission('create', 'notifications') || this.hasPermission('update', 'settings');
   };
   PermissionHandler.prototype.hasDashboardPermission = function (action, data, location) {
-    // Selfservice cannot see dashboard if it doesn't has reservation or checkout permissions
-    if (this._isSelfService) {
-      return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
-    }
-    return true;
+    return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
   };
   PermissionHandler.prototype.hasCalendarPermission = function (action, data, location) {
     // Calendar permission depends on reservation or checkout permission
@@ -12466,6 +14728,9 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasItemCustodyPermission = function () {
     return this._useCustody;
   };
+  PermissionHandler.prototype.hasReleaseCustodyAtLocationPermission = function () {
+    return this._useCustody && this._useReleaseAtLocation;
+  };
   PermissionHandler.prototype.hasItemFlagPermission = function () {
     return this._useFlags;
   };
@@ -12473,7 +14738,7 @@ PermissionHandler = function () {
     return this._useGeo;
   };
   PermissionHandler.prototype.hasItemDepreciationPermission = function () {
-    return this._isRootOrAdmin && this._useDepreciations;
+    return this._useDepreciations && this.hasItemPermission('getDepreciation');
   };
   PermissionHandler.prototype.hasUserSyncPermission = function () {
     return this.hasAccountUserSyncPermission('read');
@@ -12482,10 +14747,19 @@ PermissionHandler = function () {
     return this._useSelfService;
   };
   PermissionHandler.prototype.hasReportingPermission = function () {
-    return this._isRootOrAdmin && this._useReporting;
+    return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
   };
   PermissionHandler.prototype.hasLabelPermission = function () {
-    return this._canSetLabel && this._canClearLabel;
+    return this.hasCheckoutPermission('setLabel');
+  };
+  PermissionHandler.prototype.hasSlackPermission = function () {
+    return this._useSlack;
+  };
+  PermissionHandler.prototype.hasApiPermission = function () {
+    return this._useApi;
+  };
+  PermissionHandler.prototype.hasSpotcheckPermission = function () {
+    return this._useSpotcheck;
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -12494,7 +14768,10 @@ PermissionHandler = function () {
     return this.hasPermission(action || 'read', 'contacts', data, location);
   };
   PermissionHandler.prototype.hasContactReadOtherPermission = function (action, data, location) {
-    return !this._isSelfService;
+    return this.permissions.indexOf('CUSTOMERS_READER') != -1;
+  };
+  PermissionHandler.prototype.hasBlockContactsPermission = function (action, data, location) {
+    return this._useBlockContacts;
   };
   PermissionHandler.prototype.hasCheckoutPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'orders', data, location);
@@ -12543,9 +14820,17 @@ PermissionHandler = function () {
     return this.hasAnyAdminPermission();
   };
   PermissionHandler.prototype.hasPermission = function (action, collection, data, location) {
-    if (this._isSelfService && !this._useSelfService) {
-      return false;
-    }
+    data = data || {};
+    /*if( (this._isSelfService) && 
+        (!this._useSelfService)) {
+        return false;
+    }*/
+    var permissions = this.permissions;
+    var can = function (arr) {
+      return permissions.some(function (perm) {
+        return arr.includes(perm);
+      });
+    };
     switch (collection) {
     default:
       return false;
@@ -12553,53 +14838,149 @@ PermissionHandler = function () {
       switch (action) {
       default:
         return false;
+      // Read actions
       case 'read':
-        return true;
+      case 'get':
+      case 'getAvailabilities':
+      case 'getAvailability':
+      case 'getByCode':
+      case 'getChangeLog':
+      case 'getConflicts':
+      case 'getImage':
+      case 'getLastItemNumber':
+      case 'getMultiple':
+      case 'getSummary':
+      case 'getTransactions':
+      case 'list':
+      case 'scannedCodeOn':
+      case 'search':
+      case 'searchAvailable':
+        return can([
+          'ITEMS_READER',
+          'ITEMS_READER_RESTRICTED'
+        ]);
       case 'create':
+      case 'createMultiple':
       case 'duplicate':
       case 'update':
+      // Delete actions
       case 'delete':
+      case 'deleteMultiple':
+      case 'canDelete':
+      // Change category actions
+      case 'changeCategory':
+      case 'canChangeCategory':
+      // Other update/delete actions
+      case 'getDepreciation':
+      case 'changeLocation':
+      case 'updatePermissions':
+      case 'addBarcode':
+      case 'removeBarcode':
+      case 'addCodes':
+      case 'removeCodes':
+      case 'clearCatalog':
+      case 'clearCover':
       case 'expire':
       case 'undoExpire':
       case 'setFields':
       case 'setField':
       case 'clearField':
-      case 'addAttachment':
-      case 'addComment':
-      case 'updateComment':
-      case 'removeComment':
-      case 'import':
-      case 'export':
+      case 'setAllowedActions':
+      case 'setCatalog':
+      case 'setCover':
+        return can([
+          'ITEMS_ADMIN',
+          'ITEMS_ADMIN_RESTRICTED'
+        ]);
       case 'updateGeo':
-      case 'changeLocation':
-      case 'changeCategory':
-        return this._isRootOrAdmin;
+        return can([
+          'ITEMS_GEO_ADMIN',
+          'ITEMS_GEO_ADMIN_RESTRICTED'
+        ]);
+      case 'attach':
+      case 'addAttachment':
+        return can(['ITEMS_ATTACHMENTS_OWN_WRITER']);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['ITEMS_ATTACHMENTS_DELETER']) || data.own && can(['ITEMS_ATTACHMENTS_OWN_DELETER']);
+      // Import actions
+      case 'import':
+      case 'importAnalyze':
+      case 'importSample':
+      case 'importSpreadsheet':
+      case 'importValidate':
+        return can([
+          'ITEMS_IMPORTER',
+          'ITEMS_IMPORTER_RESTRICTED'
+        ]);
+      case 'export':
+        return can([
+          'ITEMS_EXPORTER',
+          'ITEMS_EXPORTER_RESTRICTED'
+        ]);
+      case 'addComment':
+        return can(['ITEMS_COMMENTS_OWN_WRITER']);
+      case 'updateComment':
+        return data.own && can(['ITEMS_COMMENTS_OWN_WRITER']);
+      case 'removeComment':
+        return can(['ITEMS_COMMENTS_DELETER']) || data.own && can(['ITEMS_COMMENTS_OWN_DELETER']);
       // Permissings for asset labels
       case 'printLabel':
-        return this._isRootOrAdmin;
+        return can([
+          'ITEMS_LABEL_PRINTER',
+          'ITEMS_LABEL_PRINTER_RESTRICTED'
+        ]);
       // Permissions for flags
       case 'setFlag':
-        return this._useFlags && this._canSetFlag;
+        return this._useFlags && can([
+          'ITEMS_FLAGGER',
+          'ITEMS_FLAGGER_RESTRICTED'
+        ]);
       case 'clearFlag':
-        return this._useFlags && this._canClearFlag;
-      // Modules
+        return this._useFlags && can([
+          'ITEMS_UNFLAGGER',
+          'ITEMS_UNFLAGGER_RESTRICTED'
+        ]);
+      // Reservation
       case 'reserve':
-        return this._useReservations;
+        return this.hasReservationPermission('create');
+      // Check-out
       case 'checkout':
-        return this._canCreateOrders;
+        return this.hasCheckoutPermission('create');
+      // Custody
+      case 'seeOwnCustody':
+        return this._useCustody && can(['ITEMS_CUSTODY_OWN_READER']);
       case 'takeCustody':
+        return this._useCustody && (can(['ITEMS_CUSTODY_TAKER']) || (data.restrict === false ? false : can(['ITEMS_CUSTODY_TAKER_RESTRICTED'])));
       case 'releaseCustody':
-        return this._useCustody;
+        return this._useCustody && (can([
+          'ITEMS_CUSTODY_RELEASER',
+          'ITEMS_CUSTODY_RELEASER_RESTRICTED'
+        ]) || data.own && can(['ITEMS_CUSTODY_OWN_RELEASER']));
       case 'transferCustody':
-        return this._useCustody && this._isRootOrAdmin;
+        return this._useCustody && (can(['ITEMS_CUSTODY_TRANSFERER']) || (data.restrict === false ? false : can(['ITEMS_CUSTODY_TRANSFERER_RESTRICTED'])) || data.own && can(['ITEMS_CUSTODY_OWN_TRANSFERER']));
+      case 'giveCustody':
+        return this.hasContactReadOtherPermission() && this.hasItemPermission('takeCustody', data) && this.hasItemPermission('transferCustody', data);
+      case 'releaseCustodyAt':
+        return this.hasItemPermission('releaseCustody', data) && this._useReleaseAtLocation;
+      case 'getReport':
+        return can([
+          'ITEMS_REPORTER',
+          'ITEMS_REPORTER_RESTRICTED'
+        ]);
       }
       break;
     case 'kits':
+      if (!this._useKits)
+        return false;
       switch (action) {
       default:
         return false;
       case 'read':
-        return this._useKits;
+        return can([
+          'KITS_READER',
+          'KITS_READER_RESTRICTED'
+        ]);
       case 'create':
       case 'duplicate':
       case 'update':
@@ -12607,54 +14988,84 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
-      case 'addAttachment':
-      case 'addComment':
-      case 'updateComment':
-      case 'removeComment':
       case 'addItems':
       case 'removeItems':
       case 'moveItem':
+      case 'setCover':
+        return can([
+          'KITS_ADMIN',
+          'KITS_ADMIN_RESTRICTED'
+        ]);
+      case 'attach':
+      case 'addAttachment':
+        return can(['KITS_ATTACHMENTS_OWN_WRITER']);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['KITS_ATTACHMENTS_DELETER']) || data.own && can(['KITS_ATTACHMENTS_OWN_DELETER']);
+      case 'addComment':
+        return can(['KITS_COMMENTS_OWN_WRITER']);
+      case 'updateComment':
+        return data.own && can(['KITS_COMMENTS_OWN_WRITER']);
+      case 'removeComment':
+        return can(['KITS_COMMENTS_DELETER']) || data.own && can(['KITS_COMMENTS_OWN_DELETER']);
+      case 'updatePermissions':
+        return can([
+          'KITS_ADMIN',
+          'KITS_ADMIN_RESTRICTED'
+        ]);
+      case 'import':
+        return can([
+          'KITS_IMPORTER',
+          'KITS_IMPORTER_RESTRICTED'
+        ]);
       case 'export':
-        return this._useKits && this._isRootOrAdmin;
+        return can([
+          'KITS_EXPORTER',
+          'KITS_EXPORTER_RESTRICTED'
+        ]);
       // Permissings for asset labels
       case 'printLabel':
-        return this._isRootOrAdmin;
-      // Permissions for flags
-      case 'setFlag':
-        return this._useFlags && this._canSetFlag;
-      case 'clearFlag':
-        return this._useFlags && this._canClearFlag;
-      // Other
+        return can([
+          'KITS_LABEL_PRINTER',
+          'KITS_LABEL_PRINTER_RESTRICTED'
+        ]);
       case 'takeApart':
-        return this.profile.canTakeApartKits;
-      // Modules
-      // Modules
+        return this.hasReservationPermission('create') || this.hasCheckoutPermission('create');
+      // Reservation
       case 'reserve':
-        return this._useReservations;
+        return this.hasReservationPermission('create');
+      // Checkout
       case 'checkout':
-        return this._canCreateOrders;
+        return this.hasCheckoutPermission('create');
+      // Custody
+      case 'seeOwnCustody':
+        return this.hasItemPermission('seeOwnCustody', data);
       case 'takeCustody':
+        return this.hasItemPermission('takeCustody', data);
       case 'releaseCustody':
-        return this._useCustody;
+        return this.hasItemPermission('releaseCustody', data);
       case 'transferCustody':
+        return this.hasItemPermission('transferCustody', data);
       case 'giveCustody':
-        return this._useCustody && this._isRootOrAdmin;
+        return this.hasItemPermission('giveCustody', data);
+      case 'releaseCustodyAt':
+        return this.hasItemPermission('releaseCustody', data);
+      case 'getReport':
+        return this.hasItemPermission('getReport');
       }
       break;
     case 'orders':
     case 'checkouts':
+      if (!this._useOrders)
+        return false;
       switch (action) {
       default:
         return false;
-      // TODO: Checkin at location
-      // TODO: Add items to open check-out
       // CRUD
       case 'create':
+        return this.hasCheckoutPermission('update', { own: true });
       case 'update':
       case 'delete':
-        return this._canCreateOrders;
-      case 'read':
-        return this._canReadOrders;
       // Order specific actions
       case 'setCustomer':
       case 'clearCustomer':
@@ -12669,47 +15080,110 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
-        return this._canCreateOrders;
+      case 'checkoutAgain':
+        return can([
+          'ORDERS_WRITER',
+          'ORDERS_WRITER_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_WRITER']);
+      case 'extend':
+        return can(['ORDERS_EXTENDER_RESTRICTED']) || data.own && can(['ORDERS_OWN_EXTENDER']);
+      case 'read':
+        return this.hasCheckoutPermission('readAll') || can(['ORDERS_OWN_READER']);
+      case 'readAll':
+        return can([
+          'ORDERS_READER',
+          'ORDERS_READER_RESTRICTED'
+        ]);
       // Generic actions
+      case 'attach':
       case 'addAttachment':
+        return can([
+          'ORDERS_ATTACHMENTS_OWN_WRITER',
+          'ORDERS_OWN_ATTACHMENTS_OWN_WRITER'
+        ]);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['ORDERS_ATTACHMENTS_DELETER']) || data.own && can([
+          'ORDERS_ATTACHMENTS_OWN_DELETER',
+          'ORDERS_OWN_ATTACHMENTS_OWN_DELETER'
+        ]);
       case 'addComment':
+        return can(['ORDERS_COMMENTS_OWN_WRITER']) || data.own && can(['ORDERS_OWN_COMMENTS_OWN_WRITER']);
       case 'updateComment':
+        return data.own && can([
+          'ORDERS_COMMENTS_OWN_WRITER',
+          'ORDERS_OWN_COMMENTS_OWN_WRITER'
+        ]);
       case 'removeComment':
+        return can(['ORDERS_COMMENTS_DELETER']) || data.own && can([
+          'ORDERS_COMMENTS_OWN_DELETER',
+          'ORDERS_OWN_COMMENTS_OWN_DELETER'
+        ]);
+      case 'setLabel':
+      case 'clearLabel':
+        return can([
+          'ORDERS_LABELER',
+          'ORDERS_LABELER_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_LABELER']);
       case 'export':
-        return this._useOrders;
+        return can([
+          'ORDERS_EXPORTER',
+          'ORDERS_EXPORTER_RESTRICTED'
+        ]);
       case 'archive':
       case 'undoArchive':
-        return this._useOrders && this._isRootOrAdmin;
-      // Permissions for flags
-      case 'setFlag':
-        return this._useFlags && this._canSetFlag;
-      case 'clearFlag':
-        return this._useFlags && this._canClearFlag;
+        return can([
+          'ORDERS_ARCHIVER',
+          'ORDERS_ARCHIVER_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_ARCHIVER']);
       // Other
       case 'generateDocument':
-        return this._usePdf && this._isRootOrAdminOrUser;
+        return can([
+          'ORDERS_DOCUMENT_GENERATOR',
+          'ORDERS_DOCUMENT_GENERATOR_RESTRICTED'
+        ]) || data.own && can(['ORDERS_OWN_DOCUMENT_GENERATOR']);
       case 'checkinAt':
-        return this._canCreateOrders && this._useCheckinLocation;
+        return this._useCheckinLocation && this.hasCheckoutPermission('checkin');
       case 'forceCheckListCheckin':
-        return this.profile.forceCheckListCheckin;
-      case 'forceConflictResolving':
-        return false;  // this.profile.forceConflictResolving;
+        return this.profile.forceCheckListCheckin && this.hasCheckoutPermission('checkin');
+      case 'ignoreConflicts':
+        return can(['ORDERS_CONFLICT_CREATOR']);
+      case 'getReport':
+        return can([
+          'ORDERS_REPORTER',
+          'ORDERS_REPORTER_RESTRICTED',
+          'ORDERS_OWN_REPORTER'
+        ]);
       }
       break;
     case 'reservations':
+      if (!this._useReservations)
+        return false;
       switch (action) {
       default:
         return false;
-      // TODO: Add items to open reservation
       // CRUD
       case 'create':
-      case 'read':
+        return this.hasReservationPermission('update', { own: true });
       case 'update':
       case 'delete':
+        return can([
+          'RESERVATIONS_WRITER',
+          'RESERVATIONS_WRITER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_WRITER']);
+      case 'search':
+      case 'list':
+      case 'read':
+        return this.hasReservationPermission('readAll') || can(['RESERVATIONS_OWN_READER']);
+      case 'readAll':
+        return can([
+          'RESERVATIONS_READER',
+          'RESERVATIONS_READER_RESTRICTED'
+        ]);
       // Reservation specific actions
-      case 'setFromToDate':
       case 'setCustomer':
       case 'clearCustomer':
+      case 'setFromToDate':
       case 'setLocation':
       case 'clearLocation':
       case 'addItems':
@@ -12717,34 +15191,81 @@ PermissionHandler = function () {
       case 'swapItems':
       case 'reserve':
       case 'undoReserve':
-      case 'cancel':
-      case 'undoCancel':
-      case 'switchToOrder':
       case 'reserveAgain':
       case 'reserveRepeat':
       // Generic actions
       case 'setFields':
       case 'setField':
       case 'clearField':
+        return this.hasReservationPermission('update', data);
+      case 'attach':
       case 'addAttachment':
+        return can(['RESERVATIONS_ATTACHMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER']);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['RESERVATIONS_ATTACHMENTS_DELETER']) || data.own && can([
+          'RESERVATIONS_ATTACHMENTS_OWN_DELETER',
+          'RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER'
+        ]);
       case 'addComment':
+        return can(['RESERVATIONS_COMMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_COMMENTS_OWN_WRITER']);
       case 'updateComment':
+        return data.own && can([
+          'RESERVATIONS_COMMENTS_OWN_WRITER',
+          'RESERVATIONS_OWN_COMMENTS_OWN_WRITER'
+        ]);
       case 'removeComment':
+        return can(['RESERVATIONS_COMMENTS_DELETER']) || data.own && can([
+          'RESERVATIONS_COMMENTS_OWN_DELETER',
+          'RESERVATIONS_OWN_COMMENTS_OWN_DELETER'
+        ]);
       case 'export':
-        return this._useReservations;
+        return can([
+          'RESERVATIONS_EXPORTER',
+          'RESERVATIONS_EXPORTER_RESTRICTED'
+        ]);
+      case 'switchToOrder':
       case 'makeOrder':
-        return this._canCreateOrders;
+        return this.hasCheckoutPermission('create', data);
+      case 'cancel':
+      case 'undoCancel':
+        return can([
+          'RESERVATIONS_CANCELER',
+          'RESERVATIONS_CANCELER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_CANCELER']);
       case 'archive':
       case 'undoArchive':
-        return this._useReservations && this._isRootOrAdmin;
-      // Permissions for flags
-      case 'setFlag':
-        return this._useFlags && this._canSetFlag;
-      case 'clearFlag':
-        return this._useFlags && this._canClearFlag;
+        return can([
+          'RESERVATIONS_ARCHIVER',
+          'RESERVATIONS_ARCHIVER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_ARCHIVER']);
       // Other
       case 'generateDocument':
-        return this._usePdf && this._isRootOrAdminOrUser;
+        return can([
+          'RESERVATIONS_DOCUMENT_GENERATOR',
+          'RESERVATIONS_DOCUMENT_GENERATOR_RESTRICTED',
+          'RESERVATIONS_OWN_DOCUMENT_GENERATOR'
+        ]);
+      case 'ignoreConflicts':
+        return can(['RESERVATIONS_CONFLICT_CREATOR']);
+      case 'close':
+      case 'undoClose':
+        return this._useReservationsClose && (can([
+          'RESERVATIONS_CLOSER',
+          'RESERVATIONS_CLOSER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_CLOSER']));
+      case 'getReport':
+        return can([
+          'RESERVATIONS_REPORTER',
+          'RESERVATIONS_REPORTER_RESTRICTED',
+          'RESERVATIONS_OWN_REPORTER'
+        ]);
+      case 'setLabel':
+      case 'clearLabel':
+        return can([
+          'RESERVATIONS_LABELER',
+          'RESERVATIONS_LABELER_RESTRICTED'
+        ]) || data.own && can(['RESERVATIONS_OWN_LABELER']);
       }
       break;
     case 'customers':
@@ -12753,6 +15274,10 @@ PermissionHandler = function () {
       default:
         return false;
       case 'read':
+      case 'get':
+      case 'list':
+      case 'search':
+        return can(['CUSTOMERS_READER']);
       case 'create':
       case 'update':
       case 'delete':
@@ -12761,23 +15286,51 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
+        return can(['CUSTOMERS_ADMIN']);
+      case 'attach':
       case 'addAttachment':
-      case 'addComment':
-      case 'updateComment':
-      case 'removeComment':
-      case 'import':
-      case 'export':
-        return this._isRootOrAdminOrUser;
-      // Permissions for flags
-      case 'setFlag':
-        return this._useFlags && this._canSetFlag;
-      case 'clearFlag':
-        return this._useFlags && this._canClearFlag;
-      // Other
+        return can([
+          'CUSTOMERS_ATTACHMENTS_OWN_WRITER',
+          'CUSTOMERS_ATTACHMENTS_WRITER'
+        ]);
+      case 'detach':
+      case 'removeAttachment':
+        return can(['CUSTOMERS_ATTACHMENTS_DELETER']) || data.own && can([
+          'CUSTOMERS_OWN_ATTACHMENTS_OWN_DELETER',
+          'CUSTOMERS_ATTACHMENTS_OWN_DELETER'
+        ]);
       case 'printLabel':
-        return this._isRootOrAdmin;
+        return can([
+          'CUSTOMERS_LABEL_PRINTER',
+          'CUSTOMERS_LABEL_PRINTER_RESTRICTED'
+        ]);
+      case 'addComment':
+        return can(['CUSTOMERS_COMMENTS_OWN_WRITER']);
+      case 'updateComment':
+        return data.own && can(['CUSTOMERS_COMMENTS_OWN_WRITER']);
+      case 'removeComment':
+        return can(['CUSTOMERS_COMMENTS_DELETER']) || data.own && can(['CUSTOMERS_OWN_COMMENTS_OWN_DELETER']);
+      case 'import':
+      case 'importAnalyze':
+      case 'importSpreadsheet':
+      case 'importSample':
+      case 'importValidate':
+        return can(['CUSTOMERS_IMPORTER']);
+      case 'export':
+        return can(['CUSTOMERS_EXPORTER']);
+      // Other
       case 'generateDocument':
-        return this._usePdf && this._isRootOrAdminOrUser;
+        return can([
+          'CUSTOMERS_DOCUMENT_GENERATOR',
+          'CUSTOMERS_OWN_DOCUMENT_GENERATOR'
+        ]);
+      case 'block':
+      case 'undoBlock':
+        return this._useBlockContacts && can(['CUSTOMERS_BLOCK_ADMIN']);
+      case 'getReport':
+        return can(['CUSTOMERS_REPORTER']);
+      case 'changeKind':
+        return can(['CUSTOMERS_MAINTENANCE_ADMIN']);
       }
       break;
     case 'users':
@@ -12785,7 +15338,7 @@ PermissionHandler = function () {
       default:
         return false;
       case 'read':
-        return true;
+        return can(['USERS_READER']);
       case 'create':
       case 'update':
       case 'delete':
@@ -12797,79 +15350,120 @@ PermissionHandler = function () {
       case 'undoArchive':
       case 'activate':
       case 'deactivate':
-        return this._isRootOrAdmin;
+      case 'clearSync':
+      case 'restrictLocations':
+      case 'addRole':
+      case 'deleteRole':
+      case 'editRole':
+      case 'referFriend':
+        return can(['USERS_ADMIN']);
       case 'changeAccountOwner':
         return this._isOwner;
+      case 'getReport':
+        return can([
+          'USERS_REPORTER',
+          'USERS_OWN_REPORTER'
+        ]);
       }
       break;
     case 'categories':
+      switch (action) {
+      default:
+        return false;
+      case 'read':
+        return can(['CATEGORIES_READER']);
+      case 'create':
+      case 'update':
+      case 'delete':
+        return can(['CATEGORIES_ADMIN']);
+      }
     case 'locations':
       switch (action) {
       default:
         return false;
       case 'read':
-        return true;
+        return can([
+          'LOCATIONS_READER',
+          'LOCATIONS_READER_RESTRICTED'
+        ]);
       case 'create':
       case 'update':
       case 'delete':
       case 'archive':
-        return this._isRootOrAdmin;
+        return can(['LOCATIONS_ADMIN']);
       }
       break;
     case 'syncs':
+      if (!this._useUserSync)
+        return false;
       switch (action) {
       default:
         return false;
       case 'read':
+        return can(['USER_SYNCS_READER']);
       case 'create':
       case 'update':
       case 'delete':
       case 'clone':
       case 'testConnection':
       case 'syncUsers':
-        return this._useUserSync && this._isRootOrAdmin;
+        return can(['USER_SYNCS_ADMIN']);
       }
       break;
     case 'notifications':
+      if (!this._useNotifications)
+        return false;
       switch (action) {
       default:
         return false;
       case 'read':
+        return can(['NOTIFICATIONS_READER']);
       case 'create':
       case 'update':
       case 'delete':
-        return this._useNotifications && this._isRootOrAdmin;
+        return can(['NOTIFICATIONS_ADMIN']);
       }
       break;
     case 'webhooks':
+      if (!this._useWebhooks)
+        return false;
       switch (action) {
       default:
-        return false;
+        return can(['WEBHOOKS_READER']);
       case 'read':
       case 'create':
       case 'update':
       case 'delete':
-        return this._useWebhooks && this._isRootOrAdmin;
+        return can(['WEBHOOKS_ADMIN']);
       }
       break;
     case 'account':
-      switch (action) {
-      default:
-        return this._isRootOrAdmin;
-      case 'reset':
-      case 'cancelPlan':
-      case 'changePlan':
-        return this._isOwner;
-      }
-      break;
     case 'subscription':
     case 'invoices':
     case 'billing':
+      switch (action) {
+      default:
+        return can([
+          'ACCOUNT_SUBSCRIPTIONS_READER',
+          'ACCOUNT_BILLING_READER'
+        ]);
+      case 'reset':
+      case 'changePlan':
+      case 'upgrade':
+        return can([
+          'ACCOUNT_SUBSCRIPTIONS_ADMIN',
+          'ACCOUNT_BILLING_ADMIN'
+        ]);
+      case 'cancelPlan':
+        return this._isOwner;
+      }
+      break;
     case 'templates':
       switch (action) {
       default:
         return false;
       case 'read':
+        return can(['TEMPLATES_READER']);
       case 'create':
       case 'update':
       case 'delete':
@@ -12878,20 +15472,23 @@ PermissionHandler = function () {
       case 'activate':
       case 'deactivate':
       case 'clone':
-        return this._isRootOrAdmin;
+        return can(['TEMPLATES_ADMIN']);
       }
       break;
-    case 'asset-tags':
+    case 'settings':
       switch (action) {
       default:
-        return this._isRootOrAdmin;
+        return false;
+      case 'read':
+        return can(['ACCOUNT_SETTINGS_READER']);
+      case 'update':
+        return can(['ACCOUNT_SETTINGS_ADMIN']);
       }
-      break;
     }
   };
   return PermissionHandler;
 }();
-Reservation = function ($, api, Transaction, Conflict) {
+Reservation = function ($, api, Transaction, Conflict, common) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -12930,7 +15527,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this.getNextTimeSlot();
   };
   Reservation.prototype.getMinDateTo = function () {
-    return this.getNextTimeSlot(this.from);
+    return this.getNextTimeSlot(this.from && this.from.isBefore(this.getNowRounded()) ? null : this.from);
   };
   //
   // Helpers
@@ -12980,6 +15577,15 @@ Reservation = function ($, api, Transaction, Conflict) {
     return true;
   };
   /**
+   * Checks if the reservation can be spotchecked
+   * @method
+   * @name Reservation#canSpotcheck
+   * @returns {boolean}
+   */
+  Reservation.prototype.canSpotcheck = function () {
+    return common.canReservationSpotcheck(this.raw);
+  };
+  /**
    * Checks if the reservation can be booked
    * @method
    * @name Reservation#canReserve
@@ -13005,6 +15611,24 @@ Reservation = function ($, api, Transaction, Conflict) {
    */
   Reservation.prototype.canCancel = function () {
     return this.status == 'open';
+  };
+  /**
+   * Checks if the reservation can be closed
+   * @method
+   * @name Reservation#canClose
+   * @returns {boolean}
+   */
+  Reservation.prototype.canClose = function () {
+    return this.status == 'open';
+  };
+  /**
+   * Checks if the reservation can be unclosed
+   * @method
+   * @name Reservation#canUndoClose
+   * @returns {boolean}
+   */
+  Reservation.prototype.canUndoClose = function () {
+    return this.status == 'closed_manually' && (this.contact && this.contact.status == 'active');
   };
   /**
    * Checks if the reservation can be edited
@@ -13083,22 +15707,13 @@ Reservation = function ($, api, Transaction, Conflict) {
     return this.order != null;
   };
   /**
-   * Checks if the reservation can be reserved again (based on status)
-   * @method
-   * @name Reservation#canReserveAgain
-   * @returns {boolean}
-   */
-  Reservation.prototype.canReserveAgain = function () {
-    return this.status == 'open' || (this.status == 'closed' || this.status == 'cancelled');
-  };
-  /**
    * Checks if the reservation can be into recurring reservations (based on status)
    * @method
    * @name Reservation#canReserveRepeat
    * @returns {boolean}
    */
   Reservation.prototype.canReserveRepeat = function () {
-    return this.status == 'open' || this.status == 'closed';
+    return (this.status == 'open' || this.status == 'closed' || this.status == 'closed_manually') && (this.contact && this.contact.status == 'active');
   };
   /**
    * Checks if we can generate a document for this reservation (based on status)
@@ -13155,12 +15770,18 @@ Reservation = function ($, api, Transaction, Conflict) {
     if ([
         'creating',
         'open'
-      ].indexOf(this.status) != -1 && this.items && this.items.length && (this.location || this.from && this.to)) {
+      ].indexOf(this.status) != -1 && this.items && this.items.length && (this.location || this.from && this.to || this.items.filter(function (it) {
+        return it.canReserve !== 'available';
+      }))) {
       var locId = this.location ? this._getId(this.location) : null;
       var showOrderConflicts = this.from && this.to && this.status == 'open';
       var showLocationConflicts = locId != null;
       var showStatusConflicts = true;
       // always show conflicts for expired, custody
+      var showPermissionConflicts = true;
+      // always show permission conflicts (canReserve)
+      var showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
+      // always show flag conflicts except for maintenance contact (flag unavailable settings)
       return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
         cnflcts = cnflcts || [];
         // Now we have 0 or more conflicts for this reservation
@@ -13169,21 +15790,48 @@ Reservation = function ($, api, Transaction, Conflict) {
           conflict = cnflcts.find(function (conflictObj) {
             return conflictObj.item == item._id;
           });
+          if (conflict && conflict.kind == 'flag' && !showFlagConflicts) {
+            conflict = null;
+          }
           // Does this item have a server-side conflict?
           if (conflict) {
             var kind = conflict.kind || '';
             kind = kind || (conflict.order ? 'order' : '');
             kind = kind || (conflict.reservation ? 'reservation' : '');
+            // skip to next
+            if (kind == 'flag' && !showFlagConflicts)
+              return true;
             conflicts.push(new Conflict({
               kind: kind,
               item: item._id,
               itemName: item.name,
               doc: conflict.conflictsWith,
               fromDate: conflict.fromDate,
-              toDate: conflict.toDate
+              toDate: conflict.toDate,
+              locationCurrent: conflict.locationCurrent,
+              locationDesired: conflict.locationDesired
             }));
           } else {
-            if (showStatusConflicts && item.status == 'expired') {
+            if (showFlagConflicts && that.unavailableFlagHelper(item.flag)) {
+              conflicts.push(new Conflict({
+                kind: 'flag',
+                item: item._id,
+                flag: item.flag,
+                doc: item.order
+              }));
+            } else if (showPermissionConflicts && item.canReserve == 'unavailable_allow') {
+              conflicts.push(new Conflict({
+                kind: 'not_allowed_reservation',
+                item: item._id,
+                itemName: item.name
+              }));
+            } else if (that.status == 'open' && showPermissionConflicts && item.canOrder == 'unavailable_allow') {
+              conflicts.push(new Conflict({
+                kind: 'not_allowed_order',
+                item: item._id,
+                itemName: item.name
+              }));
+            } else if (showStatusConflicts && item.status == 'expired') {
               conflicts.push(new Conflict({
                 kind: 'expired',
                 item: item._id,
@@ -13501,6 +16149,62 @@ Reservation = function ($, api, Transaction, Conflict) {
     });
   };
   /**
+   * Closes the booked reservation and sets the status to `closed_manually`
+   * @method
+   * @name Reservation#close
+   * @param message
+   * @param skipRead
+   * @param skipErrorHandling
+   * @returns {*}
+   */
+  Reservation.prototype.close = function (message, skipRead, skipErrorHandling) {
+    var that = this;
+    return this._doApiCall({
+      method: 'close',
+      params: { message: message || '' },
+      skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status closed_manually') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
+  };
+  /**
+   * Uncloses the reservation and sets the status to `open` again
+   * @method
+   * @name Reservation#undoClose
+   * @param skipRead
+   * @param skipErrorHandling
+   * @returns {*}
+   */
+  Reservation.prototype.undoClose = function (skipRead, skipErrorHandling) {
+    var that = this;
+    return this._doApiCall({
+      method: 'undoClose',
+      skipRead: skipRead
+    }).then(function (resp) {
+      return resp;
+    }, function (err) {
+      if (!skipErrorHandling) {
+        if (err && err.code == 422 && (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)) {
+          return that.get();
+        }
+      }
+      //IMPORTANT
+      //Need to return a new deferred reject because otherwise
+      //done would be triggered in parent deferred
+      return $.Deferred().reject(err);
+    });
+  };
+  /**
    * Turns an open reservation into an order (which still needs to be checked out)
    * @method
    * @name Reservation#makeOrder
@@ -13562,6 +16266,23 @@ Reservation = function ($, api, Transaction, Conflict) {
     });
   };
   /**
+   * Checks if reservation can be reserved again
+   * @method
+   * @name Reservation#canReserveAgain
+   * @param skipRead
+   * @returns {promise}
+   */
+  Reservation.prototype.canReserveAgain = function () {
+    var params = {
+      _fields: 'null'  //hack
+    };
+    return this._doApiLongCall({
+      method: 'canReserveAgain',
+      params: params,
+      skipRead: true
+    });
+  };
+  /**
    * Creates a new, incomplete reservation with the same info
    * as the original reservation but other fromDate, toDate
    * Important; the response will be another Reservation document!
@@ -13574,18 +16295,8 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @param skipRead
    * @returns {promise}
    */
-  Reservation.prototype.reserveAgain = function (fromDate, toDate, customer, location, skipRead) {
-    var params = {
-      location: location,
-      customer: customer
-    };
-    if (fromDate) {
-      params.fromDate = fromDate;
-    }
-    if (toDate) {
-      params.toDate = toDate;
-    }
-    return this._doApiCall({
+  Reservation.prototype.reserveAgain = function (params, skipRead) {
+    return this._doApiLongCall({
       method: 'reserveAgain',
       params: params,
       skipRead: skipRead
@@ -13604,7 +16315,7 @@ Reservation = function ($, api, Transaction, Conflict) {
    * @returns {promise}
    */
   Reservation.prototype.reserveRepeat = function (frequency, until, customer, location) {
-    return this._doApiCall({
+    return this._doApiLongCall({
       method: 'reserveRepeat',
       params: {
         frequency: frequency,
@@ -13658,7 +16369,7 @@ Reservation = function ($, api, Transaction, Conflict) {
     return unavailable;
   };
   return Reservation;
-}(jquery, api, transaction, conflict);
+}(jquery, api, transaction, conflict, common);
 Template = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
@@ -13956,6 +16667,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     conflicts: [],
     by: null,
     archived: null,
+    modified: null,
     itemSummary: null,
     name: null
   };
@@ -13990,6 +16702,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
     this.dateHelper = spec.dateHelper || new DateHelper();
     this.helper = spec.helper || new Helper();
+    this.unavailableFlagHelper = spec.unavailableFlagHelper || function (flag) {
+      return false;
+    };
     this.status = spec.status || DEFAULTS.status;
     // the status of the order or reservation
     this.from = spec.from || DEFAULTS.from;
@@ -14037,11 +16752,12 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    */
   Transaction.prototype.getNextTimeSlot = function (d) {
     d = d || this.getNowRounded();
-    var next = moment(d).add(this._getDateHelper().roundMinutes, 'minutes');
+    var dateHelper = this._getDateHelper();
+    var next = moment(d).add(dateHelper.roundMinutes, 'minutes');
     if (next.isSame(d)) {
-      next = next.add(this._getDateHelper().roundMinutes, 'minutes');
+      next = next.add(dateHelper.roundMinutes, 'minutes');
     }
-    return next;
+    return dateHelper.getValidBusinessDate(next);
   };
   /**
    * Gets the lowest possible from date, by default now
@@ -14220,7 +16936,6 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     var data = Base.prototype._toJson.call(this, options);
     //data.started = this.from;  // VT: Will be set during checkout
     //data.finished = this.to;  // VT: Will be set during final checkin
-    data.due = this.due;
     if (this.location) {
       // Make sure we send the location as id, not the entire object
       data.location = this._getId(this.location);
@@ -14253,6 +16968,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
       that.archived = data.archived || DEFAULTS.archived;
       that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
       that.name = data.name || DEFAULTS.name;
+      that.modified = data.modified || DEFAULTS.modified;
       return that._getConflicts().then(function (conflicts) {
         that.conflicts = conflicts;
       });
@@ -14359,6 +17075,12 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
   Transaction.prototype.setDueDate = function (date, skipRead) {
     this.due = this._getDateHelper().roundTimeTo(date);
     return this._handleTransaction(skipRead);
+  };
+  Transaction.prototype.setLabel = function (labelId, skipRead) {
+    var that = this, dfdExists = this.existsInDb() ? $.Deferred().resolve() : this._createTransaction(skipRead);
+    return dfdExists.then(function () {
+      return Base.prototype.setLabel.call(that, labelId, skipRead);
+    });
   };
   // Location setters
   /**
@@ -14622,7 +17344,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canArchive = function () {
-    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   /**
    * Checks if we can unarchive a transaction (based on status)
@@ -14630,7 +17352,7 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
    * @returns {boolean}
    */
   Transaction.prototype.canUndoArchive = function () {
-    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed');
+    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
   };
   Transaction.prototype.setField = function (field, value, skipRead) {
     var that = this;
@@ -14678,7 +17400,9 @@ Transaction = function ($, api, Base, Location, DateHelper, Helper) {
     // - at this location
     // - in the specified list (if any)
     params = params || {};
-    params.location = this._getId(this.location);
+    if (this.location) {
+      params.location = this._getId(this.location);
+    }
     if (listName != null && listName.length > 0) {
       params.listName = listName;
     }
@@ -14785,8 +17509,7 @@ User = function ($, Base, common) {
     // user, admin
     active: true,
     isOwner: false,
-    archived: null,
-    restrictLocations: []
+    archived: null
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -14820,7 +17543,6 @@ User = function ($, Base, common) {
     this.active = spec.active != null ? spec.active : DEFAULTS.active;
     this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
     this.archived = spec.archived || DEFAULTS.archived;
-    this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.dsAnonymous = spec.dsAnonymous;
   };
   User.prototype = new tmp();
@@ -14835,17 +17557,6 @@ User = function ($, Base, common) {
   User.prototype.isValidEmail = function () {
     this.email = $.trim(this.email);
     return common.isValidEmail(this.email);
-  };
-  User.prototype.isValidRole = function () {
-    switch (this.role) {
-    case 'user':
-    case 'admin':
-    case 'root':
-    case 'selfservice':
-      return true;
-    default:
-      return false;
-    }
   };
   User.prototype.emailExists = function () {
     if (this.isValidEmail()) {
@@ -14869,7 +17580,7 @@ User = function ($, Base, common) {
    * @returns {boolean}
    */
   User.prototype.isValid = function () {
-    return this.isValidName() && this.isValidEmail() && this.isValidRole();
+    return this.isValidName() && this.isValidEmail();
   };
   /**
    * Checks if the user is empty
@@ -14879,7 +17590,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isEmpty = function () {
     // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
   };
   User.prototype._isDirtyInfo = function () {
     if (this.raw) {
@@ -14891,18 +17602,6 @@ User = function ($, Base, common) {
     }
     return false;
   };
-  User.prototype._isDirtyRestrictLocations = function () {
-    if (this.raw) {
-      var that = this, restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-      // Check if other locations have been selected
-      return this.restrictLocations.filter(function (x) {
-        return restrictLocations.indexOf(x) < 0;
-      }).length > 0 || restrictLocations.filter(function (x) {
-        return that.restrictLocations.indexOf(x) < 0;
-      }).length > 0;
-    }
-    return false;
-  };
   /**
    * Checks if the user is dirty and needs saving
    * @method
@@ -14911,7 +17610,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
+    return isDirty || this._isDirtyInfo();
   };
   /**
    * Gets a url for a user avatar
@@ -15058,36 +17757,6 @@ User = function ($, Base, common) {
     });
   };
   /**
-   * Restrict user access to specific location(s)
-   * @param locations
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.setRestrictLocations = function (locations, skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'setRestrictLocations',
-      params: { restrictLocations: locations },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clear user location(s) access (makes all location accessible for the user)
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.clearRestrictLocations = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'clearRestrictLocations',
-      skipRead: skipRead
-    });
-  };
-  /**
    * Updates the user
    * @param skipRead
    * @returns {*}
@@ -15102,22 +17771,13 @@ User = function ($, Base, common) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid user'));
     }
-    var that = this, dfdRestrictLocations = $.Deferred(), dfdInfo = $.Deferred();
+    var that = this, dfdInfo = $.Deferred();
     if (this._isDirtyInfo()) {
       dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
     } else {
       dfdInfo.resolve();
     }
-    if (this._isDirtyRestrictLocations()) {
-      if (this.restrictLocations.length != 0) {
-        dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
-      } else {
-        dfdRestrictLocations = this.clearRestrictLocations(true);
-      }
-    } else {
-      dfdRestrictLocations.resolve();
-    }
-    return $.when(dfdInfo, dfdRestrictLocations);
+    return $.when(dfdInfo);
   };
   /**
    * Writes the user to a json object
@@ -15129,7 +17789,6 @@ User = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.group = this.group || DEFAULTS.group;
     data.role = this.role || DEFAULTS.role;
     return data;
   };
@@ -15153,7 +17812,6 @@ User = function ($, Base, common) {
       that.active = data.active != null ? data.active : DEFAULTS.active;
       that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
       that.archived = data.archived || DEFAULTS.archived;
-      that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       $.publish('user.fromJson', data);
       return data;
     });
@@ -15172,8 +17830,9 @@ UserSync = function ($, Base, common) {
     newUsers: 'create',
     existingUsers: 'update',
     missingUsers: 'ignore',
+    overwriteLocalUsers: true,
     autoSync: false,
-    role: 'selfservice',
+    role: '',
     query: '(cn=*)',
     base: 'ou=team,dc=yourdomain,dc=com',
     loginField: 'uid',
@@ -15181,7 +17840,10 @@ UserSync = function ($, Base, common) {
     emailField: 'mail',
     restrictLocations: [],
     timezone: 'Etc/GMT',
-    hostCert: 'ldap_tls_demand'
+    hostCert: 'ldap_tls_demand',
+    caCert: '',
+    report: 'always',
+    reportEmail: ''
   };
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -15226,6 +17888,7 @@ UserSync = function ($, Base, common) {
     this.existingUsers = spec.existingUsers || DEFAULTS.existingUsers;
     this.missingUsers = spec.missingUsers || DEFAULTS.missingUsers;
     this.autoSync = spec.autoSync != null ? spec.autoSync : DEFAULTS.autoSync;
+    this.overwriteLocalUsers = spec.overwriteLocalUsers != null ? spec.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
     this.role = spec.role || DEFAULTS.role;
     this.query = spec.query || DEFAULTS.query;
     this.base = spec.base || DEFAULTS.base;
@@ -15235,6 +17898,9 @@ UserSync = function ($, Base, common) {
     this.restrictLocations = spec.restrictLocations ? spec.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
     this.timezone = spec.timezone || DEFAULTS.timezone;
     this.hostCert = spec.hostCert || DEFAULTS.hostCert;
+    this.caCert = spec.caCert || DEFAULTS.caCert;
+    this.report = spec.report || DEFAULTS.report;
+    this.reportEmail = spec.reportEmail || DEFAULTS.reportEmail;
   };
   UserSync.prototype = new tmp();
   UserSync.prototype.constructor = UserSync;
@@ -15245,16 +17911,6 @@ UserSync = function ($, Base, common) {
     this.name = $.trim(this.name);
     return this.name.length >= 3;
   };
-  UserSync.prototype.isValidRole = function () {
-    switch (this.role) {
-    case 'user':
-    case 'admin':
-    case 'selfservice':
-      return true;
-    default:
-      return false;
-    }
-  };
   /**
    * Checks if the usersync is valid
    * @method
@@ -15262,7 +17918,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isValid = function () {
-    return this.isValidName() && this.isValidRole();
+    return this.isValidName();
   };
   /**
    * Checks if the user is empty
@@ -15271,7 +17927,7 @@ UserSync = function ($, Base, common) {
    * @returns {boolean}
    */
   UserSync.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && (this.restrictLocations && this.restrictLocations.length == 0);
+    return Base.prototype.isEmpty.call(this) && this.kind == DEFAULTS.kind && this.name == DEFAULTS.name && this.host == DEFAULTS.host && this.port == DEFAULTS.port && this.timeOut == DEFAULTS.timeOut && this.login == DEFAULTS.login && this.password == DEFAULTS.password && this.newUsers == DEFAULTS.newUsers && this.existsingUsers == DEFAULTS.existingUsers && this.missingUsers == DEFAULTS.missingUsers && this.autoSync == DEFAULTS.autoSync && this.overwriteLocalUsers == DEFAULTS.overwriteLocalUsers && this.role == DEFAULTS.role && this.query == DEFAULTS.query && this.base == DEFAULTS.base && this.loginField == DEFAULTS.loginField && this.nameField == DEFAULTS.nameField && this.emailField == DEFAULTS.emailField && this.timezone == DEFAULTS.timezone && this.hostCert == DEFAULTS.hostCert && this.caCert == DEFAULTS.caCert && this.report == DEFAULTS.report && this.reportEmail == DEFAULTS.reportEmail && (this.restrictLocations && this.restrictLocations.length == 0);
   };
   /**
    * Checks if the user is dirty and needs saving
@@ -15296,6 +17952,7 @@ UserSync = function ($, Base, common) {
       var existingUsers = this.raw.existingUsers || DEFAULTS.existingUsers;
       var missingUsers = this.raw.missingUsers || DEFAULTS.missingUsers;
       var autoSync = this.raw.autoSync != null ? this.raw.autoSync : DEFAULTS.autoSync;
+      var overwriteLocalUsers = this.raw.overwriteLocalUsers != null ? this.raw.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
       var role = this.raw.role || DEFAULTS.role;
       var query = this.raw.query || DEFAULTS.query;
       var base = this.raw.base || DEFAULTS.base;
@@ -15304,7 +17961,10 @@ UserSync = function ($, Base, common) {
       var emailField = this.raw.emailField || DEFAULTS.emailField;
       var timezone = this.raw.timezone || DEFAULTS.timezone;
       var hostCert = this.raw.hostCert || DEFAULTS.hostCert;
-      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this._isDirtyRestrictLocations();
+      var caCert = this.raw.caCert || DEFAULTS.caCert;
+      var report = this.raw.report || DEFAULTS.report;
+      var reportEmail = this.raw.reportEmail || DEFAULTS.reportEmail;
+      return this.kind != kind || this.name != name || this.host != host || this.port != port || this.timeOut != timeOut || this.login != login || this.password != password || this.newUsers != newUsers || this.existingUsers != existingUsers || this.missingUsers != missingUsers || this.autoSync != autoSync || this.overwriteLocalUsers != overwriteLocalUsers || this.role != role || this.query != query || this.base != base || this.loginField != loginField || this.nameField != nameField || this.emailField != emailField || this.timezone != timezone || this.hostCert != hostCert || this.caCert != caCert || this.report != report || this.reportEmail != reportEmail || this._isDirtyRestrictLocations();
     }
     return isDirty;
   };
@@ -15365,11 +18025,14 @@ UserSync = function ($, Base, common) {
     data.port = this.port || DEFAULTS.port;
     data.timeOut = this.timeOut || DEFAULTS.timeOut;
     data.login = this.login || DEFAULTS.login;
-    data.password = this.password || DEFAULTS.password;
+    if (this.password) {
+      data.password = this.password;
+    }
     data.newUsers = this.newUsers || DEFAULTS.newUsers;
     data.existingUsers = this.existingUsers || DEFAULTS.existingUsers;
     data.missingUsers = this.missingUsers || DEFAULTS.missingUsers;
     data.autoSync = this.autoSync != null ? this.autoSync : DEFAULTS.autoSync;
+    data.overwriteLocalUsers = this.overwriteLocalUsers != null ? this.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
     data.role = this.role || DEFAULTS.role;
     data.query = this.query || DEFAULTS.query;
     data.base = this.base || DEFAULTS.base;
@@ -15378,6 +18041,9 @@ UserSync = function ($, Base, common) {
     data.emailField = this.emailField || DEFAULTS.emailField;
     data.timezone = this.timezone || DEFAULTS.timezone;
     data.hostCert = this.hostCert || DEFAULTS.hostCert;
+    data.caCert = this.caCert || DEFAULTS.caCert;
+    data.report = this.report || DEFAULTS.report;
+    data.reportEmail = this.reportEmail || DEFAULTS.reportEmail;
     return data;
   };
   /**
@@ -15403,6 +18069,7 @@ UserSync = function ($, Base, common) {
       that.existingUsers = data.existingUsers || DEFAULTS.existingUsers;
       that.missingUsers = data.missingUsers || DEFAULTS.missingUsers;
       that.autoSync = data.autoSync != null ? data.autoSync : DEFAULTS.autoSync;
+      that.overwriteLocalUsers = data.overwriteLocalUsers != null ? data.overwriteLocalUsers : DEFAULTS.overwriteLocalUsers;
       that.role = data.role || DEFAULTS.role;
       that.query = data.query || DEFAULTS.query;
       that.base = data.base || DEFAULTS.base;
@@ -15412,6 +18079,9 @@ UserSync = function ($, Base, common) {
       that.restrictLocations = data.restrictLocations ? data.restrictLocations.slice() : DEFAULTS.restrictLocations.slice();
       that.timezone = data.timezone || DEFAULTS.timezone;
       that.hostCert = data.hostCert || DEFAULTS.hostCert;
+      that.caCert = data.caCert || DEFAULTS.caCert;
+      that.report = data.report || DEFAULTS.report;
+      that.reportEmail = data.reportEmail || DEFAULTS.reportEmail;
       $.publish('usersync.fromJson', data);
       return data;
     });
@@ -15839,7 +18509,8 @@ ColorLabel = function ($) {
     name: '',
     color: 'Gold',
     readonly: false,
-    selected: false
+    selected: false,
+    default: false
   };
   /**
    * @name  ColorLabel
@@ -15855,6 +18526,7 @@ ColorLabel = function ($) {
     this.color = spec.color || DEFAULTS.color;
     this.readonly = spec.readonly || DEFAULTS.readonly;
     this.selected = spec.selected || DEFAULTS.selected;
+    this.default = spec.default || DEFAULTS.default;
   };
   /**
    * isDirty
@@ -15886,6 +18558,7 @@ ColorLabel = function ($) {
     this.color = data.color || DEFAULTS.color;
     this.selected = data.selected || DEFAULTS.selected;
     this.readonly = data.readonly || DEFAULTS.readonly;
+    this.default = data.default || DEFAULTS.default;
     return $.Deferred().resolve();
   };
   /**
@@ -15900,12 +18573,13 @@ ColorLabel = function ($) {
       name: this.name,
       color: this.color,
       selected: this.selected,
-      readonly: this.readonly
+      readonly: this.readonly,
+      default: this.default
     };
   };
   return ColorLabel;
 }(jquery);
-Field = function ($, common) {
+Field = function ($, validationHelper) {
   var DEFAULTS = {
     name: null,
     value: null,
@@ -15951,19 +18625,28 @@ Field = function ($, common) {
     case 'float':
     case 'decimal':
     case 'currency':
-      return common.isNumeric(value);
+      return validationHelper.isNumeric(value);
     case 'int':
-      return common.isNumeric(value, true);
+      return validationHelper.isNumeric(value, true);
     case 'date':
     case 'datetime':
-      return common.isValidDate(value);
+      return validationHelper.isValidDate(value);
     case 'string':
     case 'select':
+      if (this.editor == 'phone') {
+        return validationHelper.isValidPhone(value);
+      }
+      if (this.editor == 'email') {
+        return validationHelper.isValidEmail(value);
+      }
+      if (this.editor == 'url') {
+        return validationHelper.isValidURL(value);
+      }
+      if (this.editor == 'number') {
+        return validationHelper.isNumeric(value);
+      }
       return value != '';
     default:
-      if (this.editor == 'phone') {
-        return common.isValidPhone(value);
-      }
       return true;
     }
   };
@@ -15986,7 +18669,7 @@ Field = function ($, common) {
     return $.trim(this.value) == '';
   };
   return Field;
-}(jquery, common);
+}(jquery, common_validation);
 core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
   var core = {};
   // namespaces

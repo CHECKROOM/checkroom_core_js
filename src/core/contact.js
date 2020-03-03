@@ -16,7 +16,9 @@ define([
         email: "",
         status: "active",
         user: {},
-        kind: "contact"
+        kind: "contact",
+        cover: "",
+        blocked: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -45,6 +47,8 @@ define([
         this.status = spec.status || DEFAULTS.status;
         this.user = spec.user || DEFAULTS.user;
         this.kind = spec.kind || DEFAULTS.kind;
+        this.cover = spec.cover || DEFAULTS.cover;
+        this.blocked = spec.blocked || DEFAULTS.blocked;
     };
 
     Contact.prototype = new tmp();
@@ -146,12 +150,42 @@ define([
     };
 
     /**
+     * Checks if a contact can be blocked
+     * @name Contact#canBlock
+     * @returns {boolean}
+     */
+    Contact.prototype.canBlock = function() {
+        return common.contactCanBlock(this);
+    };
+
+    /**
+     * Checks if a contact can be unblocked 
+     * @name Contact#canUndoBlock
+     * @returns {boolean}
+     */
+    Contact.prototype.canUndoBlock = function() {
+        return common.contactCanUndoBlock(this);
+    };
+
+    /**
      * Checks if a contact can be deleted (based on status and link to user)
      * @name Contact#canDelete
      * @returns {boolean}
      */
     Contact.prototype.canDelete = function() {
         return common.contactCanDelete(this);
+    };
+
+    /**
+     * Change contact kind
+     * @name Contact#changeKind
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.changeKind = function(kind, skipRead) {
+        return this._doApiCall({method: "changeKind", params: {
+            kind: kind
+        }, skipRead: skipRead});
     };
 
     /**
@@ -172,6 +206,28 @@ define([
      */
     Contact.prototype.undoArchive = function(skipRead) {
         return this._doApiCall({method: "undoArchive", params: {}, skipRead: skipRead});
+    };
+
+    /**
+     * Blocks a contact
+     * @name Contact#block
+     * @param message
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.block = function(message, skipRead) {
+        return this._doApiCall({method: "block", params: { message: message }, skipRead: skipRead});
+    };
+
+    /**
+     * Unblock a contact
+     * @name Contact#undoBlock
+     * @param message
+     * @param skipRead
+     * @returns {promise}
+     */
+    Contact.prototype.undoBlock = function(message, skipRead) {
+        return this._doApiCall({method: "undoBlock", params: { message: message }, skipRead: skipRead});
     };
 
     /**
@@ -223,7 +279,7 @@ define([
         var isDirty = Base.prototype.isDirty.call(this);
         if( (!isDirty) &&
             (this.raw)) {
-            isDirty = this._isDirtyStringProperty("name") || this._isDirtyStringProperty("email");
+            isDirty = this._isDirtyStringProperty("name") || this._isDirtyStringProperty("email") || this._isDirtyStringProperty("kind");
         }
         return isDirty;
     };
@@ -236,6 +292,8 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.email = this.email || DEFAULTS.email;
+        data.kind = this.kind || DEFAULTS.kind;
+
         return data;
     };
 
@@ -248,6 +306,10 @@ define([
                 that.status = data.status || DEFAULTS.status;
                 that.user = data.user || DEFAULTS.user;
                 that.kind = data.kind || DEFAULTS.kind;
+                that.blocked = data.blocked || DEFAULTS.blocked;                
+
+                var cover = data.cover || DEFAULTS.cover;
+                that.cover = common.isImage(cover)?cover:"";
 
                 $.publish('contact.fromJson', data);
                 return data;
@@ -282,9 +344,18 @@ define([
             data["email"] = that.email;
         }
 
+        var dfdKind;
+        if(this._isDirtyStringProperty("kind")){
+            dfdKind = this.changeKind(that.kind, true);
+        }else{
+            dfdKind = $.Deferred().resolve();
+        }
+
         return this.ds.update(this.id, data, this._fields)
             .then(function(data) {
-                return (skipRead==true) ? data : that._fromJson(data);
+                return dfdKind.then(function(){
+                     return (skipRead==true) ? data : that._fromJson(data);
+                });               
             });
     };
 

@@ -74,8 +74,8 @@ define([
         // and never be called on order update
         // since most updates are done via setter methods
         var data = Transaction.prototype._toJson.call(this, options);
-        data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
-        data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
+        //data.fromDate = (this.fromDate!=null) ? this.fromDate.toJSONDate() : "null";
+        //data.toDate = (this.toDate!=null) ? this.toDate.toJSONDate() : "null";
         data.due = (this.due!=null) ? this.due.toJSONDate() : "null";
         return data;
     };
@@ -85,7 +85,7 @@ define([
 
         // Already set the from, to and due dates
         // Transaction._fromJson might need it during _getConflicts
-        that.from = ((data.started==null) || (data.started=="null")) ? null : data.started;
+        that.from = ((data.started==null) || (data.started=="null")) ? this.getMinDateFrom() : data.started;
         that.to = ((data.finished==null) || (data.finished=="null")) ? null : data.finished;
         that.due = ((data.due==null) || (data.due=="null")) ? null: data.due;
         that.reservation = data.reservation || null;
@@ -141,6 +141,16 @@ define([
     };
 
     /**
+     * Checks if the order can be spotchecked
+     * @method
+     * @name Order#canSpotcheck
+     * @returns {boolean}
+     */
+    Order.prototype.canSpotcheck = function() {
+        return common.canOrderSpotcheck(this.raw);
+    };
+
+    /**
      * Checks if the order has an reservation linked to it
      * @method
      * @name Order#canGoToReservation
@@ -190,6 +200,34 @@ define([
         );
     };
 
+
+
+    /**
+     * Checks if the checkout can be checked out again (based on status)
+     * @method
+     * @name Order#canCheckoutAgain
+     * @returns {boolean}
+     */
+    Order.prototype.canCheckoutAgain = function() {
+        return (this.status == "closed") &&                
+               ((this.contact) &&
+                (this.contact.status == "active")) &&
+               (this.items.filter(function(item){ return item.status == "available"; }).length == this.items.length);
+    };
+
+
+    /**
+     * Creates a new, draft check-out with the same info
+     * as the original check-out
+     * @method
+     * @name Reservation#checkoutAgain
+     * @param skipRead
+     * @returns {promise}
+     */
+    Order.prototype.checkoutAgain = function(skipRead) {
+        return this._doApiCall({method: "checkoutAgain", params: {}, skipRead: skipRead});
+    };
+
     /**
      * Checks if order can undo checkout
      * @method
@@ -207,7 +245,11 @@ define([
      * @returns {boolean}
      */
     Order.prototype.canDelete = function() {
-        return (this.status=="creating");
+        var that = this;
+
+        // If order has partially checked in items, then it can't be deleted anymore
+        return (this.status=="creating") &&
+               (this.items.filter(function(item){ return (item.order && item.order == that.id); }).length == this.items.length);
     };
 
     /**
@@ -231,6 +273,22 @@ define([
     };
 
     /**
+     * Checks if specific item can be removed from the checkout
+     * BUGFIX: prevent deleting item of a checkout that already has been partially checked in
+     * but checkout is afterwards undone by undoCheckout
+     * 
+     * @method
+     * @name Order#canRemoveItem
+     * @param item
+     * @returns {boolean}
+     */
+    Order.prototype.canRemoveItem = function(item) {
+        return ((item.status=="await_checkout") && 
+                (item.order && item.order == this.id));
+    };
+
+
+    /**
      * Checks if items can be swapped in the checkout (based on status)
      * @method
      * @name Order#canSwapItems
@@ -247,6 +305,32 @@ define([
      */
     Order.prototype.canGenerateDocument = function() {
         return (this.status=="open") || (this.status=="closed");
+    };
+
+    /**
+     * Checks of order due date can be extended 
+     * @param  {moment} due (optional)
+     * @param  {bool} skipRead
+     * @return {promise}
+     */
+    Order.prototype.canExtendCheckout = function(due) {
+        // We can only extend orders which are open
+        // and for which their due date will be
+        // at least 1 timeslot from now
+        var can = true;
+        if( (this.status!="open") ||
+            ((due) && 
+             (due.isBefore(this.getNextTimeSlot())))) {
+            can = false;
+        }
+
+        // Only orders with active contacts can be extended
+        if((this.contact) &&
+           (this.contact.status != "active")){
+            can = false;
+        }
+
+        return can;
     };
 
     //
@@ -284,7 +368,15 @@ define([
                     this.id,  // orderId
                     this.helper.ensureId(this.reservation))  // reservationId
                     .then(function(serverConflicts) {
-                        return conflicts.concat(serverConflicts);
+                         // Don't include conflicts for items that are no longer part of the order anymore
+                        var itemsInOrder = that.items.filter(function(item){
+                             return that.helper.ensureId(item.order) == that.id; 
+                        }).map(function(item){ 
+                            return item._id; 
+                        });
+                        return conflicts.concat(serverConflicts.filter(function(c){ 
+                            return itemsInOrder.indexOf(c.item) != -1; 
+                        }));
                     });
             }
         }
@@ -299,7 +391,8 @@ define([
      * @private
      */
     Order.prototype._getConflicts = function() {
-        var conflicts = [];
+        var that = this,
+            conflicts = [];
 
         // Only orders which are incomplete,
         // but have items and / or due date can have conflicts
@@ -319,7 +412,15 @@ define([
                     this.id,  // orderId
                     this.helper.ensureId(this.reservation))  // reservationId
                     .then(function(serverConflicts) {
-                        return conflicts.concat(serverConflicts);
+                        // Don't include conflicts for items that are no longer part of the order anymore
+                        var itemsInOrder = that.items.filter(function(item){
+                             return that.helper.ensureId(item.order) == that.id; 
+                        }).map(function(item){ 
+                            return item._id; 
+                        });
+                        return conflicts.concat(serverConflicts.filter(function(c){ 
+                            return itemsInOrder.indexOf(c.item) != -1; 
+                        }));
                     });
             }
         }
@@ -340,10 +441,16 @@ define([
      * @private
      */
     Order.prototype._getServerConflicts = function(items, fromDate, dueDate, orderId, reservationId) {
+        var that = this;
         var conflicts = [],
             kind = "",
             transItem = null,
-            itemIds = common.getItemIds(items);
+            itemIds = common.getItemIds(items.filter(function(item){
+                // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+                // Don't want to show conflicts for items that arn't part of the order anymore
+                return (item.order == that.id);
+            })),
+            showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
 
         // Get the availabilities for these items
         return this.dsItems.call(null, "getAvailabilities", {
@@ -366,7 +473,8 @@ define([
                     }
 
                     if( (transItem!=null) &&
-                        (transItem.status!="expired")) {
+                        (transItem.status!="expired") &&
+                        (transItem.status!="in_custody")) {
 
                         // Order cannot conflict with itself
                         // or with the Reservation from which it was created
@@ -375,6 +483,9 @@ define([
                             kind = "";
                             kind = kind || ((av.order) ? "order" : "");
                             kind = kind || ((av.reservation) ? "reservation" : "");
+                            kind = kind || av.kind;
+
+                            if(kind == "flag" && !showFlagConflicts) return true;
 
                             conflicts.push(new Conflict({
                                 kind: kind,
@@ -397,20 +508,49 @@ define([
         // We can check if all the items are:
         // - at the right location
         // - not expired
-        var conflicts = [],
-            locId = this.helper.ensureId(this.location || "");
+        // - has order permission
+        var that = this,
+            conflicts = [],
+            locId = this.helper.ensureId(this.location || ""),
+            showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance');
 
         $.each(this.items, function(i, item) {
-            if (item.status == "expired") {
+            // BUGFIX ignore conflicts for partially checked in items (undoCheckout)
+            if(item.order != that.id) return true;
+
+            if(that.unavailableFlagHelper(item.flag) &&
+                showFlagConflicts){
+                conflicts.push(new Conflict({
+                    kind: "flag",
+                    item: item._id,
+                    flag: item.flag,
+                    doc: item.order
+                }))
+            }else if(item.canOrder==="unavailable_allow"){
+                conflicts.push(new Conflict({
+                    kind: "not_allowed_order",
+                    item: item._id,
+                    itemName: item.name
+                }));
+            } else if (item.status == "expired") {
                 conflicts.push(new Conflict({
                     kind: "expired",
                     item: item._id,
                     itemName: item.name,
                     locationCurrent: item.location,
                     locationDesired: locId
+                }));                
+            } else if(item.status == "in_custody"){
+                conflicts.push(new Conflict({
+                    kind: "custody",
+                    item: item._id,
+                    itemName: item.name,
+                    locationCurrent: item.location,
+                    locationDesired: locId
                 }));
-                // If order location is defined, check if item
-                // is at the right location
+
+            // If order location is defined, check if item
+            // is at the right location
             } else if (locId && item.location != locId) {
                 conflicts.push(new Conflict({
                     kind: "location",
@@ -680,22 +820,13 @@ define([
     };
 
     /**
-     * Checks of order due date can be extended to given date
-     * @param  {moment} due
+     * Checks of order due date can be extended 
+     * @param  {moment} due (optional)
      * @param  {bool} skipRead
      * @return {promise}
      */
     Order.prototype.canExtend = function(due) {
-        // We can only extend orders which are open
-        // and for which their due date will be
-        // at least 1 timeslot from now
-        var can = true;
-        if( (this.status!="open") ||
-            (due.isBefore(this.getNextTimeSlot()))) {
-            can = false;
-        }
-
-        return $.Deferred().resolve({ result: can });
+        return $.Deferred().resolve({ result: this.canExtendCheckout(due) });
     };
 
     /**

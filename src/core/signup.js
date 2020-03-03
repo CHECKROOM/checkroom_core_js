@@ -6,7 +6,6 @@
  */
 define([
     "jquery",
-    "jstz", 
     "api",
     "settings",
     "field",
@@ -14,12 +13,13 @@ define([
     "common/inflection",
     "common/validation",
     "common/clientStorage",
-    "common/utils"], function ($, jstz, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
+    "common/utils"], function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
 
-    var DEFAULT_PLAN = "1215_cr_90";
+    var DEFAULT_PLAN = "cr_1802_professional_yearly_usd_500";
     var DEFAULT_PERIOD = "yearly";
     var DEFAULT_SOURCE = "attempt";
     var DEFAULT_KIND = "trial";
+    var DEFAULT_DEVICE_KIND = null;
 
     var Signup = function(opt, settings) {
         opt = opt || {};
@@ -31,15 +31,17 @@ define([
         this.firstName = opt.firstName || "";  // between 2 and 25 chars
         this.lastName = opt.lastName || "";  // between 2 and 25 chars
         this.company = opt.company || "";  // between 3 and 46 chars
-        this.timezone = opt.timezone || jstz.determine().name();
+        this.timezone = opt.timezone || "America/New_York";
         this.email = opt.email || "";
         this.login = opt.login || "";
         this.password = opt.password || "";
         this.plan = opt.plan || DEFAULT_PLAN;
         this.period = opt.period || DEFAULT_PERIOD;
+        this.deviceKind = opt.deviceKind || DEFAULT_DEVICE_KIND;
         this.source = opt.source || "";
         this.phone = opt.phone || "";
         this.industry = opt.industry || "";
+        this.tags = opt.tags || [];
 
         this.fields = [];
 
@@ -211,6 +213,13 @@ define([
         var parts = Signup.splitFirstLastName($.trim(name));
         this.firstName = parts.firstName;
         this.lastName = parts.lastName;
+        
+        // Generate login name based on name
+        if(this.firstName || this.lastName){
+            this.login = utils.getLoginName(this.firstName, this.lastName);
+        } else{
+            this.login = "";
+        }
     };
 
     Signup.prototype._getField = function(data){
@@ -227,10 +236,12 @@ define([
                 return that.ds.longCall("createAccount", {
                     kind: DEFAULT_KIND,
                     period: $.trim(that.period),
-                    plan: $.trim(that.plan),
+                    subscription: $.trim(that.plan),
                     company: $.trim(that.company),
-                    groupId: that.getGroupId()
-                })
+                    groupId: that.getGroupId(),
+                    signupDevice: that.deviceKind,
+                    tags: that.tags
+                }, true)
                     .then(function(data) {
                         return afterCreate(data);
                     });
@@ -254,11 +265,11 @@ define([
                     load_sample: false,
                     owner_customer: true,
                     maintenance_customer: true
-                })
+                }, true)
                     .then(function(user) {
                         if(storeInLocalStorage){
                             // Already store the login token in localStorage
-                            var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
+                            var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
                             tmpUser.toStorage();
                         }
 
@@ -293,7 +304,7 @@ define([
                 return that.ds.longCall('activateInvite', params).then(function(user){
                     if(storeInLocalStorage){
                         // Already store the login token in localStorage
-                        var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
+                        var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
                         tmpUser.toStorage();
                     }
 
@@ -329,7 +340,7 @@ define([
                 return  that.ds.longCall('createSelfServiceUser', params).then(function(user){
                     if(storeInLocalStorage){
                         // Already store the login token in localStorage
-                        var tmpUser = new api.ApiUser({userId: that.login, userToken: user.data.token});
+                        var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
                         tmpUser.toStorage();
                     }
 
@@ -344,6 +355,7 @@ define([
             lastName: $.trim(this.lastName),
             email: $.trim(this.email),
             company: $.trim(this.company),
+            phone: this.phone,
             tags: tags || []
         });
     };
@@ -364,7 +376,7 @@ define([
      */
     Signup.fromQueryString = function(opt, settings) {
         var name = utils.getUrlParam("name", "").capitalize(),
-            email = utils.getUrlParam("email", ""),
+            email = utils.getUrlParam("email", "").replace(" ", "+"),
             company = utils.getUrlParam("company", ""),
             firstName = utils.getUrlParam("firstName", "").capitalize(),
             lastName = utils.getUrlParam("lastName", "").capitalize(),
@@ -372,9 +384,10 @@ define([
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
             plan = utils.getUrlParam("plan", DEFAULT_PLAN),
-            timezone = utils.getUrlParam("timezone", jstz.determine().name()),
+            timezone = utils.getUrlParam("timezone", "America/New_York"),
             inviteToken = utils.getUrlParam("code", ""),
-            selfserviceToken = utils.getUrlParam("key", "");
+            selfserviceToken = utils.getUrlParam("key", ""),
+            phone = utils.getUrlParam("phone", "").replace(" ", "+");
 
         if( (firstName.length==0) &&
             (lastName.length==0) &&
@@ -406,6 +419,7 @@ define([
             source: source,
             plan: plan,
             period: period,
+            phone: phone,
             inviteToken: inviteToken,
             selfserviceToken: selfserviceToken
         }, opt), settings);

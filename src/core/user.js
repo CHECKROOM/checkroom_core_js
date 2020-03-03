@@ -16,8 +16,7 @@ define([
         role: 'user',  // user, admin
         active: true,
         isOwner: false,
-        archived: null,
-        restrictLocations: []
+        archived: null
     };
 
     // Allow overriding the ctor during inheritance
@@ -50,7 +49,6 @@ define([
         this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
         this.isOwner = (spec.isOwner!=null) ? spec.isOwner : DEFAULTS.isOwner;
         this.archived = spec.archived || DEFAULTS.archived;
-        this.restrictLocations = spec.restrictLocations?spec.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
 
         this.dsAnonymous = spec.dsAnonymous;
     };
@@ -69,18 +67,6 @@ define([
     User.prototype.isValidEmail = function() {
         this.email = $.trim(this.email);
         return common.isValidEmail(this.email);
-    };
-
-    User.prototype.isValidRole = function() {
-        switch(this.role) {
-            case "user":
-            case "admin":
-            case "root":
-            case "selfservice":
-                return true;
-            default:
-                return false;
-        }
     };
 
     User.prototype.emailExists = function() {
@@ -111,8 +97,8 @@ define([
     User.prototype.isValid = function() {
         return (
             this.isValidName() &&
-            this.isValidEmail() &&
-            this.isValidRole());
+            this.isValidEmail()
+            );
     };
 
     /**
@@ -127,8 +113,8 @@ define([
             (Base.prototype.isEmpty.call(this)) &&
             (this.name==DEFAULTS.name) &&
             (this.email==DEFAULTS.email) &&
-            (this.role==DEFAULTS.role) &&
-            (this.restrictLocations && this.restrictLocations.length == 0));
+            (this.role==DEFAULTS.role)
+        );
     };
 
     User.prototype._isDirtyInfo = function(){
@@ -148,19 +134,6 @@ define([
         return false;
     };
 
-    User.prototype._isDirtyRestrictLocations = function(){
-        if((this.raw)) {
-            var that = this,
-                restrictLocations = this.raw.restrictLocations || DEFAULTS.restrictLocations;
-            
-            // Check if other locations have been selected
-            return this.restrictLocations.filter(function(x){ return restrictLocations.indexOf(x) < 0; }).length > 0 ||
-                    restrictLocations.filter(function(x){ return that.restrictLocations.indexOf(x) < 0; }).length > 0;
-        }
-        return false;
-    };
-
-
     /**
      * Checks if the user is dirty and needs saving
      * @method
@@ -169,7 +142,7 @@ define([
      */
     User.prototype.isDirty = function() {
         var isDirty = Base.prototype.isDirty.call(this);
-        return isDirty || this._isDirtyInfo() || this._isDirtyRestrictLocations();
+        return isDirty || this._isDirtyInfo();
     };
 
     /**
@@ -325,31 +298,6 @@ define([
         return this._doApiCall({method: 'undoArchive', skipRead: skipRead});
     };
 
-    /**
-     * Restrict user access to specific location(s)
-     * @param locations
-     * @param skipRead
-     * @returns {promise}
-     */
-    User.prototype.setRestrictLocations = function(locations, skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({method: 'setRestrictLocations', params: { restrictLocations: locations }, skipRead: skipRead});
-    };
-
-    /**
-     * Clear user location(s) access (makes all location accessible for the user)
-     * @param skipRead
-     * @returns {promise}
-     */
-    User.prototype.clearRestrictLocations = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({method: 'clearRestrictLocations', skipRead: skipRead});
-    };
-
      /**
      * Updates the user
      * @param skipRead
@@ -367,7 +315,6 @@ define([
         }
 
         var that = this,
-            dfdRestrictLocations = $.Deferred(),
             dfdInfo = $.Deferred();
 
         if(this._isDirtyInfo()){
@@ -376,18 +323,7 @@ define([
             dfdInfo.resolve();
         }              
 
-        if(this._isDirtyRestrictLocations()){
-            if(this.restrictLocations.length != 0){
-                dfdRestrictLocations = this.setRestrictLocations(this.restrictLocations, true);
-            } else{
-                dfdRestrictLocations = this.clearRestrictLocations(true);
-            }
-        }else{
-            dfdRestrictLocations.resolve();
-        }
-
-        return $.when(dfdInfo, dfdRestrictLocations);
-            
+        return $.when(dfdInfo);            
     };
 
     /**
@@ -400,7 +336,6 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.email = this.email || DEFAULTS.email;
-        data.group = this.group || DEFAULTS.group;
         data.role = this.role || DEFAULTS.role;
 
         return data;
@@ -427,7 +362,6 @@ define([
                 that.active = (data.active!=null) ? data.active : DEFAULTS.active;
                 that.isOwner = (data.isOwner!=null) ? data.isOwner : DEFAULTS.isOwner;
                 that.archived = data.archived || DEFAULTS.archived;
-                that.restrictLocations = data.restrictLocations?data.restrictLocations.slice():DEFAULTS.restrictLocations.slice();
 
                 $.publish('user.fromJson', data);
                 return data;

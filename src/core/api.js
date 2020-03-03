@@ -6,7 +6,8 @@
  */
 define([
     'jquery',
-    'moment'], function ($, moment) {
+    'moment',
+    'common/queue'], function ($, moment) {
     var MAX_QUERYSTRING_LENGTH = 2048;
 
     //TODO change this
@@ -19,7 +20,16 @@ define([
 
     // Disable caching AJAX requests in IE
     // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
-    $.ajaxSetup({cache: false});
+    $.ajaxSetup({
+        beforeSend: function(xhr, call){
+
+            if(call.type == "GET"){
+                call.url += (call.url.indexOf("?") == -1?"?":"&") + "_=" + new Date().getTime();
+            }else{
+                call.data["_"] = new Date().getTime();
+            }
+        }
+    });
 
     var api = {};
 
@@ -244,26 +254,34 @@ define([
     api.ApiUser = function(spec) {
         spec = spec || {};
         this.userId = spec.userId || '';
+        this.userEmail = spec.userEmail || '';
         this.userToken = spec.userToken || '';
         this.tokenType = spec.tokenType || '';
+        this.impersonated = spec.impersonated || false;
     };
 
     api.ApiUser.prototype.fromStorage = function() {
         this.userId = window.localStorage.getItem("userId") || '';
+        this.userEmail = window.localStorage.getItem("userEmail") || '';
         this.userToken = window.localStorage.getItem("userToken") || '';
         this.tokenType = window.localStorage.getItem("tokenType") || '';
+        this.impersonated = window.localStorage.getItem("impersonated") === "true";
     };
 
     api.ApiUser.prototype.toStorage = function() {
         window.localStorage.setItem("userId", this.userId);
+        window.localStorage.setItem("userEmail", this.userEmail);
         window.localStorage.setItem("userToken", this.userToken);
         window.localStorage.setItem("tokenType", this.tokenType);
+        window.localStorage.setItem("impersonated", this.impersonated);
     };
 
     api.ApiUser.prototype.removeFromStorage = function() {
         window.localStorage.removeItem("userId");
+        window.localStorage.removeItem("userEmail");
         window.localStorage.removeItem("userToken");
         window.localStorage.removeItem("tokenType");
+        window.localStorage.removeItem("impersonated");
     };
 
     api.ApiUser.prototype.clearToken = function() {
@@ -280,6 +298,8 @@ define([
         this.userId = '';
         this.userToken = '';
         this.tokenType = '';
+        this.userEmail = '';
+        this.impersonated = false;
     };
 
     //*************
@@ -322,7 +342,7 @@ define([
                 // - mobile doesn't allow expired logins also not for owners
                 if ((resp.status=="OK") && 
                     (['expired', 'cancelled_expired', 'archived'].indexOf(resp.subscription) != -1?that.allowAccountOwner:true)) {
-                    dfd.resolve(resp.data);
+                    dfd.resolve(resp.data, resp.is_impersonated === true);
                 } else {
                     dfd.reject(resp);
                 }
@@ -363,23 +383,26 @@ define([
      * @param method
      * @param params
      * @param timeOut
-     * @param opt
+     * @param usePost
      * @returns {*}
      */
-    api.ApiAnonymous.prototype.call = function(method, params, timeOut, opt) {
+    api.ApiAnonymous.prototype.call = function(method, params, timeOut, usePost) {
         system.log('ApiAnonymous: call ' + method);
         if (this.version) {
             params = params || {};
             params["_v"] = this.version;
         }
 
-        var url =
-            this.urlApi +
-            '/' +
-            method +
-            '?' +
-            $.param(this.ajax._prepareDict(params));
-        return this.ajax.get(url, timeOut, opt);
+        var cmd = "call." + method;
+        var url = this.urlApi + '/' + method; 
+        var getUrl = url + "?" + $.param(this.ajax._prepareDict(params));
+
+        if( (usePost) ||
+            (getUrl.length >= MAX_QUERYSTRING_LENGTH)) {
+            return this.ajax.post(url, params, timeOut);
+        } else {
+            return this.ajax.get(getUrl, timeOut);
+        }
     };
 
     /**
@@ -388,12 +411,12 @@ define([
      * @name ApiAnonymous#longCall
      * @param method
      * @param params
-     * @param opt
+     * @param usePost
      * @returns {*}
      */
-    api.ApiAnonymous.prototype.longCall = function(method, params, opt) {
+    api.ApiAnonymous.prototype.longCall = function(method, params, usePost) {
         system.log('ApiAnonymous: longCall ' + method);
-        return this.call(method, params, 60000, opt);
+        return this.call(method, params, 60000, usePost);
     };
 
     //*************
@@ -513,12 +536,41 @@ define([
     api.ApiDataSource.prototype.getMultiple = function(pks, fields) {
         system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
         var cmd = "getMultiple";
-        var url = this.getBaseUrl() + pks.join(',') + ',';
-        var p = this.getParamsDict(fields);
-        if (!$.isEmptyObject(p)) {
-            url += '?' + this.getParams(p);
-        }
-        return this._ajaxGet(cmd, url);
+
+        //BUGFIX url to long
+        var chunk_size = 100;
+        var groups = pks.map( function(e,i){ 
+            return i%chunk_size===0 ? pks.slice(i,i+chunk_size) : null; 
+        })
+        .filter(function(e){ return e; });
+
+        var that = this,
+            returnArr = [];
+
+        var ajaxQueue = new $.fn.ajaxQueue(),
+            dfdMultiple = $.Deferred();
+        $.each(groups, function(i, group){
+            var url = that.getBaseUrl() + group.join(',');
+            var p = that.getParamsDict(fields);
+            if (!$.isEmptyObject(p)) {
+                url += '?' + that.getParams(p);
+            }
+            
+            ajaxQueue(function(){
+                return that._ajaxGet(cmd, url).then(function(resp){
+                    // BUGFIX make sure that response is an array
+                    resp = $.isArray(resp)?resp:[resp];
+
+                    returnArr = returnArr.concat(resp);
+                });
+            });            
+        })
+
+        ajaxQueue(function(){
+            return dfdMultiple.resolve(returnArr);
+        })
+
+        return dfdMultiple;
     };
 
     /**
@@ -702,6 +754,36 @@ define([
 
     api.ApiDataSource.prototype.searchUrl = function(params, fields, limit, skip, sort, mimeType) {
         var url = this.getBaseUrl() + 'search';
+        var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+        if( (mimeType!=null) &&
+            (mimeType.length>0)) {
+            p['mimeType'] = mimeType;
+        }
+        url += '?' + this.getParams(p);
+        return url;
+    };
+
+    /**
+     * Export objects in the collection
+     * @method
+     * @name ApiDataSource#export
+     * @param params
+     * @param fields
+     * @param limit
+     * @param skip
+     * @param sort
+     * @param mimeType
+     * @returns {promise}
+     */
+    api.ApiDataSource.prototype.export = function(params, fields, limit, skip, sort, mimeType) {
+        system.log('ApiDataSource: ' + this.collection + ': export ' + params);
+        var cmd = "export";
+        var url = this.exportUrl(params, fields, limit, skip, sort, mimeType);
+        return this._ajaxGet(cmd, url);
+    };
+
+    api.ApiDataSource.prototype.exportUrl = function(params, fields, limit, skip, sort, mimeType) {
+        var url = this.getBaseUrl() + 'call/export';
         var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
         if( (mimeType!=null) &&
             (mimeType.length>0)) {

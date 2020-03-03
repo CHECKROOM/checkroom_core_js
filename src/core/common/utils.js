@@ -116,7 +116,16 @@ define(['jquery'], function ($) {
      */
     utils.getLoginName = function(firstName, lastName) {
         var patt = /[\s-]*/igm;
-        return  firstName.latinise().toLowerCase().replace(patt, '') + "." + lastName.latinise().toLowerCase().replace(patt, '');
+
+        var parts = [];
+        if(firstName){
+            parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
+        }
+        if(lastName){
+            parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
+        }
+
+        return  parts.join("."); 
     };
 
     /**
@@ -125,14 +134,15 @@ define(['jquery'], function ($) {
      * @name  utils#getUrlParam
      * @method
      * @param  {string} name
-     * @param {string} default
+     * @param  {string} default
+     * @param  {string} url
      * @return {string}
      */
-    utils.getUrlParam = function(name, def) {
+    utils.getUrlParam = function(name, def, url) {
         name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
         var regexS = "[\\?&]"+name+"=([^&#]*)";
         var regex = new RegExp( regexS );
-        var results = regex.exec( window.location.href );
+        var results = regex.exec( url || window.location.href );
         return (results) ? decodeURIComponent(results[1].replace(/\+/g, " ")) : def;
     };
 
@@ -158,6 +168,9 @@ define(['jquery'], function ($) {
                 (cust.indexOf(';')<0) &&
                 ($.trim(cust).length>0) &&
                 (arr.indexOf(cust) >= idx));
+            }).map(function(cust){ 
+                // trim each line
+                return $.trim(cust); 
             });
         } else {
             return [];
@@ -199,9 +212,50 @@ define(['jquery'], function ($) {
             friendlyKind = "dropdown list"
         }
 
+        if(kind == "number") {
+            friendlyKind = "numeric"
+        }
+
         return friendlyKind;
      };
 
-     return utils;
+    /**
+     * arrayToCSV
+     * https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
+     * @param  {array} csv      
+     * @param  {[type]} filename 
+     */
+    utils.arrayToCSV = function(csv, filename){
+        var csvFile;
+        var downloadLink;
 
+        // CSV file
+        csvFile = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+
+        // BUGFIX IE Access is denied.
+        // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
+        if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+            window.navigator.msSaveOrOpenBlob(csvFile, filename);
+        } else {
+            // Download link
+            downloadLink = window.document.createElement("a");
+
+            // File name
+            downloadLink.download = filename;
+
+            // Create a link to the file
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+
+            // Hide download link
+            downloadLink.style.display = "none";
+
+            // Add the link to DOM
+            window.document.body.appendChild(downloadLink);
+
+            // Click download link
+            downloadLink.click();
+        }
+    }
+
+    return utils;
 });

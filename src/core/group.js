@@ -28,7 +28,9 @@ define([
         customerLabels: [],
         reservationLabels: [],
         orderLabels: [],
-        cancelled: null
+        businessHours: [],
+        cancelled: null,
+        calendarTemplate: '{{number}}: {{name_or_summary}} - {{contact.name}}'
     };
 
     // Allow overriding the ctor during inheritance
@@ -56,6 +58,8 @@ define([
      * @property {array} customerLabels     the groups customer labels
      * @property {array} reservationLabels  the groups reservation labels
      * @property {array} orderLabels        the groups order labels
+     * @property {array} businessHours      the groups business hours
+     * @property {string} calendarTemplate  the group calendar event title template
      * @constructor
      * @extends Document
      */
@@ -64,11 +68,11 @@ define([
         Document.call(this, spec);
 
         this.name = spec.name || DEFAULTS.name;
-        this.itemFlags = spec.itemFlags || DEFAULTS.itemFlags.slice();
-        this.kitFlags = spec.kitFlags || DEFAULTS.kitFlags.slice();
-        this.customerFlags = spec.customerFlags || DEFAULTS.customerFlags.slice();
-        this.orderFlags = spec.orderFlags || DEFAULTS.orderFlags.slice();
-        this.reservationFlags = spec.reservationFlags || DEFAULTS.reservationFlags.slice();
+        this.itemFlags = this.getFlags(spec.itemFlags || DEFAULTS.itemFlags.slice());
+        this.kitFlags = this.getFlags(spec.kitFlags || DEFAULTS.kitFlags.slice());
+        this.customerFlags = this.getFlags(spec.customerFlags || DEFAULTS.customerFlags.slice());
+        this.orderFlags = this.getFlags(spec.orderFlags || DEFAULTS.orderFlags.slice());
+        this.reservationFlags = this.getFlags(spec.reservationFlags || DEFAULTS.reservationFlags.slice());
         this.itemFields = spec.itemFields || DEFAULTS.itemFields.slice();
         this.kitFields = spec.kitFields || DEFAULTS.kitFields.slice();
         this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
@@ -79,6 +83,8 @@ define([
         this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
         this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
         this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
+        this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
+        this.calendarTemplate = spec.calendarTemplate || DEFAULTS.calendarTemplate;
     };
 
     Group.prototype = new tmp();
@@ -143,7 +149,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, select, skipRead) {
+    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, select, search, skipRead) {
         var params = {
             collection: collection,
             name: name,
@@ -152,7 +158,8 @@ define([
             form: form,
             unit: unit,
             editor: editor,
-            description: description
+            description: description,
+            search: search
         };
         if(select && select.length > 0){
             params.select = select;
@@ -182,7 +189,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, select, skipRead) {
+    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, select, search, skipRead) {
         var params = {
             collection: collection,
             name: name,
@@ -191,10 +198,14 @@ define([
             form: form,
             unit: unit,
             editor: editor,
-            description: description
+            description: description,
+            search: search
         }
         if(select && select.length > 0){
             params.select = select;
+        }
+        if(name != newName){
+            params.newName = newName;
         }
 
         return this._doApiCall({
@@ -251,10 +262,11 @@ define([
      * @param collection (items, kits, customers, reservations, orders)
      * @param labelColor
      * @param labelName
+     * @param labelDefault
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.createLabel = function(collection, labelColor, labelName, skipRead) {
+    Group.prototype.createLabel = function(collection, labelColor, labelName, labelDefault, skipRead) {
         return this._doApiCall({
             pk: this.id,
             method: "createLabel",
@@ -262,7 +274,8 @@ define([
             params: {
                 collection: collection,
                 labelColor: labelColor,
-                labelName: labelName
+                labelName: labelName,
+                labelDefault: labelDefault
             }
         });
     };
@@ -276,7 +289,7 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, skipRead) {
+    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, labelDefault, skipRead) {
         return this._doApiCall({
             pk: this.id,
             method: "updateLabel",
@@ -285,7 +298,8 @@ define([
                 collection: collection,
                 labelId: labelId,
                 labelColor: labelColor,
-                labelName: labelName
+                labelName: labelName,
+                labelDefault: labelDefault
             }
         });
     };
@@ -337,14 +351,15 @@ define([
      * @param shipping
      * @returns {promise}
      */
-    Group.prototype.buyProducts = function(listOfProductQtyTuples, shipping) {
+    Group.prototype.buyProducts = function(listOfProductQtyTuples, shipping, coupon) {
         return this._doApiCall({
             pk: this.id,
             method: "buyProducts",
             skipRead: true,
             params: {
                 products: listOfProductQtyTuples,
-                shipping: shipping
+                shipping: shipping,
+                coupon: coupon
             }
         });
     };
@@ -430,20 +445,152 @@ define([
     Group.prototype.getFlagsForCollection = function(coll) {
         switch (coll) {
             case "items":
-                return this.itemFlags;
+                return this.getFlags(this.itemFlags);
             case "kits":
-                return this.kitFlags;
+                return this.getFlags(this.kitFlags);
             case "contacts":
             case "customers":
-                return this.customerFlags;
+                return this.getFlags(this.customerFlags);
             case "reservations":
-                return this.reservationFlags;
+                return this.getFlags(this.reservationFlags);
             case "checkouts":
             case "orders":
-                return this.orderFlags;
+                return this.getFlags(this.orderFlags);
             default:
-                return [];
+                return this.getFlags([]);
         }
+    };
+
+    Group.prototype.getFlags = function(flags){
+        return flags.map(function(f){
+            if(typeof(f) === "string"){
+                f = {
+                    _id: f,
+                    name: f
+                }
+            };
+
+            // Also add _id param (bugfix)
+            if(!f._id) f._id = f.id;
+
+            return f;
+        })
+    }
+
+    /**
+     * Helper method that returns the business days
+     * @returns {Array}
+     */
+    Group.prototype.getBusinessDays = function(){
+        return this.businessHours.map(function(bh){
+            //server side: 0 => monday - 6 => sunday
+            //client side: 1 => monday - 7 => sunday
+            return bh.isoWeekday; 
+        });
+    };
+
+    /**
+     * Helper method that returns the business hours for a given iso day
+     * @returns {Array}
+     */
+    Group.prototype.getBusinessHoursForIsoWeekday = function(isoDay){
+        return this.businessHours.filter(function(bh){
+            //server side: 0 => monday - 6 => sunday
+            //client side: 1 => monday - 7 => sunday
+            return bh.isoWeekday == isoDay; 
+        });
+    };
+
+    /**
+     * setBusinessHours: translate iso weekdays back to server days
+     * @param {array} businessHours 
+     * @param {boolean} skipRead      
+     */
+    Group.prototype.setBusinessHours = function(businessHours, skipRead){
+        var that = this;
+
+        businessHours = businessHours || [];
+
+        // Make copy of array
+        businessHours = businessHours.slice().map(function(bh){ 
+            // BUGFIX clone object!!!!
+            var newBh = $.extend({}, bh);
+
+            newBh.dayOfWeek = bh.isoWeekday - 1; //server side 0-6 Mon-Sun
+
+            delete newBh.isoWeekday;
+
+            return newBh;
+        })
+
+        return this._doApiCall({
+            method: "setBusinessHours", 
+            params: { businessHours: businessHours, _fields: this._fields }, 
+            skipRead: skipRead, 
+            usePost: true
+        });
+    }
+
+    /**
+     * getDefaultBusinessHours: in iso weekdays
+     * @return {array}
+     * setCalendarTemplate
+     * @param {string} template 
+     * @param {string} kind      
+     */
+    Group.prototype.getDefaultBusinessHours = function(){
+        return [
+            { isoWeekday: 1, openTime: 540, closeTime: 1020},
+            { isoWeekday: 2, openTime: 540, closeTime: 1020},
+            { isoWeekday: 3, openTime: 540, closeTime: 1020},
+            { isoWeekday: 4, openTime: 540, closeTime: 1020},
+            { isoWeekday: 5, openTime: 540, closeTime: 1020}
+        ];
+    };
+
+    /**
+     * setCalendarTemplate
+     * @param {string} template 
+     * @param {string} kind      
+     */
+    Group.prototype.setCalendarTemplate = function(template, kind){
+        return this._doApiCall({
+            method: "setCalendarTemplate", 
+            params: { template: template, kind: kind }, 
+            skipRead: true,
+            usePost: true
+        });
+    };
+
+    /**
+     * setCalendarTemplate      
+     */
+    Group.prototype.clearCalendarTemplate = function(){
+        return this._doApiCall({
+            method: "clearCalendarTemplate",
+            skipRead: true
+        });
+    };
+
+    /**
+     * getCalendarTemplatePreview
+     * @param {string} template 
+     * @param {string} kind     
+     */
+    Group.prototype.getCalendarTemplatePreview = function(template, kind){
+        return this._doApiCall({
+            method: "getCalendarTemplatePreview",
+            params: { template: template, kind: kind }, 
+            skipRead: true,
+            usePost: true
+        });
+    };
+
+    /**
+     * getDefaultCalendarTemplate
+     */
+    Group.prototype.getDefaultCalendarTemplate = function(){
+        return DEFAULTS.calendarTemplate;
     };
 
     //
@@ -487,20 +634,44 @@ define([
         return Document.prototype._fromJson.call(this, data, options)
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
-                that.itemFlags = data.itemFlags || DEFAULTS.itemFlags.slice();
-                that.kitFlags = data.kitFlags || DEFAULTS.kitFlags.slice();
-                that.customerFlags = data.customerFlags || DEFAULTS.customerFlags.slice();
-                that.orderFlags = data.orderFlags || DEFAULTS.orderFlags.slice();
-                that.reservationFlags = data.reservationFlags || DEFAULTS.reservationFlags.slice();
+                that.itemFlags = that.getFlags(data.itemFlags || DEFAULTS.itemFlags.slice());
+                that.kitFlags = that.getFlags(data.kitFlags || DEFAULTS.kitFlags.slice());
+                that.customerFlags = that.getFlags(data.customerFlags || DEFAULTS.customerFlags.slice());
+                that.orderFlags = that.getFlags(data.orderFlags || DEFAULTS.orderFlags.slice());
+                that.reservationFlags = that.getFlags(data.reservationFlags || DEFAULTS.reservationFlags.slice());
                 that.itemFields = data.itemFields || DEFAULTS.itemFields.slice();
                 that.kitFields = data.kitFields || DEFAULTS.kitFields.slice();
                 that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
                 that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
                 that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
                 that.cancelled = data.cancelled || DEFAULTS.cancelled;
-                    
-                return that._fromColorLabelsJson(data, options);                
+                that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
+                that.calendarTemplate = data.calendarTemplate || DEFAULTS.calendarTemplate;
+
+                return that._fromColorLabelsJson(data, options).then(function(data){
+                    return that._fromBusinessHoursJson(data, options);
+                });                
             });
+    };
+
+    /**
+     * _fromBusinessHoursJson: client side uses iso weekdays
+     * @param  {object} data    
+     * @param  {object} options 
+     * @return {object}         
+     */
+    Group.prototype._fromBusinessHoursJson = function(data, options){
+        data.businessHours = data.businessHours.map(function(bh){
+            if(!bh.isoWeekday){
+                bh.isoWeekday = bh.dayOfWeek + 1; // 1-7 Mon - Sun
+            }
+
+            delete bh.dayOfWeek;
+
+            return bh;
+        })
+
+        return $.Deferred().resolve(data);
     };
 
     /**
@@ -518,10 +689,10 @@ define([
             that[labelsKey] = DEFAULTS[labelsKey].slice();
             
             if(labelsKey == "orderLabels"){
-                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "SlateGray" }, options));
+                that[labelsKey].push(that._getColorLabel({ readonly: true, default: !data[labelsKey].some(function(l){ return l.default === true; }), name: "Unlabeled", color: "SlateGray" }, options));
             }
             if(labelsKey == "reservationLabels"){
-                that[labelsKey].push(that._getColorLabel({ readonly: true, name: "Unlabeled", color: "LimeGreen" }, options));
+                that[labelsKey].push(that._getColorLabel({ readonly: true, default: !data[labelsKey].some(function(l){ return l.default === true; }), name: "Unlabeled", color: "LimeGreen" }, options));
             }
 
             if( (data[labelsKey]) &&

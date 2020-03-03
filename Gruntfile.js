@@ -47,7 +47,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\nfactory($, moment);\n}\n}(function (jquery, moment) {",
+                                "start":"(function (root, factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\n root.cheqroomCore = factory($, moment);\n}\n}(this, function (jquery, moment) {",
                                 "end": '\nreturn core;\n}))'
                             },
                         }));
@@ -59,10 +59,9 @@ module.exports = function(grunt){
                     baseUrl: "src/core",
                     out: "build/signup.js",
                     include: ['signup'],
-                    exclude:['jquery', 'jstz', 'moment'],
+                    exclude:['jquery', 'moment'],
                     paths:{
                         "jquery": "empty:",
-                        "jstz": "empty:",
                         "moment": "empty:"
                     },
                     optimize: "none",
@@ -74,7 +73,7 @@ module.exports = function(grunt){
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
-                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment', 'jstz'], factory);\n} else {\nfactory($, moment, jstz);\n}\n}(function (jquery, moment, jstz) {",
+                                "start":"(function (factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\nfactory($, moment);\n}\n}(function (jquery, moment) {",
                                 "end": '\nreturn signup;\n}))'
                             },
                         }));

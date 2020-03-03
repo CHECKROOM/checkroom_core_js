@@ -11,9 +11,17 @@ define([
 
     var DEFAULTS = {
         name: "",
+        description: "",
         items: [],
+        itemSummary: "",
         status: "unknown",
-        cover: ""
+        cover: "",
+        canReserve: "available",
+        canOrder: "available",
+        canCustody: "available",
+        allowReserve: true,
+        allowOrder: true,
+        allowCustody: true
     };
 
     // Allow overriding the ctor during inheritance
@@ -36,11 +44,20 @@ define([
         Base.call(this, spec);
 
         this.name = spec.name || DEFAULTS.name;
+        this.description = spec.description || DEFAULTS.description;
         this.items = spec.items || DEFAULTS.items.slice();
+        this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
         this.codes = [];
         this.conflicts = [];
         this.status = spec.status || DEFAULTS.status;
         this.cover = spec.cover || DEFAULTS.cover;
+
+        this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+        this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+        this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
+        this._canReserve = spec.canReserve !== undefined ? spec.canReserve: DEFAULTS.canReserve;
+        this._canOrder = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+        this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
     };
 
     Kit.prototype = new tmp();
@@ -111,6 +128,24 @@ define([
             (this.name==DEFAULTS.name));
     };
 
+     /**
+     * Checks if the Kit items is dirty
+     * @name Kit#isDirtyItems
+     * @returns {boolean}
+     * @override
+     */
+    Kit.prototype.isDirtyItems = function(){
+        var toItemArrayString = function(items){
+            items = items || [];
+
+            return items.map(function(it){ return it._id; }).sort().join(",");
+        };
+
+        var raw = this.raw || {};
+
+        return toItemArrayString(this.items) != toItemArrayString(raw.items);
+    }
+
     /**
      * Checks if the Kits is dirty and needs saving
      * @name Kit#isDirty
@@ -123,7 +158,7 @@ define([
             (this.raw)) {
             isDirty = this._isDirtyStringProperty("name");
         }
-        return isDirty;
+        return isDirty || this.isDirtyItems();
     };
 
     //
@@ -138,7 +173,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canCheckout = function() {
-        return common.kitCanCheckout(this);
+        return common.kitCanCheckout(this.raw);
     };
 
     /**
@@ -148,7 +183,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReserve = function() {
-        return common.kitCanReserve(this);
+        return common.kitCanReserve(this.raw);
     };
 
     /**
@@ -250,7 +285,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canTakeCustody = function() {
-        return common.kitCanTakeCustody(this);
+        return common.kitCanTakeCustody(this.raw);
     };
 
     /**
@@ -259,7 +294,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canReleaseCustody = function() {
-        return common.kitCanReleaseCustody(this);
+        return common.kitCanReleaseCustody(this.raw);
     };
 
     /**
@@ -268,7 +303,7 @@ define([
      * @returns {boolean}
      */
     Kit.prototype.canTransferCustody = function() {
-        return common.kitCanTransferCustody(this);
+        return common.kitCanTransferCustody(this.raw);
     };
 
     /**
@@ -318,6 +353,8 @@ define([
     Kit.prototype._toJson = function(options) {
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
+        data.description = this.description || DEFAULTS.description;
+
         //data.items --> not via update
         return data;
     };
@@ -327,10 +364,19 @@ define([
         return Base.prototype._fromJson.call(this, data, options)
             .then(function(data) {
                 that.name = data.name || DEFAULTS.name;
+                that.description = data.description || DEFAULTS.description;
                 that.items = data.items || DEFAULTS.items.slice();
+                that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
                 that.codes = data.codes || [];
                 that.status = data.status || DEFAULTS.status;
                 that.cover = data.cover || DEFAULTS.cover;
+
+                that._canReserve = data.canReserve !== undefined ? data.canReserve: DEFAULTS.canReserve;
+                that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+                that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+                that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+                that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+                that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
 
                 that._loadConflicts(that.items);
 

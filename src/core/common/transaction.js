@@ -41,12 +41,12 @@ define(['moment', 'common/keyValues'], function (moment, keyValues) {
      * @returns {duration}
      */
     that.getOrderDuration = function(transaction) {
-        if (transaction.started!=null) {
-            var to = (transaction.status=="closed") ? transaction.finished : transaction.due;
-            if (to) {
-                return moment.duration(to - transaction.started);
-            }
+        var from = transaction.started || moment();
+        var to = (transaction.status=="closed") ? transaction.finished : transaction.due;
+        if (to) {
+            return moment.duration(to - from);
         }
+        
         return null;
     };
 
@@ -104,6 +104,70 @@ define(['moment', 'common/keyValues'], function (moment, keyValues) {
 		var duration = that.getReservationDuration(transaction);
 		return (duration!=null) ? dateHelper.getFriendlyDuration(duration) : "";
 	};
+
+	/**
+     * getMessages
+     *
+     * @memberOf common
+     * @name  common#getMessages
+     * @method
+     * 
+     * @param  transaction          
+     * @param  permissionHandler
+     * @param  dateHelper        
+     * @return {promise}                   
+     */
+    that.getMessages = function(transaction, getDataSource, permissionHandler, dateHelper, user, group){
+        var dfd = $.Deferred();
+        	messages = [],
+            MessagePriority = {
+                'Critical': 0,
+                'High': 1,
+                'Medium': 2,
+                'Low': 3
+            },
+            group = group.raw?group.raw:group,
+            perm = permissionHandler;
+            
+        // Cleanup message?
+        if(transaction.status == "creating"){
+        	var cleanup = group.cleanup || {},
+        		deleteIn = cleanup.deleteReservationsCreating;
+
+        	if(deleteIn > 0){
+        		var deleteTime = transaction.modified.clone().add(deleteIn, 'minutes'),
+        			now = moment(),
+        			isPassed = deleteTime.isBefore(now);
+
+        		var getDeleteTime = function(){
+        			return deleteTime.fromNow();
+        		};
+
+	            var message = "Reservation will be deleted <strong>" + deleteTime.fromNow() + "</strong>";
+
+	            if(isPassed){
+	            	message = "Reservation will be deleted <strong>in a few seconds</strong>";
+	            }
+
+	            messages.push({
+	                kind: "cleanup",
+	                priority: MessagePriority.Critical,
+	                message: message,
+	                deleteTime: deleteTime,
+	                isPassed: isPassed
+	            });    
+        	}
+        }
+
+        dfd.resolve();
+
+        return dfd.then(function(){
+        	 // Sort by priority High > Low
+	        return messages.sort(function(a, b){
+	            return a.priority - b.priority;
+	        });
+        });       
+    }
 
 	return that;
 

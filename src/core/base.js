@@ -189,7 +189,7 @@ define([
 
         return this._doApiCall({
             method: 'setFields',
-            params: {fields: changedFields},
+            params: changedFields,
             skipRead: skipRead,
             usePost: true
         });
@@ -205,6 +205,10 @@ define([
      * @returns {promise}
      */
     Base.prototype.setField = function(field, value, skipRead) {
+        if(!value){
+            return this.clearField(field, skipRead);
+        }
+
         return this._doApiCall({
             method: 'setField',
             params: {field: field, value: value},
@@ -361,10 +365,14 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.setFlag = function(flag, skipRead) {
+    Base.prototype.setFlag = function(flag, message, attachments, skipRead) {
         return this._doApiCall({
             method: 'setFlag',
-            params: { flag: flag },
+            params: { 
+                flag: flag,
+                message: message,
+                attachments: attachments
+            },
             skipRead: skipRead});
     };
 
@@ -374,10 +382,13 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Base.prototype.clearFlag = function (skipRead) {
+    Base.prototype.clearFlag = function (message, attachments, skipRead) {
         return this._doApiCall({
             method: 'clearFlag',
-            params: {},
+            params: {
+                message: message,
+                attachments: attachments
+            },
             skipRead: skipRead
         });
     };
@@ -448,11 +459,15 @@ define([
      * Update item fields based on the given Field objects
      * @param {Array} fields    array of Field objects
      */
-    Base.prototype.setSortedFields = function(fields) {
+    Base.prototype.setSortedFields = function(fields,isUpdate) {
         for (var i=0;i<fields.length;i++) {
             var field = fields[i];
             if(field.isEmpty()){
-                delete this.fields[field.name];
+                if(isUpdate){
+                    this.fields[field.name] = null;
+                }else{
+                    delete this.fields[field.name];
+                }                
             }else{
                 this.fields[field.name] = field.value;
             }
@@ -630,7 +645,7 @@ define([
         if( (data.attachments) &&
             (data.attachments.length>0)) {
             $.each(data.attachments, function(i, att) {
-                obj = that._getAttachment(att, options);
+                obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
                 if (obj) {
                     that.attachments.push(obj);
                 }

@@ -128,10 +128,13 @@ define(['moment'], function (moment) {
         	if(this.isOrderOverdue(order, now)) {
         		return "label-overdue";
         	} else if(this.isOrderArchived(order)) {
-        		return this.getFriendlyOrderCss(order.status) + " label-striped";
+        		return "label-archived";
         	} else {
         		return this.getFriendlyOrderCss(order.status);
         	}
-    	}
+    	},
+    	canOrderSpotcheck: function(order){
+            return order.archived == null  && ['closed'].indexOf(order.status) == -1;
+        }
 	};
 });

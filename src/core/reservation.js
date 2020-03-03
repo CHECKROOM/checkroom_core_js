@@ -7,7 +7,8 @@ define([
     "jquery",
     "api",
     "transaction",
-    "conflict"],  /** @lends Transaction */ function ($, api, Transaction, Conflict) {
+    "conflict",
+    "common"],  /** @lends Transaction */ function ($, api, Transaction, Conflict, common) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -52,7 +53,7 @@ define([
     };
 
     Reservation.prototype.getMinDateTo = function() {
-        return this.getNextTimeSlot(this.from);
+        return this.getNextTimeSlot(this.from && this.from.isBefore(this.getNowRounded())?null:this.from);
     };
 
     //
@@ -116,6 +117,16 @@ define([
     }
 
     /**
+     * Checks if the reservation can be spotchecked
+     * @method
+     * @name Reservation#canSpotcheck
+     * @returns {boolean}
+     */
+    Reservation.prototype.canSpotcheck = function() {
+        return common.canReservationSpotcheck(this.raw);
+    };
+
+    /**
      * Checks if the reservation can be booked
      * @method
      * @name Reservation#canReserve
@@ -151,6 +162,28 @@ define([
      */
     Reservation.prototype.canCancel = function() {
         return (this.status=="open");
+    };
+
+     /**
+     * Checks if the reservation can be closed
+     * @method
+     * @name Reservation#canClose
+     * @returns {boolean}
+     */
+    Reservation.prototype.canClose = function() {
+        return (this.status=="open");
+    };
+
+    /**
+     * Checks if the reservation can be unclosed
+     * @method
+     * @name Reservation#canUndoClose
+     * @returns {boolean}
+     */
+    Reservation.prototype.canUndoClose = function() {
+        return (this.status=="closed_manually") &&
+                ((this.contact) &&
+                 (this.contact.status == "active"));
     };
 
     /**
@@ -238,23 +271,17 @@ define([
     }
 
     /**
-     * Checks if the reservation can be reserved again (based on status)
-     * @method
-     * @name Reservation#canReserveAgain
-     * @returns {boolean}
-     */
-    Reservation.prototype.canReserveAgain = function() {
-        return (this.status == "open") || (this.status == "closed" || (this.status == "cancelled"));
-    };
-
-    /**
      * Checks if the reservation can be into recurring reservations (based on status)
      * @method
      * @name Reservation#canReserveRepeat
      * @returns {boolean}
      */
     Reservation.prototype.canReserveRepeat = function() {
-        return (this.status == "open") || (this.status == "closed");
+        return ((this.status == "open") || 
+                (this.status == "closed") || 
+                (this.status == "closed_manually")) &&
+               ((this.contact) &&
+                (this.contact.status == "active"));
     };
 
     /**
@@ -322,12 +349,14 @@ define([
         if( (['creating', 'open'].indexOf(this.status) != -1) &&
             (this.items) &&
             (this.items.length) &&
-            ((this.location) || (this.from && this.to))) {
+            ((this.location) || (this.from && this.to) || (this.items.filter(function(it){ return it.canReserve !== "available"; })))) {
 
             var locId = this.location ? this._getId(this.location) : null;
             var showOrderConflicts = (this.from && this.to && this.status=="open");
             var showLocationConflicts = (locId!=null);
             var showStatusConflicts = true; // always show conflicts for expired, custody
+            var showPermissionConflicts = true; // always show permission conflicts (canReserve)
+            var showFlagConflicts = !(this.contact != null && this.contact.status == 'active' && this.contact.kind == 'maintenance'); // always show flag conflicts except for maintenance contact (flag unavailable settings)
 
             return this.ds.call(this.id, "getConflicts")
                 .then(function(cnflcts) {
@@ -340,11 +369,18 @@ define([
                             return conflictObj.item == item._id;
                         });
 
+                        if(conflict && conflict.kind == "flag" && !showFlagConflicts){
+                            conflict = null;
+                        }
+
                         // Does this item have a server-side conflict?
                         if (conflict) {
                             var kind = conflict.kind || "";
                             kind = kind || (conflict.order ? "order" : "");
                             kind = kind || (conflict.reservation ? "reservation" : "");
+
+                            // skip to next
+                            if(kind == "flag" && !showFlagConflicts) return true;
 
                             conflicts.push(new Conflict({
                                 kind: kind,
@@ -352,10 +388,33 @@ define([
                                 itemName: item.name,
                                 doc: conflict.conflictsWith,
                                 fromDate: conflict.fromDate,
-                                toDate: conflict.toDate
+                                toDate: conflict.toDate,
+                                locationCurrent: conflict.locationCurrent,
+                                locationDesired: conflict.locationDesired
                             }));
                         } else {
-                            if( (showStatusConflicts) &&
+                            if( (showFlagConflicts) &&
+                                (that.unavailableFlagHelper(item.flag))){
+                                conflicts.push(new Conflict({
+                                    kind: "flag",
+                                    item: item._id,
+                                    flag: item.flag,
+                                    doc: item.order
+                                }))
+                            } else if( (showPermissionConflicts) &&
+                                (item.canReserve=="unavailable_allow")){
+                                conflicts.push(new Conflict({
+                                    kind: "not_allowed_reservation",
+                                    item: item._id,
+                                    itemName: item.name
+                                }));
+                            } else if(that.status == 'open' && showPermissionConflicts && item.canOrder=="unavailable_allow"){
+                                conflicts.push(new Conflict({
+                                    kind: "not_allowed_order",
+                                    item: item._id,
+                                    itemName: item.name
+                                }));
+                            } else if( (showStatusConflicts) &&
                                 (item.status=="expired")) {
                                 conflicts.push(new Conflict({
                                     kind: "expired",
@@ -696,6 +755,66 @@ define([
             });
     };
 
+
+    /**
+     * Closes the booked reservation and sets the status to `closed_manually`
+     * @method
+     * @name Reservation#close
+     * @param message
+     * @param skipRead
+     * @param skipErrorHandling
+     * @returns {*}
+     */
+    Reservation.prototype.close = function(message, skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "close", params:{ message: message || "" }, skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status closed_manually') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
+    };
+
+    /**
+     * Uncloses the reservation and sets the status to `open` again
+     * @method
+     * @name Reservation#undoClose
+     * @param skipRead
+     * @param skipErrorHandling
+     * @returns {*}
+     */
+    Reservation.prototype.undoClose = function(skipRead, skipErrorHandling) {
+        var that = this;
+        return this._doApiCall({method: "undoClose", skipRead: skipRead})
+            .then(function(resp){ 
+                return resp; 
+            },function(err){
+                if(!skipErrorHandling){
+                    if( (err) && 
+                        (err.code == 422) && 
+                        (err.opt && err.opt.detail.indexOf('reservation has status open') != -1)){
+                        return that.get();
+                    }
+                }
+
+                //IMPORTANT
+                //Need to return a new deferred reject because otherwise
+                //done would be triggered in parent deferred
+                return $.Deferred().reject(err);
+            });
+    };    
+
     /**
      * Turns an open reservation into an order (which still needs to be checked out)
      * @method
@@ -753,6 +872,20 @@ define([
     };
 
     /**
+     * Checks if reservation can be reserved again
+     * @method
+     * @name Reservation#canReserveAgain
+     * @param skipRead
+     * @returns {promise}
+     */
+    Reservation.prototype.canReserveAgain = function() {
+        var params =  {
+            _fields: "null" //hack
+        };
+        return this._doApiLongCall({method: "canReserveAgain", params: params, skipRead: true});
+    };
+
+    /**
      * Creates a new, incomplete reservation with the same info
      * as the original reservation but other fromDate, toDate
      * Important; the response will be another Reservation document!
@@ -765,21 +898,8 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Reservation.prototype.reserveAgain = function(fromDate, toDate, customer, location, skipRead) {
-        var params =  {
-            location: location,
-            customer: customer
-        };
-
-        if(fromDate){
-            params.fromDate = fromDate;
-        }
-
-        if(toDate){
-            params.toDate = toDate;
-        }
-
-        return this._doApiCall({method: "reserveAgain", params: params, skipRead: skipRead});
+    Reservation.prototype.reserveAgain = function(params, skipRead) {
+        return this._doApiLongCall({method: "reserveAgain", params: params, skipRead: skipRead});
     };
 
     /**
@@ -795,7 +915,7 @@ define([
      * @returns {promise}
      */
     Reservation.prototype.reserveRepeat = function(frequency, until, customer, location) {
-        return this._doApiCall({method: "reserveRepeat", params: {
+        return this._doApiLongCall({method: "reserveRepeat", params: {
             frequency: frequency,
             until: until,
             customer: customer,

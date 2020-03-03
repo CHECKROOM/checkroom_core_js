@@ -45,11 +45,13 @@ define(function(){
 	    {regex: /\n[0-9]+\.\s(.*)/g, replacement: olList},                                 // ol lists
 	    {regex: /\n(&gt;|\>)(.*)/g, replacement: blockquote},                              // blockquotes
 	    {regex: /\n-{5,}/g, replacement: '\n<hr />'},                                      // horizontal rule
-	    {regex: /(?:[^\n]|\n(?! *\n))+/g, replacement: para},                                      // add paragraphs
 	    {regex: /<\/ul>\s?<ul>/g, replacement: ''},                                        // fix extra ul
 	    {regex: /<\/ol>\s?<ol>/g, replacement: ''},                                        // fix extra ol
+	    {regex: /(?:[^\n]|(?:<[^>].*>)\n(?! *\n))+/g, replacement: para},                                      // add paragraphs
 	    {regex: /<\/blockquote><blockquote>/g, replacement: '\n'}                          // fix extra blockquote
 	  ];
+
+	  //(\w+)\n
 
 	  // Add a rule.
 	  this.addRule = function (regex, replacement) {

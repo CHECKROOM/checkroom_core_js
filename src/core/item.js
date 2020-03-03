@@ -20,7 +20,7 @@ define([
             warrantyDate: null,
             purchaseDate: null,
             purchasePrice: null,
-            residualValue: null,
+            residualValue: 0,
             location: "",
             category: "",
             geo: [DEFAULT_LAT,DEFAULT_LONG],
@@ -29,7 +29,15 @@ define([
             kit: null,
             custody: null,
             cover: "",
-            catalog: null
+            catalog: null,
+            canReserve: 'available',
+            canOrder: 'available',
+            canCustody: 'available',
+            allowReserve: true,
+            allowOrder: true,
+            allowCustody: true,
+            flagged: null,
+            expired: null
         };
 
     // Allow overriding the ctor during inheritance
@@ -86,6 +94,13 @@ define([
         this.custody = spec.custody || DEFAULTS.custody;
         this.cover = spec.cover || DEFAULTS.cover;
         this.catalog = spec.catalog || DEFAULTS.catalog;
+
+        this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
+        this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
+        this.allowCustody = spec.allowCustody !== undefined ? spec.allowCustody : DEFAULTS.allowCustody;
+        this._canReserve = spec.canReserve !== undefined ? spec.canReserve : DEFAULTS.canReserve;
+        this._canCheckout = spec.canOrder !== undefined ? spec.canOrder : DEFAULTS.canOrder;
+        this._canCustody = spec.canCustody !== undefined ? spec.canCustody : DEFAULTS.canCustody;
     };
 
     Item.prototype = new tmp();
@@ -155,7 +170,8 @@ define([
             this._isDirtyCategory() ||
             this._isDirtyLocation() ||
             this._isDirtyGeo() || 
-            this._isDirtyFlag()
+            this._isDirtyFlag() ||
+            this._isDirtyPermissions()
         );
     };
 
@@ -193,6 +209,11 @@ define([
 
     Item.prototype._fromJson = function(data, options) {
         var that = this;
+
+        if(data.allowOrder === undefined) data.allowOrder = DEFAULTS.allowOrder;
+        if(data.allowReserve === undefined) data.allowReserve = DEFAULTS.allowReserve;
+        if(data.allowCustody === undefined) data.allowCustody = DEFAULTS.allowCustody;
+
         return Base.prototype._fromJson.call(this, data, options)
             .then(function() {
                 that.name = data.name || DEFAULTS.name;
@@ -208,6 +229,8 @@ define([
                 that.geo = data.geo || DEFAULTS.geo.slice();
                 that.cover = data.cover || DEFAULTS.cover;
                 that.catalog = data.catalog || DEFAULTS.catalog;
+                that.flagged = data.flagged || DEFAULTS.flagged;
+                that.expired = data.expired || DEFAULTS.expired;
 
                 // Depending on the fields we'll need to get the _id directly or from the dicts
                 var locId = DEFAULTS.location;
@@ -239,6 +262,13 @@ define([
                     custodyId = (data.custody._id) ? data.custody._id : data.custody;
                 }
                 that.custody = custodyId;
+
+                that._canReserve = data.canReserve !== undefined ? data.canReserve: DEFAULTS.canReserve;
+                that._canOrder = data.canOrder !== undefined ? data.canOrder : DEFAULTS.canOrder;
+                that._canCustody = data.canCustody !== undefined ? data.canCustody : DEFAULTS.canCustody;
+                that.allowReserve = data.allowReserve !== undefined ? data.allowReserve : DEFAULTS.allowReserve;
+                that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
+                that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
 
                 $.publish('item.fromJson', data);
                 return data;
@@ -292,7 +322,7 @@ define([
     };
 
     Item.prototype._isDirtyLocation = function() {
-        if (this.raw && this.status != 'in_custody') {
+        if (this.raw) {
             var locId = DEFAULTS.location;
             if (this.raw.location) {
                 locId = (this.raw.location._id) ? this.raw.location._id : this.raw.location;
@@ -315,6 +345,20 @@ define([
         }
     };
 
+    Item.prototype._isDirtyPermissions = function(){
+        if(this.raw){
+            var allowReserve = this.raw.allowReserve,
+                allowCheckout = this.raw.allowOrder,
+                allowCustody = this.raw.allowCustody;
+
+            return (this.allowReserve != allowReserve) ||
+                    (this.allowCheckout != allowCheckout) ||
+                    (this.allowCustody != allowCustody);
+        }else{
+            return false;
+        }
+    };
+
     Item.prototype._isDirtyGeo = function() {
         if (this.raw) {
             var address = this.raw.address || DEFAULTS.address;
@@ -329,7 +373,11 @@ define([
     };
 
     Item.prototype._isDirtyFlag = function() {
-        return this._isDirtyStringProperty("flag");
+        if(this.raw){
+            return this.raw.flag != this.flag;
+        }else{
+            return false;
+        }
     };
 
     //
@@ -368,7 +416,7 @@ define([
             dfdCategory = $.Deferred(),
             dfdLocation = $.Deferred(),
             dfdFields = $.Deferred(),
-            dfdFlags = $.Deferred(),
+            dfdPermissions = $.Deferred(),
             dfdBasic = $.Deferred();
 
         if (this._isDirtyCategory()) {
@@ -391,9 +439,7 @@ define([
                 } else {
                     dfdCategory.resolve();
                 }
-
-                // Skip update location if item is in custody
-                if (that._isDirtyLocation() && that.status != "in_custody") {
+                if (that._isDirtyLocation()) {
                     dfdLocation = that.changeLocation(that.location);
                 } else {
                     dfdLocation.resolve();
@@ -403,16 +449,6 @@ define([
                     dfdFields = that._updateFields();
                 } else {
                     dfdFields.resolve();
-                }
-
-                if (that._isDirtyFlag()) {
-                    if ((that.flag=="") || (that.flag==null)) {
-                        dfdFlags = that.clearFlag();
-                    } else {                        
-                        dfdFlags = that.setFlag(that.flag);
-                    }
-                } else {
-                    dfdFlags.resolve();
                 }
 
                 if( (that._isDirtyName()) ||
@@ -427,7 +463,13 @@ define([
                     dfdBasic.resolve();
                 }
 
-                return $.when(dfdCategory, dfdLocation, dfdFields, dfdFlags, dfdBasic);
+                if(that._isDirtyPermissions()){
+                    dfdPermissions = that.updateAllowedActions(that.allowReserve, that.allowCheckout, that.allowCustody);
+                }else{
+                    dfdPermissions.resolve();
+                }
+
+                return $.when(dfdCategory, dfdLocation, dfdFields, dfdBasic);
             });
     };
 
@@ -528,24 +570,6 @@ define([
     };
 
     /**
-     * Checks if an item can be reserved (based on status)
-     * @name Item#canReserve
-     * @returns {boolean}
-     */
-    Item.prototype.canReserve = function() {
-        return common.itemCanReserve(this);
-    };
-
-    /**
-     * Checks if an item can be checked out (based on status)
-     * @name Item#canCheckout
-     * @returns {boolean}
-     */
-    Item.prototype.canCheckout = function() {
-        return common.itemCanCheckout(this);
-    };
-
-    /**
      * Checks if we can go to the checkout of an item (based on status)
      * @name Item#canGoToCheckout
      * @returns {boolean}
@@ -594,11 +618,12 @@ define([
     /**
      * Expires an item, puts it in the *expired* status
      * @name Item#expire
+     * @param message
      * @param skipRead
      * @returns {promise}
      */
-    Item.prototype.expire = function(skipRead) {
-        return this._doApiCall({method: 'expire', skipRead: skipRead});
+    Item.prototype.expire = function(message, skipRead) {
+        return this._doApiCall({method: 'expire', params:{ message: message || "" }, skipRead: skipRead});
     };
 
     /**
@@ -771,13 +796,40 @@ define([
             });
     };
 
+    Item.prototype.updateAllowedActions = function(canReserve, canCheckout, canCustody, skipRead) {
+        return this._doApiCall({ 
+            method: 'setAllowedActions',
+            params: { reserve: canReserve, order: canCheckout, custody: canCustody  },
+            skipRead: skipRead
+        });
+    }
+
+    /**
+     * Checks if an item can be reserved (based on status)
+     * @name Item#canReserve
+     * @returns {boolean}
+     */
+    Item.prototype.canReserve = function() {
+        return common.itemCanReserve(this.raw);
+    };
+
+    /**
+     * Checks if an item can be checked out (based on status)
+     * @name Item#canCheckout
+     * @returns {boolean}
+     */
+    Item.prototype.canCheckout = function() {
+        return common.itemCanCheckout(this.raw);
+    };
+
+
     /**
      * Checks if custody can be taken for an item (based on status)
      * @name Item#canTakeCustody
      * @returns {boolean}
      */
     Item.prototype.canTakeCustody = function() {
-        return common.itemCanTakeCustody(this);
+        return common.itemCanTakeCustody(this.raw);
     };
 
     /**
@@ -786,7 +838,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canReleaseCustody = function() {
-        return common.itemCanReleaseCustody(this);
+        return common.itemCanReleaseCustody(this.raw);
     };
 
     /**
@@ -795,7 +847,7 @@ define([
      * @returns {boolean}
      */
     Item.prototype.canTransferCustody = function() {
-        return common.itemCanTransferCustody(this);
+        return common.itemCanTransferCustody(this.raw);
     };
 
     /**

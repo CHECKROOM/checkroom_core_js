@@ -26,6 +26,7 @@ define([
         conflicts: [],
         by: null,
         archived: null,
+        modified: null,
         itemSummary: null,
         name: null
     };
@@ -62,6 +63,7 @@ define([
         this.autoCleanup = (spec.autoCleanup!=null) ? spec.autoCleanup : false;
         this.dateHelper = spec.dateHelper || new DateHelper();
         this.helper = spec.helper || new Helper();
+        this.unavailableFlagHelper = spec.unavailableFlagHelper || function(flag){ return false; };
 
         this.status = spec.status || DEFAULTS.status;                     // the status of the order or reservation
         this.from = spec.from || DEFAULTS.from;                           // a date in the future
@@ -106,11 +108,15 @@ define([
      */
     Transaction.prototype.getNextTimeSlot = function(d) {
         d = d || this.getNowRounded();
-        var next = moment(d).add(this._getDateHelper().roundMinutes, "minutes");
+
+        var dateHelper = this._getDateHelper();
+
+        var next = moment(d).add(dateHelper.roundMinutes, "minutes");
         if (next.isSame(d)) {
-            next = next.add(this._getDateHelper().roundMinutes, "minutes");
+            next = next.add(dateHelper.roundMinutes, "minutes");
         }
-        return next
+
+        return dateHelper.getValidBusinessDate(next);
     };
 
     /**
@@ -327,7 +333,6 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         //data.started = this.from;  // VT: Will be set during checkout
         //data.finished = this.to;  // VT: Will be set during final checkin
-        data.due = this.due;
         if (this.location) {
             // Make sure we send the location as id, not the entire object
             data.location = this._getId(this.location);
@@ -361,6 +366,7 @@ define([
                 that.archived = data.archived || DEFAULTS.archived;
                 that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
                 that.name = data.name || DEFAULTS.name;
+                that.modified = data.modified || DEFAULTS.modified;
 
                 return that._getConflicts()
                     .then(function(conflicts) {
@@ -485,6 +491,14 @@ define([
         this.due = this._getDateHelper().roundTimeTo(date);
         return this._handleTransaction(skipRead);
     };
+
+    Transaction.prototype.setLabel = function(labelId, skipRead){
+        var that = this,
+            dfdExists = this.existsInDb()? $.Deferred().resolve():this._createTransaction(skipRead);
+        return dfdExists.then(function(){
+            return Base.prototype.setLabel.call(that, labelId, skipRead);
+        })
+    }
 
     // Location setters
     /**
@@ -757,7 +771,7 @@ define([
     Transaction.prototype.canArchive = function() {
         return (
         (this.archived==null) &&
-        ((this.status == "cancelled") || (this.status == "closed")));
+        ((this.status == "cancelled") || (this.status == "closed") || (this.status == "closed_manually")));
     };
 
     /**
@@ -768,7 +782,7 @@ define([
     Transaction.prototype.canUndoArchive = function() {
         return (
         (this.archived!=null) &&
-        ((this.status == "cancelled") || (this.status == "closed")));
+        ((this.status == "cancelled") || (this.status == "closed") || (this.status == "closed_manually")));
     };
 
 
@@ -820,7 +834,10 @@ define([
         // - at this location
         // - in the specified list (if any)
         params = params || {};
-        params.location = this._getId(this.location);
+
+        if(this.location){
+            params.location = this._getId(this.location);
+        }
 
         if( (listName!=null) &&
             (listName.length>0)) {

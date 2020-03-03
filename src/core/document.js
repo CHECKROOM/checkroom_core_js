@@ -140,9 +140,9 @@ define([
         if (this.existsInDb()) {
             return $.Deferred().reject(new Error("Cannot create document, already exists in database"));
         }
-        if (this.isEmpty()) {
+        /*if (this.isEmpty()) {
             return $.Deferred().reject(new Error("Cannot create empty document"));
-        }
+        }*/
         if (!this.isValid()) {
             return $.Deferred().reject(new Error("Cannot create, invalid document"));
         }
@@ -366,7 +366,7 @@ define([
      * @private
      */
     Document.prototype._doApiLongCall = function(spec) {
-        spec.timeOut = spec.timeOut || 30000;
+        spec.timeOut = spec.timeOut || 60000;
         return this._doApiCall(spec);
     };
 

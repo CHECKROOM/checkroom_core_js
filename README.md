@@ -148,4 +148,4 @@ Call `grunt gh-pages` to publish the documentation
 
 - - -
 
-Copyright CHECKROOM NV 2017
+Copyright CHECKROOM NV 2020

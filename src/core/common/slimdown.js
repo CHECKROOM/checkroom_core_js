@@ -125,4 +125,5 @@ define(function(){
 	}
 
 	window.Slimdown = Slimdown;
+	return Slimdown;
 })

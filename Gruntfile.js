@@ -48,7 +48,7 @@ module.exports = function(grunt){
                             'filePath': outputFile,
                             wrap: {
                                 "start":"(function (root, factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\n root.cheqroomCore = factory($, moment);\n}\n}(this, function (jquery, moment) {",
-                                "end": '\nreturn core;\n}))'
+                                "end": "\nif(typeof module !== 'undefined' && module.exports){\nmodule.exports = core;\n}\nreturn core;\n}))"
                             },
                         }));
                     }

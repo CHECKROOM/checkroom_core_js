@@ -255,7 +255,7 @@ define([
 
                     getDataSource("orders").search({
                         _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
-                        _restrict: !isSelfservice,
+                        _restrict: !isSelfservice || !perm.hasCheckoutPermission("read"),
                         _sort: "started",
                         status: kit.status == "checkedout"?"open":"creating",
                         _limit: 1,

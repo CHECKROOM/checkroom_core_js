@@ -349,6 +349,7 @@ api = function ($, moment) {
     this.version = spec.version;
     this.platform = spec.platform;
     this.device = spec.device;
+    this.sso = spec.sso;
     this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
@@ -364,6 +365,9 @@ api = function ($, moment) {
     }
     if (this.device) {
       params.device = this.device;
+    }
+    if (this.sso) {
+      params.sso = this.sso;
     }
     var dfd = $.Deferred();
     this.ajax.post(this.urlAuth, params, 30000).done(function (resp) {
@@ -733,8 +737,14 @@ api = function ($, moment) {
   api.ApiDataSource.prototype.search = function (params, fields, limit, skip, sort, mimeType) {
     system.log('ApiDataSource: ' + this.collection + ': search ' + params);
     var cmd = 'search';
-    var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
-    return this._ajaxGet(cmd, url);
+    var url = this.getBaseUrl() + 'search';
+    var geturl = this.searchUrl(params, fields, limit, skip, sort, mimeType);
+    if (geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      var p = this.searchParams(params, fields, limit, skip, sort, mimeType);
+      return this._ajaxPost(cmd, url, p);
+    } else {
+      return this._ajaxGet(cmd, geturl);
+    }
   };
   api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
     var url = this.getBaseUrl() + 'search';
@@ -744,6 +754,14 @@ api = function ($, moment) {
     }
     url += '?' + this.getParams(p);
     return url;
+  };
+  api.ApiDataSource.prototype.searchParams = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'search';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    return p;
   };
   /**
    * Export objects in the collection
@@ -3254,7 +3272,7 @@ common_utils = function ($) {
   return utils;
 }(jquery);
 signup = function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
-  var DEFAULT_PLAN = 'cr_1802_professional_yearly_usd_500';
+  var DEFAULT_PLAN = 'cr_2004_plus_yearly_usd_500';
   var DEFAULT_PERIOD = 'yearly';
   var DEFAULT_SOURCE = 'attempt';
   var DEFAULT_KIND = 'trial';
@@ -3335,7 +3353,10 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
   };
   Signup.prototype.companyExists = function () {
     var account = this.getGroupId();
-    return this.ds.call('accountExists', { account: account }).then(function (resp) {
+    if (this.dfdAccountExists)
+      this.dfdAccountExists.abort();
+    this.dfdAccountExists = this.ds.call('accountExists', { account: account });
+    return this.dfdAccountExists.then(function (resp) {
       return resp.result;
     });
   };
@@ -3349,7 +3370,10 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
   };
   Signup.prototype.emailExists = function () {
     if (this.emailIsValid()) {
-      return this.ds.call('emailExists', { email: this.email }).then(function (resp) {
+      if (this.dfdEmailExists)
+        this.dfdEmailExists.abort();
+      this.dfdEmailExists = this.ds.call('emailExists', { email: this.email });
+      return this.dfdEmailExists.then(function (resp) {
         return resp.result;
       });
     } else {
@@ -3362,7 +3386,10 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
   };
   Signup.prototype.loginExists = function () {
     if (this.loginIsValid()) {
-      return this.ds.call('loginExists', { login: this.login }).then(function (resp) {
+      if (this.dfdLoginExists)
+        this.dfdLoginExists.abort();
+      this.dfdLoginExists = this.ds.call('loginExists', { login: this.login });
+      return this.dfdLoginExists.then(function (resp) {
         return resp.result;
       });
     } else {
@@ -3471,19 +3498,22 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
         load_sample: false,
         owner_customer: true,
         maintenance_customer: true
-      }, true).then(function (user) {
+      }, true).then(function (resp) {
         if (storeInLocalStorage) {
-          // Already store the login token in localStorage
-          var tmpUser = new api.ApiUser({
-            userId: that.login,
-            userEmail: that.email,
-            userToken: user.data.token
-          });
-          tmpUser.toStorage();
+          Signup.storeLoginToken(resp.data);
         }
-        return afterActivate(user);
+        return afterActivate(resp);
       });
     });
+  };
+  Signup.storeLoginToken = function (data) {
+    // Already store the login token in localStorage
+    var tmpUser = new api.ApiUser({
+      userId: data.userId,
+      userEmail: data.email,
+      userToken: data.token
+    });
+    tmpUser.toStorage();
   };
   Signup.prototype.activateInvite = function (storeInLocalStorage) {
     var that = this, beforeActivate = this.onBeforeActivateInvite, afterActivate = this.onActivatedInvite;

@@ -349,6 +349,7 @@ api = function ($, moment) {
     this.version = spec.version;
     this.platform = spec.platform;
     this.device = spec.device;
+    this.sso = spec.sso;
     this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner : true;
   };
   api.ApiAuth.prototype.authenticate = function (userId, password) {
@@ -364,6 +365,9 @@ api = function ($, moment) {
     }
     if (this.device) {
       params.device = this.device;
+    }
+    if (this.sso) {
+      params.sso = this.sso;
     }
     var dfd = $.Deferred();
     this.ajax.post(this.urlAuth, params, 30000).done(function (resp) {
@@ -733,8 +737,14 @@ api = function ($, moment) {
   api.ApiDataSource.prototype.search = function (params, fields, limit, skip, sort, mimeType) {
     system.log('ApiDataSource: ' + this.collection + ': search ' + params);
     var cmd = 'search';
-    var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
-    return this._ajaxGet(cmd, url);
+    var url = this.getBaseUrl() + 'search';
+    var geturl = this.searchUrl(params, fields, limit, skip, sort, mimeType);
+    if (geturl.length >= MAX_QUERYSTRING_LENGTH) {
+      var p = this.searchParams(params, fields, limit, skip, sort, mimeType);
+      return this._ajaxPost(cmd, url, p);
+    } else {
+      return this._ajaxGet(cmd, geturl);
+    }
   };
   api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
     var url = this.getBaseUrl() + 'search';
@@ -744,6 +754,14 @@ api = function ($, moment) {
     }
     url += '?' + this.getParams(p);
     return url;
+  };
+  api.ApiDataSource.prototype.searchParams = function (params, fields, limit, skip, sort, mimeType) {
+    var url = this.getBaseUrl() + 'search';
+    var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+    if (mimeType != null && mimeType.length > 0) {
+      p['mimeType'] = mimeType;
+    }
+    return p;
   };
   /**
    * Export objects in the collection
@@ -1644,13 +1662,14 @@ common_item = function (moment, orderHelper, reservationHelper) {
       return contact._id == user.customer._id;
     };
     // Check-out message?
-    if (item.status == 'checkedout' || item.status == 'await_checkout') {
+    if (perm.hasCheckoutPermission('read') && (item.status == 'checkedout' || item.status == 'await_checkout')) {
       var message = '', dfd = $.Deferred();
       getDataSource('orders').search({
         _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
         _restrict: !isSelfservice,
         _sort: 'started',
         status: item.status == 'checkedout' ? 'open' : 'creating',
+        pk: typeof item.order !== 'string' ? item.order._id : item.order,
         _limit: 1,
         _skip: 0,
         items__contains: item.id
@@ -1691,7 +1710,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
         status: 'open',
         fromDate__gte: moment(),
         _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
-        _restrict: !isSelfservice,
+        _restrict: !isSelfservice || !perm.hasReservationPermission('read'),
         _sort: 'fromDate',
         _limit: 1,
         _skip: 0,
@@ -4120,6 +4139,7 @@ common_slimdown = function () {
     }
   };
   window.Slimdown = Slimdown;
+  return Slimdown;
 }();
 common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
   var that = {};
@@ -4351,7 +4371,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
       var message = '', dfd = $.Deferred();
       getDataSource('orders').search({
         _fields: 'name,itemSummary,status,started,due,finished,customer.name,customer.user.picture,customer.cover,customer.kind',
-        _restrict: !isSelfservice,
+        _restrict: !isSelfservice || !perm.hasCheckoutPermission('read'),
         _sort: 'started',
         status: kit.status == 'checkedout' ? 'open' : 'creating',
         _limit: 1,
@@ -5246,7 +5266,7 @@ common_pubsub = function ($) {
     o.trigger.apply(o, arguments);
   };
 }(jquery);
-common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValueHelper, slimdownHelper, moment) {
+common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValueHelper, Slimdown, moment) {
   var that = {};
   var sd = new Slimdown();
   that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler) {
@@ -5467,6 +5487,14 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       };
       var id = evt.id, body = $('.container-padding', arg.request.body).text(), to = arg.request.to, subject = arg.request.subject;
       evt.friendlyText = 'Sent mail to ' + to + ' <ul class=\'list-group field-group\'><li class=\'list-group-item\'><div class=\'mail-subject\'>' + subject + '</div><div class=\'mail-body multiline-text-truncate\'>' + body + '</div><div><a href=\'javascript:void(0)\' class=\'open-email\' data-id=\'' + id + '\'>View email</a></div></li></ul>';
+      break;
+    case 'sendSMS':
+      evt.by = {
+        kind: 'sms',
+        name: 'CHEQROOM'
+      };
+      var id = evt.id, body = arg.request.sms_body, to = arg.request.sms_to_number;
+      evt.friendlyText = 'Sent sms to ' + to + ' <ul class=\'list-group field-group\'><li class=\'list-group-item\'><div class=\'mail-body multiline-text-truncate\'>' + body + '</div></li></ul>';
       break;
     case 'block':
     case 'undoBlock':
@@ -8543,10 +8571,16 @@ user = function ($, Base, common) {
   User.prototype._isDirtyInfo = function () {
     if (this.raw) {
       var name = this.raw.name || DEFAULTS.name;
-      var role = this.raw.role || DEFAULTS.role;
       var email = this.raw.email || DEFAULTS.email;
       var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.role != role || this.active != active;
+      return this.name != name || this.email != email || this.active != active;
+    }
+    return false;
+  };
+  User.prototype._isDirtyRole = function () {
+    if (this.raw) {
+      var role = this.raw.role || DEFAULTS.role;
+      return this.role != role;
     }
     return false;
   };
@@ -8558,7 +8592,7 @@ user = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo();
+    return isDirty || this._isDirtyInfo() || this._isDirtyRole();
   };
   /**
    * Gets a url for a user avatar
@@ -8719,13 +8753,24 @@ user = function ($, Base, common) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid user'));
     }
-    var that = this, dfdInfo = $.Deferred();
+    var that = this, dfdInfo = $.Deferred(), dfdRole = $.Deferred();
     if (this._isDirtyInfo()) {
-      dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
+      var infoParams = this._toJson();
+      delete infoParams.id;
+      dfdInfo = this.ds.update(this.id, infoParams, this._fields);
     } else {
       dfdInfo.resolve();
     }
-    return $.when(dfdInfo);
+    if (this._isDirtyRole()) {
+      dfdRole = this._doApiCall({
+        method: 'updateUserRole',
+        params: { role: this.role },
+        skipRead: true
+      });
+    } else {
+      dfdRole.resolve();
+    }
+    return $.when(dfdInfo, dfdRole);
   };
   /**
    * Writes the user to a json object
@@ -8737,7 +8782,6 @@ user = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.role = this.role || DEFAULTS.role;
     return data;
   };
   /**
@@ -8827,15 +8871,19 @@ helper = function ($, defaultSettings, common) {
         }
         return url;
       },
-      getICalUrl: function (urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+      getICalUrl: function (urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId, itemIds) {
         orderLabels = orderLabels || [];
         reservationLabels = reservationLabels || [];
+        itemIds = itemIds || [];
         var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/locations/call/ical', parts = [];
         if (locationId) {
           parts.push('locations[]=' + locationId);
         }
         if (customerId) {
           parts.push('customer=' + customerId);
+        }
+        if (itemIds.length > 0) {
+          parts.push($.param({ items: itemIds }));
         }
         var selectedReservationLabels = reservationLabels.filter(function (lbl) {
           return lbl.selected;
@@ -10388,11 +10436,10 @@ Group = function ($, common, api, Document) {
    * @param skipRead
    * @returns {promise}
    */
-  Group.prototype.updateField = function (collection, name, newName, kind, required, form, unit, editor, description, select, search, skipRead) {
+  Group.prototype.updateField = function (collection, name, newName, required, form, unit, editor, description, select, search, skipRead) {
     var params = {
       collection: collection,
       name: name,
-      kind: kind,
       required: required,
       form: form,
       unit: unit,
@@ -14646,7 +14693,6 @@ PermissionHandler = function () {
     this._usePdf = limits.allowGeneratePdf;
     this._useKits = limits.allowKits && profile.useKits;
     this._useCustody = limits.allowCustody && profile.useCustody;
-    this._useGeo = profile.useGeo;
     this._useSelfService = limits.allowSelfService && profile.useSelfService;
     this._useCheckinLocation = this._useOrders && profile.orderCheckinLocation;
     this._usePublicSelfService = limits.allowSelfService && profile.usePublicSelfService;
@@ -14654,7 +14700,7 @@ PermissionHandler = function () {
     this._useSendMessage = limits.allowSendMessage && profile.useSendMessage;
     this._useUserSync = limits.allowUserSync && profile.useUserSync;
     this._useFlags = profile.useFlags;
-    this._useGeo = profile.useGeo;
+    this._useGeo = limits.allowGeo && profile.useGeo;
     this._useRestrictLocations = limits.allowRestrictLocations && profile.useRestrictLocations;
     this._useReporting = limits.allowReporting && profile.useReporting;
     this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
@@ -14667,6 +14713,12 @@ PermissionHandler = function () {
     // TODO change this update fallback (mobile)
     this._useSpotcheck = limits.allowSpotcheck && profile.useSpotcheck;
     this._useCustomRoles = limits.allowCustomRoles;
+    this._useSSO = limits.allowSSO;
+    this._useExport = limits.allowExport;
+    this._useImport = limits.allowImport;
+    this._useRepeatReservations = limits.allowReservationsRepeat;
+    this._useICal = limits.allowICal;
+    this._usePublicInventory = limits.allowPublicInventory;
   };
   // 
   // Module helpers
@@ -14704,6 +14756,39 @@ PermissionHandler = function () {
   PermissionHandler.prototype.canUseCustomRoles = function () {
     return this.limits.allowCustomRoles;
   };
+  PermissionHandler.prototype.canUseSMSNotifications = function () {
+    return this.limits.allowNotificationsSMS;
+  };
+  PermissionHandler.prototype.canUsePushNotifications = function () {
+    return this.limits.allowNotificationsPush;
+  };
+  PermissionHandler.prototype.canUseEmailNotifications = function () {
+    return this.limits.allowNotificationsEmail;
+  };
+  PermissionHandler.prototype.canUseImport = function () {
+    return this.limits.allowImport;
+  };
+  PermissionHandler.prototype.canUseExport = function () {
+    return this.limits.allowExport;
+  };
+  PermissionHandler.prototype.canUsePdf = function () {
+    return this.limits.allowGeneratePdf;
+  };
+  PermissionHandler.prototype.canUseGeo = function () {
+    return this.limits.allowGeo;
+  };
+  PermissionHandler.prototype.canUseCheckouts = function () {
+    return this.limits.allowOrders;
+  };
+  PermissionHandler.prototype.canUseReservations = function () {
+    return this.limits.allowReservations;
+  };
+  PermissionHandler.prototype.canUseColoredLabels = function () {
+    return this.canUseCheckouts() && this.canUseReservations();
+  };
+  PermissionHandler.prototype.canUseSupportChat = function () {
+    return this.limits.allowSupportChat;
+  };
   //
   // Permission helpers
   //
@@ -14721,6 +14806,12 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasCalendarPermission = function (action, data, location) {
     // Calendar permission depends on reservation or checkout permission
     return this.hasReservationPermission('read') || this.hasCheckoutPermission('read');
+  };
+  PermissionHandler.prototype.hasICalPermission = function () {
+    return this._useICal;
+  };
+  PermissionHandler.prototype.hasPublicInventoryPermission = function () {
+    return this._usePublicInventory;
   };
   PermissionHandler.prototype.hasItemPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'items', data, location);
@@ -14749,11 +14840,20 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasReportingPermission = function () {
     return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
   };
+  PermissionHandler.prototype.hasExportPermission = function () {
+    return this._useExport;
+  };
+  PermissionHandler.prototype.hasImportPermission = function () {
+    return this._useImport;
+  };
   PermissionHandler.prototype.hasLabelPermission = function () {
     return this.hasCheckoutPermission('setLabel');
   };
   PermissionHandler.prototype.hasSlackPermission = function () {
     return this._useSlack;
+  };
+  PermissionHandler.prototype.hasSSOPermission = function () {
+    return this._useSSO;
   };
   PermissionHandler.prototype.hasApiPermission = function () {
     return this._useApi;
@@ -14819,6 +14919,9 @@ PermissionHandler = function () {
     //return this.hasPermission(action, "asset-tags", data, location);
     return this.hasAnyAdminPermission();
   };
+  PermissionHandler.prototype.hasIntegrationsPermission = function () {
+    return this.hasWebhookPermission('read') || this.hasSlackPermission() || this.hasApiPermission() || this.hasPublicInventoryPermission() || this.hasSSOPermission();
+  };
   PermissionHandler.prototype.hasPermission = function (action, collection, data, location) {
     data = data || {};
     /*if( (this._isSelfService) && 
@@ -14872,7 +14975,6 @@ PermissionHandler = function () {
       case 'canChangeCategory':
       // Other update/delete actions
       case 'getDepreciation':
-      case 'changeLocation':
       case 'updatePermissions':
       case 'addBarcode':
       case 'removeBarcode':
@@ -14892,8 +14994,10 @@ PermissionHandler = function () {
           'ITEMS_ADMIN',
           'ITEMS_ADMIN_RESTRICTED'
         ]);
+      case 'changeLocation':
+        return can(['ITEMS_LOCATION_ADMIN_RESTRICTED']);
       case 'updateGeo':
-        return can([
+        return this._useGeo && can([
           'ITEMS_GEO_ADMIN',
           'ITEMS_GEO_ADMIN_RESTRICTED'
         ]);
@@ -14909,12 +15013,12 @@ PermissionHandler = function () {
       case 'importSample':
       case 'importSpreadsheet':
       case 'importValidate':
-        return can([
+        return this._useImport && can([
           'ITEMS_IMPORTER',
           'ITEMS_IMPORTER_RESTRICTED'
         ]);
       case 'export':
-        return can([
+        return this._useExport && can([
           'ITEMS_EXPORTER',
           'ITEMS_EXPORTER_RESTRICTED'
         ]);
@@ -15014,12 +15118,12 @@ PermissionHandler = function () {
           'KITS_ADMIN_RESTRICTED'
         ]);
       case 'import':
-        return can([
+        return this._useImport && can([
           'KITS_IMPORTER',
           'KITS_IMPORTER_RESTRICTED'
         ]);
       case 'export':
-        return can([
+        return this._useExport && can([
           'KITS_EXPORTER',
           'KITS_EXPORTER_RESTRICTED'
         ]);
@@ -15126,7 +15230,7 @@ PermissionHandler = function () {
           'ORDERS_LABELER_RESTRICTED'
         ]) || data.own && can(['ORDERS_OWN_LABELER']);
       case 'export':
-        return can([
+        return this._useExport && can([
           'ORDERS_EXPORTER',
           'ORDERS_EXPORTER_RESTRICTED'
         ]);
@@ -15138,10 +15242,10 @@ PermissionHandler = function () {
         ]) || data.own && can(['ORDERS_OWN_ARCHIVER']);
       // Other
       case 'generateDocument':
-        return can([
+        return this._usePdf && (can([
           'ORDERS_DOCUMENT_GENERATOR',
           'ORDERS_DOCUMENT_GENERATOR_RESTRICTED'
-        ]) || data.own && can(['ORDERS_OWN_DOCUMENT_GENERATOR']);
+        ]) || data.own && can(['ORDERS_OWN_DOCUMENT_GENERATOR']));
       case 'checkinAt':
         return this._useCheckinLocation && this.hasCheckoutPermission('checkin');
       case 'forceCheckListCheckin':
@@ -15192,12 +15296,13 @@ PermissionHandler = function () {
       case 'reserve':
       case 'undoReserve':
       case 'reserveAgain':
-      case 'reserveRepeat':
       // Generic actions
       case 'setFields':
       case 'setField':
       case 'clearField':
         return this.hasReservationPermission('update', data);
+      case 'reserveRepeat':
+        return this._useRepeatReservations && this.hasReservationPermission('update', data);
       case 'attach':
       case 'addAttachment':
         return can(['RESERVATIONS_ATTACHMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER']);
@@ -15220,7 +15325,7 @@ PermissionHandler = function () {
           'RESERVATIONS_OWN_COMMENTS_OWN_DELETER'
         ]);
       case 'export':
-        return can([
+        return this._useExport && can([
           'RESERVATIONS_EXPORTER',
           'RESERVATIONS_EXPORTER_RESTRICTED'
         ]);
@@ -15241,7 +15346,7 @@ PermissionHandler = function () {
         ]) || data.own && can(['RESERVATIONS_OWN_ARCHIVER']);
       // Other
       case 'generateDocument':
-        return can([
+        return this._usePdf && can([
           'RESERVATIONS_DOCUMENT_GENERATOR',
           'RESERVATIONS_DOCUMENT_GENERATOR_RESTRICTED',
           'RESERVATIONS_OWN_DOCUMENT_GENERATOR'
@@ -15315,12 +15420,12 @@ PermissionHandler = function () {
       case 'importSpreadsheet':
       case 'importSample':
       case 'importValidate':
-        return can(['CUSTOMERS_IMPORTER']);
+        return this._useImport && can(['CUSTOMERS_IMPORTER']);
       case 'export':
-        return can(['CUSTOMERS_EXPORTER']);
+        return this._useExport && can(['CUSTOMERS_EXPORTER']);
       // Other
       case 'generateDocument':
-        return can([
+        return this._usePdf && can([
           'CUSTOMERS_DOCUMENT_GENERATOR',
           'CUSTOMERS_OWN_DOCUMENT_GENERATOR'
         ]);
@@ -15339,22 +15444,26 @@ PermissionHandler = function () {
         return false;
       case 'read':
         return can(['USERS_READER']);
-      case 'create':
       case 'update':
+      case 'updateProfile':
+      case 'activate':
+      case 'deactivate':
+      case 'archive':
+      case 'undoArchive':
+        return can([
+          'USERS_OWN_PROFILE_ADMIN',
+          'USERS_PROFILE_ADMIN'
+        ]);
+      case 'updatePassword':
+        return can(['USERS_OWN_PASSWORD_ADMIN']);
+      case 'create':
       case 'delete':
       case 'linkNewCustomer':
       case 'linkCustomer':
       case 'unLinkCustomer':
       case 'inviteUser':
-      case 'archive':
-      case 'undoArchive':
-      case 'activate':
-      case 'deactivate':
       case 'clearSync':
       case 'restrictLocations':
-      case 'addRole':
-      case 'deleteRole':
-      case 'editRole':
       case 'referFriend':
         return can(['USERS_ADMIN']);
       case 'changeAccountOwner':
@@ -15364,6 +15473,10 @@ PermissionHandler = function () {
           'USERS_REPORTER',
           'USERS_OWN_REPORTER'
         ]);
+      case 'addRole':
+      case 'deleteRole':
+      case 'editRole':
+        return this._useCustomRoles && can(['USERS_ADMIN']);
       }
       break;
     case 'categories':
@@ -17595,10 +17708,16 @@ User = function ($, Base, common) {
   User.prototype._isDirtyInfo = function () {
     if (this.raw) {
       var name = this.raw.name || DEFAULTS.name;
-      var role = this.raw.role || DEFAULTS.role;
       var email = this.raw.email || DEFAULTS.email;
       var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.role != role || this.active != active;
+      return this.name != name || this.email != email || this.active != active;
+    }
+    return false;
+  };
+  User.prototype._isDirtyRole = function () {
+    if (this.raw) {
+      var role = this.raw.role || DEFAULTS.role;
+      return this.role != role;
     }
     return false;
   };
@@ -17610,7 +17729,7 @@ User = function ($, Base, common) {
    */
   User.prototype.isDirty = function () {
     var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo();
+    return isDirty || this._isDirtyInfo() || this._isDirtyRole();
   };
   /**
    * Gets a url for a user avatar
@@ -17771,13 +17890,24 @@ User = function ($, Base, common) {
     if (!this.isValid()) {
       return $.Deferred().reject(new Error('Cannot update, invalid user'));
     }
-    var that = this, dfdInfo = $.Deferred();
+    var that = this, dfdInfo = $.Deferred(), dfdRole = $.Deferred();
     if (this._isDirtyInfo()) {
-      dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
+      var infoParams = this._toJson();
+      delete infoParams.id;
+      dfdInfo = this.ds.update(this.id, infoParams, this._fields);
     } else {
       dfdInfo.resolve();
     }
-    return $.when(dfdInfo);
+    if (this._isDirtyRole()) {
+      dfdRole = this._doApiCall({
+        method: 'updateUserRole',
+        params: { role: this.role },
+        skipRead: true
+      });
+    } else {
+      dfdRole.resolve();
+    }
+    return $.when(dfdInfo, dfdRole);
   };
   /**
    * Writes the user to a json object
@@ -17789,7 +17919,6 @@ User = function ($, Base, common) {
     var data = Base.prototype._toJson.call(this, options);
     data.name = this.name || DEFAULTS.name;
     data.email = this.email || DEFAULTS.email;
-    data.role = this.role || DEFAULTS.role;
     return data;
   };
   /**
@@ -18703,5 +18832,8 @@ core = function (api, Availability, Attachment, Base, Category, Comment, Conflic
   core.Field = Field;
   return core;
 }(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field);
+if(typeof module !== 'undefined' && module.exports){
+module.exports = core;
+}
 return core;
 }))

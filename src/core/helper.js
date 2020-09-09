@@ -67,9 +67,10 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 return url;
             },
-            getICalUrl: function(urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId) {
+            getICalUrl: function(urlApi, userId, userPublicKey, orderLabels, reservationLabels, customerId, locationId, itemIds) {
                 orderLabels = orderLabels || [];
                 reservationLabels = reservationLabels || [];
+                itemIds = itemIds || [];
 
                 var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
                     parts = [];
@@ -79,6 +80,10 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 }
                 if (customerId) {
                     parts.push("customer=" + customerId);
+                }
+
+                if(itemIds.length > 0) {
+                    parts.push($.param({ items: itemIds }))
                 }
 
                 var selectedReservationLabels = reservationLabels.filter(function(lbl){ return lbl.selected; }).map(function(lbl){ return lbl.id || ""; });

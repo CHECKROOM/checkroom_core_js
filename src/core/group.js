@@ -189,11 +189,10 @@ define([
      * @param skipRead
      * @returns {promise}
      */
-    Group.prototype.updateField = function(collection, name, newName, kind, required, form, unit, editor, description, select, search, skipRead) {
+    Group.prototype.updateField = function(collection, name, newName, required, form, unit, editor, description, select, search, skipRead) {
         var params = {
             collection: collection,
             name: name,
-            kind: kind,
             required: required,
             form: form,
             unit: unit,

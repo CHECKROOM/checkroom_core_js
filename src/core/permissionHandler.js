@@ -25,7 +25,6 @@ define([], function () {
         this._usePdf =                (limits.allowGeneratePdf);
         this._useKits =               (limits.allowKits) &&                 (profile.useKits);
         this._useCustody =            (limits.allowCustody) &&              (profile.useCustody);
-        this._useGeo =                                                      (profile.useGeo);
         this._useSelfService =        (limits.allowSelfService) &&          (profile.useSelfService);
         this._useCheckinLocation =    (this._useOrders) &&                  (profile.orderCheckinLocation);
         this._usePublicSelfService =  (limits.allowSelfService) &&          (profile.usePublicSelfService);
@@ -33,7 +32,7 @@ define([], function () {
         this._useSendMessage =        (limits.allowSendMessage) &&          (profile.useSendMessage);
         this._useUserSync =           (limits.allowUserSync) &&             (profile.useUserSync);
         this._useFlags =              (profile.useFlags);
-        this._useGeo =                (profile.useGeo);
+        this._useGeo =                (limits.allowGeo) &&                   (profile.useGeo);
         this._useRestrictLocations =  (limits.allowRestrictLocations) &&    (profile.useRestrictLocations);
         this._useReporting =          (limits.allowReporting) &&            (profile.useReporting);
         this._useDepreciations =      (limits.allowDepreciations) &&        (profile.useDepreciations);
@@ -45,6 +44,12 @@ define([], function () {
         this._useReleaseAtLocation =    (this._useCustody) &&                  (profile.custodyCanChangeLocation !== undefined?profile.custodyCanChangeLocation:true); // TODO change this update fallback (mobile)
         this._useSpotcheck =           (limits.allowSpotcheck) &&           (profile.useSpotcheck);
         this._useCustomRoles =         (limits.allowCustomRoles);
+        this._useSSO =                (limits.allowSSO);
+        this._useExport =             (limits.allowExport);
+        this._useImport =             (limits.allowImport);   
+        this._useRepeatReservations = (limits.allowReservationsRepeat); 
+        this._useICal =               (limits.allowICal);
+        this._usePublicInventory =    (limits.allowPublicInventory);
     };
 
     // 
@@ -79,10 +84,43 @@ define([], function () {
     };
     PermissionHandler.prototype.canUseSpotcheck = function(){
         return this.limits.allowSpotcheck;
-    }
+    };
     PermissionHandler.prototype.canUseCustomRoles = function(){
         return this.limits.allowCustomRoles;
-    }
+    };
+    PermissionHandler.prototype.canUseSMSNotifications = function(){
+        return this.limits.allowNotificationsSMS;
+    };
+    PermissionHandler.prototype.canUsePushNotifications = function(){
+        return this.limits.allowNotificationsPush;
+    };
+    PermissionHandler.prototype.canUseEmailNotifications = function(){
+        return this.limits.allowNotificationsEmail;
+    };
+    PermissionHandler.prototype.canUseImport = function(){
+        return this.limits.allowImport;
+    };
+    PermissionHandler.prototype.canUseExport = function(){
+        return this.limits.allowExport;
+    };
+    PermissionHandler.prototype.canUsePdf = function(){
+        return this.limits.allowGeneratePdf;
+    };
+    PermissionHandler.prototype.canUseGeo = function(){
+        return this.limits.allowGeo;
+    };
+    PermissionHandler.prototype.canUseCheckouts = function(){
+        return this.limits.allowOrders;
+    };
+    PermissionHandler.prototype.canUseReservations = function(){
+        return this.limits.allowReservations;
+    };
+    PermissionHandler.prototype.canUseColoredLabels = function(){
+        return this.canUseCheckouts() && this.canUseReservations();
+    };
+    PermissionHandler.prototype.canUseSupportChat = function(){
+        return this.limits.allowSupportChat;
+    };
 
     //
     // Permission helpers
@@ -118,6 +156,13 @@ define([], function () {
         return this.hasReservationPermission("read") || this.hasCheckoutPermission("read");
     };
 
+    PermissionHandler.prototype.hasICalPermission = function(){
+        return this._useICal;
+    };
+
+    PermissionHandler.prototype.hasPublicInventoryPermission = function(){
+        return this._usePublicInventory;
+    };
     
     PermissionHandler.prototype.hasItemPermission = function(action, data, location) {
         return this.hasPermission(action || "read", "items", data, location);
@@ -155,12 +200,23 @@ define([], function () {
         return this._useReporting && this.permissions.indexOf("ACCOUNT_REPORTER") != -1;
     };
 
+    PermissionHandler.prototype.hasExportPermission = function(){
+        return this._useExport;
+    };
+    PermissionHandler.prototype.hasImportPermission = function(){
+        return this._useImport;
+    };
+
     PermissionHandler.prototype.hasLabelPermission = function() {
         return this.hasCheckoutPermission("setLabel");
     };
 
     PermissionHandler.prototype.hasSlackPermission = function(){
         return this._useSlack;
+    };
+
+    PermissionHandler.prototype.hasSSOPermission = function(){
+        return this._useSSO;
     };
 
     PermissionHandler.prototype.hasApiPermission = function(){
@@ -251,6 +307,10 @@ define([], function () {
         return this.hasAnyAdminPermission();
     };
 
+    PermissionHandler.prototype.hasIntegrationsPermission = function(){
+        return this.hasWebhookPermission("read") || this.hasSlackPermission() || this.hasApiPermission() || this.hasPublicInventoryPermission() || this.hasSSOPermission();
+    }
+
     PermissionHandler.prototype.hasPermission = function(action, collection, data, location) {
         data = data || {};
 
@@ -302,7 +362,6 @@ define([], function () {
                     case "canChangeCategory":
                     // Other update/delete actions
                     case "getDepreciation":
-                    case "changeLocation":
                     case "updatePermissions":
                     case "addBarcode":
                     case "removeBarcode":
@@ -319,8 +378,10 @@ define([], function () {
                     case "setCatalog":
                     case "setCover":
                         return can(["ITEMS_ADMIN", "ITEMS_ADMIN_RESTRICTED"]);
+                    case "changeLocation":
+                        return can(["ITEMS_LOCATION_ADMIN_RESTRICTED"]);
                     case "updateGeo":
-                        return can(["ITEMS_GEO_ADMIN", "ITEMS_GEO_ADMIN_RESTRICTED"]);
+                        return this._useGeo && can(["ITEMS_GEO_ADMIN", "ITEMS_GEO_ADMIN_RESTRICTED"]);
                     case "attach":
                     case "addAttachment":
                         return can(["ITEMS_ATTACHMENTS_OWN_WRITER"]);
@@ -333,9 +394,9 @@ define([], function () {
                     case "importSample":
                     case "importSpreadsheet":
                     case "importValidate":
-                        return can(["ITEMS_IMPORTER", "ITEMS_IMPORTER_RESTRICTED"]);
+                        return this._useImport && can(["ITEMS_IMPORTER", "ITEMS_IMPORTER_RESTRICTED"]);
                     case "export":
-                        return can(["ITEMS_EXPORTER", "ITEMS_EXPORTER_RESTRICTED"]);
+                        return this._useExport && can(["ITEMS_EXPORTER", "ITEMS_EXPORTER_RESTRICTED"]);
                     case "addComment":
                         return can(["ITEMS_COMMENTS_OWN_WRITER"]);
                     case "updateComment":
@@ -408,9 +469,9 @@ define([], function () {
                     case "updatePermissions":
                         return can(["KITS_ADMIN", "KITS_ADMIN_RESTRICTED"]);
                     case "import":
-                        return can(["KITS_IMPORTER", "KITS_IMPORTER_RESTRICTED"]);
+                        return this._useImport && can(["KITS_IMPORTER", "KITS_IMPORTER_RESTRICTED"]);
                     case "export":
-                        return can(["KITS_EXPORTER", "KITS_EXPORTER_RESTRICTED"]);
+                        return this._useExport && can(["KITS_EXPORTER", "KITS_EXPORTER_RESTRICTED"]);
                     // Permissings for asset labels
                     case "printLabel":
                         return can(["KITS_LABEL_PRINTER", "KITS_LABEL_PRINTER_RESTRICTED"]);
@@ -492,13 +553,13 @@ define([], function () {
                     case "clearLabel":
                         return can(["ORDERS_LABELER", "ORDERS_LABELER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_LABELER"]));
                     case "export":
-                        return can(["ORDERS_EXPORTER", "ORDERS_EXPORTER_RESTRICTED"]);
+                        return this._useExport && can(["ORDERS_EXPORTER", "ORDERS_EXPORTER_RESTRICTED"]);
                     case "archive":
                     case "undoArchive":
                         return can(["ORDERS_ARCHIVER", "ORDERS_ARCHIVER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_ARCHIVER"]));
                     // Other
                     case "generateDocument":
-                        return can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_DOCUMENT_GENERATOR_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_DOCUMENT_GENERATOR"]));
+                        return this._usePdf && (can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_DOCUMENT_GENERATOR_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_DOCUMENT_GENERATOR"])));
                     case "checkinAt":
                         return this._useCheckinLocation && this.hasCheckoutPermission("checkin");
                     case "forceCheckListCheckin":
@@ -543,13 +604,14 @@ define([], function () {
                     case "reserve":
                     case "undoReserve":
                     case "reserveAgain":
-                    case "reserveRepeat":
-
+                    
                     // Generic actions
                     case "setFields":
                     case "setField":
                     case "clearField":
                         return this.hasReservationPermission("update", data);
+                    case "reserveRepeat":
+                        return this._useRepeatReservations && this.hasReservationPermission("update", data);
                     case "attach":
                     case "addAttachment":
                         return can(["RESERVATIONS_ATTACHMENTS_OWN_WRITER"]) || (data.own && can(["RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER"]));
@@ -563,7 +625,7 @@ define([], function () {
                     case "removeComment":
                         return can(["RESERVATIONS_COMMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_COMMENTS_OWN_DELETER", "RESERVATIONS_OWN_COMMENTS_OWN_DELETER"]));
                     case "export":
-                        return can(["RESERVATIONS_EXPORTER", "RESERVATIONS_EXPORTER_RESTRICTED"]);
+                        return this._useExport && can(["RESERVATIONS_EXPORTER", "RESERVATIONS_EXPORTER_RESTRICTED"]);
                     case "switchToOrder":
                     case "makeOrder":
                         return this.hasCheckoutPermission("create", data);
@@ -575,7 +637,7 @@ define([], function () {
                         return can([ "RESERVATIONS_ARCHIVER", "RESERVATIONS_ARCHIVER_RESTRICTED"]) || (data.own && can(["RESERVATIONS_OWN_ARCHIVER"]));
                     // Other
                     case "generateDocument":
-                        return can(["RESERVATIONS_DOCUMENT_GENERATOR", "RESERVATIONS_DOCUMENT_GENERATOR_RESTRICTED", "RESERVATIONS_OWN_DOCUMENT_GENERATOR"]);
+                        return this._usePdf && (can(["RESERVATIONS_DOCUMENT_GENERATOR", "RESERVATIONS_DOCUMENT_GENERATOR_RESTRICTED", "RESERVATIONS_OWN_DOCUMENT_GENERATOR"]));
                     case "ignoreConflicts":
                         return can(["RESERVATIONS_CONFLICT_CREATOR"]);
                     case "close":
@@ -627,12 +689,12 @@ define([], function () {
                     case "importSpreadsheet":
                     case "importSample":
                     case "importValidate":
-                        return can(["CUSTOMERS_IMPORTER"]);
+                        return this._useImport && can(["CUSTOMERS_IMPORTER"]);
                     case "export":
-                        return can(["CUSTOMERS_EXPORTER"])
+                        return this._useExport && can(["CUSTOMERS_EXPORTER"])
                     // Other
                     case "generateDocument":
-                        return can(["CUSTOMERS_DOCUMENT_GENERATOR", "CUSTOMERS_OWN_DOCUMENT_GENERATOR"]);
+                        return this._usePdf && can(["CUSTOMERS_DOCUMENT_GENERATOR", "CUSTOMERS_OWN_DOCUMENT_GENERATOR"]);
                     case "block":
                     case "undoBlock":
                         return this._useBlockContacts && can(["CUSTOMERS_BLOCK_ADMIN"]);
@@ -648,28 +710,33 @@ define([], function () {
                         return false;
                     case "read":
                         return can(["USERS_READER"]);
-                    case "create":
                     case "update":
+                    case "updateProfile":
+                    case "activate":
+                    case "deactivate":
+                    case "archive":
+                    case "undoArchive":
+                        return can(["USERS_OWN_PROFILE_ADMIN", "USERS_PROFILE_ADMIN"]);
+                    case "updatePassword":
+                        return can(["USERS_OWN_PASSWORD_ADMIN"]);
+                    case "create":
                     case "delete":
                     case "linkNewCustomer":
                     case "linkCustomer":
                     case "unLinkCustomer":
                     case "inviteUser":
-                    case "archive":
-                    case "undoArchive":
-                    case "activate":
-                    case "deactivate":
                     case "clearSync":
                     case "restrictLocations":
-                    case "addRole":
-                    case "deleteRole":
-                    case "editRole":
                     case "referFriend":
                         return can(["USERS_ADMIN"]);
                     case "changeAccountOwner":
                         return this._isOwner;
                     case "getReport":
                         return can(["USERS_REPORTER", "USERS_OWN_REPORTER"]);
+                    case "addRole":
+                    case "deleteRole":
+                    case "editRole":
+                        return this._useCustomRoles && can(["USERS_ADMIN"]);
                 }
                 break;
             case "categories":

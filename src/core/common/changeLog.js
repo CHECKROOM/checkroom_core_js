@@ -5,7 +5,7 @@ define([
 	'common/keyValues',
 	'common/slimdown',
 	'moment'
-], function(codeHelper, imageHelper, attachmentHelper, keyValueHelper, slimdownHelper, moment){
+], function(codeHelper, imageHelper, attachmentHelper, keyValueHelper, Slimdown, moment){
 	var that = {};
 
 	var sd = new Slimdown();
@@ -247,6 +247,18 @@ define([
                 	subject = arg.request.subject;
 
                 evt.friendlyText = "Sent mail to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-subject'>" + subject + "</div><div class='mail-body multiline-text-truncate'>" + body + "</div><div><a href='javascript:void(0)' class='open-email' data-id='" + id + "'>View email</a></div></li></ul>";
+                break;
+            case "sendSMS":
+                evt.by = {
+                    kind: 'sms',
+                    name: 'CHEQROOM'
+                }
+
+                var id = evt.id,
+                    body = arg.request.sms_body,
+                    to = arg.request.sms_to_number;
+
+                evt.friendlyText = "Sent sms to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-body multiline-text-truncate'>" + body + "</div></li></ul>";
                 break;
             case "block":
             case "undoBlock":

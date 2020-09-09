@@ -313,6 +313,7 @@ define([
         this.version = spec.version;
         this.platform = spec.platform;
         this.device = spec.device;
+        this.sso = spec.sso;
         this.allowAccountOwner = spec.allowAccountOwner !== undefined ? spec.allowAccountOwner:true;
     };
 
@@ -330,6 +331,9 @@ define([
         }
         if(this.device){
             params.device = this.device;
+        }
+        if(this.sso){
+            params.sso = this.sso;
         }
 
         var dfd = $.Deferred();
@@ -748,8 +752,15 @@ define([
     api.ApiDataSource.prototype.search = function(params, fields, limit, skip, sort, mimeType) {
         system.log('ApiDataSource: ' + this.collection + ': search ' + params);
         var cmd = "search";
-        var url = this.searchUrl(params, fields, limit, skip, sort, mimeType);
-        return this._ajaxGet(cmd, url);
+        var url = this.getBaseUrl() + 'search';
+        var geturl = this.searchUrl(params, fields, limit, skip, sort, mimeType);
+        
+        if(geturl.length >= MAX_QUERYSTRING_LENGTH) {
+            var p = this.searchParams(params, fields, limit, skip, sort, mimeType);
+            return this._ajaxPost(cmd, url, p);
+        } else {
+            return this._ajaxGet(cmd, geturl);
+        }
     };
 
     api.ApiDataSource.prototype.searchUrl = function(params, fields, limit, skip, sort, mimeType) {
@@ -761,6 +772,16 @@ define([
         }
         url += '?' + this.getParams(p);
         return url;
+    };
+
+    api.ApiDataSource.prototype.searchParams = function(params, fields, limit, skip, sort, mimeType) {
+        var url = this.getBaseUrl() + 'search';
+        var p = $.extend(this.getParamsDict(fields, limit, skip, sort), params);
+        if( (mimeType!=null) &&
+            (mimeType.length>0)) {
+            p['mimeType'] = mimeType;
+        }
+        return p;
     };
 
     /**

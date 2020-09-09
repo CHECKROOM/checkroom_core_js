@@ -15,7 +15,7 @@ define([
     "common/clientStorage",
     "common/utils"], function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
 
-    var DEFAULT_PLAN = "cr_1802_professional_yearly_usd_500";
+    var DEFAULT_PLAN = "cr_2004_plus_yearly_usd_500";
     var DEFAULT_PERIOD = "yearly";
     var DEFAULT_SOURCE = "attempt";
     var DEFAULT_KIND = "trial";
@@ -91,7 +91,12 @@ define([
 
     Signup.prototype.companyExists = function() {
         var account = this.getGroupId();
-        return this.ds.call("accountExists", {account: account})
+
+        if(this.dfdAccountExists) this.dfdAccountExists.abort();
+
+        this.dfdAccountExists = this.ds.call("accountExists", {account: account});
+
+        return this.dfdAccountExists
             .then(function(resp) {
                 return resp.result;
             });
@@ -109,7 +114,11 @@ define([
 
     Signup.prototype.emailExists = function() {
         if (this.emailIsValid()) {
-            return this.ds.call('emailExists', {email: this.email})
+            if(this.dfdEmailExists) this.dfdEmailExists.abort();
+
+            this.dfdEmailExists = this.ds.call('emailExists', {email: this.email})
+
+            return this.dfdEmailExists
                 .then(function(resp) {
                     return resp.result;
                 });
@@ -127,7 +136,12 @@ define([
 
     Signup.prototype.loginExists = function() {
         if (this.loginIsValid()) {
-            return this.ds.call('loginExists', {login: this.login})
+
+            if(this.dfdLoginExists) this.dfdLoginExists.abort();
+
+            this.dfdLoginExists = this.ds.call('loginExists', {login: this.login});
+
+            return this.dfdLoginExists
                 .then(function(resp) {
                     return resp.result;
                 });
@@ -266,18 +280,22 @@ define([
                     owner_customer: true,
                     maintenance_customer: true
                 }, true)
-                    .then(function(user) {
+                    .then(function(resp) {
                         if(storeInLocalStorage){
-                            // Already store the login token in localStorage
-                            var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
-                            tmpUser.toStorage();
+                            Signup.storeLoginToken(resp.data);
                         }
 
-                        return afterActivate(user);
+                        return afterActivate(resp);
                     });
             });
 
     };
+
+    Signup.storeLoginToken = function(data){
+        // Already store the login token in localStorage
+        var tmpUser = new api.ApiUser({userId: data.userId, userEmail: data.email, userToken: data.token});
+        tmpUser.toStorage();
+    }
 
     Signup.prototype.activateInvite = function(storeInLocalStorage){
         var that = this,

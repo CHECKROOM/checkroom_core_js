@@ -240,7 +240,8 @@ define([
 	    }
 
 		// Check-out message?
-        if(item.status == "checkedout" || item.status == "await_checkout"){
+        if(perm.hasCheckoutPermission("read") &&
+           (item.status == "checkedout" || item.status == "await_checkout")){
         	var message = "",
         		dfd = $.Deferred();
 
@@ -249,6 +250,7 @@ define([
 	                _restrict: !isSelfservice,
 	                _sort: "started",
 	                status: item.status == "checkedout"?"open":"creating",
+	                pk: ((typeof item.order !== 'string') ? item.order._id : item.order),
 	                _limit: 1,
 	                _skip: 0,
 	                items__contains: item.id
@@ -296,7 +298,7 @@ define([
 	            status: "open",
 	            fromDate__gte:  moment(),
 	            _fields: 'name,status,itemSummary,fromDate,toDate,customer.name,customer.user.picture,customer.cover,customer.kind',
-	            _restrict: !isSelfservice,
+	            _restrict: !isSelfservice || !perm.hasReservationPermission("read"),
 	            _sort: "fromDate",
 	            _limit: 1,
 	            _skip: 0,

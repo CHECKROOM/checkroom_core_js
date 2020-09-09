@@ -120,19 +120,25 @@ define([
     User.prototype._isDirtyInfo = function(){
         if((this.raw)) {
             var name = this.raw.name || DEFAULTS.name;
-            var role = this.raw.role || DEFAULTS.role;
             var email = this.raw.email || DEFAULTS.email;
             var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
 
             return (
                 (this.name!=name) ||
                 (this.email!=email) ||
-                (this.role!=role) ||
                 (this.active!=active)
             );
         }
         return false;
     };
+
+    User.prototype._isDirtyRole = function(){
+        if((this.raw)) {
+            var role = this.raw.role || DEFAULTS.role;
+            return this.role != role;
+        }
+        return false;
+    }
 
     /**
      * Checks if the user is dirty and needs saving
@@ -142,7 +148,7 @@ define([
      */
     User.prototype.isDirty = function() {
         var isDirty = Base.prototype.isDirty.call(this);
-        return isDirty || this._isDirtyInfo();
+        return isDirty || this._isDirtyInfo() || this._isDirtyRole();
     };
 
     /**
@@ -315,15 +321,28 @@ define([
         }
 
         var that = this,
-            dfdInfo = $.Deferred();
+            dfdInfo = $.Deferred(),
+            dfdRole = $.Deferred();
+
+
 
         if(this._isDirtyInfo()){
-            dfdInfo = this.ds.update(this.id, this._toJson(), this._fields);
+            var infoParams = this._toJson();
+            delete infoParams.id;
+
+            dfdInfo = this.ds.update(this.id, infoParams, this._fields);
         }else{
             dfdInfo.resolve();
         }              
 
-        return $.when(dfdInfo);            
+        if(this._isDirtyRole()){
+            dfdRole = this._doApiCall({method: 'updateUserRole', params: { role: this.role }, skipRead: true});
+        }else{
+            dfdRole.resolve();
+        }
+
+
+        return $.when(dfdInfo, dfdRole);            
     };
 
     /**
@@ -336,8 +355,7 @@ define([
         var data = Base.prototype._toJson.call(this, options);
         data.name = this.name || DEFAULTS.name;
         data.email = this.email || DEFAULTS.email;
-        data.role = this.role || DEFAULTS.role;
-
+        
         return data;
     };
 

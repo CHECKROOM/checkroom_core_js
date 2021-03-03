@@ -124,6 +124,8 @@ api = function ($, moment) {
     spec = spec || {};
     this.timeOut = spec.timeOut || 10000;
     this.responseInTz = true;
+    this.beforeSend = spec.beforeSend || function () {
+    };
   };
   api.ApiAjax.prototype.get = function (url, timeOut) {
     system.log('ApiAjax: get ' + url);
@@ -150,11 +152,19 @@ api = function ($, moment) {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
       if (x) {
-        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
-          msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+        var responseJson = {};
+        try {
+          responseJson = JSON.parse(x.responseText);
+        } catch (e) {
         }
-        if (x.status == 422 && x.responseText && x.responseText.match(/HTTPError: \(.+\)/g).length > 0) {
-          opt = { detail: x.responseText.match(/HTTPError: \(.+\)/g)[0] };
+        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+          msg = responseJson.message;
+        }
+        if (x.status == 422) {
+          opt = {
+            detail: responseJson.message,
+            status: responseJson.status
+          };
         }
       }
       switch (x.status) {
@@ -200,6 +210,7 @@ api = function ($, moment) {
     var xhr = $.ajax({
       type: 'POST',
       url: url,
+      beforeSend: that.beforeSend,
       data: JSON.stringify(this._prepareDict(data)),
       contentType: 'application/json; charset=utf-8',
       timeout: timeOut || this.timeOut,
@@ -224,6 +235,7 @@ api = function ($, moment) {
     var that = this;
     var xhr = $.ajax({
       url: url,
+      beforeSend: that.beforeSend,
       timeout: timeOut || this.timeOut,
       success: function (data) {
         return that._handleAjaxSuccess(dfd, data, opt);
@@ -300,6 +312,7 @@ api = function ($, moment) {
     this.userId = spec.userId || '';
     this.userEmail = spec.userEmail || '';
     this.userToken = spec.userToken || '';
+    this.userJwt = spec.jwt || '';
     this.tokenType = spec.tokenType || '';
     this.impersonated = spec.impersonated || false;
   };
@@ -307,6 +320,7 @@ api = function ($, moment) {
     this.userId = window.localStorage.getItem('userId') || '';
     this.userEmail = window.localStorage.getItem('userEmail') || '';
     this.userToken = window.localStorage.getItem('userToken') || '';
+    this.userJwt = window.localStorage.getItem('userJwt') || '';
     this.tokenType = window.localStorage.getItem('tokenType') || '';
     this.impersonated = window.localStorage.getItem('impersonated') === 'true';
   };
@@ -314,6 +328,7 @@ api = function ($, moment) {
     window.localStorage.setItem('userId', this.userId);
     window.localStorage.setItem('userEmail', this.userEmail);
     window.localStorage.setItem('userToken', this.userToken);
+    window.localStorage.setItem('userJwt', this.userJwt);
     window.localStorage.setItem('tokenType', this.tokenType);
     window.localStorage.setItem('impersonated', this.impersonated);
   };
@@ -321,11 +336,13 @@ api = function ($, moment) {
     window.localStorage.removeItem('userId');
     window.localStorage.removeItem('userEmail');
     window.localStorage.removeItem('userToken');
+    window.localStorage.removeItem('userJwt');
     window.localStorage.removeItem('tokenType');
     window.localStorage.removeItem('impersonated');
   };
   api.ApiUser.prototype.clearToken = function () {
     window.localStorage.setItem('userToken', null);
+    window.localStorage.setItem('userJwt', null);
     window.localStorage.setItem('tokenType', null);
   };
   api.ApiUser.prototype.isValid = function () {
@@ -335,6 +352,7 @@ api = function ($, moment) {
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
     this.userToken = '';
+    this.userJwt = '';
     this.tokenType = '';
     this.userEmail = '';
     this.impersonated = false;
@@ -563,7 +581,16 @@ api = function ($, moment) {
       return e;
     });
     var that = this, returnArr = [];
-    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred();
+    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred(), calls = [];
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfdMultiple.promise();
+    promise.abort = function () {
+      $.each(calls, function (i, xhr) {
+        xhr.abort();
+      });
+    };
     $.each(groups, function (i, group) {
       var url = that.getBaseUrl() + group.join(',');
       var p = that.getParamsDict(fields);
@@ -571,17 +598,20 @@ api = function ($, moment) {
         url += '?' + that.getParams(p);
       }
       ajaxQueue(function () {
-        return that._ajaxGet(cmd, url).then(function (resp) {
+        var call = that._ajaxGet(cmd, url);
+        call.then(function (resp) {
           // BUGFIX make sure that response is an array
           resp = $.isArray(resp) ? resp : [resp];
           returnArr = returnArr.concat(resp);
         });
+        calls.push(call);
+        return call;
       });
     });
     ajaxQueue(function () {
       return dfdMultiple.resolve(returnArr);
     });
-    return dfdMultiple;
+    return promise;
   };
   /**
    * Deletes a document by its primary key
@@ -1737,40 +1767,6 @@ common_inflection = function () {
       return a.toUpperCase();
     });
   };
-  if (!String.prototype.startsWith) {
-    /**
-     * startsWith
-     *
-     * @memberOf String
-     * @name  String#startsWith
-     * @method
-     *
-     * @param  {string} str
-     * @return {Boolean}
-     */
-    String.prototype.startsWith = function (str) {
-      return this.indexOf(str) == 0;
-    };
-  }
-  if (!String.prototype.endsWith) {
-    /**
-     * endsWith
-     *
-     * @memberOf String
-     * @name  String#endsWith
-     * @method
-     *
-     * @param  {string} str
-     * @return {Boolean}
-     */
-    String.prototype.endsWith = function (str) {
-      if (this.length < str.length) {
-        return false;
-      } else {
-        return this.lastIndexOf(str) == this.length - str.length;
-      }
-    };
-  }
   if (!String.prototype.truncate) {
     /**
      * truncate
@@ -2772,18 +2768,6 @@ common_inflection = function () {
       str = padString + str;
     return str;
   };
-  // trimLeft/trimRight polyfill
-  //https://gist.github.com/eliperelman/1036520
-  if (!String.prototype.trimLeft) {
-    String.prototype.trimLeft = function () {
-      return this.replace(/^\s+/, '');
-    };
-  }
-  if (!String.prototype.trimRight) {
-    String.prototype.trimRight = function () {
-      return this.replace(/\s+$/, '');
-    };
-  }
   /**
   * NUMBER EXTENSIONS
   */
@@ -2877,89 +2861,6 @@ common_inflection = function () {
         outStr = arr.slice(0, -1).join(sep) + sepLast + arr.slice(-1);
       }
       return outStr;
-    };
-  }
-  if (!Array.prototype.find) {
-    /**
-     * Returns a value in the array, if an element in the array
-     * satisfies the provided testing function.
-     * Otherwise undefined is returned.
-     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-     *
-     * @param  {function} function to contains check to find item
-     * @return {object}
-     */
-    Array.prototype.find = function (predicate) {
-      if (this === null) {
-        throw new TypeError('Array.prototype.find called on null or undefined');
-      }
-      if (typeof predicate !== 'function') {
-        throw new TypeError('predicate must be a function');
-      }
-      var list = Object(this);
-      var length = list.length >>> 0;
-      var thisArg = arguments[1];
-      var value;
-      for (var i = 0; i < length; i++) {
-        value = list[i];
-        if (predicate.call(thisArg, value, i, list)) {
-          return value;
-        }
-      }
-      return undefined;
-    };
-  }
-  // https://tc39.github.io/ecma262/#sec-array.prototype.includes
-  if (!Array.prototype.includes) {
-    Object.defineProperty(Array.prototype, 'includes', {
-      value: function (searchElement, fromIndex) {
-        if (this == null) {
-          throw new TypeError('"this" is null or not defined');
-        }
-        // 1. Let O be ? ToObject(this value).
-        var o = Object(this);
-        // 2. Let len be ? ToLength(? Get(O, "length")).
-        var len = o.length >>> 0;
-        // 3. If len is 0, return false.
-        if (len === 0) {
-          return false;
-        }
-        // 4. Let n be ? ToInteger(fromIndex).
-        //    (If fromIndex is undefined, this step produces the value 0.)
-        var n = fromIndex | 0;
-        // 5. If n ≥ 0, then
-        //  a. Let k be n.
-        // 6. Else n < 0,
-        //  a. Let k be len + n.
-        //  b. If k < 0, let k be 0.
-        var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
-        function sameValueZero(x, y) {
-          return x === y || typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y);
-        }
-        // 7. Repeat, while k < len
-        while (k < len) {
-          // a. Let elementK be the result of ? Get(O, ! ToString(k)).
-          // b. If SameValueZero(searchElement, elementK) is true, return true.
-          if (sameValueZero(o[k], searchElement)) {
-            return true;
-          }
-          // c. Increase k by 1.
-          k++;
-        }
-        // 8. Return false
-        return false;
-      }
-    });
-  }
-  if (!Object.values) {
-    Object.values = function (obj) {
-      var vals = [];
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          vals.push(obj[key]);
-        }
-      }
-      return vals;
     };
   }
   /**
@@ -3269,6 +3170,33 @@ common_utils = function ($) {
       downloadLink.click();
     }
   };
+  /**
+   * kFormatter
+   * @param  {number} num
+   * @return string   
+   */
+  utils.kFormatter = function (num) {
+    return Math.abs(num) > 999 ? Math.sign(num) * (Math.abs(num) / 1000).toFixed(0) + 'k' : Math.sign(num) * Math.abs(num);
+  };
+  /**
+   * sanitizeHtml
+   * https://remarkablemark.org/blog/2019/11/29/javascript-sanitize-html/
+   * 
+   * @param  {string} html
+   * @return string      
+   */
+  utils.sanitizeHtml = function (html) {
+    return $('<div />').text(html).html();
+  };
+  /**
+   * removeHtmlTags
+   * @param  {string} html 
+   * @return {string}      
+   */
+  utils.removeHtmlTags = function (html) {
+    var regX = /(<([^>]+)>)/gi;
+    return html.replace(regX, '');
+  };
   return utils;
 }(jquery);
 signup = function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
@@ -3425,7 +3353,10 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
   Signup.prototype.inviteIsValid = function () {
     var that = this;
     if ($.trim(this.inviteToken) != '') {
-      return this.ds.call('checkInvite', { code: this.inviteToken }).then(function (resp) {
+      return this.ds.call('checkInvite', {
+        code: this.inviteToken,
+        email: this.email
+      }).then(function (resp) {
         that.parseFields(resp.customerFields);
         return resp.result;
       });
@@ -3520,6 +3451,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
     return beforeActivate().then(function () {
       var params = {
         name: that.getFullName(),
+        email: $.trim(that.email),
         code: that.inviteToken,
         login: $.trim(that.login),
         password: $.trim(that.password),

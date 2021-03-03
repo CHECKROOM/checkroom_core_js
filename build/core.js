@@ -7,7 +7,7 @@ define(['jquery', 'moment'], factory);
 }(this, function (jquery, moment) {//Queued AJAX requests
 //https://stackoverflow.com/questions/3034874/sequencing-ajax-requests/3035268#3035268
 //http://jsfiddle.net/p4zjH/1/
-var common_queue, api, settings, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common_changeLog, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, core;
+var common_queue, api, settings, common_code, common_order, common_reservation, common_utils, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common_changeLog, common_spotcheck, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, Spotcheck, core;
 common_queue = function ($) {
   $.fn.ajaxQueue = function () {
     var previous = new $.Deferred().resolve();
@@ -124,6 +124,8 @@ api = function ($, moment) {
     spec = spec || {};
     this.timeOut = spec.timeOut || 10000;
     this.responseInTz = true;
+    this.beforeSend = spec.beforeSend || function () {
+    };
   };
   api.ApiAjax.prototype.get = function (url, timeOut) {
     system.log('ApiAjax: get ' + url);
@@ -150,11 +152,19 @@ api = function ($, moment) {
       dfd.reject(new api.NetworkTimeout(msg, opt));
     } else {
       if (x) {
-        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
-          msg = x.statusText.slice(x.statusText.indexOf('Notify user:') + 13);
+        var responseJson = {};
+        try {
+          responseJson = JSON.parse(x.responseText);
+        } catch (e) {
         }
-        if (x.status == 422 && x.responseText && x.responseText.match(/HTTPError: \(.+\)/g).length > 0) {
-          opt = { detail: x.responseText.match(/HTTPError: \(.+\)/g)[0] };
+        if (x.statusText && x.statusText.indexOf('Notify user:') > -1) {
+          msg = responseJson.message;
+        }
+        if (x.status == 422) {
+          opt = {
+            detail: responseJson.message,
+            status: responseJson.status
+          };
         }
       }
       switch (x.status) {
@@ -200,6 +210,7 @@ api = function ($, moment) {
     var xhr = $.ajax({
       type: 'POST',
       url: url,
+      beforeSend: that.beforeSend,
       data: JSON.stringify(this._prepareDict(data)),
       contentType: 'application/json; charset=utf-8',
       timeout: timeOut || this.timeOut,
@@ -224,6 +235,7 @@ api = function ($, moment) {
     var that = this;
     var xhr = $.ajax({
       url: url,
+      beforeSend: that.beforeSend,
       timeout: timeOut || this.timeOut,
       success: function (data) {
         return that._handleAjaxSuccess(dfd, data, opt);
@@ -300,6 +312,7 @@ api = function ($, moment) {
     this.userId = spec.userId || '';
     this.userEmail = spec.userEmail || '';
     this.userToken = spec.userToken || '';
+    this.userJwt = spec.jwt || '';
     this.tokenType = spec.tokenType || '';
     this.impersonated = spec.impersonated || false;
   };
@@ -307,6 +320,7 @@ api = function ($, moment) {
     this.userId = window.localStorage.getItem('userId') || '';
     this.userEmail = window.localStorage.getItem('userEmail') || '';
     this.userToken = window.localStorage.getItem('userToken') || '';
+    this.userJwt = window.localStorage.getItem('userJwt') || '';
     this.tokenType = window.localStorage.getItem('tokenType') || '';
     this.impersonated = window.localStorage.getItem('impersonated') === 'true';
   };
@@ -314,6 +328,7 @@ api = function ($, moment) {
     window.localStorage.setItem('userId', this.userId);
     window.localStorage.setItem('userEmail', this.userEmail);
     window.localStorage.setItem('userToken', this.userToken);
+    window.localStorage.setItem('userJwt', this.userJwt);
     window.localStorage.setItem('tokenType', this.tokenType);
     window.localStorage.setItem('impersonated', this.impersonated);
   };
@@ -321,11 +336,13 @@ api = function ($, moment) {
     window.localStorage.removeItem('userId');
     window.localStorage.removeItem('userEmail');
     window.localStorage.removeItem('userToken');
+    window.localStorage.removeItem('userJwt');
     window.localStorage.removeItem('tokenType');
     window.localStorage.removeItem('impersonated');
   };
   api.ApiUser.prototype.clearToken = function () {
     window.localStorage.setItem('userToken', null);
+    window.localStorage.setItem('userJwt', null);
     window.localStorage.setItem('tokenType', null);
   };
   api.ApiUser.prototype.isValid = function () {
@@ -335,6 +352,7 @@ api = function ($, moment) {
   api.ApiUser.prototype._reset = function () {
     this.userId = '';
     this.userToken = '';
+    this.userJwt = '';
     this.tokenType = '';
     this.userEmail = '';
     this.impersonated = false;
@@ -563,7 +581,16 @@ api = function ($, moment) {
       return e;
     });
     var that = this, returnArr = [];
-    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred();
+    var ajaxQueue = new $.fn.ajaxQueue(), dfdMultiple = $.Deferred(), calls = [];
+    // Extend promise with abort method
+    // to abort xhr request if needed
+    // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+    var promise = dfdMultiple.promise();
+    promise.abort = function () {
+      $.each(calls, function (i, xhr) {
+        xhr.abort();
+      });
+    };
     $.each(groups, function (i, group) {
       var url = that.getBaseUrl() + group.join(',');
       var p = that.getParamsDict(fields);
@@ -571,17 +598,20 @@ api = function ($, moment) {
         url += '?' + that.getParams(p);
       }
       ajaxQueue(function () {
-        return that._ajaxGet(cmd, url).then(function (resp) {
+        var call = that._ajaxGet(cmd, url);
+        call.then(function (resp) {
           // BUGFIX make sure that response is an array
           resp = $.isArray(resp) ? resp : [resp];
           returnArr = returnArr.concat(resp);
         });
+        calls.push(call);
+        return call;
       });
     });
     ajaxQueue(function () {
       return dfdMultiple.resolve(returnArr);
     });
-    return dfdMultiple;
+    return promise;
   };
   /**
    * Deletes a document by its primary key
@@ -1422,8 +1452,253 @@ common_reservation = {
     ].indexOf(reservation.status) == -1;
   }
 };
-common_item = function (moment, orderHelper, reservationHelper) {
-  var that = {};
+common_utils = function ($) {
+  var utils = {};
+  /**
+   * Sorts a given fields dict based on a list of fieldDefs
+   * @memberOf utils
+   * @name utils#sortFields
+   * @param {object} fields
+   * @param {Array} fieldDefs
+   * @param {Boolean} onlyFormFields (optional)
+   * @param {int} limit (optional)
+   * @return {Array} list of dicts
+   */
+  utils.sortFields = function (fields, fieldDefs, onlyFormFields, limit) {
+    var sortedFields = [], fieldDef = null, fieldValue = null, fieldText = null;
+    // Work on copy of fieldDefs array
+    fieldDefs = fieldDefs.slice();
+    // Return only form field definitions?
+    if (onlyFormFields != null) {
+      fieldDefs = fieldDefs.filter(function (def) {
+        return def.form == onlyFormFields;
+      });
+    }
+    // Create a Field dict for each field definition
+    for (var i = 0; i < fieldDefs.length; i++) {
+      fieldDef = fieldDefs[i];
+      fieldValue = fields[fieldDef.name];
+      sortedFields.push($.extend({ value: fieldValue }, fieldDef));
+      if (limit != null && sortedFields.length >= limit) {
+        break;
+      }
+    }
+    return sortedFields;
+  };
+  /**
+   * Stringifies an object while first sorting the keys
+   * Ensures we can use it to check object equality
+   * http://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
+   * @memberOf  utils
+   * @name  utils#stringifyOrdered
+   * @method
+   * @param obj
+   * @return {string}
+   */
+  utils.stringifyOrdered = function (obj) {
+    keys = [];
+    if (obj) {
+      for (var key in obj) {
+        keys.push(key);
+      }
+    }
+    keys.sort();
+    var tObj = {};
+    var key;
+    for (var index in keys) {
+      key = keys[index];
+      tObj[key] = obj[key];
+    }
+    return JSON.stringify(tObj);
+  };
+  /**
+   * Checks if two objects are equal
+   * Mimics behaviour from http://underscorejs.org/#isEqual
+   * @memberOf  utils
+   * @name  utils#areEqual
+   * @method
+   * @param obj1
+   * @param obj2
+   * @return {boolean}
+   */
+  utils.areEqual = function (obj1, obj2) {
+    return utils.stringifyOrdered(obj1 || {}) == utils.stringifyOrdered(obj2 || {});
+  };
+  /**
+   * Turns an integer into a compact text to show in a badge
+   * @memberOf  utils
+   * @name  utils#badgeify
+   * @method
+   * @param  {int} count
+   * @return {string}
+   */
+  utils.badgeify = function (count) {
+    if (count > 100) {
+      return '99+';
+    } else if (count > 10) {
+      return '10+';
+    } else if (count > 0) {
+      return '' + count;
+    } else {
+      return '';
+    }
+  };
+  /**
+   * Turns a firstName lastName into a fistname.lastname login
+   * @memberOf utils
+   * @name  utils#getLoginName
+   * @method
+   * @param  {string} firstName
+   * @param  {string} lastName
+   * @return {string}
+   */
+  utils.getLoginName = function (firstName, lastName) {
+    var patt = /[\s-]*/gim;
+    var parts = [];
+    if (firstName) {
+      parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
+    }
+    if (lastName) {
+      parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
+    }
+    return parts.join('.');
+  };
+  /**
+   * Gets a parameter from the querystring (returns null if not found)
+   * @memberOf utils
+   * @name  utils#getUrlParam
+   * @method
+   * @param  {string} name
+   * @param  {string} default
+   * @param  {string} url
+   * @return {string}
+   */
+  utils.getUrlParam = function (name, def, url) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regexS = '[\\?&]' + name + '=([^&#]*)';
+    var regex = new RegExp(regexS);
+    var results = regex.exec(url || window.location.href);
+    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : def;
+  };
+  // jQuery extension method
+  $.urlParam = utils.getUrlParam;
+  /**
+   * getParsedLines
+   * @memberOf utils
+   * @name  utils#getParsedLines
+   * @method
+   * @param  {string} text
+   * @return {Array}
+   */
+  utils.getParsedLines = function (text) {
+    if (text && text.length > 0) {
+      var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
+      return customs.filter(function (cust, idx, arr) {
+        return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
+      }).map(function (cust) {
+        // trim each line
+        return $.trim(cust);
+      });
+    } else {
+      return [];
+    }
+  };
+  /**
+   * getFriendlyFileName
+   * @memberOf utils
+   * @name  utils#getFriendlyFileName
+   * @method
+   * @param  {string} name
+   * @return {string}
+   */
+  utils.getFriendlyFileName = function (name) {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  };
+  /**
+   * getFriendlyKind
+   * @memberOf utils
+   * @name  utils#getFriendlyKind
+   * @method
+   * @param {object} kind
+   * @return {string}
+   */
+  utils.getFriendlyKind = function (kind) {
+    var friendlyKind = kind;
+    if (kind == 'string') {
+      friendlyKind = 'single line text';
+    }
+    if (kind == 'text') {
+      friendlyKind = 'multi line text';
+    }
+    if (kind == 'select') {
+      friendlyKind = 'dropdown list';
+    }
+    if (kind == 'number') {
+      friendlyKind = 'numeric';
+    }
+    return friendlyKind;
+  };
+  /**
+   * arrayToCSV
+   * https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
+   * @param  {array} csv      
+   * @param  {[type]} filename 
+   */
+  utils.arrayToCSV = function (csv, filename) {
+    var csvFile;
+    var downloadLink;
+    // CSV file
+    csvFile = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    // BUGFIX IE Access is denied.
+    // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(csvFile, filename);
+    } else {
+      // Download link
+      downloadLink = window.document.createElement('a');
+      // File name
+      downloadLink.download = filename;
+      // Create a link to the file
+      downloadLink.href = window.URL.createObjectURL(csvFile);
+      // Hide download link
+      downloadLink.style.display = 'none';
+      // Add the link to DOM
+      window.document.body.appendChild(downloadLink);
+      // Click download link
+      downloadLink.click();
+    }
+  };
+  /**
+   * kFormatter
+   * @param  {number} num
+   * @return string   
+   */
+  utils.kFormatter = function (num) {
+    return Math.abs(num) > 999 ? Math.sign(num) * (Math.abs(num) / 1000).toFixed(0) + 'k' : Math.sign(num) * Math.abs(num);
+  };
+  /**
+   * sanitizeHtml
+   * https://remarkablemark.org/blog/2019/11/29/javascript-sanitize-html/
+   * 
+   * @param  {string} html
+   * @return string      
+   */
+  utils.sanitizeHtml = function (html) {
+    return $('<div />').text(html).html();
+  };
+  /**
+   * removeHtmlTags
+   * @param  {string} html 
+   * @return {string}      
+   */
+  utils.removeHtmlTags = function (html) {
+    var regX = /(<([^>]+)>)/gi;
+    return html.replace(regX, '');
+  };
+  return utils;
+}(jquery);
+common_item = function (moment, orderHelper, reservationHelper, utils) {
+  var that = {}, sanitizer = utils.sanitizeHtml;
   that.itemCanTakeCustody = function (item) {
     var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
     return canCustody && item.status == 'available';
@@ -1687,10 +1962,11 @@ common_item = function (moment, orderHelper, reservationHelper) {
         if (item.status == 'await_checkout') {
           message = 'Item is currently <strong>awaiting checkout</strong>';
         } else {
+          var customerName = sanitizer(typeof checkout.customer !== 'string' ? checkout.customer.name : '');
           if (checkout && orderHelper.isOrderOverdue(checkout)) {
-            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + (typeof checkout.customer !== 'string' ? ' from ' + checkout.customer.name : '');
+            message = 'Item was <strong>due back</strong> ' + checkout.due.fromNow() + (customerName ? ' from ' + customerName : '');
           } else {
-            message = 'Item is <strong>checked out</strong>' + (typeof checkout.customer !== 'string' ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due);
+            message = 'Item is <strong>checked out</strong>' + (customerName ? ' to ' + customerName : '') + ' until ' + formatDate(checkout.due);
           }
         }
         messages.push({
@@ -1752,7 +2028,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
         });
       }
       dfd.then(function (contact, since) {
-        var message = 'Item is <strong>in ' + (isOwn(item.custody) ? 'your' : '') + ' custody</strong>' + (contact && !isOwn(item.custody) ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        var message = 'Item is <strong>in ' + (isOwn(item.custody) ? 'your' : '') + ' custody</strong>' + (contact && !isOwn(item.custody) ? ' of ' + sanitizer(contact.name) + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
         messages.push({
           kind: 'custody',
           priority: MessagePriority.High,
@@ -1819,9 +2095,9 @@ common_item = function (moment, orderHelper, reservationHelper) {
     }
     // Flag message?
     if (flag) {
-      var message = 'Item was <strong>flagged</strong> as ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+      var flagName = sanitizer(flag.name), message = 'Item was <strong>flagged</strong> as ' + flagName + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
       if (hasUnavailableFlag) {
-        message = 'Item is <strong>unavailable</strong> because of flag ' + flag.name + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
+        message = 'Item is <strong>unavailable</strong> because of flag ' + flagName + (item.flagged ? ' <span class=\'text-muted\'>' + item.flagged.fromNow() + '</span>' : '');
       }
       messages.push({
         kind: 'flag',
@@ -1862,7 +2138,7 @@ common_item = function (moment, orderHelper, reservationHelper) {
     });
   };
   return that;
-}(moment, common_order, common_reservation);
+}(moment, common_order, common_reservation, common_utils);
 common_conflicts = {
   /**
    * getFriendlyConflictKind
@@ -1884,6 +2160,7 @@ common_conflicts = {
       return 'Already reserved';
     case 'expired':
       return 'Item is expired';
+    case 'in_custody':
     case 'custody':
       return 'Item is in custody';
     case 'not_allowed_reservation':
@@ -2386,40 +2663,6 @@ common_inflection = function () {
       return a.toUpperCase();
     });
   };
-  if (!String.prototype.startsWith) {
-    /**
-     * startsWith
-     *
-     * @memberOf String
-     * @name  String#startsWith
-     * @method
-     *
-     * @param  {string} str
-     * @return {Boolean}
-     */
-    String.prototype.startsWith = function (str) {
-      return this.indexOf(str) == 0;
-    };
-  }
-  if (!String.prototype.endsWith) {
-    /**
-     * endsWith
-     *
-     * @memberOf String
-     * @name  String#endsWith
-     * @method
-     *
-     * @param  {string} str
-     * @return {Boolean}
-     */
-    String.prototype.endsWith = function (str) {
-      if (this.length < str.length) {
-        return false;
-      } else {
-        return this.lastIndexOf(str) == this.length - str.length;
-      }
-    };
-  }
   if (!String.prototype.truncate) {
     /**
      * truncate
@@ -3421,18 +3664,6 @@ common_inflection = function () {
       str = padString + str;
     return str;
   };
-  // trimLeft/trimRight polyfill
-  //https://gist.github.com/eliperelman/1036520
-  if (!String.prototype.trimLeft) {
-    String.prototype.trimLeft = function () {
-      return this.replace(/^\s+/, '');
-    };
-  }
-  if (!String.prototype.trimRight) {
-    String.prototype.trimRight = function () {
-      return this.replace(/\s+$/, '');
-    };
-  }
   /**
   * NUMBER EXTENSIONS
   */
@@ -3526,89 +3757,6 @@ common_inflection = function () {
         outStr = arr.slice(0, -1).join(sep) + sepLast + arr.slice(-1);
       }
       return outStr;
-    };
-  }
-  if (!Array.prototype.find) {
-    /**
-     * Returns a value in the array, if an element in the array
-     * satisfies the provided testing function.
-     * Otherwise undefined is returned.
-     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find
-     *
-     * @param  {function} function to contains check to find item
-     * @return {object}
-     */
-    Array.prototype.find = function (predicate) {
-      if (this === null) {
-        throw new TypeError('Array.prototype.find called on null or undefined');
-      }
-      if (typeof predicate !== 'function') {
-        throw new TypeError('predicate must be a function');
-      }
-      var list = Object(this);
-      var length = list.length >>> 0;
-      var thisArg = arguments[1];
-      var value;
-      for (var i = 0; i < length; i++) {
-        value = list[i];
-        if (predicate.call(thisArg, value, i, list)) {
-          return value;
-        }
-      }
-      return undefined;
-    };
-  }
-  // https://tc39.github.io/ecma262/#sec-array.prototype.includes
-  if (!Array.prototype.includes) {
-    Object.defineProperty(Array.prototype, 'includes', {
-      value: function (searchElement, fromIndex) {
-        if (this == null) {
-          throw new TypeError('"this" is null or not defined');
-        }
-        // 1. Let O be ? ToObject(this value).
-        var o = Object(this);
-        // 2. Let len be ? ToLength(? Get(O, "length")).
-        var len = o.length >>> 0;
-        // 3. If len is 0, return false.
-        if (len === 0) {
-          return false;
-        }
-        // 4. Let n be ? ToInteger(fromIndex).
-        //    (If fromIndex is undefined, this step produces the value 0.)
-        var n = fromIndex | 0;
-        // 5. If n ≥ 0, then
-        //  a. Let k be n.
-        // 6. Else n < 0,
-        //  a. Let k be len + n.
-        //  b. If k < 0, let k be 0.
-        var k = Math.max(n >= 0 ? n : len - Math.abs(n), 0);
-        function sameValueZero(x, y) {
-          return x === y || typeof x === 'number' && typeof y === 'number' && isNaN(x) && isNaN(y);
-        }
-        // 7. Repeat, while k < len
-        while (k < len) {
-          // a. Let elementK be the result of ? Get(O, ! ToString(k)).
-          // b. If SameValueZero(searchElement, elementK) is true, return true.
-          if (sameValueZero(o[k], searchElement)) {
-            return true;
-          }
-          // c. Increase k by 1.
-          k++;
-        }
-        // 8. Return false
-        return false;
-      }
-    });
-  }
-  if (!Object.values) {
-    Object.values = function (obj) {
-      var vals = [];
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          vals.push(obj[key]);
-        }
-      }
-      return vals;
     };
   }
   /**
@@ -3753,224 +3901,6 @@ common_validation = function (moment) {
     }
   };
 }(moment);
-common_utils = function ($) {
-  var utils = {};
-  /**
-   * Sorts a given fields dict based on a list of fieldDefs
-   * @memberOf utils
-   * @name utils#sortFields
-   * @param {object} fields
-   * @param {Array} fieldDefs
-   * @param {Boolean} onlyFormFields (optional)
-   * @param {int} limit (optional)
-   * @return {Array} list of dicts
-   */
-  utils.sortFields = function (fields, fieldDefs, onlyFormFields, limit) {
-    var sortedFields = [], fieldDef = null, fieldValue = null, fieldText = null;
-    // Work on copy of fieldDefs array
-    fieldDefs = fieldDefs.slice();
-    // Return only form field definitions?
-    if (onlyFormFields != null) {
-      fieldDefs = fieldDefs.filter(function (def) {
-        return def.form == onlyFormFields;
-      });
-    }
-    // Create a Field dict for each field definition
-    for (var i = 0; i < fieldDefs.length; i++) {
-      fieldDef = fieldDefs[i];
-      fieldValue = fields[fieldDef.name];
-      sortedFields.push($.extend({ value: fieldValue }, fieldDef));
-      if (limit != null && sortedFields.length >= limit) {
-        break;
-      }
-    }
-    return sortedFields;
-  };
-  /**
-   * Stringifies an object while first sorting the keys
-   * Ensures we can use it to check object equality
-   * http://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
-   * @memberOf  utils
-   * @name  utils#stringifyOrdered
-   * @method
-   * @param obj
-   * @return {string}
-   */
-  utils.stringifyOrdered = function (obj) {
-    keys = [];
-    if (obj) {
-      for (var key in obj) {
-        keys.push(key);
-      }
-    }
-    keys.sort();
-    var tObj = {};
-    var key;
-    for (var index in keys) {
-      key = keys[index];
-      tObj[key] = obj[key];
-    }
-    return JSON.stringify(tObj);
-  };
-  /**
-   * Checks if two objects are equal
-   * Mimics behaviour from http://underscorejs.org/#isEqual
-   * @memberOf  utils
-   * @name  utils#areEqual
-   * @method
-   * @param obj1
-   * @param obj2
-   * @return {boolean}
-   */
-  utils.areEqual = function (obj1, obj2) {
-    return utils.stringifyOrdered(obj1 || {}) == utils.stringifyOrdered(obj2 || {});
-  };
-  /**
-   * Turns an integer into a compact text to show in a badge
-   * @memberOf  utils
-   * @name  utils#badgeify
-   * @method
-   * @param  {int} count
-   * @return {string}
-   */
-  utils.badgeify = function (count) {
-    if (count > 100) {
-      return '99+';
-    } else if (count > 10) {
-      return '10+';
-    } else if (count > 0) {
-      return '' + count;
-    } else {
-      return '';
-    }
-  };
-  /**
-   * Turns a firstName lastName into a fistname.lastname login
-   * @memberOf utils
-   * @name  utils#getLoginName
-   * @method
-   * @param  {string} firstName
-   * @param  {string} lastName
-   * @return {string}
-   */
-  utils.getLoginName = function (firstName, lastName) {
-    var patt = /[\s-]*/gim;
-    var parts = [];
-    if (firstName) {
-      parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
-    }
-    if (lastName) {
-      parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
-    }
-    return parts.join('.');
-  };
-  /**
-   * Gets a parameter from the querystring (returns null if not found)
-   * @memberOf utils
-   * @name  utils#getUrlParam
-   * @method
-   * @param  {string} name
-   * @param  {string} default
-   * @param  {string} url
-   * @return {string}
-   */
-  utils.getUrlParam = function (name, def, url) {
-    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-    var regexS = '[\\?&]' + name + '=([^&#]*)';
-    var regex = new RegExp(regexS);
-    var results = regex.exec(url || window.location.href);
-    return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : def;
-  };
-  // jQuery extension method
-  $.urlParam = utils.getUrlParam;
-  /**
-   * getParsedLines
-   * @memberOf utils
-   * @name  utils#getParsedLines
-   * @method
-   * @param  {string} text
-   * @return {Array}
-   */
-  utils.getParsedLines = function (text) {
-    if (text && text.length > 0) {
-      var customs = text.split(/\s*([,;\r\n]+|\s\s)\s*/);
-      return customs.filter(function (cust, idx, arr) {
-        return cust.length > 0 && cust.indexOf(',') < 0 && cust.indexOf(';') < 0 && $.trim(cust).length > 0 && arr.indexOf(cust) >= idx;
-      }).map(function (cust) {
-        // trim each line
-        return $.trim(cust);
-      });
-    } else {
-      return [];
-    }
-  };
-  /**
-   * getFriendlyFileName
-   * @memberOf utils
-   * @name  utils#getFriendlyFileName
-   * @method
-   * @param  {string} name
-   * @return {string}
-   */
-  utils.getFriendlyFileName = function (name) {
-    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  };
-  /**
-   * getFriendlyKind
-   * @memberOf utils
-   * @name  utils#getFriendlyKind
-   * @method
-   * @param {object} kind
-   * @return {string}
-   */
-  utils.getFriendlyKind = function (kind) {
-    var friendlyKind = kind;
-    if (kind == 'string') {
-      friendlyKind = 'single line text';
-    }
-    if (kind == 'text') {
-      friendlyKind = 'multi line text';
-    }
-    if (kind == 'select') {
-      friendlyKind = 'dropdown list';
-    }
-    if (kind == 'number') {
-      friendlyKind = 'numeric';
-    }
-    return friendlyKind;
-  };
-  /**
-   * arrayToCSV
-   * https://www.codexworld.com/export-html-table-data-to-csv-using-javascript/
-   * @param  {array} csv      
-   * @param  {[type]} filename 
-   */
-  utils.arrayToCSV = function (csv, filename) {
-    var csvFile;
-    var downloadLink;
-    // CSV file
-    csvFile = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    // BUGFIX IE Access is denied.
-    // https://stackoverflow.com/questions/36984907/access-is-denied-when-attempting-to-open-a-url-generated-for-a-procedurally-ge/36984974
-    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
-      window.navigator.msSaveOrOpenBlob(csvFile, filename);
-    } else {
-      // Download link
-      downloadLink = window.document.createElement('a');
-      // File name
-      downloadLink.download = filename;
-      // Create a link to the file
-      downloadLink.href = window.URL.createObjectURL(csvFile);
-      // Hide download link
-      downloadLink.style.display = 'none';
-      // Add the link to DOM
-      window.document.body.appendChild(downloadLink);
-      // Click download link
-      downloadLink.click();
-    }
-  };
-  return utils;
-}(jquery);
 common_slimdown = function () {
   /**
   * Javascript version of https://gist.github.com/jbroadway/2836900
@@ -4099,7 +4029,7 @@ common_slimdown = function () {
       return text.trim();
     };
     function para(text, line) {
-      var trimmed = ('' + text).trimLeft().trimRight();
+      var trimmed = ('' + text).trim();
       if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
         return trimmed;
       }
@@ -4141,8 +4071,8 @@ common_slimdown = function () {
   window.Slimdown = Slimdown;
   return Slimdown;
 }();
-common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
-  var that = {};
+common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper, utils) {
+  var that = {}, sanitizer = utils.sanitizeHtml;
   /**
    * Checks if a kit can be checked out (any items available)
    * @memberOf common
@@ -4391,10 +4321,11 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
         if (kit.status == 'await_checkout') {
           message = 'Kit is currently <strong>awaiting checkout</strong>';
         } else {
+          var customerName = sanitizer(typeof checkout.customer !== 'string' ? checkout.customer.name : '');
           if (checkout && orderHelper.isOrderOverdue(checkout)) {
-            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + (typeof checkout.customer !== 'string' ? ' from ' + checkout.customer.name : '');
+            message = 'Kit was <strong>due back</strong> ' + checkout.due.fromNow() + (customerName ? ' from ' + customerName : '');
           } else {
-            message = 'Kit is <strong>checked out</strong>' + (typeof checkout.customer !== 'string' ? ' to ' + checkout.customer.name : '') + ' until ' + formatDate(checkout.due);
+            message = 'Kit is <strong>checked out</strong>' + (customerName ? ' to ' + customerName : '') + ' until ' + formatDate(checkout.due);
           }
         }
         messages.push({
@@ -4473,7 +4404,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
         });
       }
       dfd.then(function (contact, since) {
-        var message = 'Kit is <strong>in custody</strong>' + (contact ? ' of ' + contact.name + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
+        var message = 'Kit is <strong>in custody</strong>' + (contact ? ' of ' + sanitizer(contact.name) + ' <span class=\'text-muted\'>since ' + formatDate(since) + '</span>' : '');
         messages.push({
           kind: 'custody',
           priority: MessagePriority.High,
@@ -4617,7 +4548,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper) {
     });
   };
   return that;
-}(jquery, common_item, moment, common_order, common_reservation);
+}(jquery, common_item, moment, common_order, common_reservation, common_utils);
 common_contact = function (imageHelper, attachmentHelper) {
   var that = {};
   that.contactGetUserId = function (contact) {
@@ -5123,14 +5054,11 @@ common_transaction = function (moment, keyValues) {
   * @return {string}
   */
   that.getTransactionSummary = function (transaction, emptyText) {
-    if (transaction) {
-      if (transaction.name) {
-        return transaction.name;
-      } else if (transaction.itemSummary) {
-        return transaction.itemSummary;
-      } else if (transaction.items && transaction.items.length > 0) {
-        return keyValues.getCategorySummary(transaction.items);
-      }
+    transaction = transaction || {};
+    if (transaction.name) {
+      return transaction.name;
+    } else if (transaction.itemSummary && transaction.itemSummary != 'No items') {
+      return transaction.itemSummary;
     }
     return emptyText || 'No items';
   };
@@ -5266,9 +5194,10 @@ common_pubsub = function ($) {
     o.trigger.apply(o, arguments);
   };
 }(jquery);
-common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValueHelper, Slimdown, moment) {
+common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValueHelper, Slimdown, utils, moment) {
   var that = {};
   var sd = new Slimdown();
+  var sanitizer = utils.sanitizeHtml;
   that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler) {
     var unknownText = 'Unknown', hoursFormat = profile.timeFormat24 ? 'H:mm' : 'h:mma';
     evt.friendlyText = evt.action;
@@ -5282,7 +5211,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     if (arg.customerName && evt.by.name != arg.customerName) {
       params.contact = {
         id: arg.customerId,
-        name: arg.customerName || unknownText
+        name: sanitizer(arg.customerName || unknownText)
       };
     }
     var location = locations.find(function (loc) {
@@ -5291,8 +5220,8 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     var activeLocations = locations.filter(function (loc) {
       return loc.status == 'active';
     });
-    var locationName = activeLocations.length > 1 ? ' at ' + (location.name || unknownText) : '';
-    var byName = evt.by.name;
+    var locationName = sanitizer(activeLocations.length > 1 ? ' at ' + (location.name || unknownText) : '');
+    var byName = sanitizer(evt.by.name);
     var perm = getPermissionHandler();
     var getLocationById = function (locId) {
       return locations.find(function (l) {
@@ -5332,26 +5261,28 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       return imageHelper.getImageCDNUrl(settings, group.id, typeof item == 'string' ? item : item.cover || item._id || item.id, size);
     };
     var getCheckoutLink = function (id, text) {
+      var sanitizedText = sanitizer(text);
       if (!perm.hasCheckoutPermission('read'))
-        return text;
-      return '<a href=\'#check-outs/' + id + '\' class=\'transaction-link\' data-kind=\'order\' data-id=\'' + id + '\'>' + text + '</a>';
+        return sanitizedText;
+      return '<a href=\'#check-outs/' + id + '\' class=\'transaction-link\' data-kind=\'order\' data-id=\'' + id + '\'>' + sanitizedText + '</a>';
     };
     var getReservationLink = function (id, text) {
+      var sanitizedText = sanitizer(text);
       if (!perm.hasReservationPermission('read'))
-        return text;
-      return '<a href=\'#reservations/' + id + '\' class=\'transaction-link\' data-kind=\'reservation\' data-id=\'' + id + '\'>' + text + '</a>';
+        return sanitizedText;
+      return '<a href=\'#reservations/' + id + '\' class=\'transaction-link\' data-kind=\'reservation\' data-id=\'' + id + '\'>' + sanitizedText + '</a>';
     };
     var getLink = function (href, text) {
-      return '<a href=\'' + href + '\'>' + text + '</a>';
+      return '<a href=\'' + href + '\'>' + sanitizer(text) + '</a>';
     };
     var getContactLink = function (id, text) {
       if (!perm.hasContactReadOtherPermission())
-        return text;
+        return sanitizer(text);
       return getLink('#contacts/' + id, text);
     };
     var getKitLink = function (id, text) {
       if (!perm.hasKitPermission())
-        return text;
+        return sanitizer(text);
       return getLink('#kits/' + id, text);
     };
     var getMessagesBlock = function (messages) {
@@ -5367,7 +5298,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     };
     switch (evt.action) {
     case 'changeCategory':
-      var category = arg.category ? arg.category.split('.').pop().replace(/_/gim, ' ').capitalize() : unknownText;
+      var category = sanitizer(arg.category ? arg.category.split('.').pop().replace(/_/gim, ' ').capitalize() : unknownText);
       evt.friendlyText = byName + ' updated category to ' + category;
       break;
     case 'addCodes':
@@ -5452,9 +5383,9 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     case 'setFlag':
     case 'clearFlag':
       var flag = getFlagById(evt.action == 'setFlag' ? arg.flag : arg.oldFlag) || {};
-      var flagName = flag.name || unknownText;
+      var flagName = sanitizer(flag.name || unknownText);
       var flagColor = flag.color || 'orange';
-      var message = arg && arg.message ? arg.message : '';
+      var message = sanitizer(arg && arg.message ? arg.message : '');
       var hasAttachments = arg && arg.attachments && arg.attachments.length > 0;
       var attachments = arg && arg.attachments ? arg.attachments.map(function (att) {
         return {
@@ -5485,7 +5416,8 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         kind: 'email',
         name: 'CHEQROOM'
       };
-      var id = evt.id, body = $('.container-padding', arg.request.body).text(), to = arg.request.to, subject = arg.request.subject;
+      var reContainer = /<td.*class=.container-padding.*[\n]+([\s\S]*)<\/td>/gim;
+      var id = evt.id, body = sanitizer(arg.request.dialect === 'text' ? arg.request.body : utils.removeHtmlTags(reContainer.exec(arg.request.body)[1])), to = arg.request.to, subject = sanitizer(arg.request.subject);
       evt.friendlyText = 'Sent mail to ' + to + ' <ul class=\'list-group field-group\'><li class=\'list-group-item\'><div class=\'mail-subject\'>' + subject + '</div><div class=\'mail-body multiline-text-truncate\'>' + body + '</div><div><a href=\'javascript:void(0)\' class=\'open-email\' data-id=\'' + id + '\'>View email</a></div></li></ul>';
       break;
     case 'sendSMS':
@@ -5493,12 +5425,12 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         kind: 'sms',
         name: 'CHEQROOM'
       };
-      var id = evt.id, body = arg.request.sms_body, to = arg.request.sms_to_number;
+      var id = evt.id, body = sanitizer(arg.request.sms_body), to = arg.request.sms_to_number;
       evt.friendlyText = 'Sent sms to ' + to + ' <ul class=\'list-group field-group\'><li class=\'list-group-item\'><div class=\'mail-body multiline-text-truncate\'>' + body + '</div></li></ul>';
       break;
     case 'block':
     case 'undoBlock':
-      var message = arg ? arg.message : null;
+      var message = sanitizer(arg ? arg.message : null);
       var friendlyAction = evt.action == 'block' ? 'blocked' : 'unblocked';
       evt.friendlyText = byName + ' ' + friendlyAction + ' contact ' + getMessageBlock(message);
       break;
@@ -5561,7 +5493,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
           return checkedInItems.indexOf(it._id) != -1;
         });
         evt.friendlyText = byName + ' checked in equipment ' + summary + getMessagesBlock(items.map(function (it) {
-          return '<div class=\'media\'><div class=\'media-left\'><img class=\'item-image\' src=\'' + it.imageUrl + '\' /></div><div class=\'media-body\'><a href=\'#items/' + it._id + '\'>' + it.name + '</a><br /><small class=\'text-muted text-truncate item-info\'>' + it.codes.map(function (code) {
+          return '<div class=\'media\'><div class=\'media-left\'><img class=\'item-image\' src=\'' + it.imageUrl + '\' /></div><div class=\'media-body\'><a href=\'#items/' + it._id + '\'>' + sanitizer(it.name) + '</a><br /><small class=\'text-muted text-truncate item-info\'>' + it.codes.map(function (code) {
             return '<i class=\'fa fa-qrcode\'></i> ' + code;
           }) + it.barcodes.map(function (code) {
             return '<i class=\'fa fa-barcode\'></i> ' + code;
@@ -5619,7 +5551,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'cancel':
     case 'reservation.cancel':
-      var id = evt.obj, contact = params.contact, message = arg ? arg.message : null;
+      var id = evt.obj, contact = params.contact, message = sanitizer(arg ? arg.message : null);
       if (evt.action == 'cancel') {
         evt.friendlyText = byName + ' cancelled reservation' + getMessageBlock(message);
       } else {
@@ -5641,7 +5573,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'close':
     case 'reservation.close':
-      var id = evt.obj, message = arg ? arg.message : null, contact = params.contact;
+      var id = evt.obj, message = sanitizer(arg ? arg.message : null), contact = params.contact;
       if (evt.action == 'close') {
         evt.friendlyText = byName + ' closed reservation' + getMessageBlock(message);
       } else {
@@ -5683,12 +5615,12 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       evt.friendlyText = byName + ' created kit from duplicate';
       break;
     case 'setName':
-      var value = arg.name || unknownText;
+      var value = sanitizer(arg.name || unknownText);
       evt.friendlyText = byName + ' updated ' + evt.kind + ' name to ' + value;
       break;
     case 'addComment':
     case 'updateComment':
-      var comment = arg.comment.replace(/\n/gim, '<br />');
+      var comment = sanitizer(arg.comment).replace(/\n/gim, '<br />');
       evt.friendlyText = byName + ' wrote comment <div class=\'card comment-card\'><div class=\'card-block\'><span class=\'gu-truncate\'>' + comment + '</span></div></div>';
       break;
     case 'removeComment':
@@ -5730,20 +5662,20 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     case 'setField':
     case 'clearField':
     case 'renameField':
-      var field = arg.field || unknownText;
+      var field = sanitizer(arg.field || unknownText);
       var fieldDef = getFieldById(field) || {};
       switch (evt.action) {
       case 'setField':
-        var fieldValue = arg.value;
+        var fieldValue = sanitizer(arg.value);
         var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
-        var value = isDate ? moment(arg.value).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(arg.value);
+        var value = isDate ? moment(fieldValue).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(fieldValue);
         evt.friendlyText = byName + ' set ' + evt.kind + ' field ' + getMessageBlock('<small class=\'text-muted\'>' + field + '</small><br />' + value);
         break;
       case 'clearField':
         evt.friendlyText = byName + ' cleared ' + field + ' field';
         break;
       case 'renameField':
-        evt.friendlyText = byName + ' renamed field ' + arg.oldName + ' to ' + arg.newName;
+        evt.friendlyText = byName + ' renamed field ' + sanitizer(arg.oldName) + ' to ' + sanitizer(arg.newName);
         break;
       }
       break;
@@ -5753,8 +5685,8 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         var fieldDef = getFieldById(fieldKey) || {};
         var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
         return {
-          name: fieldKey,
-          value: isDate ? moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(arg[fieldKey])
+          name: sanitizer(fieldKey),
+          value: isDate ? moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')) : sd.render(sanitizer(arg[fieldKey]))
         };
       });
       evt.friendlyText = byName + ' set ' + evt.kind + ' field'.pluralize(fields.length > 1) + getMessagesBlock(fields.map(function (f) {
@@ -5798,22 +5730,22 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         }
         return true;
       }).map(function (fieldKey) {
-        var fieldValue = arg[fieldKey] || '';
+        var fieldValue = sanitizer(arg[fieldKey] || '');
         var isDate = moment(fieldValue.toString().split(' (')[0], 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ', true).isValid();
         var value = '';
         var fieldDef = getFieldById(fieldKey) || {};
         if (isDate) {
           value = moment(arg[fieldKey]).format('MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : ''));
         } else if (fieldKey == 'category') {
-          value = keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize();
+          value = sanitizer(keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize());
         } else if (fieldKey == 'location') {
           var loc = getLocationById(fieldValue) || {};
-          value = loc.name || unknownText;
+          value = sanitizer(loc.name || unknownText);
         } else {
-          value = sd.render(arg[fieldKey]);
+          value = sd.render(fieldValue);
         }
         return {
-          name: getFieldName(fieldKey),
+          name: sanitizer(getFieldName(fieldKey)),
           value: value
         };
       });
@@ -5823,7 +5755,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'update':
       if (arg.hasOwnProperty('name')) {
-        evt.friendlyText = byName + ' updated ' + evt.kind + ' name to ' + arg.name;
+        evt.friendlyText = byName + ' updated ' + evt.kind + ' name to ' + sanitizer(arg.name);
       } else if (arg.hasOwnProperty('kind') && arg.kind == 'importer') {
         evt.friendlyText = byName + ' updated ' + evt.kind + ' from import';
       } else {
@@ -5856,20 +5788,20 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
             }
           }
           if (!arg.value) {
-            evt.friendlyText = byName + ' cleared ' + arg.field + ' field';
+            evt.friendlyText = byName + ' cleared ' + sanitizer(arg.field) + ' field';
           } else {
-            evt.friendlyText = byName + ' set ' + evt.kind + ' field' + getMessageBlock('<small class=\'text-muted\'>' + arg.field + '</small><br />' + arg.value);
+            evt.friendlyText = byName + ' set ' + evt.kind + ' field' + getMessageBlock('<small class=\'text-muted\'>' + sanitizer(arg.field) + '</small><br />' + sanitizer(arg.value));
           }
           break;
         case 'contact':
           if (arg.hasOwnProperty('email')) {
-            evt.friendlyText = byName + ' updated contact email to ' + arg.email;
+            evt.friendlyText = byName + ' updated contact email to ' + sanitizer(arg.email);
           } else {
             evt.friendlyText = byName + ' updated contact';
           }
           break;
         case 'kit':
-          evt.friendlyText = byName + ' updated kit name to ' + arg.name;
+          evt.friendlyText = byName + ' updated kit name to ' + sanitizer(arg.name);
           break;
         }
       }
@@ -5878,7 +5810,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       evt.friendlyText = byName + ' duplicated item ' + arg.times + ' times';
       break;
     case 'expire':
-      var message = arg ? arg.message : null;
+      var message = sanitizer(arg ? arg.message : null);
       evt.friendlyText = byName + ' expired item' + getMessageBlock(message);
       break;
     case 'undoExpire':
@@ -5904,10 +5836,9 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'setCatalog':
       var fields = Object.keys(arg).map(function (fieldKey) {
-        var fieldValue = arg[fieldKey] || '';
         return {
           name: fieldKey,
-          value: arg[fieldKey]
+          value: sanitizer(arg[fieldKey])
         };
       });
       evt.friendlyText = byName + ' set catalog' + getMessagesBlock(fields.map(function (f) {
@@ -5928,34 +5859,30 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         name: arg.labelName,
         color: arg.labelColor
       };
-      evt.friendlyText = byName + ' set <span class=\'label-tag\' style=\'background-color:' + label.color + ';\'></span> ' + label.name;
+      evt.friendlyText = byName + ' set <span class=\'label-tag\' style=\'background-color:' + label.color + ';\'></span> ' + sanitizer(label.name);
       break;
     case 'spotchecks.close':
-      var id = evt.obj, allFound = arg.numChecked == arg.numTotal && arg.numUnchecked == 0 && arg.numUnexpected == 0, numCheckedProgress = arg.numChecked > 0 ? Math.round(arg.numChecked / arg.numTotal * 100) : 0, numUncheckedProgress = arg.numUnchecked > 0 ? Math.round(arg.numUnchecked / arg.numTotal * 100) : 0, numUnexpectedProgress = arg.numUnexpected > 0 ? Math.round(arg.numUnexpected / arg.numTotal * 100) : 0, numChecked = arg.numChecked, numUnchecked = arg.numUnchecked, numTotal = arg.numTotal, numUnexpected = arg.numUnexpected, checked = arg.items ? arg.items.checked_scanner && arg.items.checked_scanner.slice(0, 2).map(function (it) {
+      var id = evt.obj, numChecked = arg.numChecked, numIssues = arg.numUnchecked + arg.numUnexpected, checked = arg.items ? arg.items.checked_scanner && arg.items.checked_scanner.slice(0, 2).map(function (it) {
           return getItemImageUrl(it, 'XS');
-        }).concat(arg.numChecked > 2 ? imageHelper.getTextImage('+' + (arg.numChecked - 2), 'S') : []) : [], unchecked = arg.items ? arg.items.unchecked && arg.items.unchecked.slice(0, 2).map(function (it) {
+        }).concat(arg.numChecked > 2 ? imageHelper.getTextImage('+' + (arg.numChecked - 2), 'S') : []) : [], unchecked = arg.items && arg.items.unchecked ? arg.items.unchecked : [], unexpected = arg.items && arg.items.unexpected ? arg.items.unexpected : [], issues = unchecked.concat(unexpected).slice(0, 2).map(function (it) {
           return getItemImageUrl(it, 'XS');
-        }).concat(arg.numUnchecked > 2 ? imageHelper.getTextImage('+' + (arg.numUnchecked - 2), 'S') : []) : [], unexpected = arg.items ? arg.items.unexpected && arg.items.unexpected.slice(0, 2).map(function (it) {
-          return getItemImageUrl(it, 'XS');
-        }).concat(arg.numUnexpected > 2 ? imageHelper.getTextImage('+' + (arg.numUnexpected - 2), 'S') : []) : [];
+        }).concat(numIssues > 2 ? imageHelper.getTextImage('+' + (numIssues - 2), 'S') : []);
       if (evt.kind == 'item') {
-        evt.friendlyText = byName + ' did a <a href=\'javascript:void(0)\' class=\'spotcheck\' data-id=\'' + id + '\'>spotcheck</a>';
+        evt.friendlyText = byName + ' scanned item in a <a href=\'#spotchecks/' + id + '\' class=\'spotcheck\'>spotcheck</a>';
       } else {
-        evt.friendlyText = byName + ' did a spotcheck <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'><div class=\'title\'>' + (allFound ? '<div class=\'success\'><i class=\'fa fa-check-circle\'></i> All ' + numTotal + ' Items checked</div>' : '<div class=\'warning\'><i class=\'fa fa-exclamation-circle\'></i> ' + numUnchecked + ' of ' + numTotal + ' Items unchecked</div>') + '</div><div class=\'multi-progress\'><div class=\'found-progress\' style=\'width:' + numCheckedProgress + '%\'></div><div class=\'missing-progress\' style=\'width:' + numUncheckedProgress + '%\'></div><div class=\'unexpected-progress\' style=\'width:' + numUnexpectedProgress + '%\'></div></div> ' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + checked.map(function (src) {
+        evt.friendlyText = byName + ' finished a <a href=\'#spotchecks/' + id + '\' class=\'spotcheck\'>spotcheck</a> <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'>' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + checked.map(function (src) {
           return '<img class=\'item-image\' src=\'' + src + '\' />';
-        }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' items</div></div></div>' : '') + (numUnchecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unchecked.map(function (src) {
+        }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' ' + 'item'.pluralize(numChecked) + '</div></div></div>' : '') + (numIssues ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + issues.map(function (src) {
           return '<img class=\'item-image\' src=\'' + src + '\' />';
-        }).join('') + '</div><div>Unchecked</div><div class=\'text-muted\'>' + numUnchecked + ' items</div></div></div>' : '') + (numUnexpected ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color gray\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + unexpected.map(function (src) {
-          return '<img class=\'item-image\' src=\'' + src + '\' />';
-        }).join('') + '</div><div>Unexpected</div><div class=\'text-muted\'>' + numUnexpected + ' items</div></div></div>' : '') + '</li></ul>';
+        }).join('') + '</div><div>Issues</div><div class=\'text-muted\'>' + numIssues + ' ' + 'item'.pluralize(numIssues) + '</div></div></div>' : '') + '</li></ul>';
       }
       break;
     case 'changeLocation':
-      var loc = arg.name || unknownText;
+      var loc = sanitizer(arg.name || unknownText);
       evt.friendlyText = byName + ' updated location to ' + loc;
       break;
     case 'updateGeo':
-      var address = (arg.address || unknownText).split(',').map(function (v) {
+      var address = sanitizer(arg.address || unknownText).split(',').map(function (v) {
         return $.trim(v);
       });
       evt.friendlyText = byName + ' updated geo position to ' + getMessageBlock('<address>' + address.map(function (line) {
@@ -5969,13 +5896,182 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
     return evt;
   };
   return that;
-}(common_code, common_image, common_attachment, common_keyValues, common_slimdown, moment);
-common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub, changeLog) {
+}(common_code, common_image, common_attachment, common_keyValues, common_slimdown, common_utils, moment);
+common_spotcheck = function () {
+  var that = {
+    /**
+     * getFriendlySpotcheckCss
+     *
+     * @memberOf common
+     * @name  common#getFriendlySpotcheckCss
+     * @method
+     * 
+     * @param  {object} spotcheck 
+     * @return {string}        
+     */
+    getFriendlySpotcheckCss: function (spotcheck) {
+      spotcheck = spotcheck || {};
+      switch (spotcheck.status) {
+      case 'open':
+        return 'status-progress';
+      case 'closed':
+        if (spotcheck.numUnexpected || spotcheck.numUnchecked) {
+          return 'status-exclamation';
+        } else {
+          return 'status-success';
+        }
+      case 'cancelled':
+        return 'status-cancelled';
+      default:
+        return '';
+      }
+    },
+    /**
+     * getFriendlySpotcheckStatus 
+     *
+     * @memberOf common
+     * @name  common#getFriendlySpotcheckStatus
+     * @method
+     * 
+     * @param  {object} spotcheck 
+     * @return {string}        
+     */
+    getFriendlySpotcheckStatus: function (spotcheck) {
+      spotcheck = spotcheck || {};
+      switch (spotcheck.status) {
+      case 'open':
+        return 'In progress';
+      case 'closed':
+        if (spotcheck.numUnexpected || spotcheck.numUnchecked) {
+          return 'Finished with issues (' + (spotcheck.numUnexpected + spotcheck.numUnchecked) + ')';
+        } else {
+          return 'Finished';
+        }
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return '';
+      }
+    },
+    /**
+     * getSpotcheckProgressMessage
+     * @param  {[type]} spotcheck [description]
+     * @return {[type]}           [description]
+     */
+    getSpotcheckProgressMessage: function (spotcheck) {
+      if (spotcheck.status === 'open') {
+        if (!spotcheck.numUnchecked) {
+          return '<i class=\'fa fa-check-circle color-green\'></i> All ' + spotcheck.numChecked + ' item'.pluralize(spotcheck.numChecked) + ' have been scanned';
+        } else {
+          return spotcheck.numUnchecked + ' item'.pluralize(spotcheck.numUnchecked) + ' left to scan';
+        }
+      } else {
+        var numIssues = spotcheck.numUnchecked + spotcheck.numUnexpected;
+        if (numIssues) {
+          if (spotcheck.numChecked === 0) {
+            return '<i class=\'fa fa-exclamation-circle color-orange\'></i> No items scanned';
+          } else {
+            var message = '<i class=\'fa fa-exclamation-circle color-orange\'></i> ';
+            // 1 unscanned and 2 scanned exceptions
+            var msg = [];
+            if (spotcheck.numUnchecked) {
+              msg.push(spotcheck.numUnchecked + ' unscanned ' + 'issue'.pluralize(spotcheck.numUnchecked));
+            }
+            if (spotcheck.numUnexpected) {
+              msg.push(spotcheck.numUnexpected + ' scanned ' + 'exception'.pluralize(spotcheck.numUnexpected) + ' issue'.pluralize(spotcheck.numUnexpected));
+            }
+            message += msg.joinAdvanced(', ', ' and ');
+            return message;
+          }
+        } else {
+          return '<i class=\'fa fa-check-circle color-green\'></i> All ' + spotcheck.numChecked + ' item'.pluralize(spotcheck.numChecked) + ' scanned';
+        }
+      }
+    }
+  };
+  that.getSpotcheckMessages = function (spotcheck) {
+    var messages = [], MessagePriority = {
+        'Critical': 0,
+        'High': 1,
+        'Medium': 2,
+        'Low': 3
+      };
+    if (spotcheck.status === 'open') {
+      messages.push({
+        kind: 'progress',
+        spotcheck: spotcheck,
+        priority: MessagePriority.Critical,
+        message: that.getSpotcheckProgressMessage(spotcheck)
+      });
+    }
+    /*if(spotcheck.kind === "order"){
+                    messages.push({
+                        kind: "checkout",
+                        id: spotcheck.docId,
+                        priority: MessagePriority.Critical,
+                        message: "Spotcheck on check-out"
+                    });
+                }
+    
+                if(spotcheck.kind === "reservation"){
+                     messages.push({
+                        kind: "reservation",
+                        id: spotcheck.docId,
+                        priority: MessagePriority.Critical,
+                        message: "Spotcheck on reservation"
+                    });
+                }
+    
+                if(spotcheck.kind === "kit"){
+                     messages.push({
+                        kind: "kit",
+                        id: spotcheck.docId,
+                        priority: MessagePriority.Critical,
+                        message: "Spotcheck on kit"
+                    });
+                }
+    
+                if(spotcheck.kind === "custody"){
+                     messages.push({
+                        kind: "custody",
+                        id: spotcheck.docId,
+                        priority: MessagePriority.Critical,
+                        message: "Spotcheck on items in custody of"
+                    });
+                }
+    
+                 if(spotcheck.kind === "itemFilter"){
+                    if(spotcheck.itemFilter.location__in){
+                        messages.push({
+                            kind: "location",
+                            priority: MessagePriority.Critical,
+                            message: "Spotcheck on " + spotcheck.itemFilter.location__in.length + " location".pluralize(spotcheck.itemFilter.location__in.length)
+                        });
+                    }else{
+                        messages.push({
+                            kind: "category",
+                            priority: MessagePriority.Critical,
+                            message: "Spotcheck on " + spotcheck.itemFilter.category__in.length + " category".pluralize(spotcheck.itemFilter.category__in.length)
+                        });
+                    }
+                }*/
+    var dfd = $.Deferred();
+    dfd.resolve();
+    return dfd.then(function () {
+      // Sort by priority High > Low
+      return messages.sort(function (a, b) {
+        return a.priority - b.priority;
+      });
+    });
+  };
+  return that;
+}();
+common = function ($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub, changeLog, spotcheck) {
   /**
    * Return common object with different helper methods
    */
-  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction, changeLog);
-}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common_changeLog);
+  return $.extend({}, code, order, reservation, item, conflicts, keyvalues, image, attachment, validation, utils, kit, contact, user, template, _document, transaction, changeLog, spotcheck);
+}(jquery, common_code, common_order, common_reservation, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_utils, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_queue, common_pubsub, common_changeLog, common_spotcheck);
 colorLabel = function ($) {
   var DEFAULTS = {
     id: null,
@@ -6357,10 +6453,12 @@ document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiCall = function (spec) {
-    var that = this;
-    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
+    var that = this, dfd;
+    var dfd = this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost);
+    dfd.then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
+    return dfd;
   };
   /**
    * Wrapping the this.ds.call method with a longer timeout
@@ -8875,7 +8973,7 @@ helper = function ($, defaultSettings, common) {
         orderLabels = orderLabels || [];
         reservationLabels = reservationLabels || [];
         itemIds = itemIds || [];
-        var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/locations/call/ical', parts = [];
+        var url = urlApi + '/ical/' + userId + '/' + userPublicKey + '/public/' + (itemIds && itemIds.length > 0 ? 'items' : 'locations') + '/call/ical', parts = [];
         if (locationId) {
           parts.push('locations[]=' + locationId);
         }
@@ -8995,13 +9093,13 @@ helper = function ($, defaultSettings, common) {
         // load stats for given mode (defaults to production)
         stats = stats[mode || 'production'];
         var statType = stats[type];
-        if (statType === undefined)
-          throw 'Stat doesn\'t exist';
+        if (!statType)
+          return {};
         if (!name)
           return statType;
         var statTypeValue = statType[name];
         if (statTypeValue === undefined)
-          throw 'Stat value doesn\'t exist';
+          return {};
         return statTypeValue;
       },
       /**
@@ -10241,10 +10339,12 @@ Document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiCall = function (spec) {
-    var that = this;
-    return this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
+    var that = this, dfd;
+    var dfd = this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost);
+    dfd.then(function (data) {
       return spec.skipRead == true ? data : that._fromJson(data);
     });
+    return dfd;
   };
   /**
    * Wrapping the this.ds.call method with a longer timeout
@@ -10975,6 +11075,7 @@ Item = function ($, common, Base) {
       kit: null,
       custody: null,
       cover: '',
+      cover_url: null,
       catalog: null,
       canReserve: 'available',
       canOrder: 'available',
@@ -11040,6 +11141,7 @@ Item = function ($, common, Base) {
     this.kit = spec.kit || DEFAULTS.kit;
     this.custody = spec.custody || DEFAULTS.custody;
     this.cover = spec.cover || DEFAULTS.cover;
+    this.cover_url = spec.cover_url || DEFAULTS.cover_url;
     this.catalog = spec.catalog || DEFAULTS.catalog;
     this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
     this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
@@ -11132,6 +11234,7 @@ Item = function ($, common, Base) {
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
       that.cover = data.cover || DEFAULTS.cover;
+      that.cover_url = data.cover_url || DEFAULTS.cover_url;
       that.catalog = data.catalog || DEFAULTS.catalog;
       that.flagged = data.flagged || DEFAULTS.flagged;
       that.expired = data.expired || DEFAULTS.expired;
@@ -14621,8 +14724,8 @@ Order = function ($, api, Transaction, Conflict, common) {
    */
   Order.prototype._fromAttachmentsJson = function (data, options) {
     var that = this;
-    // Also parse reservation comments?
-    if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+    // Also parse reservation attachments?
+    if (that.dsReservations && data.reservation && data.reservation.attachments && data.reservation.attachments.length > 0) {
       // Parse Reservation keyValues
       return Base.prototype._fromAttachmentsJson.call(that, data.reservation, $.extend(options, {
         ds: that.dsReservations,
@@ -14679,11 +14782,14 @@ PermissionHandler = function () {
    * @param limits - a group limits dict
    * @constructor
    */
-  var PermissionHandler = function (user, profile, limits, permissions) {
+  var PermissionHandler = function (user, profile, limits, permissions, isFeatureEnabled) {
     this.user = user;
     this.profile = profile;
     this.limits = limits;
     this.permissions = permissions;
+    this.isFeatureEnabled = isFeatureEnabled || function () {
+      return false;
+    };
     this._isOwner = user.isOwner;
     // Helper booleans that mix a bunch of role stuff and profile / limits stuff
     this._isBlockedContact = user.customer && user.customer.status == 'blocked';
@@ -14858,8 +14964,8 @@ PermissionHandler = function () {
   PermissionHandler.prototype.hasApiPermission = function () {
     return this._useApi;
   };
-  PermissionHandler.prototype.hasSpotcheckPermission = function () {
-    return this._useSpotcheck;
+  PermissionHandler.prototype.hasSpotcheckPermission = function (action, data, location) {
+    return this.hasPermission(action || 'read', 'spotchecks', data, location);
   };
   PermissionHandler.prototype.hasKitPermission = function (action, data, location) {
     return this.hasPermission(action || 'read', 'kits', data, location);
@@ -15201,28 +15307,16 @@ PermissionHandler = function () {
       // Generic actions
       case 'attach':
       case 'addAttachment':
-        return can([
-          'ORDERS_ATTACHMENTS_OWN_WRITER',
-          'ORDERS_OWN_ATTACHMENTS_OWN_WRITER'
-        ]);
+        return can(['ORDERS_ATTACHMENTS_OWN_WRITER']) || data.own && can(['ORDERS_OWN_ATTACHMENTS_OWN_WRITER']);
       case 'detach':
       case 'removeAttachment':
-        return can(['ORDERS_ATTACHMENTS_DELETER']) || data.own && can([
-          'ORDERS_ATTACHMENTS_OWN_DELETER',
-          'ORDERS_OWN_ATTACHMENTS_OWN_DELETER'
-        ]);
+        return can(['ORDERS_ATTACHMENTS_DELETER']) || data.own && can(['ORDERS_ATTACHMENTS_OWN_DELETER']) || data.own && data.ownDoc && can(['ORDERS_OWN_ATTACHMENTS_OWN_DELETER']);
       case 'addComment':
         return can(['ORDERS_COMMENTS_OWN_WRITER']) || data.own && can(['ORDERS_OWN_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return data.own && can([
-          'ORDERS_COMMENTS_OWN_WRITER',
-          'ORDERS_OWN_COMMENTS_OWN_WRITER'
-        ]);
+        return data.own && can(['ORDERS_COMMENTS_OWN_WRITER']) || data.own && data.ownDoc && can(['ORDERS_OWN_COMMENTS_OWN_WRITER']);
       case 'removeComment':
-        return can(['ORDERS_COMMENTS_DELETER']) || data.own && can([
-          'ORDERS_COMMENTS_OWN_DELETER',
-          'ORDERS_OWN_COMMENTS_OWN_DELETER'
-        ]);
+        return can(['ORDERS_COMMENTS_DELETER']) || data.own && can(['ORDERS_COMMENTS_OWN_DELETER']) || data.own && data.ownDoc && can(['ORDERS_OWN_COMMENTS_OWN_DELETER']);
       case 'setLabel':
       case 'clearLabel':
         return can([
@@ -15247,9 +15341,9 @@ PermissionHandler = function () {
           'ORDERS_DOCUMENT_GENERATOR_RESTRICTED'
         ]) || data.own && can(['ORDERS_OWN_DOCUMENT_GENERATOR']));
       case 'checkinAt':
-        return this._useCheckinLocation && this.hasCheckoutPermission('checkin');
+        return this._useCheckinLocation && this.hasCheckoutPermission('checkin', data);
       case 'forceCheckListCheckin':
-        return this.profile.forceCheckListCheckin && this.hasCheckoutPermission('checkin');
+        return this.profile.forceCheckListCheckin && this.hasCheckoutPermission('checkin', data);
       case 'ignoreConflicts':
         return can(['ORDERS_CONFLICT_CREATOR']);
       case 'getReport':
@@ -15308,22 +15402,13 @@ PermissionHandler = function () {
         return can(['RESERVATIONS_ATTACHMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER']);
       case 'detach':
       case 'removeAttachment':
-        return can(['RESERVATIONS_ATTACHMENTS_DELETER']) || data.own && can([
-          'RESERVATIONS_ATTACHMENTS_OWN_DELETER',
-          'RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER'
-        ]);
+        return can(['RESERVATIONS_ATTACHMENTS_DELETER']) || data.own && can(['RESERVATIONS_ATTACHMENTS_OWN_DELETER']) || data.own && data.ownDoc && can(['RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER']);
       case 'addComment':
         return can(['RESERVATIONS_COMMENTS_OWN_WRITER']) || data.own && can(['RESERVATIONS_OWN_COMMENTS_OWN_WRITER']);
       case 'updateComment':
-        return data.own && can([
-          'RESERVATIONS_COMMENTS_OWN_WRITER',
-          'RESERVATIONS_OWN_COMMENTS_OWN_WRITER'
-        ]);
+        return data.own && can(['RESERVATIONS_COMMENTS_OWN_WRITER']) || data.own && data.ownDoc && can(['RESERVATIONS_OWN_COMMENTS_OWN_WRITER']);
       case 'removeComment':
-        return can(['RESERVATIONS_COMMENTS_DELETER']) || data.own && can([
-          'RESERVATIONS_COMMENTS_OWN_DELETER',
-          'RESERVATIONS_OWN_COMMENTS_OWN_DELETER'
-        ]);
+        return can(['RESERVATIONS_COMMENTS_DELETER']) || data.own && can(['RESERVATIONS_COMMENTS_OWN_DELETER']) || data.own && data.ownDoc && can(['RESERVATIONS_OWN_COMMENTS_OWN_DELETER']);
       case 'export':
         return this._useExport && can([
           'RESERVATIONS_EXPORTER',
@@ -15391,6 +15476,7 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
+      case 'setCover':
         return can(['CUSTOMERS_ADMIN']);
       case 'attach':
       case 'addAttachment':
@@ -15452,7 +15538,8 @@ PermissionHandler = function () {
       case 'undoArchive':
         return can([
           'USERS_OWN_PROFILE_ADMIN',
-          'USERS_PROFILE_ADMIN'
+          'USERS_PROFILE_ADMIN',
+          'USERS_ADMIN'
         ]);
       case 'updatePassword':
         return can(['USERS_OWN_PASSWORD_ADMIN']);
@@ -15597,11 +15684,38 @@ PermissionHandler = function () {
       case 'update':
         return can(['ACCOUNT_SETTINGS_ADMIN']);
       }
+    case 'spotchecks':
+      if (!this._useSpotcheck)
+        return false;
+      switch (action) {
+      case 'readAll':
+        return can(['SPOTCHECKS_READER']);
+      case 'read':
+        return can(['SPOTCHECKS_READER']) || can(['SPOTCHECKS_READER_OWN']);
+      case 'delete':
+        return can(['SPOTCHECKS_DELETER']) || data.own && can(['SPOTCHECKS_DELETER_OWN']);
+      case 'addAttachment':
+        return can(['SPOTCHECKS_ATTACHMENTS_OWN_WRITER']) || data.own && can(['SPOTCHECKS_OWN_ATTACHMENTS_OWN_WRITER']);
+      case 'removeAttachment':
+        return can(['SPOTCHECKS_ATTACHMENTS_DELETER']) || data.own && can(['SPOTCHECKS_ATTACHMENTS_OWN_DELETER']) || data.own && data.ownDoc && can(['SPOTCHECKS_OWN_ATTACHMENTS_OWN_DELETER']);
+      case 'addComment':
+        return can(['SPOTCHECKS_COMMENTS_OWN_WRITER']) || data.own && can(['SPOTCHECKS_OWN_COMMENTS_OWN_WRITER']);
+      case 'updateComment':
+        return data.own && data.ownDoc && can(['SPOTCHECKS_OWN_COMMENTS_OWN_WRITER']) || data.own && can(['SPOTCHECKS_COMMENTS_OWN_WRITER']);
+      case 'removeComment':
+        return can(['SPOTCHECKS_COMMENTS_DELETER']) || data.own && can(['SPOTCHECKS_COMMENTS_OWN_DELETER']) || data.own && data.ownDoc && can(['SPOTCHECKS_OWN_COMMENTS_OWN_DELETER']);
+      case 'archive':
+      case 'create':
+        return can(['SPOTCHECKS_WRITER']) || can(['SPOTCHECKS_WRITER_OWN']);
+      case 'update':
+        return can(['SPOTCHECKS_WRITER']) || data.own && can(['SPOTCHECKS_WRITER_OWN']);
+      }
+      break;
     }
   };
   return PermissionHandler;
 }();
-Reservation = function ($, api, Transaction, Conflict, common) {
+Reservation = function ($, api, Transaction, Conflict, moment, common) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -15858,6 +15972,21 @@ Reservation = function ($, api, Transaction, Conflict, common) {
     return Transaction.prototype._fromJson.call(this, data, options).then(function () {
       $.publish('reservation.fromJson', data);
       return data;
+    });
+  };
+  Reservation.prototype.visibleConflicts = function (conflicts, showAllConflicts) {
+    if (conflicts.length == 0 || !this.from)
+      return conflicts;
+    var from = this.from, to = this.to, now = moment();
+    if (showAllConflicts || from != null && to != null && (now.isBetween(from, to) || from.isBefore(now) || to.isBefore(now)))
+      return conflicts;
+    // Don't show order conflicts if reservation is not due now
+    return conflicts.filter(function (conflict) {
+      // Show conflict is:
+      //  - Not order conflict
+      // OR
+      //  - Order conflict that is between current date range
+      return conflict.kind != 'order' || conflict.kind == 'order' && from != null && to != null && (conflict.fromDate && conflict.toDate && (from.isBetween(conflict.fromDate, conflict.toDate, null, '[]') || to.isBetween(conflict.fromDate, conflict.toDate, null, '[]')));
     });
   };
   //
@@ -16482,7 +16611,7 @@ Reservation = function ($, api, Transaction, Conflict, common) {
     return unavailable;
   };
   return Reservation;
-}(jquery, api, transaction, conflict, common);
+}(jquery, api, transaction, conflict, moment, common);
 Template = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
@@ -18799,7 +18928,289 @@ Field = function ($, validationHelper) {
   };
   return Field;
 }(jquery, common_validation);
-core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
+Spotcheck = function ($, Base, common) {
+  var DEFAULTS = {
+    name: '',
+    summary: '',
+    status: 'open',
+    numTotal: 0,
+    numUnexpected: 0,
+    numChecked: 0,
+    numUnchecked: 0,
+    numIssues: 0,
+    by: {},
+    kind: '',
+    docId: null,
+    created: null,
+    closed: null,
+    users: [],
+    note: '',
+    address: '',
+    archived: null,
+    itemFilter: {}
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Base.prototype;
+  /**
+   * Spotcheck class
+   * @name  Spotcheck
+   * @class
+   * @constructor
+   * @extends Base
+   */
+  var Spotcheck = function (opt) {
+    var spec = $.extend({
+      _fields: ['*'],
+      crtype: 'cheqroom.types.spotcheck'
+    }, opt);
+    Base.call(this, spec);
+    this.name = spec.name || DEFAULTS.name;
+    this.summary = spec.summary || DEFAULTS.summary;
+    this.status = spec.status || DEFAULTS.status;
+    this.numTotal = spec.numTotal || DEFAULTS.numTotal;
+    this.numChecked = spec.numChecked || DEFAULTS.numChecked;
+    this.numUnchecked = spec.numUnchecked || DEFAULTS.numUnchecked;
+    this.numUnexpected = spec.numUnexpected || DEFAULTS.numUnexpected;
+  };
+  Spotcheck.prototype = new tmp();
+  Spotcheck.prototype.constructor = Spotcheck;
+  //
+  // Specific validators
+  /**
+   * Checks if name is valid
+   * @name Spotcheck#isValidName
+   * @method
+   * @return {Boolean} 
+   */
+  Spotcheck.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    return this.name.length >= 3;
+  };
+  /**
+   * Checks if the spotcheck can be deleted
+   * @method
+   * @name Spotcheck#canDelete
+   * @returns {boolean}
+   */
+  Spotcheck.prototype.canDelete = function () {
+    return this.status == 'open';
+  };
+  /**
+   * Checks if the spotcheck can be archived
+   * @method
+   * @name Spotcheck#canArchive
+   * @returns {boolean}
+   */
+  Spotcheck.prototype.canArchive = function () {
+    return this.status == 'closed' && !this.archived;
+  };
+  /**
+   * Checks if the spotcheck can be unarchived
+   * @method
+   * @name Spotcheck#canUndoArchive
+   * @returns {boolean}
+   */
+  Spotcheck.prototype.canUndoArchive = function () {
+    return this.archived != null;
+  };
+  /**
+   * Checks if the spotcheck can be done again
+   * @method
+   * @name Spotcheck#canSpotcheckAgain
+   * @returns {boolean}
+   */
+  Spotcheck.prototype.canSpotcheckAgain = function () {
+    return this.status === 'closed';
+  };
+  //
+  // Base overrides
+  //
+  /**
+   * Checks if the Spotcheck has any validation errors
+   * @name Spotcheck#isValid
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Spotcheck.prototype.isValid = function () {
+    return this.isValidName();
+  };
+  /**
+   * Checks if the Spotchecks is dirty and needs saving
+   * @name Spotcheck#isDirty
+   * @returns {boolean}
+   * @override
+   */
+  Spotcheck.prototype.isDirty = function () {
+    var isDirty = Base.prototype.isDirty.call(this);
+    if (!isDirty && this.raw) {
+      isDirty = this._isDirtyStringProperty('name');
+    }
+    return isDirty || this.isDirtyItems();
+  };
+  //
+  // Business logic
+  //
+  /**
+   * Sets spotcheck name
+   * @method
+   * @name Spotcheck#setName
+   * @param name
+   * @param skipRead skip parsing the returned json response into the spotcheck
+   * @returns {promise}
+   */
+  Spotcheck.prototype.setName = function (name, skipRead) {
+    return this._doApiCall({
+      method: 'setName',
+      params: { name: name },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Clears spotcheck name
+   * @method
+   * @name Spotcheck#clearName
+   * @param skipRead skip parsing the returned json response into the spotcheck
+   * @returns {promise}
+   */
+  Spotcheck.prototype.clearName = function (skipRead) {
+    return this._doApiCall({
+      method: 'clearName',
+      skipRead: skipRead
+    });
+  };
+  Spotcheck.prototype.getEntries = function (params) {
+    return this._doApiCall({
+      method: 'getEntries',
+      params: params,
+      skipRead: true
+    });
+  };
+  Spotcheck.prototype.create = function (params, skipRead) {
+    return this._doApiCall({
+      method: 'create',
+      params: params,
+      skipRead: skipRead,
+      usePost: true
+    });
+  };
+  Spotcheck.prototype.markEntriesAsScanned = function (scanItems, optionalParams, skipRead) {
+    var params = $.extend({ scanItems: scanItems }, optionalParams);
+    return this._doApiCall({
+      method: 'markEntriesAsScanned',
+      params: params,
+      skipRead: skipRead
+    });
+  };
+  Spotcheck.prototype.unmarkEntriesAsScanned = function (scanItems, skipRead) {
+    var params = { scanItems: scanItems };
+    return this._doApiCall({
+      method: 'unmarkEntriesAsScanned',
+      params: params,
+      skipRead: skipRead
+    });
+  };
+  Spotcheck.prototype.searchEntriesByCodes = function (codes) {
+    return this._doApiCall({
+      method: 'searchEntriesByCodes',
+      params: {
+        codes: codes,
+        _fields: '*'
+      },
+      skipRead: true
+    });
+  };
+  Spotcheck.prototype.close = function (message, skipRead) {
+    return this._doApiCall({
+      method: 'close',
+      params: { message: message },
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Archive a spotcheck
+   * @name Spotcheck#archive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Spotcheck.prototype.archive = function (skipRead) {
+    if (!this.canArchive()) {
+      return $.Deferred().reject(new Error('Cannot archive document'));
+    }
+    return this._doApiCall({
+      method: 'archive',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Unarchive a spotcheck
+   * @name Spotcheck#undoArchive
+   * @param skipRead
+   * @returns {promise}
+   */
+  Spotcheck.prototype.undoArchive = function (skipRead) {
+    return this._doApiCall({
+      method: 'undoArchive',
+      params: {},
+      skipRead: skipRead
+    });
+  };
+  /**
+   * Redo spotcheck
+   * @name Spotcheck#spotcheckAgain
+   * @param skipRead
+   * @returns {promise}
+   */
+  Spotcheck.prototype.spotcheckAgain = function () {
+    return this._doApiCall({
+      method: 'spotcheckAgain',
+      params: { name: this.name },
+      skipRead: true
+    });
+  };
+  //
+  // Implementation stuff
+  //
+  Spotcheck.prototype._getDefaults = function () {
+    return DEFAULTS;
+  };
+  Spotcheck.prototype._toJson = function (options) {
+    var data = Base.prototype._toJson.call(this, options);
+    data.name = this.name || DEFAULTS.name;
+    return data;
+  };
+  Spotcheck.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Base.prototype._fromJson.call(this, data, options).then(function (data) {
+      that.name = data.name || DEFAULTS.name;
+      that.summary = data.summary || DEFAULTS.summary;
+      that.status = data.status || DEFAULTS.status;
+      that.numTotal = data.numTotal || DEFAULTS.numTotal;
+      that.numUnexpected = data.numUnexpected || DEFAULTS.numUnexpected;
+      that.numChecked = data.numChecked || DEFAULTS.numChecked;
+      that.numUnchecked = data.numUnchecked || DEFAULTS.numUnchecked;
+      that.numIssues = data.numIssues || DEFAULTS.numIssues;
+      that.kind = data.kind || DEFAULTS.kind;
+      that.docId = data.docId || DEFAULTS.docId;
+      that.created = data.created || DEFAULTS.created;
+      that.finished = data.closed || DEFAULTS.closed;
+      that.users = data.users || DEFAULTS.users;
+      that.note = data.message || DEFAULTS.note;
+      that.address = data.lastAddress || DEFAULTS.address;
+      that.archived = data.archived || DEFAULTS.archived;
+      that.itemFilter = data.itemFilter || DEFAULTS.itemFilter;
+      that.by = data.by || DEFAULTS.by;
+      $.publish('Spotcheck.fromJson', data);
+      return data;
+    });
+  };
+  return Spotcheck;
+}(jquery, base, common);
+core = function (api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field, Spotcheck) {
   var core = {};
   // namespaces
   core.api = api;
@@ -18830,8 +19241,9 @@ core = function (api, Availability, Attachment, Base, Category, Comment, Conflic
   core.Helper = Helper;
   core.ColorLabel = ColorLabel;
   core.Field = Field;
+  core.Spotcheck = Spotcheck;
   return core;
-}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field);
+}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field, Spotcheck);
 if(typeof module !== 'undefined' && module.exports){
 module.exports = core;
 }

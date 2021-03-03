@@ -18,15 +18,14 @@ define(['moment', 'common/keyValues'], function (moment, keyValues) {
 	 * @return {string}
 	 */
 	that.getTransactionSummary = function(transaction, emptyText) {
-		if(transaction){
-			if(transaction.name){
-				return transaction.name;
-			}else if(transaction.itemSummary){
-				return transaction.itemSummary;
-			}else if((transaction.items) && (transaction.items.length>0)){
-				return keyValues.getCategorySummary(transaction.items);
-			}
+		transaction = transaction || {};
+
+		if(transaction.name){
+			return transaction.name;
+		}else if(transaction.itemSummary && transaction.itemSummary != "No items"){
+			return transaction.itemSummary;
 		}
+		
 		return emptyText || "No items";
 	};
 

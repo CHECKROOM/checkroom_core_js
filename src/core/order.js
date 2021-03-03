@@ -898,8 +898,8 @@ define([
     Order.prototype._fromAttachmentsJson = function(data, options) {
         var that = this;
 
-        // Also parse reservation comments?
-        if (that.dsReservations && data.reservation && data.reservation.comments && data.reservation.comments.length > 0) {
+        // Also parse reservation attachments?
+        if (that.dsReservations && data.reservation && data.reservation.attachments && data.reservation.attachments.length > 0) {
           // Parse Reservation keyValues
           return Base.prototype._fromAttachmentsJson.call(that, data.reservation, $.extend(options, { ds: that.dsReservations, fromReservation: true })).then(function () {
             var reservationAttachments = that.attachments;

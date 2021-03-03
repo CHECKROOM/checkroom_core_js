@@ -6,9 +6,11 @@ define([
     'common/item',
     'moment',
     'common/order',
-    'common/reservation'
-], function ($, itemHelpers, moment, orderHelper, reservationHelper) {
-    var that = {};
+    'common/reservation',
+    'common/utils'
+], function ($, itemHelpers, moment, orderHelper, reservationHelper, utils) {
+    var that = {},
+        sanitizer = utils.sanitizeHtml;
 
     /**
      * Checks if a kit can be checked out (any items available)
@@ -280,10 +282,12 @@ define([
                     if(kit.status == "await_checkout"){
                         message = "Kit is currently <strong>awaiting checkout</strong>";
                     }else{
+                        var customerName = sanitizer(typeof checkout.customer !== "string"?checkout.customer.name:"");
+
                         if(checkout && orderHelper.isOrderOverdue(checkout)){
-                            message = "Kit was <strong>due back</strong> " + checkout.due.fromNow() + (typeof checkout.customer !== "string"?" from " + checkout.customer.name:"");
+                            message = "Kit was <strong>due back</strong> " + checkout.due.fromNow() + (customerName?" from " + customerName:"");
                         }else{
-                            message = "Kit is <strong>checked out</strong>" + (typeof checkout.customer !== "string"?" to " + checkout.customer.name:"") + " until " + formatDate(checkout.due);
+                            message = "Kit is <strong>checked out</strong>" + (customerName?" to " + customerName:"") + " until " + formatDate(checkout.due);
                         }
                     }
 
@@ -365,7 +369,7 @@ define([
             }
 
             dfd.then(function(contact, since){
-                var message = "Kit is <strong>in custody</strong>" + (contact?(" of " + contact.name + " <span class='text-muted'>since " + formatDate(since) + "</span>"):"");
+                var message = "Kit is <strong>in custody</strong>" + (contact?(" of " + sanitizer(contact.name) + " <span class='text-muted'>since " + formatDate(since) + "</span>"):"");
 
                     messages.push({
                         kind: "custody",

@@ -22,7 +22,6 @@ define([
     // http://stackoverflow.com/questions/5502002/jquery-ajax-producing-304-responses-when-it-shouldnt
     $.ajaxSetup({
         beforeSend: function(xhr, call){
-
             if(call.type == "GET"){
                 call.url += (call.url.indexOf("?") == -1?"?":"&") + "_=" + new Date().getTime();
             }else{
@@ -76,6 +75,7 @@ define([
         spec = spec || {};
         this.timeOut = spec.timeOut || 10000;
         this.responseInTz = true;
+        this.beforeSend = spec.beforeSend || function(){};
     };
 
     api.ApiAjax.prototype.get = function(url, timeOut) {
@@ -106,16 +106,22 @@ define([
             dfd.reject(new api.NetworkTimeout(msg, opt));
         } else {
             if (x){
-                if((x.statusText) &&
-                    (x.statusText.indexOf("Notify user:") > -1)) {
-                    msg = x.statusText.slice(x.statusText.indexOf("Notify user:") + 13);
+                var responseJson = {};
+                try{
+                    responseJson = JSON.parse(x.responseText)
+                }catch(e){
+                    // ignore
                 }
 
-                if( (x.status == 422) &&
-                    (x.responseText) &&
-                    (x.responseText.match(/HTTPError: \(.+\)/g).length > 0)){
+                if((x.statusText) &&
+                    (x.statusText.indexOf("Notify user:") > -1)) {
+                    msg = responseJson.message;
+                }
+
+                if(x.status == 422){
                     opt = {
-                        detail: x.responseText.match(/HTTPError: \(.+\)/g)[0]
+                        detail: responseJson.message,
+                        status: responseJson.status
                     }
                 }
             }
@@ -144,6 +150,7 @@ define([
         }
     };
 
+
     api.ApiAjax.prototype._postAjax = function(url, data, timeOut, opt) {
         var dfd = $.Deferred();
         var that = this;
@@ -151,6 +158,7 @@ define([
         var xhr = $.ajax({
             type: "POST",
             url: url,
+            beforeSend: that.beforeSend,
             data: JSON.stringify(this._prepareDict(data)),
             contentType: "application/json; charset=utf-8",
             timeout: timeOut || this.timeOut,
@@ -175,6 +183,7 @@ define([
 
         var xhr = $.ajax({
             url: url,
+            beforeSend: that.beforeSend,
             timeout: timeOut || this.timeOut,
             success: function(data) {return that._handleAjaxSuccess(dfd, data, opt);},
             error: function(x, t, m) {return that._handleAjaxError(dfd, x, t, m, opt);}
@@ -256,6 +265,7 @@ define([
         this.userId = spec.userId || '';
         this.userEmail = spec.userEmail || '';
         this.userToken = spec.userToken || '';
+        this.userJwt = spec.jwt || '';
         this.tokenType = spec.tokenType || '';
         this.impersonated = spec.impersonated || false;
     };
@@ -264,6 +274,7 @@ define([
         this.userId = window.localStorage.getItem("userId") || '';
         this.userEmail = window.localStorage.getItem("userEmail") || '';
         this.userToken = window.localStorage.getItem("userToken") || '';
+        this.userJwt = window.localStorage.getItem("userJwt") || '';
         this.tokenType = window.localStorage.getItem("tokenType") || '';
         this.impersonated = window.localStorage.getItem("impersonated") === "true";
     };
@@ -272,6 +283,7 @@ define([
         window.localStorage.setItem("userId", this.userId);
         window.localStorage.setItem("userEmail", this.userEmail);
         window.localStorage.setItem("userToken", this.userToken);
+        window.localStorage.setItem("userJwt", this.userJwt);
         window.localStorage.setItem("tokenType", this.tokenType);
         window.localStorage.setItem("impersonated", this.impersonated);
     };
@@ -280,12 +292,14 @@ define([
         window.localStorage.removeItem("userId");
         window.localStorage.removeItem("userEmail");
         window.localStorage.removeItem("userToken");
+        window.localStorage.removeItem("userJwt");
         window.localStorage.removeItem("tokenType");
         window.localStorage.removeItem("impersonated");
     };
 
     api.ApiUser.prototype.clearToken = function() {
         window.localStorage.setItem("userToken", null);
+        window.localStorage.setItem("userJwt", null);
         window.localStorage.setItem("tokenType", null);
     };
 
@@ -297,6 +311,7 @@ define([
     api.ApiUser.prototype._reset = function() {
         this.userId = '';
         this.userToken = '';
+        this.userJwt = '';
         this.tokenType = '';
         this.userEmail = '';
         this.impersonated = false;
@@ -552,7 +567,20 @@ define([
             returnArr = [];
 
         var ajaxQueue = new $.fn.ajaxQueue(),
-            dfdMultiple = $.Deferred();
+            dfdMultiple = $.Deferred(),
+            calls = [];
+
+        // Extend promise with abort method
+        // to abort xhr request if needed
+        // http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
+        var promise = dfdMultiple.promise();
+        promise.abort = function(){
+            $.each(calls, function(i, xhr){
+                xhr.abort();  
+            });
+        };
+
+
         $.each(groups, function(i, group){
             var url = that.getBaseUrl() + group.join(',');
             var p = that.getParamsDict(fields);
@@ -561,12 +589,18 @@ define([
             }
             
             ajaxQueue(function(){
-                return that._ajaxGet(cmd, url).then(function(resp){
+                var call = that._ajaxGet(cmd, url);
+
+                call.then(function(resp){
                     // BUGFIX make sure that response is an array
                     resp = $.isArray(resp)?resp:[resp];
 
                     returnArr = returnArr.concat(resp);
                 });
+
+                calls.push(call);
+
+                return call;
             });            
         })
 
@@ -574,7 +608,7 @@ define([
             return dfdMultiple.resolve(returnArr);
         })
 
-        return dfdMultiple;
+        return promise;
     };
 
     /**

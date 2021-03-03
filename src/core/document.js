@@ -344,17 +344,23 @@ define([
      * @private
      */
     Document.prototype._doApiCall = function(spec) {
-        var that = this;
-        return this.ds.call(
-                (spec.collectionCall==true) ? null : (spec.pk || this.id),
-                spec.method,
-                spec.params,
-                spec._fields || this._fields,
-                spec.timeOut,
-                spec.usePost)
-            .then(function(data) {
-                return (spec.skipRead==true) ? data : that._fromJson(data);
-            });
+        var that = this,
+            dfd;
+        
+        var dfd = this.ds.call(
+            (spec.collectionCall==true) ? null : (spec.pk || this.id),
+            spec.method,
+            spec.params,
+            spec._fields || this._fields,
+            spec.timeOut,
+            spec.usePost
+        );
+            
+        dfd.then(function(data) {
+            return (spec.skipRead==true) ? data : that._fromJson(data);
+        });
+
+        return dfd;
     };
 
     /**

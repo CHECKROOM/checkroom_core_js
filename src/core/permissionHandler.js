@@ -9,11 +9,12 @@ define([], function () {
      * @param limits - a group limits dict
      * @constructor
      */
-    var PermissionHandler = function (user, profile, limits, permissions) {
+    var PermissionHandler = function (user, profile, limits, permissions, isFeatureEnabled) {
         this.user = user;
         this.profile = profile;
         this.limits = limits;
         this.permissions = permissions;
+        this.isFeatureEnabled = isFeatureEnabled || function(){ return false; };
 
         this._isOwner = user.isOwner;
 
@@ -223,8 +224,8 @@ define([], function () {
         return this._useApi;
     };
 
-    PermissionHandler.prototype.hasSpotcheckPermission = function(){
-        return this._useSpotcheck;
+    PermissionHandler.prototype.hasSpotcheckPermission = function(action, data, location){
+        return this.hasPermission(action || "read", "spotchecks", data, location);
     }
 
     PermissionHandler.prototype.hasKitPermission = function(action, data, location) {
@@ -539,16 +540,16 @@ define([], function () {
                     // Generic actions
                     case "attach":
                     case "addAttachment":
-                        return can(["ORDERS_ATTACHMENTS_OWN_WRITER", "ORDERS_OWN_ATTACHMENTS_OWN_WRITER"]);
+                        return can(["ORDERS_ATTACHMENTS_OWN_WRITER"]) || (data.own && can(["ORDERS_OWN_ATTACHMENTS_OWN_WRITER"]));
                     case "detach":
                     case "removeAttachment":
-                        return can(["ORDERS_ATTACHMENTS_DELETER"]) || (data.own && can(["ORDERS_ATTACHMENTS_OWN_DELETER", "ORDERS_OWN_ATTACHMENTS_OWN_DELETER"]));
+                        return can(["ORDERS_ATTACHMENTS_DELETER"]) || (data.own && can(["ORDERS_ATTACHMENTS_OWN_DELETER"])) || (data.own && data.ownDoc && can(["ORDERS_OWN_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
                         return can(["ORDERS_COMMENTS_OWN_WRITER"]) || (data.own && can(["ORDERS_OWN_COMMENTS_OWN_WRITER"]));
                     case "updateComment":
-                        return (data.own && can(["ORDERS_COMMENTS_OWN_WRITER", "ORDERS_OWN_COMMENTS_OWN_WRITER"]));
+                        return (data.own && can(["ORDERS_COMMENTS_OWN_WRITER"])) || (data.own && data.ownDoc && can(["ORDERS_OWN_COMMENTS_OWN_WRITER"]));
                     case "removeComment":
-                        return can(["ORDERS_COMMENTS_DELETER"]) || (data.own && can(["ORDERS_COMMENTS_OWN_DELETER", "ORDERS_OWN_COMMENTS_OWN_DELETER"]));
+                        return can(["ORDERS_COMMENTS_DELETER"]) || (data.own && can(["ORDERS_COMMENTS_OWN_DELETER"])) || (data.own && data.ownDoc && can(["ORDERS_OWN_COMMENTS_OWN_DELETER"]));
                     case "setLabel":
                     case "clearLabel":
                         return can(["ORDERS_LABELER", "ORDERS_LABELER_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_LABELER"]));
@@ -561,9 +562,9 @@ define([], function () {
                     case "generateDocument":
                         return this._usePdf && (can(["ORDERS_DOCUMENT_GENERATOR", "ORDERS_DOCUMENT_GENERATOR_RESTRICTED"]) || (data.own && can(["ORDERS_OWN_DOCUMENT_GENERATOR"])));
                     case "checkinAt":
-                        return this._useCheckinLocation && this.hasCheckoutPermission("checkin");
+                        return this._useCheckinLocation && this.hasCheckoutPermission("checkin", data);
                     case "forceCheckListCheckin":
-                        return this.profile.forceCheckListCheckin && this.hasCheckoutPermission("checkin");
+                        return this.profile.forceCheckListCheckin && this.hasCheckoutPermission("checkin", data);
                     case "ignoreConflicts":
                         return can(["ORDERS_CONFLICT_CREATOR"]);
                     case "getReport":
@@ -617,13 +618,13 @@ define([], function () {
                         return can(["RESERVATIONS_ATTACHMENTS_OWN_WRITER"]) || (data.own && can(["RESERVATIONS_OWN_ATTACHMENTS_OWN_WRITER"]));
                     case "detach":
                     case "removeAttachment":
-                        return can(["RESERVATIONS_ATTACHMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_ATTACHMENTS_OWN_DELETER", "RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER"]));
+                        return can(["RESERVATIONS_ATTACHMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_ATTACHMENTS_OWN_DELETER"])) || (data.own && data.ownDoc && can(["RESERVATIONS_OWN_ATTACHMENTS_OWN_DELETER"]));
                     case "addComment":
                         return can(["RESERVATIONS_COMMENTS_OWN_WRITER"]) || (data.own && can(["RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]));
                     case "updateComment":
-                        return (data.own && can(["RESERVATIONS_COMMENTS_OWN_WRITER", "RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]));
+                        return (data.own && can(["RESERVATIONS_COMMENTS_OWN_WRITER"])) || (data.own && data.ownDoc && can(["RESERVATIONS_OWN_COMMENTS_OWN_WRITER"]));
                     case "removeComment":
-                        return can(["RESERVATIONS_COMMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_COMMENTS_OWN_DELETER", "RESERVATIONS_OWN_COMMENTS_OWN_DELETER"]));
+                        return can(["RESERVATIONS_COMMENTS_DELETER"]) || (data.own && can(["RESERVATIONS_COMMENTS_OWN_DELETER"])) || (data.own && data.ownDoc && can(["RESERVATIONS_OWN_COMMENTS_OWN_DELETER"]));
                     case "export":
                         return this._useExport && can(["RESERVATIONS_EXPORTER", "RESERVATIONS_EXPORTER_RESTRICTED"]);
                     case "switchToOrder":
@@ -667,7 +668,8 @@ define([], function () {
                     case "undoArchive":
                     case "setFields":
                     case "setField":
-                    case "clearField":                                  
+                    case "clearField":  
+                    case "setCover":                                
                         return can(["CUSTOMERS_ADMIN"]);
 
                     case "attach":
@@ -716,7 +718,7 @@ define([], function () {
                     case "deactivate":
                     case "archive":
                     case "undoArchive":
-                        return can(["USERS_OWN_PROFILE_ADMIN", "USERS_PROFILE_ADMIN"]);
+                        return can(["USERS_OWN_PROFILE_ADMIN", "USERS_PROFILE_ADMIN", "USERS_ADMIN"]);
                     case "updatePassword":
                         return can(["USERS_OWN_PASSWORD_ADMIN"]);
                     case "create":
@@ -849,6 +851,33 @@ define([], function () {
                     case "update":
                         return can(["ACCOUNT_SETTINGS_ADMIN"]);
                 }
+            case "spotchecks":
+                if(!this._useSpotcheck) return false;
+
+                switch (action) {
+                    case "readAll":
+                        return can(["SPOTCHECKS_READER"]);
+                    case "read":
+                        return can(["SPOTCHECKS_READER"]) || can(["SPOTCHECKS_READER_OWN"]);
+                    case "delete":
+                        return can(["SPOTCHECKS_DELETER"]) || (data.own && can(["SPOTCHECKS_DELETER_OWN"]));
+                    case "addAttachment":
+                        return can(["SPOTCHECKS_ATTACHMENTS_OWN_WRITER"]) || (data.own && can(["SPOTCHECKS_OWN_ATTACHMENTS_OWN_WRITER"]));
+                    case "removeAttachment":
+                        return can(["SPOTCHECKS_ATTACHMENTS_DELETER"]) || (data.own && can(["SPOTCHECKS_ATTACHMENTS_OWN_DELETER"])) || (data.own && data.ownDoc && can(["SPOTCHECKS_OWN_ATTACHMENTS_OWN_DELETER"]));
+                    case "addComment":                     
+                        return (can(["SPOTCHECKS_COMMENTS_OWN_WRITER"])) || (data.own && can(["SPOTCHECKS_OWN_COMMENTS_OWN_WRITER"]));
+                    case "updateComment":
+                        return  (data.own && data.ownDoc && can(["SPOTCHECKS_OWN_COMMENTS_OWN_WRITER"])) || (data.own && can(["SPOTCHECKS_COMMENTS_OWN_WRITER"]));
+                    case "removeComment":
+                        return can(["SPOTCHECKS_COMMENTS_DELETER"]) || (data.own && can(["SPOTCHECKS_COMMENTS_OWN_DELETER"])) || (data.own && data.ownDoc && can(["SPOTCHECKS_OWN_COMMENTS_OWN_DELETER"]));                    
+                    case "archive":
+                    case "create":
+                        return can(["SPOTCHECKS_WRITER"]) || can(["SPOTCHECKS_WRITER_OWN"]);
+                    case "update":
+                        return can(["SPOTCHECKS_WRITER"]) || (data.own && can(["SPOTCHECKS_WRITER_OWN"]));
+                }
+                break;
         }
     };
 

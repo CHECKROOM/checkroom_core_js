@@ -8,7 +8,8 @@ define([
     "api",
     "transaction",
     "conflict",
-    "common"],  /** @lends Transaction */ function ($, api, Transaction, Conflict, common) {
+    "moment",
+    "common"],  /** @lends Transaction */ function ($, api, Transaction, Conflict, moment, common) {
 
     // Allow overriding the ctor during inheritance
     // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -321,6 +322,29 @@ define([
                 return data;
             });
     };
+
+    Reservation.prototype.visibleConflicts = function(conflicts, showAllConflicts){
+        if(conflicts.length == 0 || !this.from) return conflicts;
+
+        var from = this.from,
+            to = this.to,
+            now = moment();
+
+        if(showAllConflicts || (from != null && to != null && (now.isBetween(from,to) || from.isBefore(now) || to.isBefore(now)))) return conflicts;
+
+        // Don't show order conflicts if reservation is not due now
+        return conflicts.filter(function(conflict){
+            // Show conflict is:
+            //  - Not order conflict
+            // OR
+            //  - Order conflict that is between current date range
+            return (conflict.kind != "order") ||
+                  ((conflict.kind == "order") &&
+                   (from != null) &&
+                   (to != null) &&
+                   ((conflict.fromDate && conflict.toDate && (from.isBetween(conflict.fromDate, conflict.toDate, null, "[]") || to.isBetween(conflict.fromDate, conflict.toDate, null, "[]")))));
+            });
+    }
 
     //
     // Base overrides

@@ -72,7 +72,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
                 reservationLabels = reservationLabels || [];
                 itemIds = itemIds || [];
 
-                var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/locations/call/ical",
+                var url = urlApi + "/ical/" + userId + "/" + userPublicKey + "/public/" + (itemIds && itemIds.length > 0?"items":"locations") + "/call/ical",
                     parts = [];
 
                 if (locationId) {
@@ -196,11 +196,11 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
 
                 var statType = stats[type];
 
-                if(statType === undefined) throw "Stat doesn't exist";
+                if(!statType) return {};
                 if(!name) return statType;
 
                 var statTypeValue = statType[name];
-                if(statTypeValue === undefined) throw "Stat value doesn't exist";
+                if(statTypeValue === undefined) return {};
 
                 return statTypeValue;      
             },

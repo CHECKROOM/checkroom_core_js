@@ -30,7 +30,8 @@ define([
     'common',
     'OrderTransfer',
     'ColorLabel',
-    'Field'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field) {
+    'Field',
+    'Spotcheck'], function(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, Helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field, Spotcheck) {
 
     var core = {};
 
@@ -64,6 +65,7 @@ define([
     core.Helper = Helper;
     core.ColorLabel = ColorLabel;
     core.Field = Field;
+    core.Spotcheck = Spotcheck;
 
     return core;
 });

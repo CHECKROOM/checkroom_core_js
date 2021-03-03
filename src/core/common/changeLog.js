@@ -4,11 +4,13 @@ define([
 	'common/attachment',
 	'common/keyValues',
 	'common/slimdown',
+    'common/utils',
 	'moment'
-], function(codeHelper, imageHelper, attachmentHelper, keyValueHelper, Slimdown, moment){
+], function(codeHelper, imageHelper, attachmentHelper, keyValueHelper, Slimdown, utils, moment){
 	var that = {};
 
 	var sd = new Slimdown();
+    var sanitizer = utils.sanitizeHtml;
 
 	that.getChangeLogEvent =  function(evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler){
 		var unknownText = "Unknown",
@@ -24,13 +26,13 @@ define([
 			kind: evt.kind
 		}
 		if(arg.customerName && evt.by.name != arg.customerName){
-            params.contact = { id: arg.customerId, name: arg.customerName || unknownText };
+            params.contact = { id: arg.customerId, name: sanitizer(arg.customerName || unknownText) };
         };
 
         var location = locations.find(function(loc){ return loc._id == (arg.location || arg.locationId); }) || {};
         var activeLocations = locations.filter(function(loc){ return loc.status == "active"; });
-        var locationName = activeLocations.length > 1?" at " + (location.name || unknownText) :"";
-        var byName = evt.by.name;
+        var locationName = sanitizer(activeLocations.length > 1?" at " + (location.name || unknownText) :"");
+        var byName = sanitizer(evt.by.name);
         var perm = getPermissionHandler();
 
         var getLocationById = function(locId){
@@ -78,25 +80,29 @@ define([
         }
 
         var getCheckoutLink = function(id, text){
-            if(!perm.hasCheckoutPermission("read")) return text;
+            var sanitizedText = sanitizer(text);
 
-        	return "<a href='#check-outs/" + id + "' class='transaction-link' data-kind='order' data-id='" + id + "'>" + text + "</a>";
+            if(!perm.hasCheckoutPermission("read")) return sanitizedText;
+
+        	return "<a href='#check-outs/" + id + "' class='transaction-link' data-kind='order' data-id='" + id + "'>" + sanitizedText + "</a>";
         }
         var getReservationLink = function(id, text){
-            if(!perm.hasReservationPermission("read")) return text;
+            var sanitizedText = sanitizer(text);
 
-        	return "<a href='#reservations/" + id + "' class='transaction-link' data-kind='reservation' data-id='" + id + "'>" + text +  "</a>";
+            if(!perm.hasReservationPermission("read")) return sanitizedText;
+
+        	return "<a href='#reservations/" + id + "' class='transaction-link' data-kind='reservation' data-id='" + id + "'>" + sanitizedText +  "</a>";
         }
         var getLink = function(href, text){
-        	return "<a href='" + href + "'>" + text + "</a>";
+        	return "<a href='" + href + "'>" + sanitizer(text) + "</a>";
         }
         var getContactLink = function(id, text){
-            if(!perm.hasContactReadOtherPermission()) return text;
+            if(!perm.hasContactReadOtherPermission()) return sanitizer(text);
 
         	return getLink("#contacts/" + id, text);
         }   
         var getKitLink = function(id, text){
-            if(!perm.hasKitPermission()) return text;
+            if(!perm.hasKitPermission()) return sanitizer(text);
 
         	return getLink("#kits/" + id, text);
         } 
@@ -115,7 +121,7 @@ define([
 
         switch(evt.action){
         	case "changeCategory":
-        		var category = arg.category? arg.category.split('.').pop().replace(/_/igm, " ").capitalize(): unknownText;
+        		var category = sanitizer(arg.category? arg.category.split('.').pop().replace(/_/igm, " ").capitalize(): unknownText);
         		evt.friendlyText = byName + " updated category to " + category;
         		break;
         	case "addCodes":
@@ -209,9 +215,9 @@ define([
             case "setFlag":
             case "clearFlag":
                 var flag = getFlagById(evt.action == "setFlag"?arg.flag:arg.oldFlag) || {};
-                var flagName = flag.name || unknownText;
+                var flagName = sanitizer(flag.name || unknownText);
                 var flagColor = flag.color || "orange";
-                var message = arg && arg.message?arg.message: "";
+                var message = sanitizer(arg && arg.message?arg.message:"");
                 var hasAttachments = arg && arg.attachments && arg.attachments.length > 0;
                 var attachments = arg && arg.attachments?arg.attachments.map(function(att){ 
                         return {
@@ -241,10 +247,11 @@ define([
                     name: 'CHEQROOM'
                 }
 
+                var reContainer = /<td.*class=.container-padding.*[\n]+([\s\S]*)<\/td>/igm;
                 var id = evt.id,
-                	body = $(".container-padding", arg.request.body).text(),
+                	body = sanitizer(arg.request.dialect === "text" ? arg.request.body : utils.removeHtmlTags(reContainer.exec(arg.request.body)[1])),
                 	to = arg.request.to, 
-                	subject = arg.request.subject;
+                	subject = sanitizer(arg.request.subject);
 
                 evt.friendlyText = "Sent mail to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-subject'>" + subject + "</div><div class='mail-body multiline-text-truncate'>" + body + "</div><div><a href='javascript:void(0)' class='open-email' data-id='" + id + "'>View email</a></div></li></ul>";
                 break;
@@ -255,14 +262,14 @@ define([
                 }
 
                 var id = evt.id,
-                    body = arg.request.sms_body,
+                    body = sanitizer(arg.request.sms_body),
                     to = arg.request.sms_to_number;
 
                 evt.friendlyText = "Sent sms to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-body multiline-text-truncate'>" + body + "</div></li></ul>";
                 break;
             case "block":
             case "undoBlock":
-            	var message = arg?arg.message:null;
+            	var message = sanitizer(arg?arg.message:null);
             	var friendlyAction = evt.action == "block"? "blocked": "unblocked";
 
                 evt.friendlyText = byName + " " + friendlyAction + " contact " + getMessageBlock(message);    	  
@@ -337,7 +344,7 @@ define([
 	                });
 
                     evt.friendlyText = byName + " checked in equipment " + summary + getMessagesBlock(items.map(function(it){
-                        return "<div class='media'><div class='media-left'><img class='item-image' src='" + it.imageUrl + "' /></div><div class='media-body'><a href='#items/"+ it._id + "'>" + it.name + "</a><br /><small class='text-muted text-truncate item-info'>" + it.codes.map(function(code){ return "<i class='fa fa-qrcode'></i> " + code; }) + it.barcodes.map(function(code){ return "<i class='fa fa-barcode'></i> " + code; }) + "</small></div></div>";
+                        return "<div class='media'><div class='media-left'><img class='item-image' src='" + it.imageUrl + "' /></div><div class='media-body'><a href='#items/"+ it._id + "'>" + sanitizer(it.name) + "</a><br /><small class='text-muted text-truncate item-info'>" + it.codes.map(function(code){ return "<i class='fa fa-qrcode'></i> " + code; }) + it.barcodes.map(function(code){ return "<i class='fa fa-barcode'></i> " + code; }) + "</small></div></div>";
                     }));
 	            }
             	break;
@@ -399,7 +406,7 @@ define([
             case "reservation.cancel":
             	var id = evt.obj,
             		contact = params.contact,
-            		message = arg?arg.message:null;
+            		message = sanitizer(arg?arg.message:null);
 
             	if(evt.action == "cancel"){
             		evt.friendlyText = byName + " cancelled reservation" + getMessageBlock(message);
@@ -423,7 +430,7 @@ define([
         	case "close":
         	case "reservation.close":
         		var id = evt.obj,
-        			message = arg?arg.message:null,
+        			message = sanitizer(arg?arg.message:null),
         			contact = params.contact;
 
         		if(evt.action == "close"){
@@ -471,12 +478,12 @@ define([
             	evt.friendlyText = byName + " created kit from duplicate";
             	break;
             case "setName":
-            	var value = arg.name || unknownText;
+            	var value = sanitizer(arg.name || unknownText);
             	evt.friendlyText = byName + " updated " + evt.kind + " name to " + value;
             	break;
             case "addComment":
             case "updateComment":
-            	var comment = arg.comment.replace(/\n/igm,'<br />');
+            	var comment = sanitizer(arg.comment).replace(/\n/igm,'<br />');
                 evt.friendlyText = byName + " wrote comment <div class='card comment-card'><div class='card-block'><span class='gu-truncate'>" + comment + "</span></div></div>";
                 break;
             case "removeComment":
@@ -525,15 +532,15 @@ define([
             case "setField":
             case "clearField":
             case "renameField":
-              	var field = arg.field || unknownText;
+              	var field = sanitizer(arg.field || unknownText);
                 var fieldDef = getFieldById(field) || {};
 
            		switch(evt.action){
            			case "setField":
-		           		var fieldValue = arg.value;
+		           		var fieldValue = sanitizer(arg.value);
 		                var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
 		               
-		                var value = (isDate?moment(arg.value).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(arg.value));
+		                var value = (isDate?moment(fieldValue).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(fieldValue));
 
 		                evt.friendlyText = byName + " set " + evt.kind + " field " + getMessageBlock("<small class='text-muted'>" + field + "</small><br />" + value);
 		                break;
@@ -541,7 +548,7 @@ define([
 		            	evt.friendlyText = byName + " cleared " + field + " field";
 		            	break;
 		            case "renameField":
-		            	evt.friendlyText = byName + " renamed field " + arg.oldName + " to " + arg.newName;
+		            	evt.friendlyText = byName + " renamed field " + sanitizer(arg.oldName) + " to " + sanitizer(arg.newName);
 		            	break;
            		}
                 break;
@@ -554,8 +561,8 @@ define([
                     var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
 
                     return { 
-                        name: fieldKey, 
-                        value: isDate?moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(arg[fieldKey]) 
+                        name: sanitizer(fieldKey), 
+                        value: isDate?moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(sanitizer(arg[fieldKey])) 
                     } 
                 });
 
@@ -598,7 +605,7 @@ define([
 
             		return true;
             	}).map(function(fieldKey){ 
-                    var fieldValue = arg[fieldKey] || "";
+                    var fieldValue = sanitizer(arg[fieldKey] || "");
 
                     var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
                    	var value = "";
@@ -607,16 +614,16 @@ define([
                    	if(isDate){
                    		value = moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:''));
                    	}else if(fieldKey == "category"){
-                   		value = keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize();
+                   		value = sanitizer(keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize());
                    	}else if(fieldKey == "location"){
                    		var loc = getLocationById(fieldValue) || {};
-                   		value = loc.name || unknownText;
+                   		value = sanitizer(loc.name || unknownText);
                    	}else{
-                   		value = sd.render(arg[fieldKey]);
+                   		value = sd.render(fieldValue);
                    	}
 
                     return { 
-                        name: getFieldName(fieldKey), 
+                        name: sanitizer(getFieldName(fieldKey)), 
                         value: value
                     } 
                 });
@@ -628,7 +635,7 @@ define([
             	break;
             case "update":
             	if(arg.hasOwnProperty("name")){
-                    evt.friendlyText = byName + " updated " + evt.kind + " name to " + arg.name;
+                    evt.friendlyText = byName + " updated " + evt.kind + " name to " + sanitizer(arg.name);
                 }else if(arg.hasOwnProperty("kind") && arg.kind == "importer"){
                     evt.friendlyText = byName + " updated " + evt.kind + " from import";
                 }else{
@@ -663,20 +670,20 @@ define([
                             }
 
                             if(!arg.value){
-                                evt.friendlyText =  byName + " cleared " + arg.field + " field";
+                                evt.friendlyText =  byName + " cleared " + sanitizer(arg.field) + " field";
                             }else{
-                                evt.friendlyText = byName + " set " + evt.kind + " field" + getMessageBlock("<small class='text-muted'>" + arg.field + "</small><br />" + arg.value);
+                                evt.friendlyText = byName + " set " + evt.kind + " field" + getMessageBlock("<small class='text-muted'>" + sanitizer(arg.field) + "</small><br />" + sanitizer(arg.value));
                             }
                             break;
                         case "contact":
                             if(arg.hasOwnProperty("email")){
-                                evt.friendlyText = byName + " updated contact email to " + arg.email;
+                                evt.friendlyText = byName + " updated contact email to " + sanitizer(arg.email);
                             }else{
                                 evt.friendlyText = byName + " updated contact";
                             }
                             break;
                         case "kit":
-                            evt.friendlyText = byName + " updated kit name to " + arg.name;
+                            evt.friendlyText = byName + " updated kit name to " + sanitizer(arg.name);
                             break;
                     }
                     
@@ -686,7 +693,7 @@ define([
                 evt.friendlyText = byName + " duplicated item " + arg.times + " times";
                 break;
             case "expire":
-            	var message = arg?arg.message:null;
+            	var message = sanitizer(arg?arg.message:null);
             	evt.friendlyText = byName + " expired item" + getMessageBlock(message);
             	break;
             case "undoExpire":
@@ -712,11 +719,9 @@ define([
             	break;
             case "setCatalog":
             	var fields = Object.keys(arg).map(function(fieldKey){ 
-                    var fieldValue = arg[fieldKey] || "";
-
                     return { 
                         name: fieldKey, 
-                        value: arg[fieldKey] 
+                        value: sanitizer(arg[fieldKey]) 
                     } 
                 });
                 evt.friendlyText = byName + " set catalog" + getMessagesBlock(fields.map(function(f){
@@ -735,40 +740,34 @@ define([
                 };
                 var label = getLabelById(labelDictionary[doc.crtype], labelId) || { name: arg.labelName, color: arg.labelColor };
             		
-            	evt.friendlyText = byName + " set <span class='label-tag' style='background-color:" + label.color + ";'></span> " + label.name;
+            	evt.friendlyText = byName + " set <span class='label-tag' style='background-color:" + label.color + ";'></span> " + sanitizer(label.name);
             	break;
             case "spotchecks.close":
             	var id = evt.obj,
-                    allFound = (arg.numChecked == arg.numTotal && arg.numUnchecked == 0 && arg.numUnexpected == 0),
-                    numCheckedProgress = arg.numChecked > 0?Math.round((arg.numChecked / arg.numTotal)*100):0,
-                    numUncheckedProgress = arg.numUnchecked > 0?Math.round((arg.numUnchecked / arg.numTotal)*100):0,
-                    numUnexpectedProgress = arg.numUnexpected > 0?Math.round((arg.numUnexpected / arg.numTotal)*100):0,
                     numChecked = arg.numChecked,
-                    numUnchecked = arg.numUnchecked,
-                    numTotal = arg.numTotal,
-                    numUnexpected = arg.numUnexpected,
+                    numIssues = arg.numUnchecked + arg.numUnexpected, 
                     checked = arg.items?arg.items.checked_scanner && arg.items.checked_scanner.slice(0,2).map(function(it){
                          return getItemImageUrl(it, "XS");
                     }).concat(arg.numChecked > 2?imageHelper.getTextImage("+" + (arg.numChecked-2), 'S'):[]):[],
-                    unchecked = arg.items?arg.items.unchecked && arg.items.unchecked.slice(0,2).map(function(it){
+
+                    unchecked = arg.items && arg.items.unchecked?arg.items.unchecked:[],
+                    unexpected = arg.items && arg.items.unexpected?arg.items.unexpected:[],
+                    issues = unchecked.concat(unexpected).slice(0,2).map(function(it){
                          return getItemImageUrl(it, "XS");
-                    }).concat(arg.numUnchecked > 2?imageHelper.getTextImage("+" + (arg.numUnchecked-2), 'S'):[]):[],
-                    unexpected = arg.items?arg.items.unexpected && arg.items.unexpected.slice(0,2).map(function(it){
-                         return getItemImageUrl(it, "XS");
-                    }).concat(arg.numUnexpected > 2?imageHelper.getTextImage("+" + (arg.numUnexpected-2), 'S'):[]):[];
+                    }).concat(numIssues > 2?imageHelper.getTextImage("+" + (numIssues-2), 'S'):[]);
 
                 if(evt.kind == "item"){
-                    evt.friendlyText = byName + " did a <a href='javascript:void(0)' class='spotcheck' data-id='" + id + "'>spotcheck</a>";
+                    evt.friendlyText = byName + " scanned item in a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a>";
                 }else{
-                    evt.friendlyText = byName + " did a spotcheck <ul class='list-group field-group spotcheck' data-id='"+ id +"'><li class='list-group-item'><div class='title'>" + (allFound?"<div class='success'><i class='fa fa-check-circle'></i> All " + numTotal + " Items checked</div>":"<div class='warning'><i class='fa fa-exclamation-circle'></i> " + numUnchecked + " of "+ numTotal +" Items unchecked</div>") + "</div><div class='multi-progress'><div class='found-progress' style='width:"+ numCheckedProgress +"%'></div><div class='missing-progress' style='width:"+ numUncheckedProgress +"%'></div><div class='unexpected-progress' style='width:" + numUnexpectedProgress + "%'></div></div> " + (numChecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color success'></span></div><div class='media-body'><div class='item-images'>" + (checked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) + "</div><div>Checked</div><div class='text-muted'>" + numChecked + " items</div></div></div>":"") + (numUnchecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color warning'></span></div><div class='media-body'><div class='item-images'>"+ (unchecked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Unchecked</div><div class='text-muted'>"+ numUnchecked + " items</div></div></div>":"") + (numUnexpected?"<div class='media legend-item'><div class='media-left'><span class='legend-color gray'></span></div><div class='media-body'><div class='item-images'>"+ (unexpected.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Unexpected</div><div class='text-muted'>"+ numUnexpected + " items</div></div></div>":"") + "</li></ul>";
+                    evt.friendlyText = byName + " finished a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a> <ul class='list-group field-group spotcheck' data-id='"+ id +"'><li class='list-group-item'>" + (numChecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color success'></span></div><div class='media-body'><div class='item-images'>" + (checked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) + "</div><div>Checked</div><div class='text-muted'>" + numChecked + " " + "item".pluralize(numChecked) + "</div></div></div>":"") + (numIssues?"<div class='media legend-item'><div class='media-left'><span class='legend-color warning'></span></div><div class='media-body'><div class='item-images'>"+ (issues.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Issues</div><div class='text-muted'>"+ numIssues + " " + "item".pluralize(numIssues) + "</div></div></div>":"") + "</li></ul>";
                 }
             	break;
             case "changeLocation":
-            	var loc = arg.name || unknownText;
+            	var loc = sanitizer(arg.name || unknownText);
             	evt.friendlyText = byName + " updated location to " + loc;
             	break;
             case "updateGeo":
-            	var address = (arg.address || unknownText).split(",").map(function(v){ return $.trim(v); });
+            	var address = sanitizer(arg.address || unknownText).split(",").map(function(v){ return $.trim(v); });
             	evt.friendlyText = byName + " updated geo position to " + getMessageBlock("<address>" + address.map(function(line){ return "<span>" + line + "</span>"; }).join("") + "</address>");
             	break;
             case "changeKind":

@@ -73,7 +73,7 @@ define(function(){
 	  };
 
 	  function para (text, line) {
-	  	var trimmed = ("" + text).trimLeft().trimRight();
+	  	var trimmed = ("" + text).trim();
 	    if (/^<\/?(ul|ol|li|h|p|bl)/i.test(trimmed)) {
 	      return trimmed;
 	    }

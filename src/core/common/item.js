@@ -4,9 +4,12 @@
 define([
 	'moment',
 	'common/order',
-	'common/reservation'
-], function (moment, orderHelper, reservationHelper) {
-	var that = {};
+	'common/reservation',
+	'common/utils'
+], function (moment, orderHelper, reservationHelper, utils) {
+	var that = {},
+		sanitizer = utils.sanitizeHtml;
+
 	
 	that.itemCanTakeCustody = function(item) {
 		var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
@@ -272,10 +275,12 @@ define([
 	           		if(item.status == "await_checkout"){
 	                        message = "Item is currently <strong>awaiting checkout</strong>";
 	                }else{
+	                	var customerName = sanitizer(typeof checkout.customer !== "string"?checkout.customer.name:"");
+
 	                    if(checkout && orderHelper.isOrderOverdue(checkout)){
-	                        message = "Item was <strong>due back</strong> " + checkout.due.fromNow() + (typeof checkout.customer !== "string"?" from " + checkout.customer.name:"");
+	                        message = "Item was <strong>due back</strong> " + checkout.due.fromNow() + (customerName?" from " + customerName:"");
 	                    }else{
-	                        message = "Item is <strong>checked out</strong>" + (typeof checkout.customer !== "string"?" to " + checkout.customer.name:"") + " until " + formatDate(checkout.due);
+	                        message = "Item is <strong>checked out</strong>" + (customerName?" to " + customerName:"") + " until " + formatDate(checkout.due);
 	                    }
 	                }
 
@@ -342,7 +347,7 @@ define([
 	        }
 
             dfd.then(function(contact, since){
-           		var message = "Item is <strong>in " + (isOwn(item.custody)?"your":"") + " custody</strong>" + (contact && !isOwn(item.custody)?(" of " + contact.name + " <span class='text-muted'>since " + formatDate(since) + "</span>"):"");
+           		var message = "Item is <strong>in " + (isOwn(item.custody)?"your":"") + " custody</strong>" + (contact && !isOwn(item.custody)?(" of " + sanitizer(contact.name) + " <span class='text-muted'>since " + formatDate(since) + "</span>"):"");
 
                 messages.push({
                     kind: "custody",
@@ -422,10 +427,12 @@ define([
     	
         // Flag message?
         if(flag){
-        	var message = "Item was <strong>flagged</strong> as " + flag.name + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
+
+        	var flagName = sanitizer(flag.name),
+        		message = "Item was <strong>flagged</strong> as " + flagName + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
         	
         	if(hasUnavailableFlag){
-        		message = "Item is <strong>unavailable</strong> because of flag " + flag.name + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
+        		message = "Item is <strong>unavailable</strong> because of flag " + flagName + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
         	}
 
             messages.push({

@@ -28,7 +28,8 @@ define([
     'common/transaction',
     'common/queue',
     'common/pubsub',
-    'common/changeLog'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub, changeLog) {
+    'common/changeLog',
+    'common/spotcheck'], function($, code, order, reservation, item, conflicts, keyvalues, image, attachment, inflection, validation, utils, slimdown, kit, contact, user, template, clientStorage, _document, transaction, ajaxQueue, pubsub, changeLog, spotcheck) {
      /**
      * Return common object with different helper methods
      */
@@ -49,5 +50,6 @@ define([
         template,
         _document,
         transaction,
-        changeLog);
+        changeLog,
+        spotcheck);
 });

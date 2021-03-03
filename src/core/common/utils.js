@@ -257,5 +257,35 @@ define(['jquery'], function ($) {
         }
     }
 
+    /**
+     * kFormatter
+     * @param  {number} num
+     * @return string   
+     */
+    utils.kFormatter = function(num){
+        return Math.abs(num) > 999 ? Math.sign(num)*((Math.abs(num)/1000).toFixed(0)) + 'k' : Math.sign(num)*Math.abs(num);
+    };
+
+    /**
+     * sanitizeHtml
+     * https://remarkablemark.org/blog/2019/11/29/javascript-sanitize-html/
+     * 
+     * @param  {string} html
+     * @return string      
+     */
+    utils.sanitizeHtml = function(html){
+        return $('<div />').text(html).html();
+    };
+
+    /**
+     * removeHtmlTags
+     * @param  {string} html 
+     * @return {string}      
+     */
+    utils.removeHtmlTags = function(html){
+        var regX = /(<([^>]+)>)/ig;                
+        return html.replace(regX, "");
+    }
+
     return utils;
 });

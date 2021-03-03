@@ -186,7 +186,7 @@ define([
         var that = this;
 
         if($.trim(this.inviteToken) != ""){
-            return this.ds.call('checkInvite', { code: this.inviteToken }).then(function(resp){
+            return this.ds.call('checkInvite', { code: this.inviteToken, email: this.email }).then(function(resp){
                 that.parseFields(resp.customerFields);
 
                 return resp.result;
@@ -306,6 +306,7 @@ define([
             .then(function(){
                 var params = {
                     name: that.getFullName(),
+                    email: $.trim(that.email),
                     code: that.inviteToken,
                     login: $.trim(that.login),
                     password: $.trim(that.password),

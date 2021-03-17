@@ -58,7 +58,7 @@ define(["jquery", "settings", "common"], /** @lends Helper */ function ($, defau
              * @returns {string}
              */
             getImageUrl: function(ds, pk, size, bustCache) {
-                var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+                var url = ds.getBaseUrl(true) + pk + '?mimeType=image/jpeg';
                 if (size && size != 'orig') {
                     url += '&size=' + size;
                 }

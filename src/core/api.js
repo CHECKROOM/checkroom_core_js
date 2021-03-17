@@ -924,15 +924,15 @@ define([
      * @name ApiDataSource#getBaseUrl
      * @returns {string}
      */
-    api.ApiDataSource.prototype.getBaseUrl = function() {
+    api.ApiDataSource.prototype.getBaseUrl = function(forceOldToken) {
         var tokenType = ((this.user.tokenType != null) && (this.user.tokenType.length>0)) ? this.user.tokenType : 'null';            
-   
+        
         //Don't use cached version of this because when user session gets expired
         //a new token is generated
         return this.urlApi + '/' +
             this.user.userId + '/' +
-            this.user.userToken + '/' +
-            tokenType + '/' +
+            (tokenType === 'jwt' && !forceOldToken ? 'null' : this.user.userToken) + '/' +
+            (forceOldToken ? 'null' : tokenType) + '/' +
             this.collection + '/';
     };
 

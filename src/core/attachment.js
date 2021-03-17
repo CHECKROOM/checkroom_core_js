@@ -61,7 +61,7 @@ define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmen
      * @returns {string}
      */
     Attachment.prototype.getDownloadUrl = function() {
-        return this.ds.getBaseUrl() + this.value + '?download=True';
+        return this.ds.getBaseUrl(true) + this.value + '?download=True';
     };
 
     /**

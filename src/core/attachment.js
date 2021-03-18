@@ -11,7 +11,8 @@ define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmen
         fileName: '',
         fileSize: 0,
         isCover: false,
-        canBeCover: true
+        canBeCover: true,
+        value_url: null
     };
 
     /**
@@ -30,6 +31,7 @@ define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmen
         this.fileName = spec.fileName || DEFAULTS.fileName;
         this.fileSize = spec.fileSize || DEFAULTS.fileSize;
         this.value = spec.value || DEFAULTS.value;
+        this.value_url = spec.value_url || DEFAULTS.value_url;
         this.created = spec.created || DEFAULTS.created;
         this.by = spec.by || DEFAULTS.by;
         this.isCover = (spec.isCover!=null) ? spec.isCover : DEFAULTS.isCover;
@@ -160,6 +162,7 @@ define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmen
         this.fileName = data.fileName || DEFAULTS.fileName;
         this.fileSize = data.fileSize || DEFAULTS.fileSize;
         this.value = data.value || DEFAULTS.value;
+        this.value_url = data.value_url || DEFAULTS.value_url;
         this.created = data.created || DEFAULTS.created;
         this.by = data.by || DEFAULTS.by;
         return $.Deferred().resolve(data);

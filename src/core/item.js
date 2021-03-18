@@ -29,7 +29,6 @@ define([
             kit: null,
             custody: null,
             cover: "",
-            cover_url: null,
             catalog: null,
             canReserve: 'available',
             canOrder: 'available',
@@ -94,7 +93,6 @@ define([
         this.kit = spec.kit || DEFAULTS.kit;
         this.custody = spec.custody || DEFAULTS.custody;
         this.cover = spec.cover || DEFAULTS.cover;
-        this.cover_url = spec.cover_url  || DEFAULTS.cover_url;
         this.catalog = spec.catalog || DEFAULTS.catalog;
 
         this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
@@ -230,7 +228,6 @@ define([
                 that.address = data.address || DEFAULTS.address;
                 that.geo = data.geo || DEFAULTS.geo.slice();
                 that.cover = data.cover || DEFAULTS.cover;
-                that.cover_url = data.cover_url || DEFAULTS.cover_url;
                 that.catalog = data.catalog || DEFAULTS.catalog;
                 that.flagged = data.flagged || DEFAULTS.flagged;
                 that.expired = data.expired || DEFAULTS.expired;

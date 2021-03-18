@@ -19,6 +19,7 @@ define([
         id: "",
         modified: null,
         cover: null,
+        cover_url: null,
         flag: null,
         label: null,
         fields: {},
@@ -58,6 +59,7 @@ define([
         this.comments = spec.comments || DEFAULTS.comments.slice();             // comments array
         this.attachments = spec.attachments || DEFAULTS.attachments.slice();    // attachments array
         this.cover = spec.cover || DEFAULTS.cover;                              // cover attachment id, default null
+        this.cover_url = spec.cover_url  || DEFAULTS.cover_url;                 // dictionary of full urls of cover attachment
         this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();             // barcodes array
         this.label = spec.label || DEFAULTS.label;                              // color label
     };
@@ -578,6 +580,8 @@ define([
                 that.modified = data.modified || DEFAULTS.modified;
                 that.barcodes = data.barcodes || DEFAULTS.barcodes;
                 that.label = data.label || DEFAULTS.label;
+                that.cover_url = data.cover_url || DEFAULTS.cover_url;
+                that.cover = data.cover || DEFAULTS.cover;
 
                 return that._fromCommentsJson(data, options)
                     .then(function() {

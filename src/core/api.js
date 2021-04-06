@@ -119,6 +119,7 @@ define([
                 }
 
                 if(x.status == 422){
+                    msg = responseJson.message;
                     opt = {
                         detail: responseJson.message,
                         status: responseJson.status

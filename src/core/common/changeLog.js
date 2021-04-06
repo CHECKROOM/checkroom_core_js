@@ -12,7 +12,7 @@ define([
 	var sd = new Slimdown();
     var sanitizer = utils.sanitizeHtml;
 
-	that.getChangeLogEvent =  function(evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler){
+	that.getChangeLogEvent =  function(evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler, itemImageHelper, attachmentImageHelper){
 		var unknownText = "Unknown",
 			hoursFormat = (profile.timeFormat24) ? "H:mm" : "h:mma";
 
@@ -67,15 +67,15 @@ define([
             })
         }
 
-        var getAttachmentImageUrl = function(attachment, size){
+        var getAttachmentImageUrl = attachmentImageHelper || function(attachment, size){
         	// is url
             if(typeof attachment === "string" && attachment.indexOf('http') == 0) return attachment;
 
-            var attId = typeof attachment === "string"?attachment:attachment._id || attachment.id;
+            var attId = typeof attachment === "string"?attachment:attachment._id || attachment.id || attachment.attachmentId;
 
             return imageHelper.getImageCDNUrl(settings, group.id, size?attachmentHelper.makeFileNameJpg(attId):attId, size);
         };
-        var getItemImageUrl = function(item, size){
+        var getItemImageUrl = itemImageHelper || function(item, size){
             return imageHelper.getImageCDNUrl(settings, group.id, typeof(item) == "string"?item:(item.cover || item._id || item.id), size);
         }
 
@@ -229,12 +229,12 @@ define([
                 evt.by = {
                     kind: 'flag',
                     name:  evt.by.name,
-                    color: evt.action == "setFlag"?flagColor:'#999'
+                    color: evt.action == "setFlag"?flagColor:'gray'
                 };
 
                 switch(evt.action){
                 	case "setFlag":
-                		evt.friendlyText = byName + " set flag <span style='color:" + flagColor + "'><i class='fa fa-flag'></i> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
+                		evt.friendlyText = byName + " set flag <span class='text-" + flagColor.toLowerCase() + "'><i class='fa fa-flag'></i> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
                 		break;
                 	case "clearFlag":
                 		evt.friendlyText = byName + " cleared flag <span style='text-decoration:line-through;'><i class='fa fa-flag'></i> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
@@ -281,7 +281,7 @@ define([
                 var attachment = arg && arg.attachments.length > 0 && arg.attachments[0];
                 var attachmentId = typeof(attachment) === "string"?attachment:attachment.attachmentId;
                 var isPdf = attachmentId.indexOf('.pdf') != -1;
-                var attachmentUrl = arg && arg.attachments.length > 0?getAttachmentImageUrl(attachmentId, isPdf?'S':'XS'):null;
+                var attachmentUrl = arg && arg.attachments.length > 0?getAttachmentImageUrl(attachment, isPdf?'S':'XS'):null;
                 var downloadUrl = arg && arg.attachments.length > 0?(getDataSource("attachments").getBaseUrl() + attachmentId + "?download=true"):"javascript:void(0);";
 
                 evt.friendlyText = byName + " added attachment " + (downloadUrl?"<a class='open-attachment' data-id='" + attachmentId + "' href='" + downloadUrl + "' target='_blank'>":"") + (attachmentUrl?"<img " + (isPdf?"class='pdf'":"") + " src='" + attachmentUrl + "' />":"") + (downloadUrl?"</a>":"");
@@ -740,26 +740,59 @@ define([
                 };
                 var label = getLabelById(labelDictionary[doc.crtype], labelId) || { name: arg.labelName, color: arg.labelColor };
             		
-            	evt.friendlyText = byName + " set <span class='label-tag' style='background-color:" + label.color + ";'></span> " + sanitizer(label.name);
+            	evt.friendlyText = byName + " set <span class='label-tag label-" + label.color.toLowerCase() + "'></span> " + sanitizer(label.name);
             	break;
             case "spotchecks.close":
             	var id = evt.obj,
                     numChecked = arg.numChecked,
                     numIssues = arg.numUnchecked + arg.numUnexpected, 
                     checked = arg.items?arg.items.checked_scanner && arg.items.checked_scanner.slice(0,2).map(function(it){
-                         return getItemImageUrl(it, "XS");
+                         // Use placeholder image
+                         return imageHelper.getTextImage("", 'S');
                     }).concat(arg.numChecked > 2?imageHelper.getTextImage("+" + (arg.numChecked-2), 'S'):[]):[],
 
                     unchecked = arg.items && arg.items.unchecked?arg.items.unchecked:[],
                     unexpected = arg.items && arg.items.unexpected?arg.items.unexpected:[],
                     issues = unchecked.concat(unexpected).slice(0,2).map(function(it){
-                         return getItemImageUrl(it, "XS");
+                        // Use placeholder image
+                        return imageHelper.getTextImage("", 'S');
                     }).concat(numIssues > 2?imageHelper.getTextImage("+" + (numIssues-2), 'S'):[]);
 
                 if(evt.kind == "item"){
                     evt.friendlyText = byName + " scanned item in a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a>";
                 }else{
-                    evt.friendlyText = byName + " finished a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a> <ul class='list-group field-group spotcheck' data-id='"+ id +"'><li class='list-group-item'>" + (numChecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color success'></span></div><div class='media-body'><div class='item-images'>" + (checked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) + "</div><div>Checked</div><div class='text-muted'>" + numChecked + " " + "item".pluralize(numChecked) + "</div></div></div>":"") + (numIssues?"<div class='media legend-item'><div class='media-left'><span class='legend-color warning'></span></div><div class='media-body'><div class='item-images'>"+ (issues.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Issues</div><div class='text-muted'>"+ numIssues + " " + "item".pluralize(numIssues) + "</div></div></div>":"") + "</li></ul>";
+                    // Replace placeholder image with actual thumbs
+                    var thumbHelper = function(thumbs){
+                        var tmp = [];
+
+                        thumbs.forEach(function(thumb){
+                            var tmpObj = {
+                                _id: thumb.item_id,
+                            };
+                            if(thumb.cover_id) tmpObj.cover = thumb.cover_id;
+                            if(thumb.cover_id_url) tmpObj.cover_url = thumb.cover_id_url;
+
+                            for(var i=0;i<thumb.count;i++){
+                                tmp.push(tmpObj)
+                            }
+                        })
+
+                        return tmp.slice(0,2).map(function(thumb){
+                            return "<img class='item-image' src='" + getItemImageUrl(thumb, "S") + "' />";
+                        }).concat(tmp.length > 2 ? "<img class='item-image' src='" + imageHelper.getTextImage("+" + (tmp.length-2), 'S') + "' />":"").join("");
+                    }
+                    var dfdThumbs = getDataSource("spotchecks").call(id, "getThumbnails");
+                    dfdThumbs.then(function(resp){
+                        if(resp.checked){
+                            $("#checkedImg_" + id).html(thumbHelper(resp.checked));
+                        }
+                        var issues = resp.unchecked.concat(resp.unexpected);
+                        if(issues.length > 0){
+                            $("#issuesImg_" + id).html(thumbHelper(issues));
+                        }
+                    });
+
+                    evt.friendlyText = byName + " finished a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a> <ul class='list-group field-group spotcheck' data-id='"+ id +"'><li class='list-group-item'>" + (numChecked?"<div class='media legend-item'><div class='media-left'><span class='legend-color success'></span></div><div class='media-body'><div class='item-images' id='checkedImg_" + id + "'>" + (checked.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) + "</div><div>Checked</div><div class='text-muted'>" + numChecked + " " + "item".pluralize(numChecked) + "</div></div></div>":"") + (numIssues?"<div class='media legend-item'><div class='media-left'><span class='legend-color warning'></span></div><div class='media-body'><div class='item-images' id='issuesImg_" + id + "'>"+ (issues.map(function(src){ return "<img class='item-image' src='" + src + "' />"; }).join("")) +"</div><div>Issues</div><div class='text-muted'>"+ numIssues + " " + "item".pluralize(numIssues) + "</div></div></div>":"") + "</li></ul>";
                 }
             	break;
             case "changeLocation":

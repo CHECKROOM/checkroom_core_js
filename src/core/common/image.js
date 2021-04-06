@@ -181,6 +181,8 @@ define(['jquery'], function ($) {
          * @return {string}           
          */
         getImageUrl: function(ds, pk, size, bustCache) {
+            if(environment !== "production") console.warn("[Deprecation] Getting CDN url through getImageUrl is deprecated", pk) 
+
             var url = ds.getBaseUrl(true) + pk + '?mimeType=image/jpeg';
             
             if (size && size != "orig") {
@@ -205,6 +207,8 @@ define(['jquery'], function ($) {
          * @return {string}              
          */
         getImageCDNUrl: function(settings, groupId, attachmentId, size) {
+            if(environment !== "production") console.warn("[Deprecation] Getting CDN url through getImageCDNUrl is deprecated", attachmentId) 
+
             // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
             var url = "https://assets.cheqroomcdn.com/" + settings.amazonBucket + "/groups/" + groupId + "/" + attachmentId;
             if( (size) &&

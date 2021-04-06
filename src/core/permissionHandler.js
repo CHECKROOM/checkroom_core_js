@@ -51,7 +51,7 @@ define([], function () {
         this._useRepeatReservations = (limits.allowReservationsRepeat); 
         this._useICal =               (limits.allowICal);
         this._usePublicInventory =    (limits.allowPublicInventory);
-        this._useBookingRestrictions = (limits.allowBusinessHours);
+        this._useBookingRestrictions = (limits.allowBookingRestrictions);
     };
 
     // 
@@ -103,7 +103,7 @@ define([], function () {
         return this.limits.allowImport;
     };
     PermissionHandler.prototype.canUseBookingRestrictions = function(){
-        return this.limits.allowBusinessHours;
+        return this.limits.allowBookingRestrictions;
     }
     PermissionHandler.prototype.canUseExport = function(){
         return this.limits.allowExport;

@@ -161,6 +161,7 @@ api = function ($, moment) {
           msg = responseJson.message;
         }
         if (x.status == 422) {
+          msg = responseJson.message;
           opt = {
             detail: responseJson.message,
             status: responseJson.status
@@ -888,11 +889,11 @@ api = function ($, moment) {
    * @name ApiDataSource#getBaseUrl
    * @returns {string}
    */
-  api.ApiDataSource.prototype.getBaseUrl = function () {
+  api.ApiDataSource.prototype.getBaseUrl = function (forceOldToken) {
     var tokenType = this.user.tokenType != null && this.user.tokenType.length > 0 ? this.user.tokenType : 'null';
     //Don't use cached version of this because when user session gets expired
     //a new token is generated
-    return this.urlApi + '/' + this.user.userId + '/' + this.user.userToken + '/' + tokenType + '/' + this.collection + '/';
+    return this.urlApi + '/' + this.user.userId + '/' + (tokenType === 'jwt' && !forceOldToken ? 'null' : this.user.userToken) + '/' + (forceOldToken ? 'null' : tokenType) + '/' + this.collection + '/';
   };
   /**
    * Prepare some parameters so we can use them during a request

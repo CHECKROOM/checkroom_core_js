@@ -161,6 +161,7 @@ api = function ($, moment) {
           msg = responseJson.message;
         }
         if (x.status == 422) {
+          msg = responseJson.message;
           opt = {
             detail: responseJson.message,
             status: responseJson.status
@@ -888,11 +889,11 @@ api = function ($, moment) {
    * @name ApiDataSource#getBaseUrl
    * @returns {string}
    */
-  api.ApiDataSource.prototype.getBaseUrl = function () {
+  api.ApiDataSource.prototype.getBaseUrl = function (forceOldToken) {
     var tokenType = this.user.tokenType != null && this.user.tokenType.length > 0 ? this.user.tokenType : 'null';
     //Don't use cached version of this because when user session gets expired
     //a new token is generated
-    return this.urlApi + '/' + this.user.userId + '/' + this.user.userToken + '/' + tokenType + '/' + this.collection + '/';
+    return this.urlApi + '/' + this.user.userId + '/' + (tokenType === 'jwt' && !forceOldToken ? 'null' : this.user.userToken) + '/' + (forceOldToken ? 'null' : tokenType) + '/' + this.collection + '/';
   };
   /**
    * Prepare some parameters so we can use them during a request
@@ -2488,7 +2489,9 @@ common_image = function ($) {
      * @return {string}           
      */
     getImageUrl: function (ds, pk, size, bustCache) {
-      var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+      if (environment !== 'production')
+        console.warn('[Deprecation] Getting CDN url through getImageUrl is deprecated', pk);
+      var url = ds.getBaseUrl(true) + pk + '?mimeType=image/jpeg';
       if (size && size != 'orig') {
         url += '&size=' + size;
       }
@@ -2511,6 +2514,8 @@ common_image = function ($) {
      * @return {string}              
      */
     getImageCDNUrl: function (settings, groupId, attachmentId, size) {
+      if (environment !== 'production')
+        console.warn('[Deprecation] Getting CDN url through getImageCDNUrl is deprecated', attachmentId);
       // https://cheqroom-cdn.s3.amazonaws.com/app-staging/groups/nose/b00f1ae1-941c-11e3-9fc5-1040f389c0d4-M.jpg
       var url = 'https://assets.cheqroomcdn.com/' + settings.amazonBucket + '/groups/' + groupId + '/' + attachmentId;
       if (size && size.length > 0) {
@@ -5198,7 +5203,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
   var that = {};
   var sd = new Slimdown();
   var sanitizer = utils.sanitizeHtml;
-  that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler) {
+  that.getChangeLogEvent = function (evt, doc, user, locations, group, profile, settings, getDataSource, getPermissionHandler, itemImageHelper, attachmentImageHelper) {
     var unknownText = 'Unknown', hoursFormat = profile.timeFormat24 ? 'H:mm' : 'h:mma';
     evt.friendlyText = evt.action;
     evt.by = evt.by || {};
@@ -5250,14 +5255,14 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         return f.name == fieldName;
       });
     };
-    var getAttachmentImageUrl = function (attachment, size) {
+    var getAttachmentImageUrl = attachmentImageHelper || function (attachment, size) {
       // is url
       if (typeof attachment === 'string' && attachment.indexOf('http') == 0)
         return attachment;
-      var attId = typeof attachment === 'string' ? attachment : attachment._id || attachment.id;
+      var attId = typeof attachment === 'string' ? attachment : attachment._id || attachment.id || attachment.attachmentId;
       return imageHelper.getImageCDNUrl(settings, group.id, size ? attachmentHelper.makeFileNameJpg(attId) : attId, size);
     };
-    var getItemImageUrl = function (item, size) {
+    var getItemImageUrl = itemImageHelper || function (item, size) {
       return imageHelper.getImageCDNUrl(settings, group.id, typeof item == 'string' ? item : item.cover || item._id || item.id, size);
     };
     var getCheckoutLink = function (id, text) {
@@ -5396,11 +5401,11 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       evt.by = {
         kind: 'flag',
         name: evt.by.name,
-        color: evt.action == 'setFlag' ? flagColor : '#999'
+        color: evt.action == 'setFlag' ? flagColor : 'gray'
       };
       switch (evt.action) {
       case 'setFlag':
-        evt.friendlyText = byName + ' set flag <span style=\'color:' + flagColor + '\'><i class=\'fa fa-flag\'></i> ' + flagName + '</span>' + (message ? '<ul class=\'list-group field-group\'><li class=\'list-group-item\'><small class=\'text-muted\'>Message</small><br />' + message + '</li>' + (hasAttachments ? '<li class=\'list-group-item\'><small class=\'text-muted\'>Attachments</small><div>' + attachments.map(function (att) {
+        evt.friendlyText = byName + ' set flag <span class=\'text-' + flagColor.toLowerCase() + '\'><i class=\'fa fa-flag\'></i> ' + flagName + '</span>' + (message ? '<ul class=\'list-group field-group\'><li class=\'list-group-item\'><small class=\'text-muted\'>Message</small><br />' + message + '</li>' + (hasAttachments ? '<li class=\'list-group-item\'><small class=\'text-muted\'>Attachments</small><div>' + attachments.map(function (att) {
           return '<img class=\'flag-attachment\' data-id=\'' + att.id + '\' src=\'' + att.url + '\' style=\'display:inline-block;margin-right:5px;\' />';
         }).join('') + '</div></li>' : '') + '</ul>' : '');
         break;
@@ -5441,7 +5446,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       var attachment = arg && arg.attachments.length > 0 && arg.attachments[0];
       var attachmentId = typeof attachment === 'string' ? attachment : attachment.attachmentId;
       var isPdf = attachmentId.indexOf('.pdf') != -1;
-      var attachmentUrl = arg && arg.attachments.length > 0 ? getAttachmentImageUrl(attachmentId, isPdf ? 'S' : 'XS') : null;
+      var attachmentUrl = arg && arg.attachments.length > 0 ? getAttachmentImageUrl(attachment, isPdf ? 'S' : 'XS') : null;
       var downloadUrl = arg && arg.attachments.length > 0 ? getDataSource('attachments').getBaseUrl() + attachmentId + '?download=true' : 'javascript:void(0);';
       evt.friendlyText = byName + ' added attachment ' + (downloadUrl ? '<a class=\'open-attachment\' data-id=\'' + attachmentId + '\' href=\'' + downloadUrl + '\' target=\'_blank\'>' : '') + (attachmentUrl ? '<img ' + (isPdf ? 'class=\'pdf\'' : '') + ' src=\'' + attachmentUrl + '\' />' : '') + (downloadUrl ? '</a>' : '');
       break;
@@ -5859,20 +5864,49 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
         name: arg.labelName,
         color: arg.labelColor
       };
-      evt.friendlyText = byName + ' set <span class=\'label-tag\' style=\'background-color:' + label.color + ';\'></span> ' + sanitizer(label.name);
+      evt.friendlyText = byName + ' set <span class=\'label-tag label-' + label.color.toLowerCase() + '\'></span> ' + sanitizer(label.name);
       break;
     case 'spotchecks.close':
       var id = evt.obj, numChecked = arg.numChecked, numIssues = arg.numUnchecked + arg.numUnexpected, checked = arg.items ? arg.items.checked_scanner && arg.items.checked_scanner.slice(0, 2).map(function (it) {
-          return getItemImageUrl(it, 'XS');
+          // Use placeholder image
+          return imageHelper.getTextImage('', 'S');
         }).concat(arg.numChecked > 2 ? imageHelper.getTextImage('+' + (arg.numChecked - 2), 'S') : []) : [], unchecked = arg.items && arg.items.unchecked ? arg.items.unchecked : [], unexpected = arg.items && arg.items.unexpected ? arg.items.unexpected : [], issues = unchecked.concat(unexpected).slice(0, 2).map(function (it) {
-          return getItemImageUrl(it, 'XS');
+          // Use placeholder image
+          return imageHelper.getTextImage('', 'S');
         }).concat(numIssues > 2 ? imageHelper.getTextImage('+' + (numIssues - 2), 'S') : []);
       if (evt.kind == 'item') {
         evt.friendlyText = byName + ' scanned item in a <a href=\'#spotchecks/' + id + '\' class=\'spotcheck\'>spotcheck</a>';
       } else {
-        evt.friendlyText = byName + ' finished a <a href=\'#spotchecks/' + id + '\' class=\'spotcheck\'>spotcheck</a> <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'>' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + checked.map(function (src) {
+        // Replace placeholder image with actual thumbs
+        var thumbHelper = function (thumbs) {
+          var tmp = [];
+          thumbs.forEach(function (thumb) {
+            var tmpObj = { _id: thumb.item_id };
+            if (thumb.cover_id)
+              tmpObj.cover = thumb.cover_id;
+            if (thumb.cover_id_url)
+              tmpObj.cover_url = thumb.cover_id_url;
+            for (var i = 0; i < thumb.count; i++) {
+              tmp.push(tmpObj);
+            }
+          });
+          return tmp.slice(0, 2).map(function (thumb) {
+            return '<img class=\'item-image\' src=\'' + getItemImageUrl(thumb, 'S') + '\' />';
+          }).concat(tmp.length > 2 ? '<img class=\'item-image\' src=\'' + imageHelper.getTextImage('+' + (tmp.length - 2), 'S') + '\' />' : '').join('');
+        };
+        var dfdThumbs = getDataSource('spotchecks').call(id, 'getThumbnails');
+        dfdThumbs.then(function (resp) {
+          if (resp.checked) {
+            $('#checkedImg_' + id).html(thumbHelper(resp.checked));
+          }
+          var issues = resp.unchecked.concat(resp.unexpected);
+          if (issues.length > 0) {
+            $('#issuesImg_' + id).html(thumbHelper(issues));
+          }
+        });
+        evt.friendlyText = byName + ' finished a <a href=\'#spotchecks/' + id + '\' class=\'spotcheck\'>spotcheck</a> <ul class=\'list-group field-group spotcheck\' data-id=\'' + id + '\'><li class=\'list-group-item\'>' + (numChecked ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color success\'></span></div><div class=\'media-body\'><div class=\'item-images\' id=\'checkedImg_' + id + '\'>' + checked.map(function (src) {
           return '<img class=\'item-image\' src=\'' + src + '\' />';
-        }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' ' + 'item'.pluralize(numChecked) + '</div></div></div>' : '') + (numIssues ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\'>' + issues.map(function (src) {
+        }).join('') + '</div><div>Checked</div><div class=\'text-muted\'>' + numChecked + ' ' + 'item'.pluralize(numChecked) + '</div></div></div>' : '') + (numIssues ? '<div class=\'media legend-item\'><div class=\'media-left\'><span class=\'legend-color warning\'></span></div><div class=\'media-body\'><div class=\'item-images\' id=\'issuesImg_' + id + '\'>' + issues.map(function (src) {
           return '<img class=\'item-image\' src=\'' + src + '\' />';
         }).join('') + '</div><div>Issues</div><div class=\'text-muted\'>' + numIssues + ' ' + 'item'.pluralize(numIssues) + '</div></div></div>' : '') + '</li></ul>';
       }
@@ -6602,7 +6636,8 @@ Attachment = function ($, attachmentHelper) {
     fileName: '',
     fileSize: 0,
     isCover: false,
-    canBeCover: true
+    canBeCover: true,
+    value_url: null
   };
   /**
    * @name  Attachment
@@ -6620,6 +6655,7 @@ Attachment = function ($, attachmentHelper) {
     this.fileName = spec.fileName || DEFAULTS.fileName;
     this.fileSize = spec.fileSize || DEFAULTS.fileSize;
     this.value = spec.value || DEFAULTS.value;
+    this.value_url = spec.value_url || DEFAULTS.value_url;
     this.created = spec.created || DEFAULTS.created;
     this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
@@ -6649,7 +6685,7 @@ Attachment = function ($, attachmentHelper) {
    * @returns {string}
    */
   Attachment.prototype.getDownloadUrl = function () {
-    return this.ds.getBaseUrl() + this.value + '?download=True';
+    return this.ds.getBaseUrl(true) + this.value + '?download=True';
   };
   /**
    * Gets the extension part of a filename
@@ -6732,6 +6768,7 @@ Attachment = function ($, attachmentHelper) {
     this.fileName = data.fileName || DEFAULTS.fileName;
     this.fileSize = data.fileSize || DEFAULTS.fileSize;
     this.value = data.value || DEFAULTS.value;
+    this.value_url = data.value_url || DEFAULTS.value_url;
     this.created = data.created || DEFAULTS.created;
     this.by = data.by || DEFAULTS.by;
     return $.Deferred().resolve(data);
@@ -6811,7 +6848,8 @@ attachment = function ($, attachmentHelper) {
     fileName: '',
     fileSize: 0,
     isCover: false,
-    canBeCover: true
+    canBeCover: true,
+    value_url: null
   };
   /**
    * @name  Attachment
@@ -6829,6 +6867,7 @@ attachment = function ($, attachmentHelper) {
     this.fileName = spec.fileName || DEFAULTS.fileName;
     this.fileSize = spec.fileSize || DEFAULTS.fileSize;
     this.value = spec.value || DEFAULTS.value;
+    this.value_url = spec.value_url || DEFAULTS.value_url;
     this.created = spec.created || DEFAULTS.created;
     this.by = spec.by || DEFAULTS.by;
     this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
@@ -6858,7 +6897,7 @@ attachment = function ($, attachmentHelper) {
    * @returns {string}
    */
   Attachment.prototype.getDownloadUrl = function () {
-    return this.ds.getBaseUrl() + this.value + '?download=True';
+    return this.ds.getBaseUrl(true) + this.value + '?download=True';
   };
   /**
    * Gets the extension part of a filename
@@ -6941,6 +6980,7 @@ attachment = function ($, attachmentHelper) {
     this.fileName = data.fileName || DEFAULTS.fileName;
     this.fileSize = data.fileSize || DEFAULTS.fileSize;
     this.value = data.value || DEFAULTS.value;
+    this.value_url = data.value_url || DEFAULTS.value_url;
     this.created = data.created || DEFAULTS.created;
     this.by = data.by || DEFAULTS.by;
     return $.Deferred().resolve(data);
@@ -7044,6 +7084,7 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     id: '',
     modified: null,
     cover: null,
+    cover_url: null,
     flag: null,
     label: null,
     fields: {},
@@ -7089,6 +7130,8 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
     // attachments array
     this.cover = spec.cover || DEFAULTS.cover;
     // cover attachment id, default null
+    this.cover_url = spec.cover_url || DEFAULTS.cover_url;
+    // dictionary of full urls of cover attachment
     this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
     // barcodes array
     this.label = spec.label || DEFAULTS.label;  // color label
@@ -7562,6 +7605,8 @@ Base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.modified = data.modified || DEFAULTS.modified;
       that.barcodes = data.barcodes || DEFAULTS.barcodes;
       that.label = data.label || DEFAULTS.label;
+      that.cover_url = data.cover_url || DEFAULTS.cover_url;
+      that.cover = data.cover || DEFAULTS.cover;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -7979,6 +8024,7 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     id: '',
     modified: null,
     cover: null,
+    cover_url: null,
     flag: null,
     label: null,
     fields: {},
@@ -8024,6 +8070,8 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
     // attachments array
     this.cover = spec.cover || DEFAULTS.cover;
     // cover attachment id, default null
+    this.cover_url = spec.cover_url || DEFAULTS.cover_url;
+    // dictionary of full urls of cover attachment
     this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
     // barcodes array
     this.label = spec.label || DEFAULTS.label;  // color label
@@ -8497,6 +8545,8 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
       that.modified = data.modified || DEFAULTS.modified;
       that.barcodes = data.barcodes || DEFAULTS.barcodes;
       that.label = data.label || DEFAULTS.label;
+      that.cover_url = data.cover_url || DEFAULTS.cover_url;
+      that.cover = data.cover || DEFAULTS.cover;
       return that._fromCommentsJson(data, options).then(function () {
         return that._fromAttachmentsJson(data, options);
       });
@@ -8960,7 +9010,7 @@ helper = function ($, defaultSettings, common) {
        * @returns {string}
        */
       getImageUrl: function (ds, pk, size, bustCache) {
-        var url = ds.getBaseUrl() + pk + '?mimeType=image/jpeg';
+        var url = ds.getBaseUrl(true) + pk + '?mimeType=image/jpeg';
         if (size && size != 'orig') {
           url += '&size=' + size;
         }
@@ -11075,7 +11125,6 @@ Item = function ($, common, Base) {
       kit: null,
       custody: null,
       cover: '',
-      cover_url: null,
       catalog: null,
       canReserve: 'available',
       canOrder: 'available',
@@ -11141,7 +11190,6 @@ Item = function ($, common, Base) {
     this.kit = spec.kit || DEFAULTS.kit;
     this.custody = spec.custody || DEFAULTS.custody;
     this.cover = spec.cover || DEFAULTS.cover;
-    this.cover_url = spec.cover_url || DEFAULTS.cover_url;
     this.catalog = spec.catalog || DEFAULTS.catalog;
     this.allowReserve = spec.allowReserve !== undefined ? spec.allowReserve : DEFAULTS.allowReserve;
     this.allowCheckout = spec.allowOrder !== undefined ? spec.allowOrder : DEFAULTS.allowOrder;
@@ -11234,7 +11282,6 @@ Item = function ($, common, Base) {
       that.address = data.address || DEFAULTS.address;
       that.geo = data.geo || DEFAULTS.geo.slice();
       that.cover = data.cover || DEFAULTS.cover;
-      that.cover_url = data.cover_url || DEFAULTS.cover_url;
       that.catalog = data.catalog || DEFAULTS.catalog;
       that.flagged = data.flagged || DEFAULTS.flagged;
       that.expired = data.expired || DEFAULTS.expired;

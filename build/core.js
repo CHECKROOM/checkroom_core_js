@@ -1011,7 +1011,7 @@ common_code = {
    * @return {Boolean}         
    */
   isValidBarcode: function (barCode) {
-    return barCode && barCode.match(/^([A-Z0-9\s\-]{3,22})$/i) != null;
+    return barCode && barCode.match(/^([A-Z0-9\s\-]{3,43})$/i) != null;
   },
   /**
    * isValidQRCode
@@ -18136,7 +18136,7 @@ UserSync = function ($, Base, common) {
     name: '',
     host: 'ldap://yourdomain.com',
     port: 389,
-    timeOut: 10,
+    timeOut: 60,
     login: '',
     password: '',
     newUsers: 'create',

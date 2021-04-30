@@ -14,7 +14,7 @@ define([
         name: "",
         host: "ldap://yourdomain.com",
         port: 389,
-        timeOut: 10,
+        timeOut: 60,
         login: "",
         password: "",
         newUsers: "create",

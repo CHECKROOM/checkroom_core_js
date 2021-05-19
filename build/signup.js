@@ -3220,7 +3220,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
     // between 3 and 46 chars
     this.timezone = opt.timezone || 'America/New_York';
     this.email = opt.email || '';
-    this.login = opt.login || '';
     this.password = opt.password || '';
     this.plan = opt.plan || DEFAULT_PLAN;
     this.period = opt.period || DEFAULT_PERIOD;
@@ -3266,7 +3265,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
     return this.firstNameIsValid() && this.lastNameIsValid() && this.companyIsValid() && this.emailIsValid();
   };
   Signup.prototype.validCredentials = function () {
-    return this.loginIsValid() && this.passwordIsValid();
+    return this.passwordIsValid();
   };
   Signup.prototype.firstNameIsValid = function () {
     var firstName = $.trim(this.firstName);
@@ -3307,22 +3306,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
       });
     } else {
       return $.Deferred().resolve(false);
-    }
-  };
-  Signup.prototype.loginIsValid = function () {
-    var login = this.login.NoWhiteSpaceInWord().OnlyAlphaNumSpaceUnderscoreAndDot();
-    return login.length >= 4 && login == this.login;
-  };
-  Signup.prototype.loginExists = function () {
-    if (this.loginIsValid()) {
-      if (this.dfdLoginExists)
-        this.dfdLoginExists.abort();
-      this.dfdLoginExists = this.ds.call('loginExists', { login: this.login });
-      return this.dfdLoginExists.then(function (resp) {
-        return resp.result;
-      });
-    } else {
-      return $.Deferred().resolve(true);
     }
   };
   Signup.prototype.checkInvited = function () {
@@ -3391,12 +3374,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
     var parts = Signup.splitFirstLastName($.trim(name));
     this.firstName = parts.firstName;
     this.lastName = parts.lastName;
-    // Generate login name based on name
-    if (this.firstName || this.lastName) {
-      this.login = utils.getLoginName(this.firstName, this.lastName);
-    } else {
-      this.login = '';
-    }
   };
   Signup.prototype._getField = function (data) {
     return new Field(data);
@@ -3423,7 +3400,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
       return that.ds.longCall('activateAccount', {
         groupId: that.getGroupId(),
         name: that.getFullName(),
-        login: $.trim(that.login),
         email: $.trim(that.email),
         password: $.trim(that.password),
         timezone: $.trim(that.timezone),
@@ -3454,7 +3430,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
         name: that.getFullName(),
         email: $.trim(that.email),
         code: that.inviteToken,
-        login: $.trim(that.login),
         password: $.trim(that.password),
         timezone: $.trim(that.timezone)
       };
@@ -3466,13 +3441,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
       }
       return that.ds.longCall('activateInvite', params).then(function (user) {
         if (storeInLocalStorage) {
-          // Already store the login token in localStorage
-          var tmpUser = new api.ApiUser({
-            userId: that.login,
-            userEmail: that.email,
-            userToken: user.data.token
-          });
-          tmpUser.toStorage();
+          Signup.storeLoginToken(user.data);
         }
         return afterActivate(user);
       });
@@ -3483,7 +3452,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
     return beforeActivate().then(function () {
       var params = {
         name: that.getFullName(),
-        login: $.trim(that.login),
         password: $.trim(that.password),
         timezone: $.trim(that.timezone),
         email: $.trim(that.email),
@@ -3498,13 +3466,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
       }
       return that.ds.longCall('createSelfServiceUser', params).then(function (user) {
         if (storeInLocalStorage) {
-          // Already store the login token in localStorage
-          var tmpUser = new api.ApiUser({
-            userId: that.login,
-            userEmail: that.email,
-            userToken: user.data.token
-          });
-          tmpUser.toStorage();
+          Signup.storeLoginToken(user.data);
         }
         return afterActivate(user);
       });
@@ -3534,14 +3496,11 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
    * @returns {Signup}
    */
   Signup.fromQueryString = function (opt, settings) {
-    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', '').replace(' ', '+'), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), login = utils.getUrlParam('login', '').toLowerCase(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', 'America/New_York'), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', ''), phone = utils.getUrlParam('phone', '').replace(' ', '+');
+    var name = utils.getUrlParam('name', '').capitalize(), email = utils.getUrlParam('email', '').replace(' ', '+'), company = utils.getUrlParam('company', ''), firstName = utils.getUrlParam('firstName', '').capitalize(), lastName = utils.getUrlParam('lastName', '').capitalize(), source = utils.getUrlParam('source', DEFAULT_SOURCE), period = utils.getUrlParam('period', DEFAULT_PERIOD), plan = utils.getUrlParam('plan', DEFAULT_PLAN), timezone = utils.getUrlParam('timezone', 'America/New_York'), inviteToken = utils.getUrlParam('code', ''), selfserviceToken = utils.getUrlParam('key', ''), phone = utils.getUrlParam('phone', '').replace(' ', '+');
     if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
       var parts = Signup.splitFirstLastName(name);
       firstName = parts.firstName;
       lastName = parts.lastName;
-    }
-    if (login.length == 0 && firstName.length > 0 && lastName.length > 0) {
-      login = utils.getLoginName(firstName, lastName);
     }
     // Don't allow signup to deprecated plans
     if ([
@@ -3559,7 +3518,6 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
       timezone: timezone,
       firstName: firstName,
       lastName: lastName,
-      login: login,
       source: source,
       plan: plan,
       period: period,

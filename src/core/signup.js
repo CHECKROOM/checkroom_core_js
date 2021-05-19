@@ -33,7 +33,6 @@ define([
         this.company = opt.company || "";  // between 3 and 46 chars
         this.timezone = opt.timezone || "America/New_York";
         this.email = opt.email || "";
-        this.login = opt.login || "";
         this.password = opt.password || "";
         this.plan = opt.plan || DEFAULT_PLAN;
         this.period = opt.period || DEFAULT_PERIOD;
@@ -70,8 +69,7 @@ define([
     };
 
     Signup.prototype.validCredentials = function() {
-        return this.loginIsValid() &&
-            this.passwordIsValid();
+        return this.passwordIsValid();
     };
 
     Signup.prototype.firstNameIsValid = function() {
@@ -124,29 +122,6 @@ define([
                 });
         } else {
             return $.Deferred().resolve(false);
-        }
-    };
-
-    Signup.prototype.loginIsValid = function() {
-        var login = this.login
-            .NoWhiteSpaceInWord()
-            .OnlyAlphaNumSpaceUnderscoreAndDot();
-        return (login.length>=4) && (login==this.login);
-    };
-
-    Signup.prototype.loginExists = function() {
-        if (this.loginIsValid()) {
-
-            if(this.dfdLoginExists) this.dfdLoginExists.abort();
-
-            this.dfdLoginExists = this.ds.call('loginExists', {login: this.login});
-
-            return this.dfdLoginExists
-                .then(function(resp) {
-                    return resp.result;
-                });
-        } else {
-            return $.Deferred().resolve(true);
         }
     };
 
@@ -227,13 +202,6 @@ define([
         var parts = Signup.splitFirstLastName($.trim(name));
         this.firstName = parts.firstName;
         this.lastName = parts.lastName;
-        
-        // Generate login name based on name
-        if(this.firstName || this.lastName){
-            this.login = utils.getLoginName(this.firstName, this.lastName);
-        } else{
-            this.login = "";
-        }
     };
 
     Signup.prototype._getField = function(data){
@@ -272,7 +240,6 @@ define([
                 return that.ds.longCall("activateAccount", {
                     groupId: that.getGroupId(),
                     name: that.getFullName(),
-                    login: $.trim(that.login),
                     email: $.trim(that.email),
                     password: $.trim(that.password),
                     timezone: $.trim(that.timezone),
@@ -308,7 +275,6 @@ define([
                     name: that.getFullName(),
                     email: $.trim(that.email),
                     code: that.inviteToken,
-                    login: $.trim(that.login),
                     password: $.trim(that.password),
                     timezone: $.trim(that.timezone)
                 };
@@ -322,9 +288,7 @@ define([
 
                 return that.ds.longCall('activateInvite', params).then(function(user){
                     if(storeInLocalStorage){
-                        // Already store the login token in localStorage
-                        var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
-                        tmpUser.toStorage();
+                        Signup.storeLoginToken(user.data);
                     }
 
                     return afterActivate(user);
@@ -341,7 +305,6 @@ define([
             .then(function(){
                 var params = {
                     name: that.getFullName(),
-                    login: $.trim(that.login),
                     password: $.trim(that.password),
                     timezone: $.trim(that.timezone),
                     email: $.trim(that.email),
@@ -358,9 +321,7 @@ define([
 
                 return  that.ds.longCall('createSelfServiceUser', params).then(function(user){
                     if(storeInLocalStorage){
-                        // Already store the login token in localStorage
-                        var tmpUser = new api.ApiUser({userId: that.login, userEmail: that.email, userToken: user.data.token});
-                        tmpUser.toStorage();
+                        Signup.storeLoginToken(user.data);
                     }
 
                     return afterActivate(user);
@@ -399,7 +360,6 @@ define([
             company = utils.getUrlParam("company", ""),
             firstName = utils.getUrlParam("firstName", "").capitalize(),
             lastName = utils.getUrlParam("lastName", "").capitalize(),
-            login = utils.getUrlParam("login", "").toLowerCase(),
             source = utils.getUrlParam("source", DEFAULT_SOURCE),
             period = utils.getUrlParam("period", DEFAULT_PERIOD),
             plan = utils.getUrlParam("plan", DEFAULT_PLAN),
@@ -416,12 +376,6 @@ define([
             lastName = parts.lastName;
         }
 
-        if( (login.length==0) &&
-            (firstName.length>0) &&
-            (lastName.length>0)) {
-            login = utils.getLoginName(firstName, lastName);
-        }
-
         // Don't allow signup to deprecated plans
         if(["starter","basic", "professional","enterprise"].indexOf(plan) != -1){
             plan = DEFAULT_PLAN;
@@ -434,7 +388,6 @@ define([
             timezone: timezone,
             firstName: firstName,
             lastName: lastName,
-            login: login,
             source: source,
             plan: plan,
             period: period,

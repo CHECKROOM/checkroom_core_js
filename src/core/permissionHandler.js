@@ -52,6 +52,7 @@ define([], function () {
         this._useICal =               (limits.allowICal);
         this._usePublicInventory =    (limits.allowPublicInventory);
         this._useBookingRestrictions = (limits.allowBookingRestrictions);
+        this._useEquipmentPicking =     (limits.allowEquipmentPicking) &&   (profile.useEquipmentPicking);
     };
 
     // 
@@ -126,6 +127,10 @@ define([], function () {
     PermissionHandler.prototype.canUseSupportChat = function(){
         return this.limits.allowSupportChat;
     };
+    PermissionHandler.prototype.canUseEquipmentPicking = function(){
+        return this.limits.allowEquipmentPicking;
+    };
+
 
     //
     // Permission helpers
@@ -163,6 +168,10 @@ define([], function () {
 
     PermissionHandler.prototype.hasICalPermission = function(){
         return this._useICal;
+    };
+
+    PermissionHandler.prototype.hasEquipmentPicking = function(){
+        return this._useEquipmentPicking;
     };
 
     PermissionHandler.prototype.hasPublicInventoryPermission = function(){

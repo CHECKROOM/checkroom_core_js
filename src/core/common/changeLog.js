@@ -218,11 +218,11 @@ define([
                 var flagName = sanitizer(flag.name || unknownText);
                 var flagColor = flag.color || "orange";
                 var message = sanitizer(arg && arg.message?arg.message:"");
-                var hasAttachments = arg && arg.attachments && arg.attachments.length > 0;
-                var attachments = arg && arg.attachments?arg.attachments.map(function(att){ 
+                var hasAttachments = arg && arg.attachments_url && arg.attachments_url.length > 0;
+                var attachments = arg && arg.attachments_url?arg.attachments_url.map(function(att, i){ 
                         return {
-                            id: att,
-                            url: getAttachmentImageUrl(att, 'XS') 
+                            id: arg.attachments[i],
+                            url: att['XS'] 
                         };
                     }):[]
 

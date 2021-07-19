@@ -5391,11 +5391,11 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       var flagName = sanitizer(flag.name || unknownText);
       var flagColor = flag.color || 'orange';
       var message = sanitizer(arg && arg.message ? arg.message : '');
-      var hasAttachments = arg && arg.attachments && arg.attachments.length > 0;
-      var attachments = arg && arg.attachments ? arg.attachments.map(function (att) {
+      var hasAttachments = arg && arg.attachments_url && arg.attachments_url.length > 0;
+      var attachments = arg && arg.attachments_url ? arg.attachments_url.map(function (att, i) {
         return {
-          id: att,
-          url: getAttachmentImageUrl(att, 'XS')
+          id: arg.attachments[i],
+          url: att['XS']
         };
       }) : [];
       evt.by = {
@@ -14873,6 +14873,7 @@ PermissionHandler = function () {
     this._useICal = limits.allowICal;
     this._usePublicInventory = limits.allowPublicInventory;
     this._useBookingRestrictions = limits.allowBookingRestrictions;
+    this._useEquipmentPicking = limits.allowEquipmentPicking && profile.useEquipmentPicking;
   };
   // 
   // Module helpers
@@ -14946,6 +14947,9 @@ PermissionHandler = function () {
   PermissionHandler.prototype.canUseSupportChat = function () {
     return this.limits.allowSupportChat;
   };
+  PermissionHandler.prototype.canUseEquipmentPicking = function () {
+    return this.limits.allowEquipmentPicking;
+  };
   //
   // Permission helpers
   //
@@ -14966,6 +14970,9 @@ PermissionHandler = function () {
   };
   PermissionHandler.prototype.hasICalPermission = function () {
     return this._useICal;
+  };
+  PermissionHandler.prototype.hasEquipmentPicking = function () {
+    return this._useEquipmentPicking;
   };
   PermissionHandler.prototype.hasPublicInventoryPermission = function () {
     return this._usePublicInventory;

@@ -3439,7 +3439,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
           params['fields__' + field.name] = field.value;
         });
       }
-      return that.ds.longCall('activateInvite', params).then(function (user) {
+      return that.ds.longCall('activateInvite', params, true).then(function (user) {
         if (storeInLocalStorage) {
           Signup.storeLoginToken(user.data);
         }
@@ -3464,7 +3464,7 @@ signup = function ($, api, settings, Field, dateHelper, inflection, validation, 
           params['fields__' + field.name] = field.value;
         });
       }
-      return that.ds.longCall('createSelfServiceUser', params).then(function (user) {
+      return that.ds.longCall('createSelfServiceUser', params, true).then(function (user) {
         if (storeInLocalStorage) {
           Signup.storeLoginToken(user.data);
         }

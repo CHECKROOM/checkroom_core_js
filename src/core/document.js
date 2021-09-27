@@ -345,19 +345,23 @@ define([
      */
     Document.prototype._doApiCall = function(spec) {
         var that = this,
-            dfd;
+            dfd = $.Deferred();
         
-        var dfd = this.ds.call(
+        this.ds.call(
             (spec.collectionCall==true) ? null : (spec.pk || this.id),
             spec.method,
             spec.params,
             spec._fields || this._fields,
             spec.timeOut,
             spec.usePost
-        );
-            
-        dfd.then(function(data) {
-            return (spec.skipRead==true) ? data : that._fromJson(data);
+        ).then(function(data) {
+            if (spec.skipRead==true){
+                dfd.resolve(data);
+            }else {
+                that._fromJson(data).done(function(data){
+                    dfd.resolve(data);
+                })
+            };
         });
 
         return dfd;

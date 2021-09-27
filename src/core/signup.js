@@ -286,7 +286,7 @@ define([
                     });
                 }
 
-                return that.ds.longCall('activateInvite', params).then(function(user){
+                return that.ds.longCall('activateInvite', params, true).then(function(user){
                     if(storeInLocalStorage){
                         Signup.storeLoginToken(user.data);
                     }
@@ -319,7 +319,7 @@ define([
                     });
                 }
 
-                return  that.ds.longCall('createSelfServiceUser', params).then(function(user){
+                return  that.ds.longCall('createSelfServiceUser', params, true).then(function(user){
                     if(storeInLocalStorage){
                         Signup.storeLoginToken(user.data);
                     }

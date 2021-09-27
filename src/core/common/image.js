@@ -220,7 +220,15 @@ define(['jquery'], function ($) {
             return url;          
         },
         getNoImage: function(size){
-            return this.getIconAvatar(size, 'f03e', 'rgba(0,0,0,0.2)', 'rgba(255,255,255,0.5)');     
+            const mappedSize = size || 'S';
+
+            return {
+                XS: 'https://app.cheqroom.com/image-XS.png',
+                S: 'https://app.cheqroom.com/image-S.png',
+                M: 'https://app.cheqroom.com/image-M.png',
+                L: 'https://app.cheqroom.com/image-L.png',
+                XL: 'https://app.cheqroom.com/image-XL.png',
+            }[mappedSize];    
         }
     }
 });

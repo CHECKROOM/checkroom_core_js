@@ -7,7 +7,7 @@ define(['jquery', 'moment'], factory);
 }(this, function (jquery, moment) {//Queued AJAX requests
 //https://stackoverflow.com/questions/3034874/sequencing-ajax-requests/3035268#3035268
 //http://jsfiddle.net/p4zjH/1/
-var common_queue, api, settings, common_code, common_order, common_reservation, common_utils, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common_changeLog, common_spotcheck, common, colorLabel, document, Availability, Attachment, comment, attachment, field, Base, Category, Comment, Conflict, base, user, helper, Contact, DateHelper, Document, Group, Item, Kit, Location, location, dateHelper, transaction, conflict, Order, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, OrderTransfer, ColorLabel, Field, Spotcheck, core;
+var common_queue, api, settings, common_code, common_order, common_reservation, common_utils, common_item, common_conflicts, common_keyValues, common_image, common_attachment, common_inflection, common_validation, common_slimdown, common_kit, common_contact, common_user, common_template, common_clientStorage, common_document, common_transaction, common_pubsub, common_changeLog, common_spotcheck, common, colorLabel, document, availability, attachment, comment, field, base, category, conflict, user, helper, contact, dateHelper, group, item, kit, location, transaction, order, permissionHandler, reservation, template, usersync, webhook, orderTransfer, spotcheck, core;
 common_queue = function ($) {
   $.fn.ajaxQueue = function () {
     var previous = new $.Deferred().resolve();
@@ -6487,10 +6487,15 @@ document = function ($, common, api, ColorLabel) {
    * @private
    */
   Document.prototype._doApiCall = function (spec) {
-    var that = this, dfd;
-    var dfd = this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost);
-    dfd.then(function (data) {
-      return spec.skipRead == true ? data : that._fromJson(data);
+    var that = this, dfd = $.Deferred();
+    this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
+      if (spec.skipRead == true) {
+        dfd.resolve(data);
+      } else {
+        that._fromJson(data).done(function (data) {
+          dfd.resolve(data);
+        });
+      }
     });
     return dfd;
   };
@@ -6512,7 +6517,7 @@ document = function ($, common, api, ColorLabel) {
   };
   return Document;
 }(jquery, common, api, colorLabel);
-Availability = function ($, common, api, Document) {
+availability = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
     id: '',
@@ -6624,7 +6629,7 @@ Availability = function ($, common, api, Document) {
   };
   return Availability;
 }(jquery, common, api, document);
-Attachment = function ($, attachmentHelper) {
+attachment = function ($, attachmentHelper) {
   var PREVIEWS = [
     'jpg',
     'jpeg',
@@ -6836,157 +6841,6 @@ comment = function ($) {
   };
   return Comment;
 }(jquery);
-attachment = function ($, attachmentHelper) {
-  var PREVIEWS = [
-    'jpg',
-    'jpeg',
-    'png',
-    'gif',
-    'pdf'
-  ];
-  var DEFAULTS = {
-    fileName: '',
-    fileSize: 0,
-    isCover: false,
-    canBeCover: true,
-    value_url: null
-  };
-  /**
-   * @name  Attachment
-   * @class
-   * @property {ApiDataSource} ds    attachments datasource
-   * @property {bool} isCover        is this the cover image of a document
-   * @property {bool} canBeCover     can this attachment be the cover of a document?
-   * @constructor
-   */
-  var Attachment = function (spec) {
-    spec = spec || {};
-    this.ds = spec.ds;
-    this.raw = null;
-    // the raw json object
-    this.fileName = spec.fileName || DEFAULTS.fileName;
-    this.fileSize = spec.fileSize || DEFAULTS.fileSize;
-    this.value = spec.value || DEFAULTS.value;
-    this.value_url = spec.value_url || DEFAULTS.value_url;
-    this.created = spec.created || DEFAULTS.created;
-    this.by = spec.by || DEFAULTS.by;
-    this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
-    this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
-    this.forKind = spec.forKind;
-  };
-  /**
-   * Gets the url of a thumbnail
-   * "XS": 32,
-   * "S": 64,
-   * "M": 128,
-   * "L": 256,
-   * "XL": 512
-   * "orig": original size
-   * @name Attachment#getThumbnailUrl
-   * @method
-   * @param size
-   * @returns {string}
-   */
-  Attachment.prototype.getThumbnailUrl = function (size) {
-    return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : '';
-  };
-  /**
-   * Gets the url where the attachment can be downloaded
-   * @name Attachment#getDownloadUrl
-   * @method
-   * @returns {string}
-   */
-  Attachment.prototype.getDownloadUrl = function () {
-    return this.ds.getBaseUrl(true) + this.value + '?download=True';
-  };
-  /**
-   * Gets the extension part of a filename
-   * @name  Attachment#getExt
-   * @method
-   * @param fileName
-   * @returns {string}
-   */
-  Attachment.prototype.getExt = function (fileName) {
-    return attachmentHelper.getExt(fileName || this.fileName);
-  };
-  /**
-   * Gets a friendly file size
-   * @param  {int} size 
-   * @return {string}      
-   */
-  Attachment.prototype.getFriendlyFileSize = function () {
-    var size = this.fileSize;
-    if (isNaN(size))
-      size = 0;
-    if (size < 1024)
-      return size + ' Bytes';
-    size /= 1024;
-    if (size < 1024)
-      return size.toFixed(2) + ' Kb';
-    size /= 1024;
-    if (size < 1024)
-      return size.toFixed(2) + ' Mb';
-    size /= 1024;
-    if (size < 1024)
-      return size.toFixed(2) + ' Gb';
-    size /= 1024;
-    return size.toFixed(2) + ' Tb';
-  };
-  /**
-   * Checks if the attachment is an image
-   * @name  Attachment#isImage
-   * @method
-   * @returns {boolean}
-   */
-  Attachment.prototype.isImage = function () {
-    return attachmentHelper.isImage(this.fileName);
-  };
-  /**
-   * Checks if the attachment has a preview
-   * @name  Attachment#hasPreview
-   * @method
-   * @returns {boolean}
-   */
-  Attachment.prototype.hasPreview = function () {
-    var ext = this.getExt(this.fileName);
-    return $.inArray(ext, PREVIEWS) >= 0;
-  };
-  /**
-   * _toJson, makes a dict of the object
-   * @method
-   * @param options
-   * @returns {object}
-   * @private
-   */
-  Attachment.prototype._toJson = function (options) {
-    return {
-      fileName: this.fileName,
-      fileSize: this.fileSize,
-      value: this.value,
-      created: this.created,
-      by: this.by
-    };
-  };
-  /**
-   * _fromJson: reads the Attachment object from json
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @returns promise
-   * @private
-   */
-  Attachment.prototype._fromJson = function (data, options) {
-    this.raw = data;
-    this.fileName = data.fileName || DEFAULTS.fileName;
-    this.fileSize = data.fileSize || DEFAULTS.fileSize;
-    this.value = data.value || DEFAULTS.value;
-    this.value_url = data.value_url || DEFAULTS.value_url;
-    this.created = data.created || DEFAULTS.created;
-    this.by = data.by || DEFAULTS.by;
-    return $.Deferred().resolve(data);
-  };
-  return Attachment;
-}(jquery, common_attachment);
 field = function ($, validationHelper) {
   var DEFAULTS = {
     name: null,
@@ -7078,946 +6932,6 @@ field = function ($, validationHelper) {
   };
   return Field;
 }(jquery, common_validation);
-Base = function ($, common, api, Document, Comment, Attachment, Field) {
-  // Some constant values
-  var DEFAULTS = {
-    id: '',
-    modified: null,
-    cover: null,
-    cover_url: null,
-    flag: null,
-    label: null,
-    fields: {},
-    comments: [],
-    attachments: [],
-    barcodes: []
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = Document.prototype;
-  /**
-   * @name  Base
-   * @class
-   * @property {ApiDataSource} dsAttachments   attachments datasource
-   * @property {string} crtype                 e.g. cheqroom.types.customer
-   * @property {moment} modified               last modified timestamp
-   * @property {string} flag                   the document flag
-   * @property {object} fields                 dictionary of document fields
-   * @property {array} comments                array of Comment objects
-   * @property {array} attachments             array of Attachment objects
-   * @property {string} cover                  cover attachment id, default null
-   * @constructor
-   * @extends Document
-   */
-  var Base = function (opt) {
-    var spec = $.extend({}, opt);
-    Document.call(this, spec);
-    this.dsAttachments = spec.dsAttachments;
-    // ApiDataSource for the attachments coll
-    this.crtype = spec.crtype;
-    // e.g. cheqroom.types.customer
-    this.modified = spec.modified || DEFAULTS.modified;
-    // last modified timestamp in momentjs
-    this.flag = spec.flag || DEFAULTS.flag;
-    // flag
-    this.fields = spec.fields || $.extend({}, DEFAULTS.fields);
-    // fields dictionary
-    this.comments = spec.comments || DEFAULTS.comments.slice();
-    // comments array
-    this.attachments = spec.attachments || DEFAULTS.attachments.slice();
-    // attachments array
-    this.cover = spec.cover || DEFAULTS.cover;
-    // cover attachment id, default null
-    this.cover_url = spec.cover_url || DEFAULTS.cover_url;
-    // dictionary of full urls of cover attachment
-    this.barcodes = spec.barcodes || DEFAULTS.barcodes.slice();
-    // barcodes array
-    this.label = spec.label || DEFAULTS.label;  // color label
-  };
-  Base.prototype = new tmp();
-  Base.prototype.constructor = Base;
-  //
-  // Document overrides
-  //
-  Base.prototype._getDefaults = function () {
-    return DEFAULTS;
-  };
-  /**
-   * Checks if the object is empty
-   * after calling reset() isEmpty() should return true
-   * We'll only check for fields, comments, attachments here
-   * @name  Base#isEmpty
-   * @method
-   * @returns {boolean}
-   * @override
-   */
-  Base.prototype.isEmpty = function () {
-    return this.flag == DEFAULTS.flag && (this.fields == null || Object.keys(this.fields).length == 0) && (this.comments == null || this.comments.length == 0) && (this.attachments == null || this.attachments.length == 0);
-  };
-  /**
-   * Checks if the base is dirty and needs saving
-   * @name Base#isDirty
-   * @returns {boolean}
-   */
-  Base.prototype.isDirty = function () {
-    return this._isDirtyFlag() || this._isDirtyFields();
-  };
-  /**
-   * Checks via the api if we can delete the document
-   * @name  Base#canDelete
-   * @method
-   * @returns {promise}
-   * @override
-   */
-  Base.prototype.canDelete = function () {
-    // Documents can only be deleted when they have a pk
-    if (this.existsInDb()) {
-      return this.ds.call(this.id, 'canDelete');
-    } else {
-      return $.Deferred().resolve({
-        result: false,
-        message: ''
-      });
-    }
-  };
-  // Comments
-  // ----
-  /**
-   * Adds a comment by string
-   * @name  Base#addComment
-   * @method
-   * @param comment
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.addComment = function (comment, skipRead) {
-    return this._doApiCall({
-      method: 'addComment',
-      params: { comment: comment },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Updates a comment by id
-   * @name  Base#updateComment
-   * @method
-   * @param id
-   * @param comment
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.updateComment = function (id, comment, skipRead) {
-    return this._doApiCall({
-      method: 'updateComment',
-      params: {
-        commentId: id,
-        comment: comment
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Deletes a Comment by id
-   * @name  Base#deleteComment
-   * @method
-   * @param id
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.deleteComment = function (id, skipRead) {
-    return this._doApiCall({
-      method: 'removeComment',
-      params: { commentId: id },
-      skipRead: skipRead
-    });
-  };
-  // Field stuff
-  // ----
-  /**
-   * Sets multiple custom fields in a single call
-   * @name Base#setFields
-   * @method
-   * @param fields
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setFields = function (fields, skipRead) {
-    var that = this, changedFields = {};
-    $.each(fields, function (key, value) {
-      if (that.raw.fields[key] != fields[key]) {
-        changedFields[key] = value;
-      }
-    });
-    return this._doApiCall({
-      method: 'setFields',
-      params: changedFields,
-      skipRead: skipRead,
-      usePost: true
-    });
-  };
-  /**
-   * Sets a custom field
-   * @name Base#setField
-   * @method
-   * @param field
-   * @param value
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setField = function (field, value, skipRead) {
-    if (!value) {
-      return this.clearField(field, skipRead);
-    }
-    return this._doApiCall({
-      method: 'setField',
-      params: {
-        field: field,
-        value: value
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears a custom field
-   * @name Base#clearField
-   * @method
-   * @param field
-   * @param skipRead
-   */
-  Base.prototype.clearField = function (field, skipRead) {
-    return this._doApiCall({
-      method: 'clearField',
-      params: { field: field },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Adds a barcode
-   * @name Base#addBarcode
-   * @param code
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.addBarcode = function (code, skipRead) {
-    return this._doApiCall({
-      method: 'addBarcode',
-      params: { barcode: code },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Removes a barcode
-   * @name Item#removeBarcode
-   * @param code
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.removeBarcode = function (code, skipRead) {
-    return this._doApiCall({
-      method: 'removeBarcode',
-      params: { barcode: code },
-      skipRead: skipRead
-    });
-  };
-  // Attachments stuff
-  // ----
-  /**
-   * Gets an url for a user avatar
-   * 'XS': (64, 64),
-   * 'S': (128, 128),
-   * 'M': (256, 256),
-   * 'L': (512, 512)
-   * @param size {string} default null is original size
-   * @param groupId {string} Group primary key (only when you're passing an attachment)
-   * @param att {string} attachment primary key, by default we take the cover
-   * @param bustCache {boolean}
-   * @returns {string}
-   */
-  Base.prototype.getImageUrl = function (size, groupId, att, bustCache) {
-    var attachment = att || this.cover;
-    return attachment != null && attachment.length > 0 ? this.helper.getImageCDNUrl(groupId, attachment, size) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
-  };
-  /**
-   * Set the cover image to an Attachment
-   * @name  Base#setCover
-   * @method
-   * @param att
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setCover = function (att, skipRead) {
-    return this._doApiCall({
-      method: 'setCover',
-      params: { attachmentId: att._id },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears the cover image
-   * @name  Base#clearCover
-   * @method
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.clearCover = function (skipRead) {
-    return this._doApiCall({
-      method: 'clearCover',
-      params: {},
-      skipRead: skipRead
-    });
-  };
-  /**
-   * attaches an Attachment object
-   * @name  Base#attach
-   * @method
-   * @param attachmentId
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.attach = function (attachmentId, skipRead) {
-    if (this.existsInDb()) {
-      return this._doApiCall({
-        method: 'attach',
-        params: { attachments: [attachmentId] },
-        skipRead: skipRead
-      });
-    } else {
-      return $.Deferred().reject(new api.ApiError('Cannot attach attachment, id is empty or null'));
-    }
-  };
-  /**
-   * detaches an Attachment by kvId (guid)
-   * @name  Base#detach
-   * @method
-   * @param attachmentId
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.detach = function (attachmentId, skipRead) {
-    if (this.existsInDb()) {
-      return this._doApiCall({
-        method: 'detach',
-        params: { attachments: [attachmentId] },
-        skipRead: skipRead
-      });
-    } else {
-      return $.Deferred().reject(new api.ApiError('Cannot detach attachment, id is empty or null'));
-    }
-  };
-  // Flags stuff
-  // ----
-  /**
-   * Sets the flag of an item
-   * @name Base#setFlag
-   * @param flag
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setFlag = function (flag, message, attachments, skipRead) {
-    return this._doApiCall({
-      method: 'setFlag',
-      params: {
-        flag: flag,
-        message: message,
-        attachments: attachments
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears the flag of an item
-   * @name Base#clearFlag
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.clearFlag = function (message, attachments, skipRead) {
-    return this._doApiCall({
-      method: 'clearFlag',
-      params: {
-        message: message,
-        attachments: attachments
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Sets the label of an item
-   * @name Base#setLabel
-   * @param labelId
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.setLabel = function (labelId, skipRead) {
-    return this._doApiCall({
-      method: 'setLabel',
-      params: { labelId: labelId },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears the label of an item
-   * @name Base#clearLabel
-   * @param skipRead
-   * @returns {promise}
-   */
-  Base.prototype.clearLabel = function (skipRead) {
-    return this._doApiCall({
-      method: 'clearLabel',
-      params: {},
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Returns a list of Field objects
-   * @param fieldDefs         array of field definitions
-   * @param onlyFormFields    should return only form fields
-   * @param limit             return no more than x fields
-   * @return {Array}
-   */
-  Base.prototype.getSortedFields = function (fieldDefs, onlyFormFields, limit) {
-    var that = this, fields = [], fieldDef = null, fieldValue = null;
-    // Work on copy of fieldDefs array
-    fieldDefs = fieldDefs.slice();
-    // Return only form field definitions?
-    fieldDefs = fieldDefs.filter(function (def) {
-      return onlyFormFields == true ? def.form : true;
-    });
-    // Create a Field object for each field definition
-    for (var i = 0; i < fieldDefs.length; i++) {
-      fieldDef = fieldDefs[i];
-      fieldValue = that.fields[fieldDef.name] || '';
-      if (limit == null || limit > fields.length) {
-        fields.push(that._getField($.extend({ value: fieldValue }, fieldDef)));
-      }
-    }
-    return fields;
-  };
-  /**
-   * Update item fields based on the given Field objects
-   * @param {Array} fields    array of Field objects
-   */
-  Base.prototype.setSortedFields = function (fields, isUpdate) {
-    for (var i = 0; i < fields.length; i++) {
-      var field = fields[i];
-      if (field.isEmpty()) {
-        if (isUpdate) {
-          this.fields[field.name] = null;
-        } else {
-          delete this.fields[field.name];
-        }
-      } else {
-        this.fields[field.name] = field.value;
-      }
-    }
-  };
-  /**
-   * Checks if all item fields are valid
-   * @param  {Array}  fields
-   * @return {Boolean}        
-   */
-  Base.prototype.validateSortedFields = function (fields) {
-    for (var i = 0; i < fields.length; i++) {
-      if (!fields[i].isValid()) {
-        return false;
-      }
-    }
-    return true;
-  };
-  /**
-   * Update fields of a document
-   * @name Base#updateFields
-   * @returns {promise}
-   */
-  Base.prototype.updateFields = function () {
-    return this._updateFields();
-  };
-  // Implementation
-  // ----
-  /**
-   * Checks if the flag is dirty compared to the raw response
-   * @returns {boolean}
-   * @private
-   */
-  Base.prototype._isDirtyFlag = function () {
-    if (this.raw) {
-      return this.flag != this.raw.flag;
-    } else {
-      return false;
-    }
-  };
-  /**
-   * Checks if the fields are dirty compared to the raw response
-   * @returns {boolean}
-   * @private
-   */
-  Base.prototype._isDirtyFields = function () {
-    if (this.raw) {
-      return !common.areEqual(this.fields, this.raw.fields);
-    } else {
-      return false;
-    }
-  };
-  /**
-   * Runs over the custom fields that are dirty and calls `setField`
-   * @returns {*}
-   * @private
-   */
-  Base.prototype._updateFields = function () {
-    var calls = [];
-    if (this.raw) {
-      for (var key in this.fields) {
-        if (this.fields[key] != this.raw.fields[key]) {
-          calls.push(this.setField(key, this.fields[key], true));
-        }
-      }
-    }
-    if (calls.length > 0) {
-      return $.when(calls);
-    } else {
-      return $.Deferred().resolve(this);
-    }
-  };
-  // toJson, fromJson
-  // ----
-  /**
-   * _toJson, makes a dict of params to use during create / update
-   * @param options
-   * @returns {{}}
-   * @private
-   */
-  Base.prototype._toJson = function (options) {
-    return Document.prototype._toJson.call(this, options);
-  };
-  /**
-   * _fromJson: read some basic information
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @private
-   */
-  Base.prototype._fromJson = function (data, options) {
-    var that = this;
-    return Document.prototype._fromJson.call(this, data, options).then(function () {
-      that.flag = data.flag || DEFAULTS.flag;
-      that.fields = data.fields != null ? $.extend({}, data.fields) : $.extend({}, DEFAULTS.fields);
-      that.modified = data.modified || DEFAULTS.modified;
-      that.barcodes = data.barcodes || DEFAULTS.barcodes;
-      that.label = data.label || DEFAULTS.label;
-      that.cover_url = data.cover_url || DEFAULTS.cover_url;
-      that.cover = data.cover || DEFAULTS.cover;
-      return that._fromCommentsJson(data, options).then(function () {
-        return that._fromAttachmentsJson(data, options);
-      });
-    });
-  };
-  /**
-   * _toJsonFields: makes json which can be used to set fields during `create`
-   * @method
-   * @param options
-   * @returns {{}}
-   * @private
-   */
-  Base.prototype._toJsonFields = function (options) {
-    var fields = {};
-    if (this.fields) {
-      for (var key in this.fields) {
-        fields['fields__' + key] = this.fields[key];
-      }
-    }
-    return fields;
-  };
-  /**
-   * _fromCommentsJson: reads the data.comments
-   * @param data
-   * @param options
-   * @returns {*}
-   * @private
-   */
-  Base.prototype._fromCommentsJson = function (data, options) {
-    var obj = null, that = this;
-    this.comments = DEFAULTS.comments.slice();
-    if (data.comments && data.comments.length > 0) {
-      $.each(data.comments, function (i, comment) {
-        obj = that._getComment(comment, options);
-        if (obj) {
-          that.comments.push(obj);
-        }
-      });
-    }
-    return $.Deferred().resolve(data);
-  };
-  /**
-   * _fromAttachmentsJson: reads the data.attachments
-   * @param data
-   * @param options
-   * @returns {*}
-   * @private
-   */
-  Base.prototype._fromAttachmentsJson = function (data, options) {
-    var obj = null, that = this;
-    this.attachments = DEFAULTS.attachments.slice();
-    if (data.attachments && data.attachments.length > 0) {
-      $.each(data.attachments, function (i, att) {
-        obj = that._getAttachment(att, $.extend(options, { forKind: that.crtype }));
-        if (obj) {
-          that.attachments.push(obj);
-        }
-      });
-    }
-    return $.Deferred().resolve(data);
-  };
-  Base.prototype._getComment = function (data, options) {
-    var spec = $.extend({ ds: this.ds }, options || {}, data);
-    return new Comment(spec);
-  };
-  Base.prototype._getAttachment = function (data, options) {
-    var spec = $.extend({ ds: this.ds }, options || {}, data);
-    return new Attachment(spec);
-  };
-  Base.prototype._getField = function (data, options) {
-    var spec = $.extend({}, options || {}, data);
-    return new Field(spec);
-  };
-  return Base;
-}(jquery, common, api, document, comment, attachment, field);
-Category = function ($, common, api, Document) {
-  /*
-  id = StringField(primary_key=True)  # category id in reverse domain format cheqroom.types.customer
-  name = StringField()  # A friendly name for the category
-  count = IntField(default=0)  # How many categories are under this parent
-  defs = ListField(EmbeddedDocumentField(KeyValueDef))  # a list of allowed KeyValueDefs
-  parent = ReferenceField("Category")  # the parent category
-  by = ReferenceField(User)  # The user that add / updated this meta
-  modified = DateTimeField(default=DateHelper.getNow)  # The data when it was added / update
-   */
-  // Some constant values
-  var DEFAULTS = {
-    id: '',
-    name: '',
-    count: 0,
-    defs: [],
-    parent: '',
-    modified: null
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = Document.prototype;
-  /**
-   * Category describes a category which can trigger on certain events (signals)
-   * @name  Category
-   * @class
-   * @property {string} name          the category name
-   * @property {string} count         how many categories are under this node
-   * @property {array} defs           a list of allowed keyvalue definitions
-   * @property {string} parent        the primary key of the parent category
-   * @property {Moment} modified      the modified date of the category
-   * @constructor
-   * @extends Document
-   */
-  var Category = function (opt) {
-    var spec = $.extend({}, opt);
-    Document.call(this, spec);
-    this.name = spec.name || DEFAULTS.name;
-    this.count = spec.count || DEFAULTS.count;
-    this.defs = spec.defs || DEFAULTS.defs.slice();
-    this.parent = spec.parent || DEFAULTS.parent;
-    this.modified = spec.modified || DEFAULTS.modified;
-  };
-  Category.prototype = new tmp();
-  Category.prototype.constructor = Category;
-  //
-  // Specific validators
-  /**
-   * Checks if name is valid
-   * @name Category#isValidName
-   * @method
-   * @return {Boolean}
-   */
-  Category.prototype.isValidName = function () {
-    this.name = $.trim(this.name);
-    if (this.name.length >= 3) {
-      var nospecial = this.name.latinise().replace(/[`~!@#$%^&*()_|+\-=?;:'",.<\{\}\[\]\\\/]/gi, '');
-      return this.name == nospecial;
-    } else {
-      return false;
-    }
-  };
-  //
-  // Document overrides
-  //
-  /**
-   * Checks if the category has any validation errors
-   * @name Category#isValid
-   * @method
-   * @returns {boolean}
-   * @override
-   */
-  Category.prototype.isValid = function () {
-    return this.isValidName();
-  };
-  Category.prototype._getDefaults = function () {
-    return DEFAULTS;
-  };
-  /**
-   * Checks if the object is empty, it never is
-   * @name  Category#isEmpty
-   * @method
-   * @returns {boolean}
-   * @override
-   */
-  Category.prototype.isEmpty = function () {
-    return Document.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
-  };
-  /**
-   * Checks if the category is dirty and needs saving
-   * @returns {boolean}
-   * @override
-   */
-  Category.prototype.isDirty = function () {
-    var isDirty = Document.prototype.isDirty.call(this);
-    if (!isDirty && this.raw) {
-      isDirty = this.name != this.raw.name;
-    }
-    return isDirty;
-  };
-  /**
-   * Checks via the api if we can delete the Category document
-   * @name  Category#canDelete
-   * @method
-   * @returns {promise}
-   * @override
-   */
-  Category.prototype.canDelete = function () {
-    return this.ds.call(this.id, 'canDeleteCategory', { omitFields: true });
-  };
-  /**
-   * Checks via the api if we can rename the Category document
-   * e.g. if it would not clash with any existing categories
-   * @method
-   * @param name
-   * @returns {promise}
-   */
-  Category.prototype.canChangeName = function (name) {
-    return this.ds.call(this.id, 'canChangeName', { name: name });
-  };
-  /**
-   * Changes the name of a category
-   * @method
-   * @param name
-   * @returns {promise}
-   */
-  Category.prototype.changeName = function (name) {
-    return this._doApiCall({
-      pk: this.id,
-      method: 'changeName',
-      params: { name: name }
-    });
-  };
-  /**
-   * Checks via the api if we can change the parent of a Category document
-   * e.g. if it would not clash with any existing categories
-   * @param parentId
-   * @returns {promise}
-   */
-  Category.prototype.canChangeParent = function (parentId) {
-    return this.ds.call(this.id, 'canChangeParent', {
-      parent: parentId,
-      omitFields: true
-    });
-  };
-  /**
-   * Changes the parent of a category
-   * @param parentId
-   * @returns {promise}
-   */
-  Category.prototype.changeParent = function (parentId) {
-    return this._doApiCall({
-      pk: this.id,
-      method: 'changeParent',
-      params: {
-        parent: parentId,
-        omitFields: true
-      }
-    });
-  };
-  // toJson, fromJson
-  // ----
-  /**
-   * _toJson, makes a dict of params to use during create / update
-   * @param options
-   * @returns {{}}
-   * @private
-   */
-  Category.prototype._toJson = function (options) {
-    var data = Document.prototype._toJson.call(this, options);
-    data.name = this.name;
-    return data;
-  };
-  /**
-   * _fromJson: read some basic information
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @returns {promise}
-   * @private
-   */
-  Category.prototype._fromJson = function (data, options) {
-    var that = this;
-    return Document.prototype._fromJson.call(this, data, options).then(function () {
-      that.name = data.name || DEFAULTS.name;
-      that.count = data.count || DEFAULTS.count;
-      that.defs = data.defs || DEFAULTS.defs.slice();
-      that.parent = data.parent || DEFAULTS.parent;
-      that.modified = data.modified || DEFAULTS.modified;
-      return data;
-    });
-  };
-  return Category;
-}(jquery, common, api, document);
-Comment = function ($) {
-  var DEFAULTS = {
-    id: '',
-    value: null,
-    created: null,
-    modified: null,
-    by: null
-  };
-  /**
-   * @name  Comment
-   * @class
-   * @param spec
-   * @constructor
-   */
-  var Comment = function (spec) {
-    spec = spec || {};
-    this.ds = spec.ds;
-    this.raw = null;
-    // the raw json object
-    this.id = spec.id || DEFAULTS.id;
-    this.value = spec.value || DEFAULTS.value;
-    this.created = spec.created || DEFAULTS.created;
-    this.modified = spec.modified || DEFAULTS.modified;
-    this.by = spec.by || DEFAULTS.by;
-    this.fromReservation = spec.fromReservation || false;
-  };
-  /**
-   * _toJson, makes a dict of the object
-   * @method
-   * @param options
-   * @returns {object}
-   * @private
-   */
-  Comment.prototype._toJson = function (options) {
-    return {
-      id: this.id,
-      value: this.value,
-      created: this.created,
-      modified: this.modified,
-      by: this.by
-    };
-  };
-  /**
-   * _fromJson: reads the Comment object from json
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @returns promise
-   * @private
-   */
-  Comment.prototype._fromJson = function (data, options) {
-    this.raw = data;
-    this.id = data.id || DEFAULTS.id;
-    this.value = data.value || DEFAULTS.value;
-    this.created = data.created || DEFAULTS.created;
-    this.modified = data.modified || DEFAULTS.modified;
-    this.by = data.by || DEFAULTS.by;
-    return $.Deferred().resolve(data);
-  };
-  return Comment;
-}(jquery);
-Conflict = function ($) {
-  var DEFAULTS = {
-    kind: '',
-    doc: '',
-    item: '',
-    itemName: '',
-    locationCurrent: '',
-    locationDesired: '',
-    fromDate: null,
-    toDate: null
-  };
-  /**
-   * Conflict class
-   * @name  Conflict
-   * @class    
-   * @constructor
-   * 
-   * @param spec
-   * @property {string}  kind                   - The conflict kind (status, order, reservation, location)
-   * @property {string}  doc                    - The id of the document with which it conflicts
-   * @property {string}  item                   - The Item id for this conflict
-   * @property {string}  itemName               - The Item name for this conflict
-   * @property {string}  locationCurrent        - The Location the item is now
-   * @property {string}  locationDesired        - The Location where the item should be
-   * @property {moment}  fromDate               - From when does the conflict start
-   * @property {moment}  toDate                 - Until when does the conflict end
-   */
-  var Conflict = function (spec) {
-    this.ds = spec.ds;
-    this._fields = spec._fields;
-    this.raw = null;
-    // the raw json object
-    this.kind = spec.kind || DEFAULTS.kind;
-    this.doc = spec.doc || DEFAULTS.doc;
-    this.item = spec.item || DEFAULTS.item;
-    this.itemName = spec.itemName || DEFAULTS.itemName;
-    this.locationCurrent = spec.locationCurrent || DEFAULTS.locationCurrent;
-    this.locationDesired = spec.locationDesired || DEFAULTS.locationDesired;
-    this.fromDate = spec.fromDate || DEFAULTS.fromDate;
-    this.toDate = spec.toDate || DEFAULTS.toDate;
-  };
-  /**
-   * _toJson, makes a dict of the object
-   * @method
-   * @param {object} opt dict
-   * @returns {object}
-   * @private
-   */
-  Conflict.prototype._toJson = function (opt) {
-    return {
-      kind: this.kind,
-      doc: this.doc,
-      item: this.item,
-      itemName: this.itemName,
-      locationCurrent: this.locationCurrent,
-      locationDesired: this.locationDesired,
-      fromDate: this.fromDate,
-      toDate: this.toDate
-    };
-  };
-  /**
-   * _fromJson
-   * @method
-   * @param {object} data the json response
-   * @param {object} opt dict
-   * @returns promise
-   * @private
-   */
-  Conflict.prototype._fromJson = function (data, opt) {
-    this.raw = data;
-    this.kind = data.kind || DEFAULTS.kind;
-    this.item = data.item || DEFAULTS.item;
-    this.itemName = data.itemName || DEFAULTS.itemName;
-    this.fromDate = data.fromDate || DEFAULTS.fromDate;
-    this.toDate = data.toDate || DEFAULTS.toDate;
-    return $.Deferred().resolve(data);
-  };
-  return Conflict;
-}(jquery);
 base = function ($, common, api, Document, Comment, Attachment, Field) {
   // Some constant values
   var DEFAULTS = {
@@ -8622,6 +7536,281 @@ base = function ($, common, api, Document, Comment, Attachment, Field) {
   };
   return Base;
 }(jquery, common, api, document, comment, attachment, field);
+category = function ($, common, api, Document) {
+  /*
+  id = StringField(primary_key=True)  # category id in reverse domain format cheqroom.types.customer
+  name = StringField()  # A friendly name for the category
+  count = IntField(default=0)  # How many categories are under this parent
+  defs = ListField(EmbeddedDocumentField(KeyValueDef))  # a list of allowed KeyValueDefs
+  parent = ReferenceField("Category")  # the parent category
+  by = ReferenceField(User)  # The user that add / updated this meta
+  modified = DateTimeField(default=DateHelper.getNow)  # The data when it was added / update
+   */
+  // Some constant values
+  var DEFAULTS = {
+    id: '',
+    name: '',
+    count: 0,
+    defs: [],
+    parent: '',
+    modified: null
+  };
+  // Allow overriding the ctor during inheritance
+  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+  var tmp = function () {
+  };
+  tmp.prototype = Document.prototype;
+  /**
+   * Category describes a category which can trigger on certain events (signals)
+   * @name  Category
+   * @class
+   * @property {string} name          the category name
+   * @property {string} count         how many categories are under this node
+   * @property {array} defs           a list of allowed keyvalue definitions
+   * @property {string} parent        the primary key of the parent category
+   * @property {Moment} modified      the modified date of the category
+   * @constructor
+   * @extends Document
+   */
+  var Category = function (opt) {
+    var spec = $.extend({}, opt);
+    Document.call(this, spec);
+    this.name = spec.name || DEFAULTS.name;
+    this.count = spec.count || DEFAULTS.count;
+    this.defs = spec.defs || DEFAULTS.defs.slice();
+    this.parent = spec.parent || DEFAULTS.parent;
+    this.modified = spec.modified || DEFAULTS.modified;
+  };
+  Category.prototype = new tmp();
+  Category.prototype.constructor = Category;
+  //
+  // Specific validators
+  /**
+   * Checks if name is valid
+   * @name Category#isValidName
+   * @method
+   * @return {Boolean}
+   */
+  Category.prototype.isValidName = function () {
+    this.name = $.trim(this.name);
+    if (this.name.length >= 3) {
+      var nospecial = this.name.latinise().replace(/[`~!@#$%^&*()_|+\-=?;:'",.<\{\}\[\]\\\/]/gi, '');
+      return this.name == nospecial;
+    } else {
+      return false;
+    }
+  };
+  //
+  // Document overrides
+  //
+  /**
+   * Checks if the category has any validation errors
+   * @name Category#isValid
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Category.prototype.isValid = function () {
+    return this.isValidName();
+  };
+  Category.prototype._getDefaults = function () {
+    return DEFAULTS;
+  };
+  /**
+   * Checks if the object is empty, it never is
+   * @name  Category#isEmpty
+   * @method
+   * @returns {boolean}
+   * @override
+   */
+  Category.prototype.isEmpty = function () {
+    return Document.prototype.isEmpty.call(this) && this.name == DEFAULTS.name;
+  };
+  /**
+   * Checks if the category is dirty and needs saving
+   * @returns {boolean}
+   * @override
+   */
+  Category.prototype.isDirty = function () {
+    var isDirty = Document.prototype.isDirty.call(this);
+    if (!isDirty && this.raw) {
+      isDirty = this.name != this.raw.name;
+    }
+    return isDirty;
+  };
+  /**
+   * Checks via the api if we can delete the Category document
+   * @name  Category#canDelete
+   * @method
+   * @returns {promise}
+   * @override
+   */
+  Category.prototype.canDelete = function () {
+    return this.ds.call(this.id, 'canDeleteCategory', { omitFields: true });
+  };
+  /**
+   * Checks via the api if we can rename the Category document
+   * e.g. if it would not clash with any existing categories
+   * @method
+   * @param name
+   * @returns {promise}
+   */
+  Category.prototype.canChangeName = function (name) {
+    return this.ds.call(this.id, 'canChangeName', { name: name });
+  };
+  /**
+   * Changes the name of a category
+   * @method
+   * @param name
+   * @returns {promise}
+   */
+  Category.prototype.changeName = function (name) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'changeName',
+      params: { name: name }
+    });
+  };
+  /**
+   * Checks via the api if we can change the parent of a Category document
+   * e.g. if it would not clash with any existing categories
+   * @param parentId
+   * @returns {promise}
+   */
+  Category.prototype.canChangeParent = function (parentId) {
+    return this.ds.call(this.id, 'canChangeParent', {
+      parent: parentId,
+      omitFields: true
+    });
+  };
+  /**
+   * Changes the parent of a category
+   * @param parentId
+   * @returns {promise}
+   */
+  Category.prototype.changeParent = function (parentId) {
+    return this._doApiCall({
+      pk: this.id,
+      method: 'changeParent',
+      params: {
+        parent: parentId,
+        omitFields: true
+      }
+    });
+  };
+  // toJson, fromJson
+  // ----
+  /**
+   * _toJson, makes a dict of params to use during create / update
+   * @param options
+   * @returns {{}}
+   * @private
+   */
+  Category.prototype._toJson = function (options) {
+    var data = Document.prototype._toJson.call(this, options);
+    data.name = this.name;
+    return data;
+  };
+  /**
+   * _fromJson: read some basic information
+   * @method
+   * @param {object} data the json response
+   * @param {object} options dict
+   * @returns {promise}
+   * @private
+   */
+  Category.prototype._fromJson = function (data, options) {
+    var that = this;
+    return Document.prototype._fromJson.call(this, data, options).then(function () {
+      that.name = data.name || DEFAULTS.name;
+      that.count = data.count || DEFAULTS.count;
+      that.defs = data.defs || DEFAULTS.defs.slice();
+      that.parent = data.parent || DEFAULTS.parent;
+      that.modified = data.modified || DEFAULTS.modified;
+      return data;
+    });
+  };
+  return Category;
+}(jquery, common, api, document);
+conflict = function ($) {
+  var DEFAULTS = {
+    kind: '',
+    doc: '',
+    item: '',
+    itemName: '',
+    locationCurrent: '',
+    locationDesired: '',
+    fromDate: null,
+    toDate: null
+  };
+  /**
+   * Conflict class
+   * @name  Conflict
+   * @class    
+   * @constructor
+   * 
+   * @param spec
+   * @property {string}  kind                   - The conflict kind (status, order, reservation, location)
+   * @property {string}  doc                    - The id of the document with which it conflicts
+   * @property {string}  item                   - The Item id for this conflict
+   * @property {string}  itemName               - The Item name for this conflict
+   * @property {string}  locationCurrent        - The Location the item is now
+   * @property {string}  locationDesired        - The Location where the item should be
+   * @property {moment}  fromDate               - From when does the conflict start
+   * @property {moment}  toDate                 - Until when does the conflict end
+   */
+  var Conflict = function (spec) {
+    this.ds = spec.ds;
+    this._fields = spec._fields;
+    this.raw = null;
+    // the raw json object
+    this.kind = spec.kind || DEFAULTS.kind;
+    this.doc = spec.doc || DEFAULTS.doc;
+    this.item = spec.item || DEFAULTS.item;
+    this.itemName = spec.itemName || DEFAULTS.itemName;
+    this.locationCurrent = spec.locationCurrent || DEFAULTS.locationCurrent;
+    this.locationDesired = spec.locationDesired || DEFAULTS.locationDesired;
+    this.fromDate = spec.fromDate || DEFAULTS.fromDate;
+    this.toDate = spec.toDate || DEFAULTS.toDate;
+  };
+  /**
+   * _toJson, makes a dict of the object
+   * @method
+   * @param {object} opt dict
+   * @returns {object}
+   * @private
+   */
+  Conflict.prototype._toJson = function (opt) {
+    return {
+      kind: this.kind,
+      doc: this.doc,
+      item: this.item,
+      itemName: this.itemName,
+      locationCurrent: this.locationCurrent,
+      locationDesired: this.locationDesired,
+      fromDate: this.fromDate,
+      toDate: this.toDate
+    };
+  };
+  /**
+   * _fromJson
+   * @method
+   * @param {object} data the json response
+   * @param {object} opt dict
+   * @returns promise
+   * @private
+   */
+  Conflict.prototype._fromJson = function (data, opt) {
+    this.raw = data;
+    this.kind = data.kind || DEFAULTS.kind;
+    this.item = data.item || DEFAULTS.item;
+    this.itemName = data.itemName || DEFAULTS.itemName;
+    this.fromDate = data.fromDate || DEFAULTS.fromDate;
+    this.toDate = data.toDate || DEFAULTS.toDate;
+    return $.Deferred().resolve(data);
+  };
+  return Conflict;
+}(jquery);
 user = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
@@ -9195,7 +8384,7 @@ helper = function ($, defaultSettings, common) {
     };
   };
 }(jquery, settings, common);
-Contact = function ($, Base, common, User, Helper) {
+contact = function ($, Base, common, User, Helper) {
   var DEFAULTS = {
     name: '',
     email: '',
@@ -9523,7 +8712,7 @@ Contact = function ($, Base, common, User, Helper) {
   };
   return Contact;
 }(jquery, base, common, user, helper);
-DateHelper = function ($, moment) {
+dateHelper = function ($, moment) {
   // Add a new function to moment
   moment.fn.toJSONDate = function () {
     // toISOString gives the time in Zulu timezone
@@ -10084,337 +9273,7 @@ DateHelper = function ($, moment) {
   };
   return DateHelper;
 }(jquery, moment);
-Document = function ($, common, api, ColorLabel) {
-  // Some constant values
-  var DEFAULTS = { id: '' };
-  /**
-   * @name Document
-   * @class
-   * @constructor
-   * @property {ApiDataSource}  ds        - The documents primary key
-   * @property {array}  _fields           - The raw, unprocessed json response
-   * @property {string}  id               - The documents primary key
-   * @property {string}  raw              - The raw, unprocessed json response
-   */
-  var Document = function (spec) {
-    this.raw = null;
-    // raw json object
-    this.id = spec.id || DEFAULTS.id;
-    // doc _id
-    this.ds = spec.ds;
-    // ApiDataSource object
-    this._fields = spec._fields;  // e.g. [*]
-  };
-  /**
-   * Resets the object
-   * @name  Document#reset
-   * @method
-   * @returns {promise}
-   */
-  Document.prototype.reset = function () {
-    // By default, reset just reads from the DEFAULTS dict again
-    return this._fromJson(this._getDefaults(), null);
-  };
-  /**
-   * Checks if the document exists in the database
-   * @name  Document#existsInDb
-   * @method
-   * @returns {boolean}
-   */
-  Document.prototype.existsInDb = function () {
-    // Check if we have a primary key
-    return this.id != null && this.id.length > 0;
-  };
-  /**
-   * Checks if the object is empty
-   * @name  Document#isEmpty
-   * @method
-   * @returns {boolean}
-   */
-  Document.prototype.isEmpty = function () {
-    return true;
-  };
-  /**
-   * Checks if the object needs to be saved
-   * We don't check any of the keyvalues (or comments, attachments) here
-   * @name  Document#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  Document.prototype.isDirty = function () {
-    return false;
-  };
-  /**
-   * Checks if the object is valid
-   * @name  Document#isValid
-   * @method
-   * @returns {boolean}
-   */
-  Document.prototype.isValid = function () {
-    return true;
-  };
-  /**
-   * Discards any changes made to the object from the previously loaded raw response
-   * or resets it when no old raw response was found
-   * @name  Document#discardChanges
-   * @method
-   * @returns {promise}
-   */
-  Document.prototype.discardChanges = function () {
-    return this.raw ? this._fromJson(this.raw, null) : this.reset();
-  };
-  /**
-   * Reloads the object from db
-   * @name  Document#reload
-   * @method
-   * @param _fields
-   * @returns {promise}
-   */
-  Document.prototype.reload = function (_fields) {
-    if (this.existsInDb()) {
-      return this.get(_fields);
-    } else {
-      return $.Deferred().reject(new api.ApiError('Cannot reload document, id is empty or null'));
-    }
-  };
-  /**
-   * Gets an object by the default api.get
-   * @name  Document#get
-   * @method
-   * @param _fields
-   * @returns {promise}
-   */
-  Document.prototype.get = function (_fields) {
-    if (this.existsInDb()) {
-      var that = this;
-      return this.ds.get(this.id, _fields || this._fields).then(function (data) {
-        return that._fromJson(data);
-      });
-    } else {
-      return $.Deferred().reject(new api.ApiError('Cannot get document, id is empty or null'));
-    }
-  };
-  /**
-   * Creates an object by the default api.create
-   * @name  Document#create
-   * @method
-   * @param skipRead skips reading the response via _fromJson (false)
-   * @returns {promise}
-   */
-  Document.prototype.create = function (skipRead) {
-    if (this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot create document, already exists in database'));
-    }
-    /*if (this.isEmpty()) {
-        return $.Deferred().reject(new Error("Cannot create empty document"));
-    }*/
-    if (!this.isValid()) {
-      return $.Deferred().reject(new Error('Cannot create, invalid document'));
-    }
-    return this._create(skipRead);
-  };
-  /**
-   * Updates an object by the default api.update
-   * @name  Document#update
-   * @method
-   * @param skipRead skips reading the response via _fromJson (false)
-   * @returns {promise}
-   */
-  Document.prototype.update = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot update document without id'));
-    }
-    if (this.isEmpty()) {
-      return $.Deferred().reject(new Error('Cannot update to empty document'));
-    }
-    if (!this.isValid()) {
-      return $.Deferred().reject(new Error('Cannot update, invalid document'));
-    }
-    return this._update(skipRead);
-  };
-  /**
-   * Deletes an object by the default api.delete
-   * @name  Document#delete
-   * @method
-   * @returns {promise}
-   */
-  Document.prototype.delete = function () {
-    // Call the api /delete on this document
-    if (this.existsInDb()) {
-      return this._delete();
-    } else {
-      return $.Deferred().reject(new Error('Document does not exist'));
-    }
-  };
-  // toJson, fromJson
-  // ----
-  Document.prototype._getDefaults = function () {
-    return DEFAULTS;
-  };
-  /**
-   * _toJson, makes a dict of this object
-   * Possibly inheriting classes will override this method,
-   * because not all fields can be set during create / update
-   * @method
-   * @param options
-   * @returns {{}}
-   * @private
-   */
-  Document.prototype._toJson = function (options) {
-    return { id: this.id };
-  };
-  /**
-   * _fromJson: in this implementation we'll only read
-   * the data.keyValues into: comments, attachments, keyValues
-   * @method
-   * @param {object} data the json response
-   * @param {object} options dict
-   * @private
-   */
-  Document.prototype._fromJson = function (data, options) {
-    this.raw = data;
-    this.id = data._id || DEFAULTS.id;
-    return $.Deferred().resolve(data);
-  };
-  // Implementation stuff
-  // ---
-  /**
-   * The actual _create implementation (after all the checks are done)
-   * @param skipRead
-   * @returns {*}
-   * @private
-   */
-  Document.prototype._create = function (skipRead) {
-    var that = this;
-    var data = this._toJson();
-    delete data.id;
-    return this.ds.create(data, this._fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
-    });
-  };
-  /**
-   * The actual _update implementation (after all the checks are done)
-   * @param skipRead
-   * @returns {*}
-   * @private
-   */
-  Document.prototype._update = function (skipRead) {
-    var that = this;
-    var data = this._toJson();
-    delete data.id;
-    return this.ds.update(this.id, data, this._fields).then(function (data) {
-      return skipRead == true ? data : that._fromJson(data);
-    });
-  };
-  /**
-   * The actual _delete implementation (after all the checks are done)
-   * @returns {*}
-   * @private
-   */
-  Document.prototype._delete = function () {
-    var that = this;
-    return this.ds.delete(this.id).then(function () {
-      return that.reset();
-    });
-  };
-  /**
-   * Helper for checking if a simple object property is dirty
-   * compared to the original raw result
-   * @param prop
-   * @returns {boolean}
-   * @private
-   */
-  Document.prototype._isDirtyProperty = function (prop) {
-    return this.raw ? this[prop] != this.raw[prop] : false;
-  };
-  /**
-   * Helper for checking if a simple object property is dirty
-   * compared to the original raw result
-   * Because we know that the API doesn't return empty string properties,
-   * we do a special, extra check on that.
-   * @param prop
-   * @returns {boolean}
-   * @private
-   */
-  Document.prototype._isDirtyStringProperty = function (prop) {
-    if (this.raw) {
-      var same = this[prop] == this.raw[prop] || this[prop] == '' && this.raw[prop] == null;
-      return !same;
-    } else {
-      return false;
-    }
-  };
-  /**
-   * Helper for checking if a simple object property is dirty
-   * compared to the original raw result
-   * @param prop
-   * @returns {boolean}
-   * @private
-   */
-  Document.prototype._isDirtyMomentProperty = function (prop) {
-    if (this.raw) {
-      var newVal = this[prop], oldVal = this.raw[prop];
-      if (newVal == null && oldVal == null) {
-        return false;
-      } else if (newVal && oldVal) {
-        return !newVal.isSame(oldVal);
-      } else {
-        return true;
-      }
-    } else {
-      return false;
-    }
-  };
-  /**
-   * Gets the id of a document
-   * @param obj
-   * @param prop
-   * @returns {string}
-   * @private
-   */
-  Document.prototype._getId = function (obj, prop) {
-    return typeof obj === 'string' ? obj : obj[prop || '_id'];
-  };
-  Document.prototype._getIds = function (objs, prop) {
-    return objs.map(function (obj) {
-      return typeof obj == 'string' ? obj : obj[prop || '_id'];
-    });
-  };
-  /**
-   * Wrapping the this.ds.call method
-   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
-   * @method
-   * @param spec
-   * @returns {promise}
-   * @private
-   */
-  Document.prototype._doApiCall = function (spec) {
-    var that = this, dfd;
-    var dfd = this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost);
-    dfd.then(function (data) {
-      return spec.skipRead == true ? data : that._fromJson(data);
-    });
-    return dfd;
-  };
-  /**
-   * Wrapping the this.ds.call method with a longer timeout
-   * {pk: '', method: '', params: {}, _fields: '', timeOut: null, usePost: null, skipRead: null}
-   * @method
-   * @param spec
-   * @returns {promise}
-   * @private
-   */
-  Document.prototype._doApiLongCall = function (spec) {
-    spec.timeOut = spec.timeOut || 60000;
-    return this._doApiCall(spec);
-  };
-  Document.prototype._getColorLabel = function (data, options) {
-    var spec = $.extend({}, options || {}, data);
-    return new ColorLabel(spec);
-  };
-  return Document;
-}(jquery, common, api, colorLabel);
-Group = function ($, common, api, Document) {
+group = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
     id: '',
@@ -11103,7 +9962,7 @@ Group = function ($, common, api, Document) {
   };
   return Group;
 }(jquery, common, api, document);
-Item = function ($, common, Base) {
+item = function ($, common, Base) {
   var FLAG = 'cheqroom.prop.Custom', DEFAULT_LAT = 0, DEFAULT_LONG = 0, DEFAULTS = {
       name: '',
       status: '',
@@ -11905,7 +10764,7 @@ Item = function ($, common, Base) {
   };
   return Item;
 }(jquery, common, base);
-Kit = function ($, Base, common) {
+kit = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     description: '',
@@ -12342,87 +11201,6 @@ Kit = function ($, Base, common) {
   };
   return Kit;
 }(jquery, base, common);
-Location = function ($, Base) {
-  var DEFAULTS = {
-    name: '',
-    address: ''
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = Base.prototype;
-  /**
-   * @name Location
-   * @class Location
-   * @constructor
-   * @extends Base
-   * @property {string}  name        - the location name
-   * @property {string}  address     - the location address
-   * @example
-   * var loc = new cr.api.Location({ds: dsLocations});
-   * loc.name = "Headquarters";
-   * loc.address = "4280 Express Road, Sarasota, FL 34238";
-   * loc.create()
-   *     .done(function() {
-   *         console.log(loc);
-   *     });
-   */
-  var Location = function (opt) {
-    var spec = $.extend({ _fields: ['*'] }, opt);
-    Base.call(this, spec);
-    this.name = spec.name || DEFAULTS.name;
-    this.address = spec.address || DEFAULTS.address;
-  };
-  Location.prototype = new tmp();
-  Location.prototype.constructor = Location;
-  //
-  // Document overrides
-  //
-  /**
-   * Checks if the location is empty
-   * @method
-   * @name Location#isEmpty
-   * @returns {boolean}
-   */
-  Location.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.address == DEFAULTS.address;
-  };
-  /**
-   * Checks if the location is dirty and needs saving
-   * @method
-   * @name Location#isDirty
-   * @returns {boolean}
-   */
-  Location.prototype.isDirty = function () {
-    var isDirty = Base.prototype.isDirty.call(this);
-    if (!isDirty && this.raw) {
-      var name = this.raw.name || DEFAULTS.name;
-      var address = this.raw.address || DEFAULTS.address;
-      return this.name != name || this.address != address;
-    }
-    return isDirty;
-  };
-  Location.prototype._getDefaults = function () {
-    return DEFAULTS;
-  };
-  Location.prototype._toJson = function (options) {
-    var data = Base.prototype._toJson.call(this, options);
-    data.name = this.name || DEFAULTS.name;
-    data.address = this.address || DEFAULTS.address;
-    return data;
-  };
-  Location.prototype._fromJson = function (data, options) {
-    var that = this;
-    return Base.prototype._fromJson.call(this, data, options).then(function () {
-      that.name = data.name || DEFAULTS.name;
-      that.address = data.address || DEFAULTS.address;
-      $.publish('location.fromJson', data);
-      return data;
-    });
-  };
-  return Location;
-}(jquery, base);
 location = function ($, Base) {
   var DEFAULTS = {
     name: '',
@@ -12504,567 +11282,6 @@ location = function ($, Base) {
   };
   return Location;
 }(jquery, base);
-dateHelper = function ($, moment) {
-  // Add a new function to moment
-  moment.fn.toJSONDate = function () {
-    // toISOString gives the time in Zulu timezone
-    // we want the local timezone but in ISO formatting
-    return this.format('YYYY-MM-DD[T]HH:mm:ss.000[Z]');
-  };
-  // https://github.com/moment/moment/pull/1595
-  //m.roundTo('minute', 15); // Round the moment to the nearest 15 minutes.
-  //m.roundTo('minute', 15, 'up'); // Round the moment up to the nearest 15 minutes.
-  //m.roundTo('minute', 15, 'down'); // Round the moment down to the nearest 15 minutes.
-  moment.fn.roundTo = function (units, offset, midpoint) {
-    units = moment.normalizeUnits(units);
-    offset = offset || 1;
-    var roundUnit = function (unit) {
-      switch (midpoint) {
-      case 'up':
-        unit = Math.ceil(unit / offset);
-        break;
-      case 'down':
-        unit = Math.floor(unit / offset);
-        break;
-      default:
-        unit = Math.round(unit / offset);
-        break;
-      }
-      return unit * offset;
-    };
-    switch (units) {
-    case 'year':
-      this.year(roundUnit(this.year()));
-      break;
-    case 'month':
-      this.month(roundUnit(this.month()));
-      break;
-    case 'week':
-      this.weekday(roundUnit(this.weekday()));
-      break;
-    case 'isoWeek':
-      this.isoWeekday(roundUnit(this.isoWeekday()));
-      break;
-    case 'day':
-      this.day(roundUnit(this.day()));
-      break;
-    case 'hour':
-      this.hour(roundUnit(this.hour()));
-      break;
-    case 'minute':
-      this.minute(roundUnit(this.minute()));
-      break;
-    case 'second':
-      this.second(roundUnit(this.second()));
-      break;
-    default:
-      this.millisecond(roundUnit(this.millisecond()));
-      break;
-    }
-    return this;
-  };
-  /*
-   useHours = BooleanField(default=True)
-   avgCheckoutHours = IntField(default=4)
-   roundMinutes = IntField(default=15)
-   roundType = StringField(default="nearest", choices=ROUND_TYPE)  # nearest, longer, shorter
-   */
-  var INCREMENT = 15, START_OF_DAY_HRS = 9, END_OF_DAY_HRS = 17;
-  /**
-   * @name  DateHelper
-   * @class
-   * @constructor
-   */
-  var DateHelper = function (spec) {
-    spec = spec || {};
-    this.roundType = spec.roundType || 'nearest';
-    this.roundMinutes = spec.roundMinutes || INCREMENT;
-    this.timeFormat24 = spec.timeFormat24 ? spec.timeFormat24 : false;
-    this._momentFormat = this.timeFormat24 ? 'MMM D [at] H:mm' : 'MMM D [at] h:mm a';
-    this.startOfDayHours = spec.startOfDayHours != null ? startOfDayHours : START_OF_DAY_HRS;
-    this.endOfDayHours = spec.endOfDayHours != null ? endOfDayHours : END_OF_DAY_HRS;
-    this.businessHours = spec.businessHours || [];
-    this.weekStart = spec.weekStart || 1;
-  };
-  /**
-   * @name parseDate
-   * @method
-   * @param data
-   * @returns {moment}
-   */
-  DateHelper.prototype.parseDate = function (data) {
-    if (typeof data == 'string' || data instanceof String) {
-      // "2014-04-03T12:15:00+00:00" (length 25)
-      // "2014-04-03T09:32:43.841000+00:00" (length 32)
-      if (data.endsWith('+00:00')) {
-        var len = data.length;
-        if (len == 25) {
-          return moment(data.substring(0, len - 6));
-        } else if (len == 32) {
-          return moment(data.substring(0, len - 6).split('.')[0]);
-        }
-      }
-    }
-  };
-  /**
-   * @name  DateHelper#getNow
-   * @method
-   * @return {moment}
-   */
-  DateHelper.prototype.getNow = function () {
-    // TODO: Use the right MomentJS constructor
-    //       This one will be deprecated in the next version
-    return moment();
-  };
-  /**
-   * @name DateHelper#getFriendlyDuration
-   * @method
-   * @param  duration
-   * @return {}
-   */
-  DateHelper.prototype.getFriendlyDuration = function (duration) {
-    return duration.humanize();
-  };
-  /**
-   * @name DateHelper#getFriendlyDateParts
-   * @param date
-   * @param now (optional)
-   * @param format (optional)
-   * @returns [date string,time string]
-   */
-  DateHelper.prototype.getFriendlyDateParts = function (date, now, format) {
-    /*
-     moment().calendar() shows friendlier dates
-     - when the date is <=7d away:
-     - Today at 4:15 PM
-     - Yesterday at 4:15 PM
-     - Last Monday at 4:15 PM
-     - Wednesday at 4:15 PM
-     - when the date is >7d away:
-     - 07/25/2015
-     */
-    if (!moment.isMoment(date)) {
-      date = moment(date);
-    }
-    now = now || this.getNow();
-    return date.calendar().replace('AM', 'am').replace('PM', 'pm').split(' at ');
-  };
-  /**
-   * Returns a number of friendly date ranges with a name
-   * Each date range is a standard transaction duration
-   * @name getDateRanges
-   * @method
-   * @param avgHours
-   * @param numRanges
-   * @param now
-   * @param i18n
-   * @returns {Array} [{counter: 1, from: m(), to: m(), hours: 24, option: 'days', title: '1 Day'}, {...}]
-   */
-  DateHelper.prototype.getDateRanges = function (avgHours, numRanges, now, i18n) {
-    if (now && !moment.isMoment(now)) {
-      now = moment(now);
-    }
-    i18n = i18n || {
-      year: 'year',
-      years: 'years',
-      month: 'month',
-      months: 'months',
-      week: 'week',
-      weeks: 'weeks',
-      day: 'day',
-      days: 'days',
-      hour: 'hour',
-      hours: 'hours'
-    };
-    var timeOptions = [
-        'years',
-        'months',
-        'weeks',
-        'days',
-        'hours'
-      ], timeHourVals = [
-        365 * 24,
-        30 * 24,
-        7 * 24,
-        24,
-        1
-      ], opt = null, val = null, title = null, counter = 0, chosenIndex = -1, ranges = [];
-    // Find the range kind that best fits the avgHours (search from long to short)
-    for (var i = 0; i < timeOptions.length; i++) {
-      val = timeHourVals[i];
-      opt = timeOptions[i];
-      if (avgHours >= val) {
-        if (avgHours % val == 0) {
-          chosenIndex = i;
-          break;
-        }
-      }
-    }
-    now = now || this.getNow();
-    if (chosenIndex >= 0) {
-      for (var i = 1; i <= numRanges; i++) {
-        counter = i * avgHours;
-        title = i18n[counter == 1 ? opt.replace('s', '') : opt];
-        ranges.push({
-          option: opt,
-          hours: counter,
-          title: counter / timeHourVals[chosenIndex] + ' ' + title,
-          from: now.clone(),
-          to: now.clone().add(counter, 'hours')
-        });
-      }
-    }
-    return ranges.filter(function (r) {
-      return global.dateHelper.isValidBusinessDate(r.to);
-    });
-  };
-  /**
-   * getFriendlyFromTo
-   * returns {fromDate:"", fromTime: "", fromText: "", toDate: "", toTime: "", toText: "", text: ""}
-   * @param from
-   * @param to
-   * @param useHours
-   * @param now
-   * @param separator
-   * @param format
-   * @returns {}
-   */
-  DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, separator, format) {
-    if (!moment.isMoment(from)) {
-      from = moment(from);
-    }
-    if (!moment.isMoment(to)) {
-      to = moment(to);
-    }
-    now = now || this.getNow();
-    var sep = separator || ' - ', fromParts = this.getFriendlyDateParts(from, now, format), toParts = this.getFriendlyDateParts(to, now, format), result = {
-        dayDiff: from ? from.clone().startOf('day').diff(to, 'days') : -1,
-        fromDate: from ? fromParts[0] : 'No from date set',
-        fromTime: useHours && from != null ? fromParts[1] : '',
-        toDate: to ? toParts[0] : 'No to date set',
-        toTime: useHours && to != null ? toParts[1] : ''
-      };
-    result.fromText = result.fromDate;
-    result.toText = result.toDate;
-    if (useHours) {
-      if (result.fromTime) {
-        result.fromText += ' ' + result.fromTime;
-      }
-      if (result.toTime) {
-        result.toText += ' ' + result.toTime;
-      }
-    }
-    // Build a text based on the dates and times we have
-    if (result.dayDiff == 0) {
-      if (useHours) {
-        result.text = result.fromText + sep + result.toText;
-      } else {
-        result.text = result.fromText;
-      }
-    } else {
-      result.text = result.fromText + sep + result.toText;
-    }
-    return result;
-  };
-  /**
-   * @deprecated use getFriendlyFromToInfo
-   * [getFriendlyFromToOld]
-   * @param  fromDate
-   * @param  toDate
-   * @param  groupProfile
-   * @return {}
-   */
-  DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
-    var mFrom = this.roundFromTime(fromDate, groupProfile);
-    var mTo = this.roundToTime(toDate, groupProfile);
-    return {
-      from: mFrom,
-      to: mTo,
-      daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
-      duration: moment.duration(mFrom - mTo).humanize(),
-      fromText: mFrom.calendar().replace(' at ', ' '),
-      toText: mTo.calendar().replace(' at ', ' ')
-    };
-  };
-  /**
-   * makeStartDate helps making an start date for a transaction, usually a reservation
-   * It will do the standard rounding
-   * But also, if you're using dates instead of datetimes,
-   * it will try to make smart decisions about which hours to use
-   * @param m - the Moment date
-   * @param useHours - does the profile use hours?
-   * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
-   * @param minDate - passing in a minimum start-date, will be different for reservations compared to orders
-   * @param maxDate - passing in a maximum start-date (not used for the moment)
-   * @param now - the current moment (just to make testing easier)
-   * @returns {moment}
-   * @private
-   */
-  DateHelper.prototype.makeStartDate = function (m, useHours, dayMode, minDate, maxDate, now) {
-    useHours = useHours != null ? useHours : true;
-    // is the account set up to use hours?
-    dayMode = dayMode != null ? dayMode : false;
-    // did the selection come from a calendar fullcalendar day selection?
-    now = now || moment();
-    // the current time (for unit testing)
-    if (useHours && !dayMode) {
-      // The account is set up to use hours,
-      // and the user picked the hours himself (since it's not picked from a dayMode calendar)
-      // We'll just round the from date
-      // if it's before the minDate, just take the minDate instead
-      m = this.roundTimeFrom(m);
-    } else {
-      // When we get here we know that either:
-      // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
-      // or
-      // 2) The account is set up to use days instead of hours
-      //
-      // Which means we still need to see if we can make a smart decision about the hours part
-      // we'll base this on typical business hours (usually 9 to 5)
-      var isToday = m.isSame(now, 'day'), startOfBusinessDay = this._makeStartOfBusinessDay(m);
-      if (isToday) {
-        // The start date is today
-        // and the current time is still before business hours
-        // we can use the start time to start-of-business hours
-        if (m.isBefore(startOfBusinessDay)) {
-          m = startOfBusinessDay;
-        } else {
-          // We're already at the beginning of business hours
-          // or even already passed it, just try rounding the
-          // time and see if its before minDate
-          m = this.roundTimeFrom(m);
-        }
-      } else {
-        // The start date is not today, we can just take the business day start from the date that was passed
-        m = startOfBusinessDay;
-      }
-    }
-    // Make sure we never return anything before the mindate
-    return minDate && m.isBefore(minDate) ? minDate : m;
-  };
-  /**
-   * makeEndDate helps making an end date for a transaction
-   * It will do the standard rounding
-   * But also, if you're using dates instead of datetimes,
-   * it will try to make smart decisions about which hours to use
-   * @param m - the Moment date
-   * @param useHours - does the profile use hours?
-   * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
-   * @param minDate
-   * @param maxDate
-   * @param now - the current moment (just to make testing easier)
-   * @returns {moment}
-   * @private
-   */
-  DateHelper.prototype.makeEndDate = function (m, useHours, dayMode, minDate, maxDate, now) {
-    useHours = useHours != null ? useHours : true;
-    dayMode = dayMode != null ? dayMode : false;
-    now = now || moment();
-    if (useHours && !dayMode) {
-      // The account is set up to use hours,
-      // and since dayMode is false,
-      // we assume the hours are picked by the user himself
-      // just do the rounding and we're done
-      m = this.roundTimeTo(m);
-    } else {
-      // When we get here we know that either:
-      // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
-      // or
-      // 2) The account is set up to use days instead of hours
-      //
-      // Which means we still need to see if we can make a smart decision about the hours part
-      var isToday = m.isSame(now, 'day'), endOfBusinessDay = this._makeEndOfBusinessDay(m), endOfDay = this._makeEndOfDay(m);
-      if (isToday) {
-        // The end date is today
-        // and the current date is before business hours
-        // we can use the end time to end-of-business hours
-        if (m.isBefore(endOfBusinessDay)) {
-          m = endOfBusinessDay;
-        } else {
-          m = endOfDay;
-        }
-      } else if (m.isAfter(endOfBusinessDay)) {
-        m = endOfDay;
-      } else {
-        m = endOfBusinessDay;
-      }
-    }
-    // Make sure we never return a date after the max date
-    return maxDate && m.isAfter(maxDate) ? maxDate : m;
-  };
-  /**
-   * [getFriendlyDateText]
-   * @param  date
-   * @param  useHours
-   * @param  now
-   * @param  format
-   * @return {string}
-   */
-  DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format) {
-    if (date == null) {
-      return 'Not set';
-    }
-    var parts = this.getFriendlyDateParts(date, now, format);
-    return useHours ? parts.join(' ') : parts[0];
-  };
-  /**
-   * [addAverageDuration]
-   * @param m
-   * @returns {moment}
-   */
-  DateHelper.prototype.addAverageDuration = function (m) {
-    // TODO: Read the average order duration from the group.profile
-    // add it to the date that was passed
-    return m.clone().add(1, 'day');
-  };
-  /**
-   * roundTimeFrom uses the time rounding rules to round a begin datetime
-   * @name  DateHelper#roundTimeFrom
-   * @method
-   * @param m
-   */
-  DateHelper.prototype.roundTimeFrom = function (m) {
-    return this.roundMinutes <= 1 ? m : this.roundTime(m, this.roundMinutes, this._typeToDirection(this.roundType, 'from'));
-  };
-  /**
-   * roundTimeTo uses the time rounding rules to round an end datetime
-   * @name  DateHelper#roundTimeTo
-   * @method
-   * @param m
-   */
-  DateHelper.prototype.roundTimeTo = function (m) {
-    return this.roundMinutes <= 1 ? m : this.roundTime(m, this.roundMinutes, this._typeToDirection(this.roundType, 'to'));
-  };
-  /**
-   * @name  DateHelper#roundTime
-   * @method
-   * @param  m
-   * @param  inc
-   * @param  direction
-   */
-  DateHelper.prototype.roundTime = function (m, inc, direction) {
-    var mom = moment.isMoment(m) ? m : moment(m);
-    mom.seconds(0).milliseconds(0);
-    return mom.roundTo('minute', inc || INCREMENT, direction);
-  };
-  /**
-   * @name  DateHelper#roundTimeUp
-   * @method
-   * @param  m
-   * @param  inc
-   */
-  DateHelper.prototype.roundTimeUp = function (m, inc) {
-    var mom = moment.isMoment(m) ? m : moment(m);
-    mom.seconds(0).milliseconds(0);
-    return mom.roundTo('minute', inc || INCREMENT, 'up');
-  };
-  /**
-   * @name DateHelper#roundTimeDown
-   * @method
-   * @param  m
-   * @param  inc
-   */
-  DateHelper.prototype.roundTimeDown = function (m, inc) {
-    var mom = moment.isMoment(m) ? m : moment(m);
-    mom.seconds(0).milliseconds(0);
-    return mom.roundTo('minute', inc || INCREMENT, 'down');
-  };
-  DateHelper.prototype._typeToDirection = function (type, fromto) {
-    switch (type) {
-    case 'longer':
-      switch (fromto) {
-      case 'from':
-        return 'down';
-      case 'to':
-        return 'up';
-      default:
-        break;
-      }
-      break;
-    case 'shorter':
-      switch (fromto) {
-      case 'from':
-        return 'up';
-      case 'to':
-        return 'down';
-      default:
-        break;
-      }
-      break;
-    default:
-      break;
-    }
-  };
-  DateHelper.prototype.isValidBusinessDate = function (d) {
-    var isValid = false;
-    var businessHours = this.businessHours;
-    if (businessHours.length > 0) {
-      $.each(this._getBusinessHours(d), function (i, h) {
-        var openTime = moment(moment.utc(moment.duration(h.openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm'), closeTime = moment(moment.utc(moment.duration(h.closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
-        var testDate = moment(d.clone().format('H:mm'), 'H:mm');
-        isValid = testDate.isBetween(openTime, closeTime) || testDate.isSame(openTime) || testDate.isSame(closeTime);
-        if (isValid)
-          return false;
-      });
-    } else {
-      isValid = true;
-    }
-    return isValid;
-  };
-  DateHelper.prototype.getValidBusinessDate = function (d) {
-    var that = this, now = this.getNow(), maxMinutes = 0;
-    //bugfix getValidBusinessDate only returns dates from now or in the future
-    if (d.isBefore(now)) {
-      d.date(now.date());
-    }
-    while (!this.isValidBusinessDate(d) || maxMinutes >= 7 * 24 * 60) {
-      d = d.add(that.roundMinutes, 'minutes');
-      // Prevent infinite loop by stopping after 1 full week
-      maxMinutes += that.roundMinutes;
-    }
-    return d;
-  };
-  DateHelper.prototype._getBusinessHours = function (d) {
-    var businessHours = this.businessHours;
-    if (businessHours.length > 0) {
-      return businessHours.filter(function (bh) {
-        return bh.isoWeekday == d.isoWeekday();
-      });
-    } else {
-      return [];
-    }
-  };
-  DateHelper.prototype._makeStartOfBusinessDay = function (m) {
-    var startOfBusinessDay = m.clone().hour(this.startOfDayHours).minutes(0).seconds(0).milliseconds(0);
-    var businessHours = this.businessHours;
-    if (businessHours.length > 0) {
-      var businessHoursForDay = this._getBusinessHours(m);
-      if (businessHoursForDay.length > 0) {
-        var openTime = moment(moment.utc(moment.duration(businessHoursForDay[0].openTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
-        startOfBusinessDay.hour(openTime.hour()).minute(openTime.minute());
-      }
-    }
-    return this.getValidBusinessDate(startOfBusinessDay);
-  };
-  DateHelper.prototype._makeEndOfBusinessDay = function (m) {
-    var endOfBusinessDay = m.clone().hour(this.endOfDayHours).minutes(0).seconds(0).milliseconds(0);
-    var businessHours = this.businessHours;
-    if (businessHours.length > 0) {
-      var businessHoursForDay = this._getBusinessHours(m).sort(function (a, b) {
-        return a.closeTime < b.closeTime;
-      });
-      if (businessHoursForDay.length > 0) {
-        var closeTime = moment(moment.utc(moment.duration(businessHoursForDay[0].closeTime, 'minutes').asMilliseconds()).format('H:mm'), 'H:mm');
-        endOfBusinessDay.hour(closeTime.hour()).minute(closeTime.minute());
-      }
-    }
-    return this.getValidBusinessDate(endOfBusinessDay);
-  };
-  DateHelper.prototype._makeEndOfDay = function (m) {
-    return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
-  };
-  return DateHelper;
-}(jquery, moment);
 transaction = function ($, api, Base, Location, DateHelper, Helper) {
   var DEFAULTS = {
     status: 'creating',
@@ -13909,86 +12126,7 @@ transaction = function ($, api, Base, Location, DateHelper, Helper) {
   };
   return Transaction;
 }(jquery, api, base, location, dateHelper, helper);
-conflict = function ($) {
-  var DEFAULTS = {
-    kind: '',
-    doc: '',
-    item: '',
-    itemName: '',
-    locationCurrent: '',
-    locationDesired: '',
-    fromDate: null,
-    toDate: null
-  };
-  /**
-   * Conflict class
-   * @name  Conflict
-   * @class    
-   * @constructor
-   * 
-   * @param spec
-   * @property {string}  kind                   - The conflict kind (status, order, reservation, location)
-   * @property {string}  doc                    - The id of the document with which it conflicts
-   * @property {string}  item                   - The Item id for this conflict
-   * @property {string}  itemName               - The Item name for this conflict
-   * @property {string}  locationCurrent        - The Location the item is now
-   * @property {string}  locationDesired        - The Location where the item should be
-   * @property {moment}  fromDate               - From when does the conflict start
-   * @property {moment}  toDate                 - Until when does the conflict end
-   */
-  var Conflict = function (spec) {
-    this.ds = spec.ds;
-    this._fields = spec._fields;
-    this.raw = null;
-    // the raw json object
-    this.kind = spec.kind || DEFAULTS.kind;
-    this.doc = spec.doc || DEFAULTS.doc;
-    this.item = spec.item || DEFAULTS.item;
-    this.itemName = spec.itemName || DEFAULTS.itemName;
-    this.locationCurrent = spec.locationCurrent || DEFAULTS.locationCurrent;
-    this.locationDesired = spec.locationDesired || DEFAULTS.locationDesired;
-    this.fromDate = spec.fromDate || DEFAULTS.fromDate;
-    this.toDate = spec.toDate || DEFAULTS.toDate;
-  };
-  /**
-   * _toJson, makes a dict of the object
-   * @method
-   * @param {object} opt dict
-   * @returns {object}
-   * @private
-   */
-  Conflict.prototype._toJson = function (opt) {
-    return {
-      kind: this.kind,
-      doc: this.doc,
-      item: this.item,
-      itemName: this.itemName,
-      locationCurrent: this.locationCurrent,
-      locationDesired: this.locationDesired,
-      fromDate: this.fromDate,
-      toDate: this.toDate
-    };
-  };
-  /**
-   * _fromJson
-   * @method
-   * @param {object} data the json response
-   * @param {object} opt dict
-   * @returns promise
-   * @private
-   */
-  Conflict.prototype._fromJson = function (data, opt) {
-    this.raw = data;
-    this.kind = data.kind || DEFAULTS.kind;
-    this.item = data.item || DEFAULTS.item;
-    this.itemName = data.itemName || DEFAULTS.itemName;
-    this.fromDate = data.fromDate || DEFAULTS.fromDate;
-    this.toDate = data.toDate || DEFAULTS.toDate;
-    return $.Deferred().resolve(data);
-  };
-  return Conflict;
-}(jquery);
-Order = function ($, api, Transaction, Conflict, common) {
+order = function ($, api, Transaction, Base, Conflict, common) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -14818,8 +12956,8 @@ Order = function ($, api, Transaction, Conflict, common) {
     }
   };
   return Order;
-}(jquery, api, transaction, conflict, common);
-PermissionHandler = function () {
+}(jquery, api, transaction, base, conflict, common);
+permissionHandler = function () {
   /**
    * PermissionHandler
    * @name PermissionHandler
@@ -15776,7 +13914,7 @@ PermissionHandler = function () {
   };
   return PermissionHandler;
 }();
-Reservation = function ($, api, Transaction, Conflict, moment, common) {
+reservation = function ($, api, Transaction, Conflict, moment, common) {
   // Allow overriding the ctor during inheritance
   // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
   var tmp = function () {
@@ -16673,7 +14811,7 @@ Reservation = function ($, api, Transaction, Conflict, moment, common) {
   };
   return Reservation;
 }(jquery, api, transaction, conflict, moment, common);
-Template = function ($, common, api, Document) {
+template = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
     id: '',
@@ -16957,1187 +15095,7 @@ Template = function ($, common, api, Document) {
   };
   return Template;
 }(jquery, common, api, document);
-Transaction = function ($, api, Base, Location, DateHelper, Helper) {
-  var DEFAULTS = {
-    status: 'creating',
-    from: null,
-    to: null,
-    due: null,
-    contact: null,
-    location: null,
-    number: '',
-    items: [],
-    conflicts: [],
-    by: null,
-    archived: null,
-    modified: null,
-    itemSummary: null,
-    name: null
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = Base.prototype;
-  /**
-   * @name Transaction
-   * @class Transaction
-   * @constructor
-   * @extends Base
-   * @property {boolean} autoCleanup      - Automatically cleanup the transaction if it becomes empty?
-   * @property {DateHelper} dateHelper    - A DateHelper object ref
-   * @property {string} status            - The transaction status
-   * @property {moment} from              - The transaction from date
-   * @property {moment} to                - The transaction to date
-   * @property {moment} due               - The transaction due date
-   * @property {string} number            - The booking number
-   * @property {string} contact           - The Contact.id for this transaction
-   * @property {string} location          - The Location.id for this transaction
-   * @property {Array} items              - A list of Item.id strings
-   * @property {Array} conflicts          - A list of conflict hashes
-   */
-  var Transaction = function (opt) {
-    var spec = $.extend({}, opt);
-    Base.call(this, spec);
-    this.dsItems = spec.dsItems;
-    // we'll also access the /items collection
-    // should we automatically delete the transaction from the database?
-    this.autoCleanup = spec.autoCleanup != null ? spec.autoCleanup : false;
-    this.dateHelper = spec.dateHelper || new DateHelper();
-    this.helper = spec.helper || new Helper();
-    this.unavailableFlagHelper = spec.unavailableFlagHelper || function (flag) {
-      return false;
-    };
-    this.status = spec.status || DEFAULTS.status;
-    // the status of the order or reservation
-    this.from = spec.from || DEFAULTS.from;
-    // a date in the future
-    this.to = spec.to || DEFAULTS.to;
-    // a date in the future
-    this.due = spec.due || DEFAULTS.due;
-    // a date even further in the future, we suggest some standard avg durations
-    this.number = spec.number || DEFAULTS.number;
-    // a booking number
-    this.contact = spec.contact || DEFAULTS.contact;
-    // a contact id
-    this.location = spec.location || DEFAULTS.location;
-    // a location id
-    this.items = spec.items || DEFAULTS.items.slice();
-    // an array of item ids
-    this.conflicts = spec.conflicts || DEFAULTS.conflicts.slice();
-    // an array of Conflict objects
-    this.by = spec.by || DEFAULTS.by;
-    this.itemSummary = spec.itemSummary || DEFAULTS.itemSummary;
-    this.name = spec.name || DEFAULTS.name;
-  };
-  Transaction.prototype = new tmp();
-  Transaction.prototype.constructor = Base;
-  //
-  // Date helpers (possibly overwritten)
-  //
-  /**
-   * Gets the now time
-   * @returns {Moment}
-   */
-  Transaction.prototype.getNow = function () {
-    return this._getDateHelper().getNow();
-  };
-  /**
-   * Gets the now time rounded
-   * @returns {Moment}
-   */
-  Transaction.prototype.getNowRounded = function () {
-    return this._getDateHelper().roundTimeFrom(this.getNow());
-  };
-  /**
-   * Gets the next time slot after a date, by default after now
-   * @returns {Moment}
-   */
-  Transaction.prototype.getNextTimeSlot = function (d) {
-    d = d || this.getNowRounded();
-    var dateHelper = this._getDateHelper();
-    var next = moment(d).add(dateHelper.roundMinutes, 'minutes');
-    if (next.isSame(d)) {
-      next = next.add(dateHelper.roundMinutes, 'minutes');
-    }
-    return dateHelper.getValidBusinessDate(next);
-  };
-  /**
-   * Gets the lowest possible from date, by default now
-   * @method
-   * @name Transaction#getMinDateFrom
-   * @returns {Moment}
-   */
-  Transaction.prototype.getMinDateFrom = function () {
-    return this.getMinDate();
-  };
-  /**
-   * Gets the highest possible from date, by default years from now
-   * @method
-   * @name Transaction#getMaxDateFrom
-   * @returns {Moment}
-   */
-  Transaction.prototype.getMaxDateFrom = function () {
-    return this.getMaxDate();
-  };
-  /**
-   * Gets the lowest possible to date, by default from +1 timeslot
-   * @method
-   * @name Transaction#getMinDateTo
-   * @returns {Moment}
-   */
-  Transaction.prototype.getMinDateTo = function () {
-    // to can only be one timeslot after the min from date
-    return this.getNextTimeSlot(this.getMinDateFrom());
-  };
-  /**
-   * Gets the highest possible to date, by default years from now
-   * @method
-   * @name Transaction#getMaxDateTo
-   * @returns {Moment}
-   */
-  Transaction.prototype.getMaxDateTo = function () {
-    return this.getMaxDate();
-  };
-  /**
-   * Gets the lowest possible due date, by default same as getMinDateTo
-   * @method
-   * @name Transaction#getMinDateDue
-   * @returns {Moment}
-   */
-  Transaction.prototype.getMinDateDue = function () {
-    return this.getMinDateTo();
-  };
-  /**
-   * Gets the highest possible due date, by default same as getMaxDateDue
-   * @method
-   * @name Transaction#getMaxDateDue
-   * @returns {Moment}
-   */
-  Transaction.prototype.getMaxDateDue = function () {
-    return this.getMaxDateTo();
-  };
-  /**
-   * DEPRECATED
-   * Gets the lowest possible date to start this transaction
-   * @method
-   * @name Transaction#getMinDate
-   * @returns {Moment} min date
-   */
-  Transaction.prototype.getMinDate = function () {
-    return this.getNow();
-  };
-  /**
-   * DEPRECATED
-   * Gets the latest possible date to end this transaction
-   * @method
-   * @name Transaction#getMaxDate
-   * @returns {Moment} max date
-   */
-  Transaction.prototype.getMaxDate = function () {
-    var dateHelper = this._getDateHelper();
-    var now = dateHelper.getNow();
-    var next = dateHelper.roundTimeTo(now);
-    return next.add(2, 'years');
-  };
-  /**
-   * suggestEndDate, makes a new moment() object with a suggested end date,
-   * already rounded up according to the group.profile settings
-   * @method suggestEndDate
-   * @name Transaction#suggestEndDate
-   * @param {Moment} m a suggested end date for this transaction
-   * @returns {*}
-   */
-  Transaction.prototype.suggestEndDate = function (m) {
-    var dateHelper = this._getDateHelper();
-    var end = dateHelper.addAverageDuration(m || dateHelper.getNow());
-    return dateHelper.roundTimeTo(end);
-  };
-  //
-  // Base overrides
-  //
-  /**
-   * Checks if the transaction is empty
-   * @method isEmpty
-   * @name Transaction#isEmpty
-   * @returns {boolean}
-   */
-  Transaction.prototype.isEmpty = function () {
-    return Base.prototype.isEmpty.call(this) && this.status == DEFAULTS.status && (this.crtype == 'cheqroom.types.order' ? true : this.from == DEFAULTS.from) && this.to == DEFAULTS.to && this.due == DEFAULTS.due && this.number == DEFAULTS.number && this.contact == DEFAULTS.contact && this.location == DEFAULTS.location && this.items.length == 0  // not DEFAULTS.items? :)
-;
-  };
-  /**
-   * Checks if the transaction is dirty and needs saving
-   * @method
-   * @name Transaction#isDirty
-   * @returns {boolean}
-   */
-  Transaction.prototype.isDirty = function () {
-    return Base.prototype.isDirty.call(this) || this._isDirtyBasic() || this._isDirtyDates() || this._isDirtyLocation() || this._isDirtyContact() || this._isDirtyItems();
-  };
-  Transaction.prototype._isDirtyBasic = function () {
-    if (this.raw) {
-      var status = this.raw.status || DEFAULTS.status;
-      return this.status != status;
-    } else {
-      return false;
-    }
-  };
-  Transaction.prototype._isDirtyDates = function () {
-    if (this.raw) {
-      var from = this.raw.from || DEFAULTS.from;
-      var to = this.raw.to || DEFAULTS.to;
-      var due = this.raw.due || DEFAULTS.due;
-      return this.from != from || this.to != to || this.due != due;
-    } else {
-      return false;
-    }
-  };
-  Transaction.prototype._isDirtyLocation = function () {
-    if (this.raw) {
-      var location = DEFAULTS.location;
-      if (this.raw.location) {
-        location = this.raw.location._id ? this.raw.location._id : this.raw.location;
-      }
-      return this.location != location;
-    } else {
-      return false;
-    }
-  };
-  Transaction.prototype._isDirtyContact = function () {
-    if (this.raw) {
-      var contact = DEFAULTS.contact;
-      if (this.raw.customer) {
-        contact = this.raw.customer._id ? this.raw.customer._id : this.raw.customer;
-      }
-      return this.contact != contact;
-    } else {
-      return false;
-    }
-  };
-  Transaction.prototype._isDirtyItems = function () {
-    if (this.raw) {
-      var items = DEFAULTS.items.slice();
-      if (this.raw.items) {
-      }
-      return false;
-    } else {
-      return false;
-    }
-  };
-  Transaction.prototype._getDefaults = function () {
-    return DEFAULTS;
-  };
-  /**
-   * Writes out some shared fields for all transactions
-   * Inheriting classes will probably add more to this
-   * @param options
-   * @returns {object}
-   * @private
-   */
-  Transaction.prototype._toJson = function (options) {
-    var data = Base.prototype._toJson.call(this, options);
-    //data.started = this.from;  // VT: Will be set during checkout
-    //data.finished = this.to;  // VT: Will be set during final checkin
-    if (this.location) {
-      // Make sure we send the location as id, not the entire object
-      data.location = this._getId(this.location);
-    }
-    if (this.contact) {
-      // Make sure we send the contact as id, not the entire object
-      // VT: It's still called the "customer" field on the backend!
-      data.customer = this._getId(this.contact);
-    }
-    return data;
-  };
-  /**
-   * Reads the transaction from a json object
-   * @param data
-   * @param options
-   * @returns {promise}
-   * @private
-   */
-  Transaction.prototype._fromJson = function (data, options) {
-    var that = this;
-    return Base.prototype._fromJson.call(this, data, options).then(function () {
-      that.cover = null;
-      // don't read cover property for Transactions
-      that.status = data.status || DEFAULTS.status;
-      that.number = data.number || DEFAULTS.number;
-      that.location = data.location || DEFAULTS.location;
-      that.contact = data.customer || DEFAULTS.contact;
-      that.items = data.items || DEFAULTS.items.slice();
-      that.by = data.by || DEFAULTS.by;
-      that.archived = data.archived || DEFAULTS.archived;
-      that.itemSummary = data.itemSummary || DEFAULTS.itemSummary;
-      that.name = data.name || DEFAULTS.name;
-      that.modified = data.modified || DEFAULTS.modified;
-      return that._getConflicts().then(function (conflicts) {
-        that.conflicts = conflicts;
-      });
-    });
-  };
-  Transaction.prototype._toLog = function (options) {
-    var obj = this._toJson(options);
-    obj.minDateFrom = this.getMinDateFrom().toJSONDate();
-    obj.maxDateFrom = this.getMaxDateFrom().toJSONDate();
-    obj.minDateDue = this.getMinDateDue().toJSONDate();
-    obj.maxDateDue = this.getMaxDateDue().toJSONDate();
-    obj.minDateTo = this.getMinDateTo().toJSONDate();
-    obj.maxDateTo = this.getMaxDateTo().toJSONDate();
-    console.log(obj);
-  };
-  Transaction.prototype._checkFromDateBetweenMinMax = function (d) {
-    return this._checkDateBetweenMinMax(d, this.getMinDateFrom(), this.getMaxDateFrom());
-  };
-  Transaction.prototype._checkDueDateBetweenMinMax = function (d) {
-    return this._checkDateBetweenMinMax(d, this.getMinDateDue(), this.getMaxDateDue());
-  };
-  Transaction.prototype._checkToDateBetweenMinMax = function (d) {
-    return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
-  };
-  Transaction.prototype._getUniqueItemIds = function (ids) {
-    ids = ids || [];
-    //https://stackoverflow.com/questions/38373364/the-best-way-to-remove-duplicate-strings-in-an-array
-    return ids.reduce(function (p, c, i, a) {
-      if (p.indexOf(c) == -1)
-        p.push(c);
-      return p;
-    }, []);
-  };
-  // Setters
-  // ----
-  // From date setters
-  /**
-   * Clear the transaction from date
-   * @method
-   * @name Transaction#clearFromDate
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.clearFromDate = function (skipRead) {
-    this.from = DEFAULTS.from;
-    return this._handleTransaction(skipRead);
-  };
-  /**
-   * Sets the transaction from date
-   * @method
-   * @name Transaction#setFromDate
-   * @param date
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.setFromDate = function (date, skipRead) {
-    this.from = this._getDateHelper().roundTimeFrom(date);
-    return this._handleTransaction(skipRead);
-  };
-  // To date setters
-  /**
-   * Clear the transaction to date
-   * @method
-   * @name Transaction#clearToDate
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.clearToDate = function (skipRead) {
-    this.to = DEFAULTS.to;
-    return this._handleTransaction(skipRead);
-  };
-  /**
-   * Sets the transaction to date
-   * @method
-   * @name Transaction#setToDate
-   * @param date
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.setToDate = function (date, skipRead) {
-    this.to = this._getDateHelper().roundTimeTo(date);
-    return this._handleTransaction(skipRead);
-  };
-  // Due date setters
-  /**
-   * Clear the transaction due date
-   * @method
-   * @name Transaction#clearDueDate
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.clearDueDate = function (skipRead) {
-    this.due = DEFAULTS.due;
-    return this._handleTransaction(skipRead);
-  };
-  /**
-   * Set the transaction due date
-   * @method
-   * @name Transaction#setDueDate
-   * @param date
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.setDueDate = function (date, skipRead) {
-    this.due = this._getDateHelper().roundTimeTo(date);
-    return this._handleTransaction(skipRead);
-  };
-  Transaction.prototype.setLabel = function (labelId, skipRead) {
-    var that = this, dfdExists = this.existsInDb() ? $.Deferred().resolve() : this._createTransaction(skipRead);
-    return dfdExists.then(function () {
-      return Base.prototype.setLabel.call(that, labelId, skipRead);
-    });
-  };
-  // Location setters
-  /**
-   * Sets the location for this transaction
-   * @method
-   * @name Transaction#setLocation
-   * @param locationId
-   * @param skipRead skip parsing the returned json response into the transaction
-   * @returns {promise}
-   */
-  Transaction.prototype.setLocation = function (locationId, skipRead) {
-    this.location = locationId;
-    if (this.existsInDb()) {
-      return this._doApiCall({
-        method: 'setLocation',
-        params: { location: locationId },
-        skipRead: skipRead
-      });
-    } else {
-      return this._createTransaction(skipRead);
-    }
-  };
-  /**
-   * Clears the location for this transaction
-   * @method
-   * @name Transaction#clearLocation
-   * @param skipRead skip parsing the returned json response into the transaction
-   * @returns {promise}
-   */
-  Transaction.prototype.clearLocation = function (skipRead) {
-    var that = this;
-    this.location = DEFAULTS.location;
-    return this._doApiCall({
-      method: 'clearLocation',
-      skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
-    });
-  };
-  // Contact setters
-  /**
-   * Sets the contact for this transaction
-   * @method
-   * @name Transaction#setContact
-   * @param contactId
-   * @param skipRead skip parsing the returned json response into the transaction
-   * @returns {promise}
-   */
-  Transaction.prototype.setContact = function (contactId, skipRead) {
-    this.contact = contactId;
-    if (this.existsInDb()) {
-      return this._doApiCall({
-        method: 'setCustomer',
-        params: { customer: contactId },
-        skipRead: skipRead
-      });
-    } else {
-      return this._createTransaction(skipRead);
-    }
-  };
-  /**
-   * Clears the contact for this transaction
-   * @method
-   * @name Transaction#clearContact
-   * @param skipRead skip parsing the returned json response into the transaction
-   * @returns {promise}
-   */
-  Transaction.prototype.clearContact = function (skipRead) {
-    var that = this;
-    this.contact = DEFAULTS.contact;
-    return this._doApiCall({
-      method: 'clearCustomer',
-      skipRead: skipRead
-    }).then(function () {
-      return that._ensureTransactionDeleted();
-    });
-  };
-  /**
-   * Sets transaction name
-   * @method
-   * @name Transaction#setName
-   * @param name
-   * @param skipRead skip parsing the returned json response into the transaction
-   * @returns {promise}
-   */
-  Transaction.prototype.setName = function (name, skipRead) {
-    return this._doApiCall({
-      method: 'setName',
-      params: { name: name },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Clears transaction name
-   * @method
-   * @name Transaction#clearName
-   * @param skipRead skip parsing the returned json response into the transaction
-   * @returns {promise}
-   */
-  Transaction.prototype.clearName = function (skipRead) {
-    return this._doApiCall({
-      method: 'clearName',
-      skipRead: skipRead
-    });
-  };
-  // Business logic
-  // ----
-  // Inheriting classes will use the setter functions below to update the object in memory
-  // the _handleTransaction will create, update or delete the actual document via the API
-  /**
-   * addItems; adds a bunch of Items to the transaction using a list of item ids
-   * It creates the transaction if it doesn't exist yet
-   * @name Transaction#addItems
-   * @method
-   * @param items
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.addItems = function (items, skipRead) {
-    var that = this;
-    //Remove duplicate item ids
-    items = that._getUniqueItemIds(items);
-    return this._ensureTransactionExists(skipRead).then(function () {
-      return that._doApiCall({
-        method: 'addItems',
-        params: { items: items },
-        skipRead: skipRead
-      });
-    });
-  };
-  /**
-   * removeItems; removes a bunch of Items from the transaction using a list of item ids
-   * It deletes the transaction if it's empty afterwards and autoCleanup is true
-   * @name Transaction#removeItems
-   * @method
-   * @param items
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.removeItems = function (items, skipRead) {
-    var that = this;
-    if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot removeItems from document without id'));
-    }
-    //Remove duplicate item ids
-    items = that._getUniqueItemIds(items);
-    return this._doApiCall({
-      method: 'removeItems',
-      params: { items: items },
-      skipRead: skipRead
-    }).then(function (data) {
-      return that._ensureTransactionDeleted().then(function () {
-        return data;
-      });
-    });
-  };
-  /**
-   * clearItems; removes all Items from the transaction
-   * It deletes the transaction if it's empty afterwards and autoCleanup is true
-   * @name Transaction#clearItems
-   * @method
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.clearItems = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot clearItems from document without id'));
-    }
-    var that = this;
-    return this._doApiCall({
-      method: 'clearItems',
-      skipRead: skipRead
-    }).then(function (data) {
-      return that._ensureTransactionDeleted().then(function () {
-        return data;
-      });
-    });
-  };
-  /**
-   * swapItem; swaps one item for another in a transaction
-   * @name Transaction#swapItem
-   * @method
-   * @param fromItem
-   * @param toItem
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.swapItem = function (fromItem, toItem, skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot swapItem from document without id'));
-    }
-    // swapItem cannot create or delete a transaction
-    return this._doApiCall({
-      method: 'swapItem',
-      params: {
-        fromItem: fromItem,
-        toItem: toItem
-      },
-      skipRead: skipRead
-    });
-  };
-  /**
-   * hasItems; Gets a list of items that are already part of the transaction
-   * @name Transaction#hasItems
-   * @method
-   * @param itemIds        array of string values
-   * @returns {Array}
-   */
-  Transaction.prototype.hasItems = function (itemIds) {
-    var allItems = this.items || [];
-    var duplicates = [];
-    var found = null;
-    $.each(itemIds, function (i, itemId) {
-      $.each(allItems, function (i, it) {
-        if (it._id == itemId) {
-          found = itemId;
-          return false;
-        }
-      });
-      if (found != null) {
-        duplicates.push(found);
-      }
-    });
-    return duplicates;
-  };
-  /**
-   * Archive a transaction
-   * @name Transaction#archive
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.archive = function (skipRead) {
-    if (!this.canArchive()) {
-      return $.Deferred().reject(new Error('Cannot archive document'));
-    }
-    return this._doApiCall({
-      method: 'archive',
-      params: {},
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Undo archive of a transaction
-   * @name Transaction#undoArchive
-   * @param skipRead
-   * @returns {promise}
-   */
-  Transaction.prototype.undoArchive = function (skipRead) {
-    if (!this.canUndoArchive()) {
-      return $.Deferred().reject(new Error('Cannot unarchive document'));
-    }
-    return this._doApiCall({
-      method: 'undoArchive',
-      params: {},
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Checks if we can archive a transaction (based on status)
-   * @name Transaction#canArchive
-   * @returns {boolean}
-   */
-  Transaction.prototype.canArchive = function () {
-    return this.archived == null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
-  };
-  /**
-   * Checks if we can unarchive a transaction (based on status)
-   * @name Transaction#canUndoArchive
-   * @returns {boolean}
-   */
-  Transaction.prototype.canUndoArchive = function () {
-    return this.archived != null && (this.status == 'cancelled' || this.status == 'closed' || this.status == 'closed_manually');
-  };
-  Transaction.prototype.setField = function (field, value, skipRead) {
-    var that = this;
-    return this._ensureTransactionExists(skipRead).then(function () {
-      return that._doApiCall({
-        method: 'setField',
-        params: {
-          field: field,
-          value: value
-        },
-        skipRead: skipRead
-      });
-    });
-  };
-  //
-  // Implementation stuff
-  //
-  /**
-   * Gets a list of Conflict objects for this transaction
-   * Will be overriden by inheriting classes
-   * @returns {promise}
-   * @private
-   */
-  Transaction.prototype._getConflicts = function () {
-    return $.Deferred().resolve([]);
-  };
-  Transaction.prototype._getDateHelper = function () {
-    return this.dateHelper;
-  };
-  /**
-   * Searches for Items that are available for this transaction
-   * @param params: a dict with params, just like items/search
-   * @param listName: restrict search to a certain list
-   * @param useAvailabilities (uses items/searchAvailable instead of items/search)
-   * @param onlyUnbooked (true by default, only used when useAvailabilities=true)
-   * @param skipItems array of item ids that should be skipped
-   * @private
-   * @returns {*}
-   */
-  Transaction.prototype._searchItems = function (params, listName, useAvailabilities, onlyUnbooked, skipItems) {
-    if (this.dsItems == null) {
-      return $.Deferred().reject(new api.ApiBadRequest(this.crtype + ' has no DataSource for items'));
-    }
-    // Restrict the search to just the Items that are:
-    // - at this location
-    // - in the specified list (if any)
-    params = params || {};
-    if (this.location) {
-      params.location = this._getId(this.location);
-    }
-    if (listName != null && listName.length > 0) {
-      params.listName = listName;
-    }
-    // Make sure we only pass the item ids,
-    // and not the entire items
-    var that = this;
-    var skipList = null;
-    if (skipItems && skipItems.length) {
-      skipList = skipItems.slice(0);
-      $.each(skipList, function (i, item) {
-        skipList[i] = that._getId(item);
-      });
-    }
-    if (useAvailabilities == true) {
-      // We'll use a more advanced API call /items/searchAvailable
-      // It's a bit slower and the .count result is not usable
-      // It requires some more parameters to be set
-      params.onlyUnbooked = onlyUnbooked != null ? onlyUnbooked : true;
-      params.fromDate = this.from;
-      params.toDate = this.to || this.due;
-      //need due date for orders!!!!!
-      params._limit = params._limit || 20;
-      params._skip = params._skip || 0;
-      if (skipList && skipList.length) {
-        params.skipItems = skipList;
-      }
-      return this.dsItems.call(null, 'searchAvailable', params);
-    } else {
-      // We don't need to use availabilities,
-      // we should better use the regular /search
-      // it's faster and has better paging :)
-      if (skipList && skipList.length) {
-        params.pk__nin = skipList;
-      }
-      return this.dsItems.search(params);
-    }
-  };
-  /**
-   * Returns a rejected promise when a date is not between min and max date
-   * Otherwise the deferred just resolves to the date
-   * It's used to do some quick checks of transaction dates
-   * @param date
-   * @returns {*}
-   * @private
-   */
-  Transaction.prototype._checkDateBetweenMinMax = function (date, minDate, maxDate) {
-    minDate = minDate || this.getMinDate();
-    maxDate = maxDate || this.getMaxDate();
-    if (date < minDate || date > maxDate) {
-      var msg = 'date ' + date.toJSONDate() + ' is outside of min max range ' + minDate.toJSONDate() + '->' + maxDate.toJSONDate();
-      return $.Deferred().reject(new api.ApiUnprocessableEntity(msg));
-    } else {
-      return $.Deferred().resolve(date);
-    }
-  };
-  /**
-   * _handleTransaction: creates, updates or deletes a transaction document
-   * @returns {*}
-   * @private
-   */
-  Transaction.prototype._handleTransaction = function (skipRead) {
-    var isEmpty = this.isEmpty();
-    if (this.existsInDb()) {
-      if (isEmpty) {
-        if (this.autoCleanup) {
-          return this._deleteTransaction();
-        } else {
-          return $.Deferred().resolve();
-        }
-      } else {
-        return this._updateTransaction(skipRead);
-      }
-    } else if (!isEmpty) {
-      return this._createTransaction(skipRead);
-    } else {
-      return $.Deferred().resolve();
-    }
-  };
-  Transaction.prototype._deleteTransaction = function () {
-    return this.delete();
-  };
-  Transaction.prototype._updateTransaction = function (skipRead) {
-    return this.update(skipRead);
-  };
-  Transaction.prototype._createTransaction = function (skipRead) {
-    return this.create(skipRead);
-  };
-  Transaction.prototype._ensureTransactionExists = function (skipRead) {
-    return !this.existsInDb() ? this._createTransaction(skipRead) : $.Deferred().resolve();
-  };
-  Transaction.prototype._ensureTransactionDeleted = function () {
-    return this.isEmpty() && this.autoCleanup ? this._deleteTransaction() : $.Deferred().resolve();
-  };
-  return Transaction;
-}(jquery, api, base, location, dateHelper, helper);
-User = function ($, Base, common) {
-  var DEFAULTS = {
-    name: '',
-    email: '',
-    group: '',
-    // groupid
-    picture: '',
-    role: 'user',
-    // user, admin
-    active: true,
-    isOwner: false,
-    archived: null
-  };
-  // Allow overriding the ctor during inheritance
-  // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-  var tmp = function () {
-  };
-  tmp.prototype = Base.prototype;
-  /**
-   * @name User
-   * @class User
-   * @constructor
-   * @extends Base
-   * @property {string}  name               - The name
-   * @property {string}  role               - The role (admin, user)
-   * @property {boolean} active             - Is the user active?
-   */
-  var User = function (opt) {
-    var spec = $.extend({
-      _fields: [
-        '*',
-        'group',
-        'picture'
-      ]
-    }, opt);
-    Base.call(this, spec);
-    this.helper = spec.helper;
-    this.name = spec.name || DEFAULTS.name;
-    this.picture = spec.picture || DEFAULTS.picture;
-    this.email = spec.email || DEFAULTS.email;
-    this.role = spec.role || DEFAULTS.role;
-    this.group = spec.group || DEFAULTS.group;
-    this.active = spec.active != null ? spec.active : DEFAULTS.active;
-    this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
-    this.archived = spec.archived || DEFAULTS.archived;
-    this.dsAnonymous = spec.dsAnonymous;
-  };
-  User.prototype = new tmp();
-  User.prototype.constructor = User;
-  //
-  // Document overrides
-  //
-  User.prototype.isValidName = function () {
-    this.name = $.trim(this.name);
-    return this.name.length >= 4;
-  };
-  User.prototype.isValidEmail = function () {
-    this.email = $.trim(this.email);
-    return common.isValidEmail(this.email);
-  };
-  User.prototype.emailExists = function () {
-    if (this.isValidEmail()) {
-      // Don't check for emailExists for exisiting user
-      if (this.id != null && this.email == this.raw.email) {
-        return $.Deferred().resolve(false);
-      }
-      return this.dsAnonymous.call('emailExists', { email: this.email }).then(function (resp) {
-        return resp.result;
-      });
-    } else {
-      return $.Deferred().resolve(false);
-    }
-  };
-  User.prototype.isValidPassword = function () {
-    this.password = $.trim(this.password);
-    return common.isValidPassword(this.password);
-  };
-  /**
-   * Checks if the user is valid
-   * @returns {boolean}
-   */
-  User.prototype.isValid = function () {
-    return this.isValidName() && this.isValidEmail();
-  };
-  /**
-   * Checks if the user is empty
-   * @method
-   * @name User#isEmpty
-   * @returns {boolean}
-   */
-  User.prototype.isEmpty = function () {
-    // We check: name, role
-    return Base.prototype.isEmpty.call(this) && this.name == DEFAULTS.name && this.email == DEFAULTS.email && this.role == DEFAULTS.role;
-  };
-  User.prototype._isDirtyInfo = function () {
-    if (this.raw) {
-      var name = this.raw.name || DEFAULTS.name;
-      var email = this.raw.email || DEFAULTS.email;
-      var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
-      return this.name != name || this.email != email || this.active != active;
-    }
-    return false;
-  };
-  User.prototype._isDirtyRole = function () {
-    if (this.raw) {
-      var role = this.raw.role || DEFAULTS.role;
-      return this.role != role;
-    }
-    return false;
-  };
-  /**
-   * Checks if the user is dirty and needs saving
-   * @method
-   * @name User#isDirty
-   * @returns {boolean}
-   */
-  User.prototype.isDirty = function () {
-    var isDirty = Base.prototype.isDirty.call(this);
-    return isDirty || this._isDirtyInfo() || this._isDirtyRole();
-  };
-  /**
-   * Gets a url for a user avatar
-   * 'XS': (64, 64),
-   * 'S': (128, 128),
-   * 'M': (256, 256),
-   * 'L': (512, 512)
-   * @param size {string} default null is original size
-   * @param bustCache {boolean}
-   * @returns {string}
-   */
-  User.prototype.getImageUrl = function (size, bustCache) {
-    return this.picture != null && this.picture.length > 0 ? this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) : this.helper.getImageUrl(this.ds, this.id, size, bustCache);
-  };
-  User.prototype._getDefaults = function () {
-    return DEFAULTS;
-  };
-  // OVERRIDE BASE: addKeyValue not implemented
-  User.prototype.addKeyValue = function (key, value, kind, skipRead) {
-    return $.Deferred().reject('Not implemented for User, use setPicture instead?');
-  };
-  // OVERRIDE BASE: addKeyValue not implemented
-  User.prototype.addKeyValue = function (id, key, value, kind, skipRead) {
-    return $.Deferred().reject('Not implemented for User, use setPicture instead?');
-  };
-  // OVERRIDE BASE: removeKeyValue not implemented
-  User.prototype.removeKeyValue = function (id, skipRead) {
-    return $.Deferred().reject('Not implemented for User, use clearPicture instead?');
-  };
-  User.prototype.setPicture = function (attachmentId, skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    this.picture = attachmentId;
-    return this._doApiCall({
-      method: 'setPicture',
-      params: { attachment: attachmentId },
-      skipRead: skipRead
-    });
-  };
-  User.prototype.clearPicture = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'clearPicture',
-      skipRead: skipRead
-    });
-  };
-  //
-  // Business logic
-  //
-  /**
-   * Checks if a user can be activated
-   * @returns {boolean}
-   */
-  User.prototype.canActivate = function () {
-    return !this.active && this.archived == null;
-  };
-  /**
-   * Checks if a user can be deactivated
-   * @returns {boolean}
-   */
-  User.prototype.canDeactivate = function () {
-    // TODO: We should also check if we're not deactivating the last or only user
-    return this.active && this.archived == null && !this.isOwner;
-  };
-  /**
-   * Checks if a user can be archived
-   * @returns {boolean}
-   */
-  User.prototype.canArchive = function () {
-    // TODO: We should also check if we're not deactivating the last or only user
-    return this.archived == null && !this.isOwner;
-  };
-  /**
-   * Checks if a user can be unarchived
-   * @returns {boolean}
-   */
-  User.prototype.canUndoArchive = function () {
-    return this.archived != null;
-  };
-  /**
-   * Checks if a user can be owner
-   * @returns {boolean}
-   */
-  User.prototype.canBeOwner = function () {
-    return this.archived == null && this.active && !this.isOwner && this.role == 'admin';
-  };
-  /**
-   * Activates a user
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.activate = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'activate',
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Deactivates a user
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.deactivate = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'deactivate',
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Archives a user
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.archive = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'archive',
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Unarchives a user
-   * @param skipRead
-   * @returns {promise}
-   */
-  User.prototype.undoArchive = function (skipRead) {
-    if (!this.existsInDb()) {
-      return $.Deferred().reject('User does not exist in database');
-    }
-    return this._doApiCall({
-      method: 'undoArchive',
-      skipRead: skipRead
-    });
-  };
-  /**
-   * Updates the user
-   * @param skipRead
-   * @returns {*}
-   */
-  User.prototype.update = function (skipRead) {
-    if (this.isEmpty()) {
-      return $.Deferred().reject(new Error('Cannot update to empty user'));
-    }
-    if (!this.existsInDb()) {
-      return $.Deferred().reject(new Error('Cannot update user without id'));
-    }
-    if (!this.isValid()) {
-      return $.Deferred().reject(new Error('Cannot update, invalid user'));
-    }
-    var that = this, dfdInfo = $.Deferred(), dfdRole = $.Deferred();
-    if (this._isDirtyInfo()) {
-      var infoParams = this._toJson();
-      delete infoParams.id;
-      dfdInfo = this.ds.update(this.id, infoParams, this._fields);
-    } else {
-      dfdInfo.resolve();
-    }
-    if (this._isDirtyRole()) {
-      dfdRole = this._doApiCall({
-        method: 'updateUserRole',
-        params: { role: this.role },
-        skipRead: true
-      });
-    } else {
-      dfdRole.resolve();
-    }
-    return $.when(dfdInfo, dfdRole);
-  };
-  /**
-   * Writes the user to a json object
-   * @param options
-   * @returns {object}
-   * @private
-   */
-  User.prototype._toJson = function (options) {
-    var data = Base.prototype._toJson.call(this, options);
-    data.name = this.name || DEFAULTS.name;
-    data.email = this.email || DEFAULTS.email;
-    return data;
-  };
-  /**
-   * Reads the user from the json object
-   * @param data
-   * @param options
-   * @returns {promise}
-   * @private
-   */
-  User.prototype._fromJson = function (data, options) {
-    var that = this;
-    return Base.prototype._fromJson.call(this, data, options).then(function () {
-      // Read the group id from group or group._id
-      // depending on the fields
-      that.group = data.group && data.group._id != null ? data.group._id : data.group || DEFAULTS.group;
-      that.name = data.name || DEFAULTS.name;
-      that.picture = data.picture || DEFAULTS.picture;
-      that.email = data.email || DEFAULTS.email;
-      that.role = data.role || DEFAULTS.role;
-      that.active = data.active != null ? data.active : DEFAULTS.active;
-      that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
-      that.archived = data.archived || DEFAULTS.archived;
-      $.publish('user.fromJson', data);
-      return data;
-    });
-  };
-  return User;
-}(jquery, base, common);
-UserSync = function ($, Base, common) {
+usersync = function ($, Base, common) {
   var DEFAULTS = {
     kind: 'ldap',
     name: '',
@@ -18480,7 +15438,7 @@ UserSync = function ($, Base, common) {
   };
   return UserSync;
 }(jquery, base, common);
-WebHook = function ($, common, api, Document) {
+webhook = function ($, common, api, Document) {
   // Some constant values
   var DEFAULTS = {
     id: '',
@@ -18657,7 +15615,7 @@ WebHook = function ($, common, api, Document) {
   };
   return WebHook;
 }(jquery, common, api, document);
-OrderTransfer = function ($, Base) {
+orderTransfer = function ($, Base) {
   var DEFAULTS = {
     by: null,
     created: null,
@@ -18822,174 +15780,7 @@ OrderTransfer = function ($, Base) {
   };
   return OrderTransfer;
 }(jquery, base);
-ColorLabel = function ($) {
-  var DEFAULTS = {
-    id: null,
-    name: '',
-    color: 'Gold',
-    readonly: false,
-    selected: false,
-    default: false
-  };
-  /**
-   * @name  ColorLabel
-   * @class
-   * @param spec
-   * @constructor
-   */
-  var ColorLabel = function (spec) {
-    spec = spec || {};
-    this.raw = $.extend({}, DEFAULTS, spec);
-    this.id = spec.id || DEFAULTS.id;
-    this.name = spec.name || DEFAULTS.name;
-    this.color = spec.color || DEFAULTS.color;
-    this.readonly = spec.readonly || DEFAULTS.readonly;
-    this.selected = spec.selected || DEFAULTS.selected;
-    this.default = spec.default || DEFAULTS.default;
-  };
-  /**
-   * isDirty
-   * @name  ColorLabel#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  ColorLabel.prototype.isDirty = function () {
-    return this.raw.name != this.name || this.raw.color != this.color;
-  };
-  /**
-   * isValid
-   * @name  ColorLabel#isValid
-   * @method
-   * @returns {boolean}
-   */
-  ColorLabel.prototype.isValid = function () {
-    return this.name && this.name.length > 0;
-  };
-  /**
-   * _fromJson
-   * @name  ColorLabel#_fromJson
-   * @method
-   * @returns {boolean}
-   */
-  ColorLabel.prototype._fromJson = function (data) {
-    this.id = data.id || DEFAULTS.id;
-    this.name = data.name || DEFAULTS.name;
-    this.color = data.color || DEFAULTS.color;
-    this.selected = data.selected || DEFAULTS.selected;
-    this.readonly = data.readonly || DEFAULTS.readonly;
-    this.default = data.default || DEFAULTS.default;
-    return $.Deferred().resolve();
-  };
-  /**
-   * _toJson
-   * @name  ColorLabel#_toJson
-   * @method
-   * @returns {boolean}
-   */
-  ColorLabel.prototype._toJson = function () {
-    return {
-      id: this.id,
-      name: this.name,
-      color: this.color,
-      selected: this.selected,
-      readonly: this.readonly,
-      default: this.default
-    };
-  };
-  return ColorLabel;
-}(jquery);
-Field = function ($, validationHelper) {
-  var DEFAULTS = {
-    name: null,
-    value: null,
-    required: false,
-    unit: '',
-    kind: 'string',
-    form: false,
-    editor: null,
-    description: '',
-    select: []
-  };
-  /**
-   * @name  Field
-   * @class
-   * @param spec
-   * @constructor
-   */
-  var Field = function (spec) {
-    spec = spec || {};
-    this.raw = spec;
-    this.name = spec.name || DEFAULTS.name;
-    this.value = spec.value || DEFAULTS.value;
-    this.required = spec.required || DEFAULTS.required;
-    this.unit = spec.unit || DEFAULTS.unit;
-    this.kind = spec.kind || DEFAULTS.kind;
-    this.form = spec.form || DEFAULTS.form;
-    this.editor = spec.editor || DEFAULTS.editor;
-    this.description = spec.description || DEFAULTS.description;
-    this.select = spec.select || DEFAULTS.select;
-  };
-  /**
-   * isValid
-   * @name  Field#isValid
-   * @method
-   * @returns {boolean}
-   */
-  Field.prototype.isValid = function (allowEmpty) {
-    var value = $.trim(this.value);
-    // skip if not required and empty
-    if (!this.required && value == '')
-      return true;
-    switch (this.kind) {
-    case 'float':
-    case 'decimal':
-    case 'currency':
-      return validationHelper.isNumeric(value);
-    case 'int':
-      return validationHelper.isNumeric(value, true);
-    case 'date':
-    case 'datetime':
-      return validationHelper.isValidDate(value);
-    case 'string':
-    case 'select':
-      if (this.editor == 'phone') {
-        return validationHelper.isValidPhone(value);
-      }
-      if (this.editor == 'email') {
-        return validationHelper.isValidEmail(value);
-      }
-      if (this.editor == 'url') {
-        return validationHelper.isValidURL(value);
-      }
-      if (this.editor == 'number') {
-        return validationHelper.isNumeric(value);
-      }
-      return value != '';
-    default:
-      return true;
-    }
-  };
-  /**
-   * isDirty
-   * @name  Field#isDirty
-   * @method
-   * @returns {boolean}
-   */
-  Field.prototype.isDirty = function () {
-    return this.raw.value != this.value;
-  };
-  /**
-   * isEmpty
-   * @name  Field#isEmpty
-   * @method
-   * @returns {boolean}
-   */
-  Field.prototype.isEmpty = function () {
-    return $.trim(this.value) == '';
-  };
-  return Field;
-}(jquery, common_validation);
-Spotcheck = function ($, Base, common) {
+spotcheck = function ($, Base, common) {
   var DEFAULTS = {
     name: '',
     summary: '',
@@ -19304,7 +16095,7 @@ core = function (api, Availability, Attachment, Base, Category, Comment, Conflic
   core.Field = Field;
   core.Spotcheck = Spotcheck;
   return core;
-}(api, Availability, Attachment, Base, Category, Comment, Conflict, Contact, DateHelper, Document, Group, Item, Kit, Location, Order, helper, PermissionHandler, Reservation, Template, Transaction, User, UserSync, WebHook, common, OrderTransfer, ColorLabel, Field, Spotcheck);
+}(api, availability, attachment, base, category, comment, conflict, contact, dateHelper, document, group, item, kit, location, order, helper, permissionHandler, reservation, template, transaction, user, usersync, webhook, common, orderTransfer, colorLabel, field, spotcheck);
 if(typeof module !== 'undefined' && module.exports){
 module.exports = core;
 }

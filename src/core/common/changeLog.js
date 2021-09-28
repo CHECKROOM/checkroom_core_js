@@ -582,6 +582,14 @@ define([
             		return key.capitalize();
             	}
 
+				if (arg.fields) {
+					Object.entries(arg.fields).forEach(function(entry) {
+						arg[entry[0]] = entry[1];
+					});
+
+					delete arg.fields
+				}
+
             	var fields = Object.keys(arg).filter(function(fieldKey){
                     var fieldValue = arg[fieldKey] || "";
 
@@ -598,10 +606,10 @@ define([
 
             			return ['category', 'kind'].indexOf(fieldKey) == -1;
             		}
+
                     if(activeLocations.length == 1 && fieldKey == "location"){
                         return false;
                     }
-
 
             		return true;
             	}).map(function(fieldKey){ 

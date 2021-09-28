@@ -593,7 +593,7 @@ define([
 	            		}
 
                         if(evt.kind == 'contact'){
-                            return ['category', 'user'].indexOf(fieldKey) == -1
+                            return ['category', 'user', 'kind'].indexOf(fieldKey) == -1
                         }
 
             			return ['category', 'kind'].indexOf(fieldKey) == -1;
@@ -628,7 +628,7 @@ define([
                     } 
                 });
 
-
+				// TODO HERE
             	evt.friendlyText = byName + " created " + evt.kind + getMessagesBlock(fields.map(function(f){
                 	return "<small class='text-muted'>" + f.name + "</small><br />" + f.value;
                 }));

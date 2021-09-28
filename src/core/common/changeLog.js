@@ -582,6 +582,8 @@ define([
             		return key.capitalize();
             	}
 
+				// The arg object contains a fields object which itself contains the custom fields. Instead of rendering the fields in the timeline,
+				// We move all the fields into the arg object itself so they appear under eachother instead of as [object Object]
 				if (arg.fields) {
 					Object.entries(arg.fields).forEach(function(entry) {
 						arg[entry[0]] = entry[1];

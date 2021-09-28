@@ -5768,7 +5768,6 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
           value: value
         };
       });
-      // TODO HERE
       evt.friendlyText = byName + ' created ' + evt.kind + getMessagesBlock(fields.map(function (f) {
         return '<small class=\'text-muted\'>' + f.name + '</small><br />' + f.value;
       }));

@@ -1,5 +1,5 @@
 define([
-	'common/code', 
+	'common/code',
 	'common/image',
 	'common/attachment',
 	'common/keyValues',
@@ -100,24 +100,24 @@ define([
             if(!perm.hasContactReadOtherPermission()) return sanitizer(text);
 
         	return getLink("#contacts/" + id, text);
-        }   
+        }
         var getKitLink = function(id, text){
             if(!perm.hasKitPermission()) return sanitizer(text);
 
         	return getLink("#kits/" + id, text);
-        } 
+        }
         var getMessagesBlock = function(messages){
         	if(messages.length == 0) return "";
 
-        	var temp = messages.map(function(m){ 
+        	var temp = messages.map(function(m){
         		return "<li class='list-group-item'>" + m + "</li>";
         	}).join("");
 
         	return "<ul class='list-group field-group'>" + temp + "</ul>";
-        }  
+        }
         var getMessageBlock = function(message){
         	return message?getMessagesBlock([message]):"";
-        }  
+        }
 
         switch(evt.action){
         	case "changeCategory":
@@ -127,7 +127,7 @@ define([
         	case "addCodes":
         	case "removeCodes":
             	var code = arg.codes && arg.codes.length > 0?arg.codes[0]:unknownText;
-        		
+
         		switch(evt.action){
         			case "addCodes":
         				evt.friendlyText = byName + " added qr code " + code + " <img class='qrcode' title='" + code + "' src='" + codeHelper.getQRCodeUrl(settings.qrCodeUtilsApi, code, 'S') + "' />";
@@ -172,8 +172,8 @@ define([
                 }
                 break;
             case "transferCustody":
-            case "item.transferCustody":  
-            case "kit.transferCustody":  
+            case "item.transferCustody":
+            case "kit.transferCustody":
             	var id = evt.obj;
 
 	                if(evt.by != arg.hadCustodyName){
@@ -219,10 +219,10 @@ define([
                 var flagColor = flag.color || "orange";
                 var message = sanitizer(arg && arg.message?arg.message:"");
                 var hasAttachments = arg && arg.attachments_url && arg.attachments_url.length > 0;
-                var attachments = arg && arg.attachments_url?arg.attachments_url.map(function(att, i){ 
+                var attachments = arg && arg.attachments_url?arg.attachments_url.map(function(att, i){
                         return {
                             id: arg.attachments[i],
-                            url: att['XS'] 
+                            url: att['XS']
                         };
                     }):[]
 
@@ -234,10 +234,10 @@ define([
 
                 switch(evt.action){
                 	case "setFlag":
-                		evt.friendlyText = byName + " set flag <span class='text-" + flagColor.toLowerCase() + "'><i class='fa fa-flag'></i> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
+                		evt.friendlyText = byName + " set flag <span class='text-" + flagColor.toLowerCase() + "'><svg class='inline-svg'><use href='#flag-icon' /></svg> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
                 		break;
                 	case "clearFlag":
-                		evt.friendlyText = byName + " cleared flag <span style='text-decoration:line-through;'><i class='fa fa-flag'></i> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
+                		evt.friendlyText = byName + " cleared flag <span style='text-decoration:line-through;'><svg class='inline-svg'><use href='#flag-icon' /></svg> " + flagName + "</span>" + (message?"<ul class='list-group field-group'><li class='list-group-item'><small class='text-muted'>Message</small><br />" + message + "</li>" + (hasAttachments?"<li class='list-group-item'><small class='text-muted'>Attachments</small><div>" + (attachments.map(function(att){  return "<img class='flag-attachment' data-id='" + att.id + "' src='" + att.url + "' style='display:inline-block;margin-right:5px;' />";  }).join("")) + "</div></li>":"") + "</ul>":"");
                 		break;
                 }
             	break;
@@ -250,7 +250,7 @@ define([
                 var reContainer = /<td.*class=.container-padding.*[\n]+([\s\S]*)<\/td>/igm;
                 var id = evt.id,
                 	body = sanitizer(arg.request.dialect === "text" ? arg.request.body : utils.removeHtmlTags(reContainer.exec(arg.request.body)[1])),
-                	to = arg.request.to, 
+                	to = arg.request.to,
                 	subject = sanitizer(arg.request.subject);
 
                 evt.friendlyText = "Sent mail to " + to + " <ul class='list-group field-group'><li class='list-group-item'><div class='mail-subject'>" + subject + "</div><div class='mail-body multiline-text-truncate'>" + body + "</div><div><a href='javascript:void(0)' class='open-email' data-id='" + id + "'>View email</a></div></li></ul>";
@@ -272,7 +272,7 @@ define([
             	var message = sanitizer(arg?arg.message:null);
             	var friendlyAction = evt.action == "block"? "blocked": "unblocked";
 
-                evt.friendlyText = byName + " " + friendlyAction + " contact " + getMessageBlock(message);    	  
+                evt.friendlyText = byName + " " + friendlyAction + " contact " + getMessageBlock(message);
             	break;
             case "import":
                 evt.friendlyText = byName + " created " + evt.kind + " from import";
@@ -328,19 +328,19 @@ define([
 	                    summary = "",
 	                    checkedInItems = (arg.items || []),
 	                    totalItems = checkedInItems.length;
-	                    
+
 	                if(due){
 	                    var duration = moment.duration(due.diff(evt.created));
 	                    if(to.isAfter(due)){
 	                        summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " late";
 	                    }else if(to.isBefore(due)){
 	                        summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " early";
-	                    }   
+	                    }
 	                }
 	                var dueDate = due?due.format("D MMM " + hoursFormat):"Unknown";
 	                var items = doc.items.filter(function(it){
 	                    it.imageUrl = getItemImageUrl(it, "XS");
-	                    return checkedInItems.indexOf(it._id) != -1; 
+	                    return checkedInItems.indexOf(it._id) != -1;
 	                });
 
                     evt.friendlyText = byName + " checked in equipment " + summary + getMessagesBlock(items.map(function(it){
@@ -418,7 +418,7 @@ define([
             case "undoReserve":
            	case "reservation.undoReserve":
            		var id = evt.obj,
-           			contact = params.contact; 
+           			contact = params.contact;
 
            		if(evt.action == "undoReserve"){
            			evt.friendlyText = byName + " undid reservation";
@@ -539,7 +539,7 @@ define([
            			case "setField":
 		           		var fieldValue = sanitizer(arg.value);
 		                var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
-		               
+
 		                var value = (isDate?moment(fieldValue).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(fieldValue));
 
 		                evt.friendlyText = byName + " set " + evt.kind + " field " + getMessageBlock("<small class='text-muted'>" + field + "</small><br />" + value);
@@ -553,17 +553,17 @@ define([
            		}
                 break;
             case "setFields":
-                var fields = Object.keys(arg).map(function(fieldKey){ 
+                var fields = Object.keys(arg).map(function(fieldKey){
                     var fieldValue = arg[fieldKey] || "";
 
                     var fieldDef = getFieldById(fieldKey) || {};
 
                     var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
 
-                    return { 
-                        name: sanitizer(fieldKey), 
-                        value: isDate?moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(sanitizer(arg[fieldKey])) 
-                    } 
+                    return {
+                        name: sanitizer(fieldKey),
+                        value: isDate?moment(arg[fieldKey]).format("MMM DD YYYY" + (fieldDef.editor == 'datetime'?' [at] ' + hoursFormat:'')):sd.render(sanitizer(arg[fieldKey]))
+                    }
                 });
 
                 evt.friendlyText = byName + " set " + evt.kind + " field".pluralize(fields.length > 1) + getMessagesBlock(fields.map(function(f){
@@ -614,7 +614,7 @@ define([
                     }
 
             		return true;
-            	}).map(function(fieldKey){ 
+            	}).map(function(fieldKey){
                     var fieldValue = sanitizer(arg[fieldKey] || "");
 
                     var isDate = moment(fieldValue.toString().split(" (")[0], "ddd MMM DD YYYY HH:mm:ss [GMT]ZZ", true).isValid();
@@ -632,10 +632,10 @@ define([
                    		value = sd.render(fieldValue);
                    	}
 
-                    return { 
-                        name: sanitizer(getFieldName(fieldKey)), 
+                    return {
+                        name: sanitizer(getFieldName(fieldKey)),
                         value: value
-                    } 
+                    }
                 });
 
             	evt.friendlyText = byName + " created " + evt.kind + getMessagesBlock(fields.map(function(f){
@@ -695,7 +695,7 @@ define([
                             evt.friendlyText = byName + " updated kit name to " + sanitizer(arg.name);
                             break;
                     }
-                    
+
                 }
             	break;
             case "duplicate":
@@ -715,7 +715,7 @@ define([
             	var code = arg.code || unknownText;
             	switch(arg.kind){
             		case "qrcode":
-            			evt.friendlyText = 	byName + " scanned QR code " + code;    	
+            			evt.friendlyText = 	byName + " scanned QR code " + code;
             			break;
             		case "barcode":
             			evt.friendlyText = byName + " scanned barcode " + code;
@@ -727,11 +727,11 @@ define([
             	evt.friendlyText = byName + " created " + getLink("#items/" + id, "item") + " from duplicate";
             	break;
             case "setCatalog":
-            	var fields = Object.keys(arg).map(function(fieldKey){ 
-                    return { 
-                        name: fieldKey, 
-                        value: sanitizer(arg[fieldKey]) 
-                    } 
+            	var fields = Object.keys(arg).map(function(fieldKey){
+                    return {
+                        name: fieldKey,
+                        value: sanitizer(arg[fieldKey])
+                    }
                 });
                 evt.friendlyText = byName + " set catalog" + getMessagesBlock(fields.map(function(f){
                 	return "<small class='text-muted'>" + f.name + "</small><br />" + f.value;
@@ -748,13 +748,13 @@ define([
                     'cheqroom.types.kit': 'kitLabels'
                 };
                 var label = getLabelById(labelDictionary[doc.crtype], labelId) || { name: arg.labelName, color: arg.labelColor };
-            		
+
             	evt.friendlyText = byName + " set <span class='label-tag label-" + label.color.toLowerCase() + "'></span> " + sanitizer(label.name);
             	break;
             case "spotchecks.close":
             	var id = evt.obj,
                     numChecked = arg.numChecked,
-                    numIssues = arg.numUnchecked + arg.numUnexpected, 
+                    numIssues = arg.numUnchecked + arg.numUnexpected,
                     checked = arg.items?arg.items.checked_scanner && arg.items.checked_scanner.slice(0,2).map(function(it){
                          // Use placeholder image
                          return imageHelper.getTextImage("", 'S');

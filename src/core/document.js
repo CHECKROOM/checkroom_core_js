@@ -362,6 +362,8 @@ define([
                     dfd.resolve(data);
                 })
             };
+        }).fail(function(error) {
+            dfd.reject(error);
         });
 
         return dfd;

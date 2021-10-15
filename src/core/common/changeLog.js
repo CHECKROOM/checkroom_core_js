@@ -311,32 +311,33 @@ define([
             case "order.checkin":
             case "checkin":
             	var id = evt.obj,
-            		contact = params.contact;
+            		contact = params.contact,
+					due = doc.due || evt.arg.due,
+	                to = evt.created,
+					summary = "";
+
+				if(due){
+					var duration = moment.duration(due.diff(evt.created));
+					if(to.isAfter(due)){
+						summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " late";
+					}else if(to.isBefore(due)){
+						summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " early";
+					}
+				}
 
             	if(evt.action == "order.checkin"){
 	            	switch(evt.kind){
 	                    case "item":
-	                        evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " item " + (contact?"from " + getContactLink(contact.id, contact.name):"") + locationName;
-	                        break;
+							evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " item " + summary + (contact?"from " + getContactLink(contact.id, contact.name):"") + locationName;
+							break;
 	                    case "contact":
-	                        evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " equipment" + locationName;
+	                        evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " equipment " + summary + locationName;
 	                        break;
 	                }
 	            }else{
-	            	var due = doc.due,
-	                    to = evt.created,
-	                    summary = "",
-	                    checkedInItems = (arg.items || []),
+	            	var checkedInItems = (arg.items || []),
 	                    totalItems = checkedInItems.length;
 
-	                if(due){
-	                    var duration = moment.duration(due.diff(evt.created));
-	                    if(to.isAfter(due)){
-	                        summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " late";
-	                    }else if(to.isBefore(due)){
-	                        summary = duration.humanize(true).replace(" ago","").replace("in ", "") + " early";
-	                    }
-	                }
 	                var dueDate = due?due.format("D MMM " + hoursFormat):"Unknown";
 	                var items = doc.items.filter(function(it){
 	                    it.imageUrl = getItemImageUrl(it, "XS");

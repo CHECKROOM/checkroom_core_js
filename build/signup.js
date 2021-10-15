@@ -3187,7 +3187,7 @@ common_utils = function ($) {
    * @return string      
    */
   utils.sanitizeHtml = function (html) {
-    return $('<div />').text(html).html();
+    return $('<div />').text(html).html().replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
   };
   /**
    * removeHtmlTags

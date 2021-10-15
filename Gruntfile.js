@@ -44,12 +44,18 @@ module.exports = function(grunt){
                           amdclean = require('amdclean'),
                           outputFile = data.path;
 
+
                         fs.writeFileSync(outputFile, amdclean.clean({
                             'filePath': outputFile,
                             wrap: {
                                 "start":"(function (root, factory) {\nif (typeof define === 'function' && define.amd) {\ndefine(['jquery', 'moment'], factory);\n} else {\n root.cheqroomCore = factory($, moment);\n}\n}(this, function (jquery, moment) {",
                                 "end": "\nif(typeof module !== 'undefined' && module.exports){\nmodule.exports = core;\n}\nreturn core;\n}))"
                             },
+                            escodegen: {
+                                format: {
+                                    escapeless: true
+                                }
+                            }
                         }));
                     }
                 }
@@ -79,7 +85,7 @@ module.exports = function(grunt){
                         }));
                     }
                 }
-            }            
+            }
         },
         uglify: {
             options: {

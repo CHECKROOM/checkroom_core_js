@@ -328,7 +328,7 @@ define([
             	if(evt.action == "order.checkin"){
 	            	switch(evt.kind){
 	                    case "item":
-							evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " item " + summary + (contact?"from " + getContactLink(contact.id, contact.name):"") + locationName;
+							evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " item " + summary + (contact?" from " + getContactLink(contact.id, contact.name):"") + locationName;
 							break;
 	                    case "contact":
 	                        evt.friendlyText = byName + " " + getCheckoutLink(id, "checked in") + " equipment " + summary + locationName;
@@ -450,7 +450,7 @@ define([
             		evt.friendlyText = byName + " undid close reservation";
             	}else{
             		if(evt.kind == "contact") contact = null;
-            		evt.friendlyText = byName + " undid close " + getReservationLink(id, "reservation") + (contact?" frop " + getContactLink(contact.id, contact.name):"") + locationName;;
+            		evt.friendlyText = byName + " undid close " + getReservationLink(id, "reservation") + (contact?" from " + getContactLink(contact.id, contact.name):"") + locationName;
             	}
             	break;
             case "kit.addItems":

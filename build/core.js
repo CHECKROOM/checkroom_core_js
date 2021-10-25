@@ -5491,7 +5491,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       if (evt.action == 'order.checkin') {
         switch (evt.kind) {
         case 'item':
-          evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked in') + ' item ' + summary + (contact ? 'from ' + getContactLink(contact.id, contact.name) : '') + locationName;
+          evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked in') + ' item ' + summary + (contact ? ' from ' + getContactLink(contact.id, contact.name) : '') + locationName;
           break;
         case 'contact':
           evt.friendlyText = byName + ' ' + getCheckoutLink(id, 'checked in') + ' equipment ' + summary + locationName;
@@ -5602,7 +5602,7 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       } else {
         if (evt.kind == 'contact')
           contact = null;
-        evt.friendlyText = byName + ' undid close ' + getReservationLink(id, 'reservation') + (contact ? ' frop ' + getContactLink(contact.id, contact.name) : '') + locationName;
+        evt.friendlyText = byName + ' undid close ' + getReservationLink(id, 'reservation') + (contact ? ' from ' + getContactLink(contact.id, contact.name) : '') + locationName;
       }
       break;
     case 'kit.addItems':
@@ -6504,7 +6504,10 @@ document = function ($, common, api, ColorLabel) {
    */
   Document.prototype._doApiCall = function (spec) {
     var that = this, dfd = $.Deferred();
-    this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost).then(function (data) {
+    var dfdCall = this.ds.call(spec.collectionCall == true ? null : spec.pk || this.id, spec.method, spec.params, spec._fields || this._fields, spec.timeOut, spec.usePost);
+    // Need to pass xhr abort extension to new Deferred
+    dfd.abort = dfdCall.abort;
+    dfdCall.then(function (data) {
       if (spec.skipRead == true) {
         dfd.resolve(data);
       } else {

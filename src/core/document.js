@@ -346,15 +346,20 @@ define([
     Document.prototype._doApiCall = function(spec) {
         var that = this,
             dfd = $.Deferred();
-        
-        this.ds.call(
+
+        var dfdCall = this.ds.call(
             (spec.collectionCall==true) ? null : (spec.pk || this.id),
             spec.method,
             spec.params,
             spec._fields || this._fields,
             spec.timeOut,
             spec.usePost
-        ).then(function(data) {
+        )
+
+        // Need to pass xhr abort extension to new Deferred
+        dfd.abort = dfdCall.abort;
+
+        dfdCall.then(function(data) {
             if (spec.skipRead==true){
                 dfd.resolve(data);
             }else {

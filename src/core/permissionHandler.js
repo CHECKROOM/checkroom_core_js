@@ -52,7 +52,8 @@ define([], function () {
         this._useICal =               (limits.allowICal);
         this._usePublicInventory =    (limits.allowPublicInventory);
         this._useBookingRestrictions = (limits.allowBookingRestrictions);
-        this._useEquipmentPicking =     (limits.allowEquipmentPicking) &&   (profile.useEquipmentPicking);
+        this._useEquipmentPicking = (limits.allowEquipmentPicking) && (profile.useEquipmentPicking);
+        this._useLocationBusinessHours = limits.allowLocationBusinessHours;
     };
 
     // 
@@ -130,6 +131,9 @@ define([], function () {
     PermissionHandler.prototype.canUseEquipmentPicking = function(){
         return this.limits.allowEquipmentPicking;
     };
+    PermissionHandler.prototype.canUseLocationBusinessHours = function () {
+        return this.limits.allowLocationBusinessHours;
+    }
 
 
     //
@@ -173,6 +177,10 @@ define([], function () {
     PermissionHandler.prototype.hasEquipmentPicking = function(){
         return this._useEquipmentPicking;
     };
+
+    PermissionHandler.prototype.hasLocationBusinessHours = function () {
+        return this._useLocationBusinessHours;
+    }
 
     PermissionHandler.prototype.hasPublicInventoryPermission = function(){
         return this._usePublicInventory;

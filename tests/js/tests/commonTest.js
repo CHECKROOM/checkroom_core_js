@@ -6,14 +6,6 @@ define(['settings', 'helper', 'cheqroom-core'], function(settings, helper, cr) {
         var run = function() {
             var common = cr.common;
 
-            test('isFreeEmail', function() {
-                ok(common.isFreeEmail("vincent@gmail.com"));
-                ok(common.isFreeEmail("vincent@hotmail.com"));
-                ok(common.isFreeEmail("vincent@yahoo.com"));
-                ok(!common.isFreeEmail("vincent@cheqroom.com"));
-                ok(!common.isFreeEmail("vincent+nospam@cheqroom.com"));
-            });
-
             test('joinOther', function() {
                 equal(["single"].joinOther(), "single");
                 equal([].joinOther(), "");

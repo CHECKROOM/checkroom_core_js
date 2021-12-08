@@ -7,13 +7,10 @@
 define([
     "jquery",
     "api",
-    "settings",
     "field",
-    'dateHelper',
     "common/inflection",
     "common/validation",
-    "common/clientStorage",
-    "common/utils"], function ($, api, settings, Field, dateHelper, inflection, validation, clientStorage, utils) {
+    "common/utils"], function ($, api, Field, inflection, validation, utils) {
 
     var DEFAULT_PLAN = "cr_2004_plus_yearly_usd_500";
     var DEFAULT_PERIOD = "yearly";

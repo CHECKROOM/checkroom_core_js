@@ -4,24 +4,24 @@
   "description": "A JavaScript wrapper around the CHEQROOM REST API",
   "main": "build/core.js",
   "scripts": {
+    "build": "grunt",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "CHEQROOM",
   "license": "ISC",
-  "dependencies":{
+  "dependencies": {
     "jquery": "^3.0.0",
     "moment": "^2.9.0"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-contrib-clean": "^0.6.0",
-    "grunt-contrib-requirejs": "^0.4.4",
-    "grunt-contrib-uglify": "^0.7.0",
-    "grunt-gh-pages": "^0.10.0",
-    "grunt-jsdoc": "^0.5.8",
-    "jaguarjs-jsdoc": "0.0.1",
     "amdclean": "^2.7.0",
-    "grunt-contrib-yuidoc": "^0.7.0"
+    "grunt-contrib-clean": "^2.0.0",
+    "grunt-contrib-requirejs": "^1.0.0",
+    "grunt-contrib-uglify": "^5.0.1",
+    "grunt-gh-pages": "^4.0.0",
+    "grunt-jsdoc": "^2.4.1",
+    "grunt": "^1.4.1",
+    "jaguarjs-jsdoc": "^1.1.0"
   },
   "repository": {
     "type": "git",

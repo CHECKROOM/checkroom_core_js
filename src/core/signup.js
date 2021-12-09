@@ -100,14 +100,9 @@ define([
             });
     };
 
-    Signup.prototype.emailIsValid = function(denyFreeEmail) {
+    Signup.prototype.emailIsValid = function() {
         var email = $.trim(this.email);
-        var isValid = validation.isValidEmail(email);
-        if( (isValid) &&
-            (denyFreeEmail==true)) {
-            return !validation.isFreeEmail(email);
-        }
-        return isValid;
+        return validation.isValidEmail(email);
     };
 
     Signup.prototype.emailExists = function() {

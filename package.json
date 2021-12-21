@@ -10,19 +10,9 @@
   "author": "CHEQROOM",
   "license": "ISC",
   "dependencies": {
-    "jquery": "^3.0.0",
     "moment": "^2.9.0"
   },
-  "devDependencies": {
-    "amdclean": "^2.7.0",
-    "grunt-contrib-clean": "^2.0.0",
-    "grunt-contrib-requirejs": "^1.0.0",
-    "grunt-contrib-uglify": "^5.0.1",
-    "grunt-gh-pages": "^4.0.0",
-    "grunt-jsdoc": "^2.4.1",
-    "grunt": "^1.4.1",
-    "jaguarjs-jsdoc": "^1.1.0"
-  },
+  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git://github.com/CHECKROOM/checkroom_core_js.git"

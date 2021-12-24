@@ -1,713 +1,750 @@
+import api from './api';
+import common from './common';
+import Document from './document';
+
+// Some constant values
+var DEFAULTS = {
+	id: '',
+	name: '',
+	itemFlags: [],
+	kitFlags: [],
+	customerFlags: [],
+	orderFlags: [],
+	reservationFlags: [],
+	itemFields: [],
+	kitFields: [],
+	customerFields: [],
+	orderFields: [],
+	reservationFields: [],
+	itemLabels: [],
+	kitLabels: [],
+	customerLabels: [],
+	reservationLabels: [],
+	orderLabels: [],
+	businessHours: [],
+	cancelled: null,
+	calendarTemplate: '{{number}}: {{name_or_summary}} - {{contact.name}}',
+};
+
+// Allow overriding the ctor during inheritance
+// http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+var tmp = function () {};
+tmp.prototype = Document.prototype;
+
 /**
- * The Group module
- * @copyright CHECKROOM NV 2015
- * @module group
+ * Group describes a group which can trigger on certain events (signals)
+ * @name  Group
+ * @class
+ * @property {string} name              the group name
+ * @property {array} itemFlags          the groups item flags
+ * @property {array} kitFlags           the groups kit flags
+ * @property {array} customerFlags      the groups customer flags
+ * @property {array} orderFlags         the groups order flags
+ * @property {array} reservationFlags   the groups reservation flags
+ * @property {array} itemFields         the groups item fields
+ * @property {array} kitFields          the groups kit fields
+ * @property {array} customerFields     the groups customer fields
+ * @property {array} reservationFields  the groups reservation fields
+ * @property {array} orderFields        the groups order fields
+ * @property {array} itemLabels         the groups item labels
+ * @property {array} kitLabels          the groups kit labels
+ * @property {array} customerLabels     the groups customer labels
+ * @property {array} reservationLabels  the groups reservation labels
+ * @property {array} orderLabels        the groups order labels
+ * @property {array} businessHours      the groups business hours
+ * @property {string} calendarTemplate  the group calendar event title template
+ * @constructor
+ * @extends Document
  */
-define([
-    'jquery',
-    'common',
-    'api',
-    'document'],  /** @lends Document */ function ($, common, api, Document) {
+var Group = function (opt) {
+	var spec = Object.assign({}, opt);
+	Document.call(this, spec);
 
-    // Some constant values
-    var DEFAULTS = {
-        id: "",
-        name: "",
-        itemFlags: [],
-        kitFlags: [],
-        customerFlags: [],
-        orderFlags: [],
-        reservationFlags: [],
-        itemFields: [],
-        kitFields: [],
-        customerFields: [],
-        orderFields: [],
-        reservationFields: [],
-        itemLabels: [],
-        kitLabels: [],
-        customerLabels: [],
-        reservationLabels: [],
-        orderLabels: [],
-        businessHours: [],
-        cancelled: null,
-        calendarTemplate: '{{number}}: {{name_or_summary}} - {{contact.name}}'
-    };
+	this.name = spec.name || DEFAULTS.name;
+	this.itemFlags = this.getFlags(spec.itemFlags || DEFAULTS.itemFlags.slice());
+	this.kitFlags = this.getFlags(spec.kitFlags || DEFAULTS.kitFlags.slice());
+	this.customerFlags = this.getFlags(spec.customerFlags || DEFAULTS.customerFlags.slice());
+	this.orderFlags = this.getFlags(spec.orderFlags || DEFAULTS.orderFlags.slice());
+	this.reservationFlags = this.getFlags(spec.reservationFlags || DEFAULTS.reservationFlags.slice());
+	this.itemFields = spec.itemFields || DEFAULTS.itemFields.slice();
+	this.kitFields = spec.kitFields || DEFAULTS.kitFields.slice();
+	this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
+	this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
+	this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
+	this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
+	this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
+	this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
+	this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
+	this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
+	this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
+	this.calendarTemplate = spec.calendarTemplate || DEFAULTS.calendarTemplate;
+};
 
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function(){};
-    tmp.prototype = Document.prototype;
+Group.prototype = new tmp();
+Group.prototype.constructor = Group;
 
-    /**
-     * Group describes a group which can trigger on certain events (signals)
-     * @name  Group
-     * @class
-     * @property {string} name              the group name
-     * @property {array} itemFlags          the groups item flags
-     * @property {array} kitFlags           the groups kit flags
-     * @property {array} customerFlags      the groups customer flags
-     * @property {array} orderFlags         the groups order flags
-     * @property {array} reservationFlags   the groups reservation flags
-     * @property {array} itemFields         the groups item fields
-     * @property {array} kitFields          the groups kit fields
-     * @property {array} customerFields     the groups customer fields
-     * @property {array} reservationFields  the groups reservation fields
-     * @property {array} orderFields        the groups order fields
-     * @property {array} itemLabels         the groups item labels
-     * @property {array} kitLabels          the groups kit labels
-     * @property {array} customerLabels     the groups customer labels
-     * @property {array} reservationLabels  the groups reservation labels
-     * @property {array} orderLabels        the groups order labels
-     * @property {array} businessHours      the groups business hours
-     * @property {string} calendarTemplate  the group calendar event title template
-     * @constructor
-     * @extends Document
-     */
-    var Group = function(opt) {
-        var spec = $.extend({}, opt);
-        Document.call(this, spec);
+// Business logic
+// ----
+/**
+ * Sets the name for a group
+ * @param name
+ * @returns {promise}
+ */
+Group.prototype.updateName = function (name) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'updateName',
+		location: name,
+	});
+};
 
-        this.name = spec.name || DEFAULTS.name;
-        this.itemFlags = this.getFlags(spec.itemFlags || DEFAULTS.itemFlags.slice());
-        this.kitFlags = this.getFlags(spec.kitFlags || DEFAULTS.kitFlags.slice());
-        this.customerFlags = this.getFlags(spec.customerFlags || DEFAULTS.customerFlags.slice());
-        this.orderFlags = this.getFlags(spec.orderFlags || DEFAULTS.orderFlags.slice());
-        this.reservationFlags = this.getFlags(spec.reservationFlags || DEFAULTS.reservationFlags.slice());
-        this.itemFields = spec.itemFields || DEFAULTS.itemFields.slice();
-        this.kitFields = spec.kitFields || DEFAULTS.kitFields.slice();
-        this.customerFields = spec.customerFields || DEFAULTS.customerFields.slice();
-        this.reservationFields = spec.reservationFields || DEFAULTS.reservationFields.slice();
-        this.orderFields = spec.orderFields || DEFAULTS.orderFields.slice();
-        this.itemLabels = spec.itemLabels || DEFAULTS.itemLabels.slice();
-        this.kitLabels = spec.kitLabels || DEFAULTS.kitLabels.slice();
-        this.customerLabels = spec.customerLabels || DEFAULTS.customerLabels.slice();
-        this.reservationLabels = spec.reservationLabels || DEFAULTS.reservationLabels.slice();
-        this.orderLabels = spec.orderLabels || DEFAULTS.orderLabels.slice();
-        this.businessHours = spec.businessHours || DEFAULTS.businessHours.slice();
-        this.calendarTemplate = spec.calendarTemplate || DEFAULTS.calendarTemplate;
-    };
+/**
+ * Gets the stats (for a specific location)
+ * @param locationId
+ * @returns {promise}
+ */
+Group.prototype.getStats = function (locationId) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'getStats',
+		location: locationId,
+	});
+};
 
-    Group.prototype = new tmp();
-    Group.prototype.constructor = Group;
+/**
+ * Updates the flags for a certain collection of documents
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param flags
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.updateFlags = function (collection, flags, skipRead) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'updateFlags',
+		collection: collection,
+		flags: flags,
+		skipRead: skipRead,
+	});
+};
 
-    // Business logic
-    // ----
-    /**
-     * Sets the name for a group
-     * @param name
-     * @returns {promise}
-     */
-    Group.prototype.updateName = function(name) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "updateName",
-            location: name
-        });
-    };
+/**
+ * Creates a field definition for a certain collection of documents
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param name
+ * @param kind
+ * @param required
+ * @param form
+ * @param unit
+ * @param editor
+ * @param description
+ * @param select
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.createField = function (
+	collection,
+	name,
+	kind,
+	required,
+	form,
+	unit,
+	editor,
+	description,
+	select,
+	search,
+	skipRead
+) {
+	var params = {
+		collection: collection,
+		name: name,
+		kind: kind,
+		required: required,
+		form: form,
+		unit: unit,
+		editor: editor,
+		description: description,
+		search: search,
+	};
+	if (select && select.length > 0) {
+		params.select = select;
+	}
 
-    /**
-     * Gets the stats (for a specific location)
-     * @param locationId
-     * @returns {promise}
-     */
-    Group.prototype.getStats = function(locationId) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "getStats",
-            location: locationId
-        });
-    };
+	return this._doApiCall({
+		pk: this.id,
+		method: 'createField',
+		skipRead: skipRead,
+		params: params,
+	});
+};
 
-    /**
-     * Updates the flags for a certain collection of documents
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param flags
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.updateFlags = function(collection, flags, skipRead) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "updateFlags",
-            collection: collection,
-            flags: flags,
-            skipRead: skipRead
-        });
-    };
+/**
+ * Updates a field definition for a certain collection of documents
+ * Also renames the field key on each of the documents that contain that field
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param name
+ * @param newName
+ * @param kind
+ * @param required
+ * @param form
+ * @param unit
+ * @param editor
+ * @param description
+ * @param select
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.updateField = function (
+	collection,
+	name,
+	newName,
+	required,
+	form,
+	unit,
+	editor,
+	description,
+	select,
+	search,
+	skipRead
+) {
+	var params = {
+		collection: collection,
+		name: name,
+		required: required,
+		form: form,
+		unit: unit,
+		editor: editor,
+		description: description,
+		search: search,
+	};
+	if (select && select.length > 0) {
+		params.select = select;
+	}
+	if (name != newName) {
+		params.newName = newName;
+	}
 
-    /**
-     * Creates a field definition for a certain collection of documents
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param name
-     * @param kind
-     * @param required
-     * @param form
-     * @param unit
-     * @param editor
-     * @param description
-     * @param select
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.createField = function(collection, name, kind, required, form, unit, editor, description, select, search, skipRead) {
-        var params = {
-            collection: collection,
-            name: name,
-            kind: kind,
-            required: required,
-            form: form,
-            unit: unit,
-            editor: editor,
-            description: description,
-            search: search
-        };
-        if(select && select.length > 0){
-            params.select = select;
-        }
+	return this._doApiCall({
+		pk: this.id,
+		method: 'updateField',
+		skipRead: skipRead,
+		params: params,
+	});
+};
 
-        return this._doApiCall({
-            pk: this.id,
-            method: "createField",
-            skipRead: skipRead,
-            params: params
-        });
-    };
+/**
+ * Deletes a field definition for a certain collection of documents
+ * It will remove the field on all documents of that type
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param name
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.deleteField = function (collection, name, skipRead) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'deleteField',
+		skipRead: skipRead,
+		params: {
+			collection: collection,
+			name: name,
+		},
+	});
+};
 
-    /**
-     * Updates a field definition for a certain collection of documents
-     * Also renames the field key on each of the documents that contain that field
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param name
-     * @param newName
-     * @param kind
-     * @param required
-     * @param form
-     * @param unit
-     * @param editor
-     * @param description
-     * @param select
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.updateField = function(collection, name, newName, required, form, unit, editor, description, select, search, skipRead) {
-        var params = {
-            collection: collection,
-            name: name,
-            required: required,
-            form: form,
-            unit: unit,
-            editor: editor,
-            description: description,
-            search: search
-        }
-        if(select && select.length > 0){
-            params.select = select;
-        }
-        if(name != newName){
-            params.newName = newName;
-        }
+/**
+ * Moves a field definition for a certain collection of documents
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param oldPos
+ * @param newPos
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.moveField = function (collection, oldPos, newPos, skipRead) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'moveField',
+		skipRead: skipRead,
+		params: {
+			collection: collection,
+			oldPos: oldPos,
+			newPos: newPos,
+		},
+	});
+};
 
-        return this._doApiCall({
-            pk: this.id,
-            method: "updateField",
-            skipRead: skipRead,
-            params: params
-        });
-    };
+/**
+ * Add document label
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param labelColor
+ * @param labelName
+ * @param labelDefault
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.createLabel = function (collection, labelColor, labelName, labelDefault, skipRead) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'createLabel',
+		skipRead: skipRead,
+		params: {
+			collection: collection,
+			labelColor: labelColor,
+			labelName: labelName,
+			labelDefault: labelDefault,
+		},
+	});
+};
 
-    /**
-     * Deletes a field definition for a certain collection of documents
-     * It will remove the field on all documents of that type
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param name
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.deleteField = function(collection, name, skipRead) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "deleteField",
-            skipRead: skipRead,
-            params: {
-                collection: collection,
-                name: name
-            }
-        });
-    };
+/**
+ * Updates document label
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param labelId
+ * @param labelColor
+ * @param labelName
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.updateLabel = function (collection, labelId, labelColor, labelName, labelDefault, skipRead) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'updateLabel',
+		skipRead: skipRead,
+		params: {
+			collection: collection,
+			labelId: labelId,
+			labelColor: labelColor,
+			labelName: labelName,
+			labelDefault: labelDefault,
+		},
+	});
+};
 
-    /**
-     * Moves a field definition for a certain collection of documents
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param oldPos
-     * @param newPos
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.moveField = function(collection, oldPos, newPos, skipRead) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "moveField",
-            skipRead: skipRead,
-            params: {
-                collection: collection,
-                oldPos: oldPos,
-                newPos: newPos
-            }
-        });
-    };
+/**
+ * Removes document label
+ * @param collection (items, kits, customers, reservations, orders)
+ * @param labelId
+ * @param labelColor
+ * @param labelName
+ * @param skipRead
+ * @returns {promise}
+ */
+Group.prototype.deleteLabel = function (collection, labelId, skipRead) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'deleteLabel',
+		skipRead: skipRead,
+		params: {
+			collection: collection,
+			labelId: labelId,
+		},
+	});
+};
 
-    /**
-     * Add document label
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param labelColor
-     * @param labelName
-     * @param labelDefault
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.createLabel = function(collection, labelColor, labelName, labelDefault, skipRead) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "createLabel",
-            skipRead: skipRead,
-            params: {
-                collection: collection,
-                labelColor: labelColor,
-                labelName: labelName,
-                labelDefault: labelDefault
-            }
-        });
-    };
+/**
+ * Buys a single product from our in-app store
+ * @param productId
+ * @param quantity
+ * @param shipping
+ * @returns {promise}
+ */
+Group.prototype.buyProduct = function (productId, quantity, shipping) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'buyProduct',
+		skipRead: true,
+		params: {
+			productId: productId,
+			quantity: quantity,
+			shipping: shipping,
+		},
+	});
+};
 
-    /**
-     * Updates document label
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param labelId
-     * @param labelColor
-     * @param labelName
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.updateLabel = function(collection, labelId, labelColor, labelName, labelDefault, skipRead) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "updateLabel",
-            skipRead: skipRead,
-            params: {
-                collection: collection,
-                labelId: labelId,
-                labelColor: labelColor,
-                labelName: labelName,
-                labelDefault: labelDefault
-            }
-        });
-    };
+/**
+ * Buys multiple products from our in-app store
+ * @param listOfProductQtyTuples
+ * @param shipping
+ * @returns {promise}
+ */
+Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping, coupon) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'buyProducts',
+		skipRead: true,
+		params: {
+			products: listOfProductQtyTuples,
+			shipping: shipping,
+			coupon: coupon,
+		},
+	});
+};
 
-     /**
-     * Removes document label
-     * @param collection (items, kits, customers, reservations, orders)
-     * @param labelId
-     * @param labelColor
-     * @param labelName
-     * @param skipRead
-     * @returns {promise}
-     */
-    Group.prototype.deleteLabel = function(collection, labelId, skipRead) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "deleteLabel",
-            skipRead: skipRead,
-            params: {
-                collection: collection,
-                labelId: labelId
-            }
-        });
-    };
+/**
+ * Add tags
+ * @param {Array} tags
+ */
+Group.prototype.addTags = function (tags) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'addTags',
+		skipRead: true,
+		params: {
+			tags: tags,
+		},
+	});
+};
 
-    /**
-     * Buys a single product from our in-app store
-     * @param productId
-     * @param quantity
-     * @param shipping
-     * @returns {promise}
-     */
-    Group.prototype.buyProduct = function(productId, quantity, shipping) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "buyProduct",
-            skipRead: true,
-            params: {
-                productId: productId,
-                quantity: quantity,
-                shipping: shipping
-            }
-        });
-    };
+/**
+ * Remove tags
+ * @param {Array} tags
+ */
+Group.prototype.removeTags = function (tags) {
+	return this._doApiCall({
+		pk: this.id,
+		method: 'removeTags',
+		skipRead: true,
+		params: {
+			tags: tags,
+		},
+	});
+};
 
-    /**
-     * Buys multiple products from our in-app store
-     * @param listOfProductQtyTuples
-     * @param shipping
-     * @returns {promise}
-     */
-    Group.prototype.buyProducts = function(listOfProductQtyTuples, shipping, coupon) {
-        return this._doApiCall({
-            pk: this.id,
-            method: "buyProducts",
-            skipRead: true,
-            params: {
-                products: listOfProductQtyTuples,
-                shipping: shipping,
-                coupon: coupon
-            }
-        });
-    };
+// Helpers
+// ----
 
-    /**
-     * Add tags
-     * @param {Array} tags 
-     */
-    Group.prototype.addTags = function(tags){
-        return this._doApiCall({
-            pk: this.id,
-            method: 'addTags',
-            skipRead: true,
-            params:{
-                tags: tags
-            }
-        })
-    };
+/**
+ * Helper method that gets all known fields for a certain collection of documents
+ * @param coll
+ * @param form
+ * @returns {Array}
+ */
+Group.prototype.getFieldsForCollection = function (coll, form) {
+	var fields = [];
 
-    /**
-     * Remove tags
-     * @param {Array} tags 
-     */
-    Group.prototype.removeTags = function(tags){
-        return this._doApiCall({
-            pk: this.id,
-            method: 'removeTags',
-            skipRead: true,
-            params:{
-                tags: tags
-            }
-        })
-    };
+	switch (coll) {
+		case 'items':
+			fields = this.itemFields;
+			break;
+		case 'kits':
+			fields = this.kitFields;
+			break;
+		case 'contacts':
+		case 'customers':
+			fields = this.customerFields;
+			break;
+		case 'reservations':
+			fields = this.reservationFields;
+			break;
+		case 'checkouts':
+		case 'orders':
+			fields = this.orderFields;
+			break;
+		default:
+			break;
+	}
 
-    // Helpers
-    // ----
+	if (form != null) {
+		fields = fields.find(function (f) {
+			return f.form == form;
+		});
+	}
 
-    /**
-     * Helper method that gets all known fields for a certain collection of documents
-     * @param coll
-     * @param form
-     * @returns {Array}
-     */
-    Group.prototype.getFieldsForCollection = function(coll, form) {
-        var fields = [];
+	return fields;
+};
 
-        switch (coll) {
-            case "items":
-                fields = this.itemFields;
-                break;
-            case "kits":
-                fields = this.kitFields;
-                break;
-            case "contacts":
-            case "customers":
-                fields = this.customerFields;
-                break;
-            case "reservations":
-                fields = this.reservationFields;
-                break;
-            case "checkouts":
-            case "orders":
-                fields = this.orderFields;
-                break;
-            default:
-                break;
-        }
+/**
+ * Helper method that gets all known flags for a certain collection of documents
+ * @param coll
+ * @returns {Array}
+ */
+Group.prototype.getFlagsForCollection = function (coll) {
+	switch (coll) {
+		case 'items':
+			return this.getFlags(this.itemFlags);
+		case 'kits':
+			return this.getFlags(this.kitFlags);
+		case 'contacts':
+		case 'customers':
+			return this.getFlags(this.customerFlags);
+		case 'reservations':
+			return this.getFlags(this.reservationFlags);
+		case 'checkouts':
+		case 'orders':
+			return this.getFlags(this.orderFlags);
+		default:
+			return this.getFlags([]);
+	}
+};
 
-        if (form != null) {
-            fields = $.grep(fields, function (f, i) {
-                return (f.form == form);
-            })
-        }
+Group.prototype.getFlags = function (flags) {
+	return flags.map(function (f) {
+		if (typeof f === 'string') {
+			f = {
+				_id: f,
+				name: f,
+			};
+		}
 
-        return fields;
-    };
+		// Also add _id param (bugfix)
+		if (!f._id) f._id = f.id;
 
-    /**
-     * Helper method that gets all known flags for a certain collection of documents
-     * @param coll
-     * @returns {Array}
-     */
-    Group.prototype.getFlagsForCollection = function(coll) {
-        switch (coll) {
-            case "items":
-                return this.getFlags(this.itemFlags);
-            case "kits":
-                return this.getFlags(this.kitFlags);
-            case "contacts":
-            case "customers":
-                return this.getFlags(this.customerFlags);
-            case "reservations":
-                return this.getFlags(this.reservationFlags);
-            case "checkouts":
-            case "orders":
-                return this.getFlags(this.orderFlags);
-            default:
-                return this.getFlags([]);
-        }
-    };
+		return f;
+	});
+};
 
-    Group.prototype.getFlags = function(flags){
-        return flags.map(function(f){
-            if(typeof(f) === "string"){
-                f = {
-                    _id: f,
-                    name: f
-                }
-            };
+/**
+ * Helper method that returns the business days
+ * @returns {Array}
+ */
+Group.prototype.getBusinessDays = function () {
+	return this.businessHours.map(function (bh) {
+		//server side: 0 => monday - 6 => sunday
+		//client side: 1 => monday - 7 => sunday
+		return bh.isoWeekday;
+	});
+};
 
-            // Also add _id param (bugfix)
-            if(!f._id) f._id = f.id;
+/**
+ * Helper method that returns the business hours for a given iso day
+ * @returns {Array}
+ */
+Group.prototype.getBusinessHoursForIsoWeekday = function (isoDay) {
+	return this.businessHours.filter(function (bh) {
+		//server side: 0 => monday - 6 => sunday
+		//client side: 1 => monday - 7 => sunday
+		return bh.isoWeekday == isoDay;
+	});
+};
 
-            return f;
-        })
-    }
+/**
+ * setBusinessHours: translate iso weekdays back to server days
+ * @param {array} businessHours
+ * @param {boolean} skipRead
+ */
+Group.prototype.setBusinessHours = function (businessHours, skipRead) {
+	var that = this;
 
-    /**
-     * Helper method that returns the business days
-     * @returns {Array}
-     */
-    Group.prototype.getBusinessDays = function(){
-        return this.businessHours.map(function(bh){
-            //server side: 0 => monday - 6 => sunday
-            //client side: 1 => monday - 7 => sunday
-            return bh.isoWeekday; 
-        });
-    };
+	businessHours = businessHours || [];
 
-    /**
-     * Helper method that returns the business hours for a given iso day
-     * @returns {Array}
-     */
-    Group.prototype.getBusinessHoursForIsoWeekday = function(isoDay){
-        return this.businessHours.filter(function(bh){
-            //server side: 0 => monday - 6 => sunday
-            //client side: 1 => monday - 7 => sunday
-            return bh.isoWeekday == isoDay; 
-        });
-    };
+	// Make copy of array
+	businessHours = businessHours.slice().map(function (bh) {
+		// BUGFIX clone object!!!!
+		var newBh = Object.assign({}, bh);
 
-    /**
-     * setBusinessHours: translate iso weekdays back to server days
-     * @param {array} businessHours 
-     * @param {boolean} skipRead      
-     */
-    Group.prototype.setBusinessHours = function(businessHours, skipRead){
-        var that = this;
+		newBh.dayOfWeek = bh.isoWeekday - 1; //server side 0-6 Mon-Sun
 
-        businessHours = businessHours || [];
+		delete newBh.isoWeekday;
 
-        // Make copy of array
-        businessHours = businessHours.slice().map(function(bh){ 
-            // BUGFIX clone object!!!!
-            var newBh = $.extend({}, bh);
+		return newBh;
+	});
 
-            newBh.dayOfWeek = bh.isoWeekday - 1; //server side 0-6 Mon-Sun
+	return this._doApiCall({
+		method: 'setBusinessHours',
+		params: { businessHours: businessHours, _fields: this._fields },
+		skipRead: skipRead,
+		usePost: true,
+	});
+};
 
-            delete newBh.isoWeekday;
+/**
+ * getDefaultBusinessHours: in iso weekdays
+ * @return {array}
+ * setCalendarTemplate
+ * @param {string} template
+ * @param {string} kind
+ */
+Group.prototype.getDefaultBusinessHours = function () {
+	return [
+		{ isoWeekday: 1, openTime: 540, closeTime: 1020 },
+		{ isoWeekday: 2, openTime: 540, closeTime: 1020 },
+		{ isoWeekday: 3, openTime: 540, closeTime: 1020 },
+		{ isoWeekday: 4, openTime: 540, closeTime: 1020 },
+		{ isoWeekday: 5, openTime: 540, closeTime: 1020 },
+	];
+};
 
-            return newBh;
-        })
+/**
+ * setCalendarTemplate
+ * @param {string} template
+ * @param {string} kind
+ */
+Group.prototype.setCalendarTemplate = function (template, kind) {
+	return this._doApiCall({
+		method: 'setCalendarTemplate',
+		params: { template: template, kind: kind },
+		skipRead: true,
+		usePost: true,
+	});
+};
 
-        return this._doApiCall({
-            method: "setBusinessHours", 
-            params: { businessHours: businessHours, _fields: this._fields }, 
-            skipRead: skipRead, 
-            usePost: true
-        });
-    }
+/**
+ * setCalendarTemplate
+ */
+Group.prototype.clearCalendarTemplate = function () {
+	return this._doApiCall({
+		method: 'clearCalendarTemplate',
+		skipRead: true,
+	});
+};
 
-    /**
-     * getDefaultBusinessHours: in iso weekdays
-     * @return {array}
-     * setCalendarTemplate
-     * @param {string} template 
-     * @param {string} kind      
-     */
-    Group.prototype.getDefaultBusinessHours = function(){
-        return [
-            { isoWeekday: 1, openTime: 540, closeTime: 1020},
-            { isoWeekday: 2, openTime: 540, closeTime: 1020},
-            { isoWeekday: 3, openTime: 540, closeTime: 1020},
-            { isoWeekday: 4, openTime: 540, closeTime: 1020},
-            { isoWeekday: 5, openTime: 540, closeTime: 1020}
-        ];
-    };
+/**
+ * getCalendarTemplatePreview
+ * @param {string} template
+ * @param {string} kind
+ */
+Group.prototype.getCalendarTemplatePreview = function (template, kind) {
+	return this._doApiCall({
+		method: 'getCalendarTemplatePreview',
+		params: { template: template, kind: kind },
+		skipRead: true,
+		usePost: true,
+	});
+};
 
-    /**
-     * setCalendarTemplate
-     * @param {string} template 
-     * @param {string} kind      
-     */
-    Group.prototype.setCalendarTemplate = function(template, kind){
-        return this._doApiCall({
-            method: "setCalendarTemplate", 
-            params: { template: template, kind: kind }, 
-            skipRead: true,
-            usePost: true
-        });
-    };
+/**
+ * getDefaultCalendarTemplate
+ */
+Group.prototype.getDefaultCalendarTemplate = function () {
+	return DEFAULTS.calendarTemplate;
+};
 
-    /**
-     * setCalendarTemplate      
-     */
-    Group.prototype.clearCalendarTemplate = function(){
-        return this._doApiCall({
-            method: "clearCalendarTemplate",
-            skipRead: true
-        });
-    };
+//
+// Specific validators
+/**
+ * Checks if name is valid
+ * @name Group#isValidName
+ * @method
+ * @return {Boolean}
+ */
+Group.prototype.isValidName = function () {
+	this.name = this.name.trim();
+	return this.name.length >= 3;
+};
 
-    /**
-     * getCalendarTemplatePreview
-     * @param {string} template 
-     * @param {string} kind     
-     */
-    Group.prototype.getCalendarTemplatePreview = function(template, kind){
-        return this._doApiCall({
-            method: "getCalendarTemplatePreview",
-            params: { template: template, kind: kind }, 
-            skipRead: true,
-            usePost: true
-        });
-    };
+// toJson, fromJson
+// ----
 
-    /**
-     * getDefaultCalendarTemplate
-     */
-    Group.prototype.getDefaultCalendarTemplate = function(){
-        return DEFAULTS.calendarTemplate;
-    };
+/**
+ * _toJson, makes a dict of params to use during create / update
+ * @param options
+ * @returns {{}}
+ * @private
+ */
+Group.prototype._toJson = function (options) {
+	var data = Document.prototype._toJson.call(this, options);
+	data.name = this.name;
+	return data;
+};
 
-    //
-    // Specific validators
-    /**
-     * Checks if name is valid
-     * @name Group#isValidName
-     * @method
-     * @return {Boolean}
-     */
-    Group.prototype.isValidName = function() {
-        this.name = $.trim(this.name);
-        return (this.name.length>=3);
-    };
+/**
+ * _fromJson: read some basic information
+ * @method
+ * @param {object} data the json response
+ * @param {object} options dict
+ * @returns {promise}
+ * @private
+ */
+Group.prototype._fromJson = function (data, options) {
+	var that = this;
+	return Document.prototype._fromJson.call(this, data, options).then(function () {
+		that.name = data.name || DEFAULTS.name;
+		that.itemFlags = that.getFlags(data.itemFlags || DEFAULTS.itemFlags.slice());
+		that.kitFlags = that.getFlags(data.kitFlags || DEFAULTS.kitFlags.slice());
+		that.customerFlags = that.getFlags(data.customerFlags || DEFAULTS.customerFlags.slice());
+		that.orderFlags = that.getFlags(data.orderFlags || DEFAULTS.orderFlags.slice());
+		that.reservationFlags = that.getFlags(data.reservationFlags || DEFAULTS.reservationFlags.slice());
+		that.itemFields = data.itemFields || DEFAULTS.itemFields.slice();
+		that.kitFields = data.kitFields || DEFAULTS.kitFields.slice();
+		that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
+		that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
+		that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
+		that.cancelled = data.cancelled || DEFAULTS.cancelled;
+		that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
+		that.calendarTemplate = data.calendarTemplate || DEFAULTS.calendarTemplate;
 
-    // toJson, fromJson
-    // ----
+		return that._fromColorLabelsJson(data, options).then(function (data) {
+			return that._fromBusinessHoursJson(data, options);
+		});
+	});
+};
 
-    /**
-     * _toJson, makes a dict of params to use during create / update
-     * @param options
-     * @returns {{}}
-     * @private
-     */
-    Group.prototype._toJson = function(options) {
-        var data = Document.prototype._toJson.call(this, options);
-        data.name = this.name;
-        return data;
-    };
+/**
+ * _fromBusinessHoursJson: client side uses iso weekdays
+ * @param  {object} data
+ * @param  {object} options
+ * @return {object}
+ */
+Group.prototype._fromBusinessHoursJson = function (data, options) {
+	data.businessHours = data.businessHours.map(function (bh) {
+		if (!bh.isoWeekday) {
+			bh.isoWeekday = bh.dayOfWeek + 1; // 1-7 Mon - Sun
+		}
 
-    /**
-     * _fromJson: read some basic information
-     * @method
-     * @param {object} data the json response
-     * @param {object} options dict
-     * @returns {promise}
-     * @private
-     */
-    Group.prototype._fromJson = function(data, options) {
-        var that = this;
-        return Document.prototype._fromJson.call(this, data, options)
-            .then(function() {
-                that.name = data.name || DEFAULTS.name;
-                that.itemFlags = that.getFlags(data.itemFlags || DEFAULTS.itemFlags.slice());
-                that.kitFlags = that.getFlags(data.kitFlags || DEFAULTS.kitFlags.slice());
-                that.customerFlags = that.getFlags(data.customerFlags || DEFAULTS.customerFlags.slice());
-                that.orderFlags = that.getFlags(data.orderFlags || DEFAULTS.orderFlags.slice());
-                that.reservationFlags = that.getFlags(data.reservationFlags || DEFAULTS.reservationFlags.slice());
-                that.itemFields = data.itemFields || DEFAULTS.itemFields.slice();
-                that.kitFields = data.kitFields || DEFAULTS.kitFields.slice();
-                that.customerFields = data.customerFields || DEFAULTS.customerFields.slice();
-                that.reservationFields = data.reservationFields || DEFAULTS.reservationFields.slice();
-                that.orderFields = data.orderFields || DEFAULTS.orderFields.slice();
-                that.cancelled = data.cancelled || DEFAULTS.cancelled;
-                that.businessHours = data.businessHours || DEFAULTS.businessHours.slice();
-                that.calendarTemplate = data.calendarTemplate || DEFAULTS.calendarTemplate;
+		delete bh.dayOfWeek;
 
-                return that._fromColorLabelsJson(data, options).then(function(data){
-                    return that._fromBusinessHoursJson(data, options);
-                });                
-            });
-    };
+		return bh;
+	});
 
-    /**
-     * _fromBusinessHoursJson: client side uses iso weekdays
-     * @param  {object} data    
-     * @param  {object} options 
-     * @return {object}         
-     */
-    Group.prototype._fromBusinessHoursJson = function(data, options){
-        data.businessHours = data.businessHours.map(function(bh){
-            if(!bh.isoWeekday){
-                bh.isoWeekday = bh.dayOfWeek + 1; // 1-7 Mon - Sun
-            }
+	return Promise.resolve(data);
+};
 
-            delete bh.dayOfWeek;
+/**
+ * _fromColorLabelsJson: reads the document labels
+ * @param data
+ * @param options
+ * @returns {*}
+ * @private
+ */
+Group.prototype._fromColorLabelsJson = function (data, options) {
+	var obj = null,
+		that = this;
 
-            return bh;
-        })
+	['itemLabels', 'kitLabels', 'customerLabels', 'reservationLabels', 'orderLabels'].forEach(function (labelsKey) {
+		that[labelsKey] = DEFAULTS[labelsKey].slice();
 
-        return $.Deferred().resolve(data);
-    };
+		if (labelsKey == 'orderLabels') {
+			that[labelsKey].push(
+				that._getColorLabel(
+					{
+						readonly: true,
+						default: !data[labelsKey].some(function (l) {
+							return l.default === true;
+						}),
+						name: 'Unlabeled',
+						color: 'SlateGray',
+					},
+					options
+				)
+			);
+		}
+		if (labelsKey == 'reservationLabels') {
+			that[labelsKey].push(
+				that._getColorLabel(
+					{
+						readonly: true,
+						default: !data[labelsKey].some(function (l) {
+							return l.default === true;
+						}),
+						name: 'Unlabeled',
+						color: 'LimeGreen',
+					},
+					options
+				)
+			);
+		}
 
-    /**
-     * _fromColorLabelsJson: reads the document labels
-     * @param data
-     * @param options
-     * @returns {*}
-     * @private
-     */
-    Group.prototype._fromColorLabelsJson = function(data, options) {
-         var obj = null,
-            that = this;
+		if (data[labelsKey] && data[labelsKey].length > 0) {
+			data[labelsKey].forEach(function (label) {
+				obj = that._getColorLabel(label, options);
+				if (obj) {
+					that[labelsKey].push(obj);
+				}
+			});
+		}
+	});
 
-        $.each(['itemLabels', 'kitLabels', 'customerLabels', 'reservationLabels', 'orderLabels'], function(i, labelsKey){
-            that[labelsKey] = DEFAULTS[labelsKey].slice();
-            
-            if(labelsKey == "orderLabels"){
-                that[labelsKey].push(that._getColorLabel({ readonly: true, default: !data[labelsKey].some(function(l){ return l.default === true; }), name: "Unlabeled", color: "SlateGray" }, options));
-            }
-            if(labelsKey == "reservationLabels"){
-                that[labelsKey].push(that._getColorLabel({ readonly: true, default: !data[labelsKey].some(function(l){ return l.default === true; }), name: "Unlabeled", color: "LimeGreen" }, options));
-            }
+	return Promise.resolve(data);
+};
 
-            if( (data[labelsKey]) &&
-                (data[labelsKey].length>0)) {
-                $.each(data[labelsKey], function(i, label) {
-                    obj = that._getColorLabel(label, options);
-                    if (obj) {
-                        that[labelsKey].push(obj);
-                    }
-                });
-            }
-        });
-
-        return $.Deferred().resolve(data);
-    };
-
-    return Group;
-
-});
+export default Group;

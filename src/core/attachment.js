@@ -1,172 +1,160 @@
+import attachmentHelper from './common/attachment';
+
+var PREVIEWS = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
+var DEFAULTS = {
+	fileName: '',
+	fileSize: 0,
+	isCover: false,
+	canBeCover: true,
+	value_url: null,
+};
+
 /**
- * The Attachment module
- * an Attachment class inheriting from KeyValue
- * @module attachment
- * @copyright CHECKROOM NV 2015
+ * @name  Attachment
+ * @class
+ * @property {ApiDataSource} ds    attachments datasource
+ * @property {bool} isCover        is this the cover image of a document
+ * @property {bool} canBeCover     can this attachment be the cover of a document?
+ * @constructor
  */
-define(['jquery', 'common/attachment'], /** Attachment */ function ($, attachmentHelper) {
+var Attachment = function (spec) {
+	spec = spec || {};
+	this.ds = spec.ds;
+	this.raw = null; // the raw json object
 
-    var PREVIEWS = ['jpg', 'jpeg', 'png', 'gif', 'pdf'];
-    var DEFAULTS = {
-        fileName: '',
-        fileSize: 0,
-        isCover: false,
-        canBeCover: true,
-        value_url: null
-    };
+	this.fileName = spec.fileName || DEFAULTS.fileName;
+	this.fileSize = spec.fileSize || DEFAULTS.fileSize;
+	this.value = spec.value || DEFAULTS.value;
+	this.value_url = spec.value_url || DEFAULTS.value_url;
+	this.created = spec.created || DEFAULTS.created;
+	this.by = spec.by || DEFAULTS.by;
+	this.isCover = spec.isCover != null ? spec.isCover : DEFAULTS.isCover;
+	this.canBeCover = spec.canBeCover != null ? spec.canBeCover : DEFAULTS.canBeCover;
+	this.forKind = spec.forKind;
+};
 
-    /**
-     * @name  Attachment
-     * @class
-     * @property {ApiDataSource} ds    attachments datasource
-     * @property {bool} isCover        is this the cover image of a document
-     * @property {bool} canBeCover     can this attachment be the cover of a document?
-     * @constructor
-     */
-    var Attachment = function(spec) {
-        spec = spec || {};
-        this.ds = spec.ds;
-        this.raw = null; // the raw json object
+/**
+ * Gets the url of a thumbnail
+ * "XS": 32,
+ * "S": 64,
+ * "M": 128,
+ * "L": 256,
+ * "XL": 512
+ * "orig": original size
+ * @name Attachment#getThumbnailUrl
+ * @method
+ * @param size
+ * @returns {string}
+ */
+Attachment.prototype.getThumbnailUrl = function (size) {
+	return this.hasPreview() ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : '';
+};
 
-        this.fileName = spec.fileName || DEFAULTS.fileName;
-        this.fileSize = spec.fileSize || DEFAULTS.fileSize;
-        this.value = spec.value || DEFAULTS.value;
-        this.value_url = spec.value_url || DEFAULTS.value_url;
-        this.created = spec.created || DEFAULTS.created;
-        this.by = spec.by || DEFAULTS.by;
-        this.isCover = (spec.isCover!=null) ? spec.isCover : DEFAULTS.isCover;
-        this.canBeCover = (spec.canBeCover!=null) ? spec.canBeCover : DEFAULTS.canBeCover;
-        this.forKind = spec.forKind;
-    };
+/**
+ * Gets the url where the attachment can be downloaded
+ * @name Attachment#getDownloadUrl
+ * @method
+ * @returns {string}
+ */
+Attachment.prototype.getDownloadUrl = function () {
+	return this.ds.getBaseUrl(true) + this.value + '?download=True';
+};
 
-    /**
-     * Gets the url of a thumbnail
-     * "XS": 32,
-     * "S": 64,
-     * "M": 128,
-     * "L": 256,
-     * "XL": 512
-     * "orig": original size
-     * @name Attachment#getThumbnailUrl
-     * @method
-     * @param size
-     * @returns {string}
-     */
-    Attachment.prototype.getThumbnailUrl = function(size) {
-        return (this.hasPreview()) ? this.helper.getImageUrl(this.ds, this.value, size || 'S') : "";
-    };
+/**
+ * Gets the extension part of a filename
+ * @name  Attachment#getExt
+ * @method
+ * @param fileName
+ * @returns {string}
+ */
+Attachment.prototype.getExt = function (fileName) {
+	return attachmentHelper.getExt(fileName || this.fileName);
+};
 
-    /**
-     * Gets the url where the attachment can be downloaded
-     * @name Attachment#getDownloadUrl
-     * @method
-     * @returns {string}
-     */
-    Attachment.prototype.getDownloadUrl = function() {
-        return this.ds.getBaseUrl(true) + this.value + '?download=True';
-    };
+/**
+ * Gets a friendly file size
+ * @param  {int} size
+ * @return {string}
+ */
+Attachment.prototype.getFriendlyFileSize = function () {
+	var size = this.fileSize;
 
-    /**
-     * Gets the extension part of a filename
-     * @name  Attachment#getExt
-     * @method
-     * @param fileName
-     * @returns {string}
-     */
-    Attachment.prototype.getExt = function(fileName) {
-        return attachmentHelper.getExt(fileName || this.fileName);
-    };
+	if (isNaN(size)) size = 0;
 
-    /**
-     * Gets a friendly file size
-     * @param  {int} size 
-     * @return {string}      
-     */
-    Attachment.prototype.getFriendlyFileSize = function(){
-        var size = this.fileSize;
+	if (size < 1024) return size + ' Bytes';
 
-        if (isNaN(size))
-            size = 0;
+	size /= 1024;
 
-        if (size < 1024)
-            return size + ' Bytes';
+	if (size < 1024) return size.toFixed(2) + ' Kb';
 
-        size /= 1024;
+	size /= 1024;
 
-        if (size < 1024)
-            return size.toFixed(2) + ' Kb';
+	if (size < 1024) return size.toFixed(2) + ' Mb';
 
-        size /= 1024;
+	size /= 1024;
 
-        if (size < 1024)
-            return size.toFixed(2) + ' Mb';
+	if (size < 1024) return size.toFixed(2) + ' Gb';
 
-        size /= 1024;
+	size /= 1024;
 
-        if (size < 1024)
-            return size.toFixed(2) + ' Gb';
+	return size.toFixed(2) + ' Tb';
+};
 
-        size /= 1024;
+/**
+ * Checks if the attachment is an image
+ * @name  Attachment#isImage
+ * @method
+ * @returns {boolean}
+ */
+Attachment.prototype.isImage = function () {
+	return attachmentHelper.isImage(this.fileName);
+};
 
-        return size.toFixed(2) + ' Tb';
-    }
+/**
+ * Checks if the attachment has a preview
+ * @name  Attachment#hasPreview
+ * @method
+ * @returns {boolean}
+ */
+Attachment.prototype.hasPreview = function () {
+	var ext = this.getExt(this.fileName);
+	return PREVIEWS.includes(ext);
+};
 
-    /**
-     * Checks if the attachment is an image
-     * @name  Attachment#isImage
-     * @method
-     * @returns {boolean}
-     */
-    Attachment.prototype.isImage = function() {
-        return attachmentHelper.isImage(this.fileName);
-    };
+/**
+ * _toJson, makes a dict of the object
+ * @method
+ * @param options
+ * @returns {object}
+ * @private
+ */
+Attachment.prototype._toJson = function (options) {
+	return {
+		fileName: this.fileName,
+		fileSize: this.fileSize,
+		value: this.value,
+		created: this.created,
+		by: this.by,
+	};
+};
 
-    /**
-     * Checks if the attachment has a preview
-     * @name  Attachment#hasPreview
-     * @method
-     * @returns {boolean}
-     */
-    Attachment.prototype.hasPreview = function() {
-        var ext = this.getExt(this.fileName);
-        return ($.inArray(ext, PREVIEWS) >= 0);
-    };
+/**
+ * _fromJson: reads the Attachment object from json
+ * @method
+ * @param {object} data the json response
+ * @param {object} options dict
+ * @returns promise
+ * @private
+ */
+Attachment.prototype._fromJson = function (data, options) {
+	this.raw = data;
+	this.fileName = data.fileName || DEFAULTS.fileName;
+	this.fileSize = data.fileSize || DEFAULTS.fileSize;
+	this.value = data.value || DEFAULTS.value;
+	this.value_url = data.value_url || DEFAULTS.value_url;
+	this.created = data.created || DEFAULTS.created;
+	this.by = data.by || DEFAULTS.by;
+	return Promise.resolve(data);
+};
 
-    /**
-     * _toJson, makes a dict of the object
-     * @method
-     * @param options
-     * @returns {object}
-     * @private
-     */
-    Attachment.prototype._toJson = function(options) {
-        return {
-            fileName: this.fileName,
-            fileSize: this.fileSize,
-            value: this.value,
-            created: this.created,
-            by: this.by
-        };
-    };
-
-    /**
-     * _fromJson: reads the Attachment object from json
-     * @method
-     * @param {object} data the json response
-     * @param {object} options dict
-     * @returns promise
-     * @private
-     */
-    Attachment.prototype._fromJson = function(data, options) {
-        this.raw = data;
-        this.fileName = data.fileName || DEFAULTS.fileName;
-        this.fileSize = data.fileSize || DEFAULTS.fileSize;
-        this.value = data.value || DEFAULTS.value;
-        this.value_url = data.value_url || DEFAULTS.value_url;
-        this.created = data.created || DEFAULTS.created;
-        this.by = data.by || DEFAULTS.by;
-        return $.Deferred().resolve(data);
-    };
-
-    return Attachment;
-});
+export default Attachment;

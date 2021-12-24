@@ -1,391 +1,370 @@
+import Base from './base';
+import common from './common';
+
+var DEFAULTS = {
+	name: '',
+	email: '',
+	group: '', // groupid
+	picture: '',
+	role: 'user', // user, admin
+	active: true,
+	isOwner: false,
+	archived: null,
+};
+
+// Allow overriding the ctor during inheritance
+// http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+var tmp = function () {};
+tmp.prototype = Base.prototype;
+
 /**
- * The User module
- * @module user
- * @copyright CHECKROOM NV 2015
+ * @name User
+ * @class User
+ * @constructor
+ * @extends Base
+ * @property {string}  name               - The name
+ * @property {string}  role               - The role (admin, user)
+ * @property {boolean} active             - Is the user active?
  */
-define([
-    'jquery',
-    'base',
-    'common'],  /** @lends User */ function ($, Base, common) {
+var User = function (opt) {
+	var spec = Object.assign(
+		{
+			_fields: ['*', 'group', 'picture'],
+		},
+		opt
+	);
+	Base.call(this, spec);
 
-    var DEFAULTS = {
-        name: '',
-        email: '',
-        group: '',  // groupid
-        picture: '',
-        role: 'user',  // user, admin
-        active: true,
-        isOwner: false,
-        archived: null
-    };
+	this.helper = spec.helper;
 
-    // Allow overriding the ctor during inheritance
-    // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
-    var tmp = function() {};
-    tmp.prototype = Base.prototype;
+	this.name = spec.name || DEFAULTS.name;
+	this.picture = spec.picture || DEFAULTS.picture;
+	this.email = spec.email || DEFAULTS.email;
+	this.role = spec.role || DEFAULTS.role;
+	this.group = spec.group || DEFAULTS.group;
+	this.active = spec.active != null ? spec.active : DEFAULTS.active;
+	this.isOwner = spec.isOwner != null ? spec.isOwner : DEFAULTS.isOwner;
+	this.archived = spec.archived || DEFAULTS.archived;
 
-    /**
-     * @name User
-     * @class User
-     * @constructor
-     * @extends Base
-     * @property {string}  name               - The name
-     * @property {string}  role               - The role (admin, user)
-     * @property {boolean} active             - Is the user active?
-     */
-    var User = function(opt) {
-        var spec = $.extend({
-            _fields: ['*', 'group', 'picture']
-        }, opt);
-        Base.call(this, spec);
+	this.dsAnonymous = spec.dsAnonymous;
+};
 
-        this.helper = spec.helper;
+User.prototype = new tmp();
+User.prototype.constructor = User;
 
-        this.name = spec.name || DEFAULTS.name;
-        this.picture = spec.picture || DEFAULTS.picture;
-        this.email = spec.email || DEFAULTS.email;
-        this.role = spec.role || DEFAULTS.role;
-        this.group = spec.group || DEFAULTS.group;
-        this.active = (spec.active!=null) ? spec.active : DEFAULTS.active;
-        this.isOwner = (spec.isOwner!=null) ? spec.isOwner : DEFAULTS.isOwner;
-        this.archived = spec.archived || DEFAULTS.archived;
+//
+// Document overrides
+//
+User.prototype.isValidName = function () {
+	this.name = this.name.trim();
+	return this.name.length >= 4;
+};
 
-        this.dsAnonymous = spec.dsAnonymous;
-    };
+User.prototype.isValidEmail = function () {
+	this.email = this.email.trim();
+	return common.isValidEmail(this.email);
+};
 
-    User.prototype = new tmp();
-    User.prototype.constructor = User;
+User.prototype.emailExists = function () {
+	if (this.isValidEmail()) {
+		// Don't check for emailExists for exisiting user
+		if (this.id != null && this.email == this.raw.email) {
+			return Promise.resolve(false);
+		}
 
-    //
-    // Document overrides
-    //
-    User.prototype.isValidName = function() {
-        this.name = $.trim(this.name);
-        return (this.name.length>=4);
-    };
+		return this.dsAnonymous.call('emailExists', { email: this.email }).then(function (resp) {
+			return resp.result;
+		});
+	} else {
+		return Promise.resolve(false);
+	}
+};
 
-    User.prototype.isValidEmail = function() {
-        this.email = $.trim(this.email);
-        return common.isValidEmail(this.email);
-    };
+User.prototype.isValidPassword = function () {
+	this.password = this.password.trim());
+	return common.isValidPassword(this.password);
+};
 
-    User.prototype.emailExists = function() {
-        if (this.isValidEmail()) {
-            // Don't check for emailExists for exisiting user
-            if(this.id != null && this.email == this.raw.email){
-                return $.Deferred().resolve(false);
-            }
+/**
+ * Checks if the user is valid
+ * @returns {boolean}
+ */
+User.prototype.isValid = function () {
+	return this.isValidName() && this.isValidEmail();
+};
 
-            return this.dsAnonymous.call('emailExists', {email: this.email})
-                .then(function(resp) {
-                    return resp.result;
-                });
-        } else {
-            return $.Deferred().resolve(false);
-        }
-    };
+/**
+ * Checks if the user is empty
+ * @method
+ * @name User#isEmpty
+ * @returns {boolean}
+ */
+User.prototype.isEmpty = function () {
+	// We check: name, role
+	return (
+		Base.prototype.isEmpty.call(this) &&
+		this.name == DEFAULTS.name &&
+		this.email == DEFAULTS.email &&
+		this.role == DEFAULTS.role
+	);
+};
 
-    User.prototype.isValidPassword = function() {
-        this.password = $.trim(this.password);
-        return common.isValidPassword(this.password);
-    };
+User.prototype._isDirtyInfo = function () {
+	if (this.raw) {
+		var name = this.raw.name || DEFAULTS.name;
+		var email = this.raw.email || DEFAULTS.email;
+		var active = this.raw.active != null ? this.raw.active : DEFAULTS.active;
 
-    /**
-     * Checks if the user is valid
-     * @returns {boolean}
-     */
-    User.prototype.isValid = function() {
-        return (
-            this.isValidName() &&
-            this.isValidEmail()
-            );
-    };
+		return this.name != name || this.email != email || this.active != active;
+	}
+	return false;
+};
 
-    /**
-     * Checks if the user is empty
-     * @method
-     * @name User#isEmpty
-     * @returns {boolean}
-     */
-    User.prototype.isEmpty = function() {
-        // We check: name, role
-        return (
-            (Base.prototype.isEmpty.call(this)) &&
-            (this.name==DEFAULTS.name) &&
-            (this.email==DEFAULTS.email) &&
-            (this.role==DEFAULTS.role)
-        );
-    };
+User.prototype._isDirtyRole = function () {
+	if (this.raw) {
+		var role = this.raw.role || DEFAULTS.role;
+		return this.role != role;
+	}
+	return false;
+};
 
-    User.prototype._isDirtyInfo = function(){
-        if((this.raw)) {
-            var name = this.raw.name || DEFAULTS.name;
-            var email = this.raw.email || DEFAULTS.email;
-            var active = (this.raw.active!=null) ? this.raw.active : DEFAULTS.active;
+/**
+ * Checks if the user is dirty and needs saving
+ * @method
+ * @name User#isDirty
+ * @returns {boolean}
+ */
+User.prototype.isDirty = function () {
+	var isDirty = Base.prototype.isDirty.call(this);
+	return isDirty || this._isDirtyInfo() || this._isDirtyRole();
+};
 
-            return (
-                (this.name!=name) ||
-                (this.email!=email) ||
-                (this.active!=active)
-            );
-        }
-        return false;
-    };
+/**
+ * Gets a url for a user avatar
+ * 'XS': (64, 64),
+ * 'S': (128, 128),
+ * 'M': (256, 256),
+ * 'L': (512, 512)
+ * @param size {string} default null is original size
+ * @param bustCache {boolean}
+ * @returns {string}
+ */
+User.prototype.getImageUrl = function (size, bustCache) {
+	return this.picture != null && this.picture.length > 0
+		? this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache)
+		: this.helper.getImageUrl(this.ds, this.id, size, bustCache);
+};
 
-    User.prototype._isDirtyRole = function(){
-        if((this.raw)) {
-            var role = this.raw.role || DEFAULTS.role;
-            return this.role != role;
-        }
-        return false;
-    }
+User.prototype._getDefaults = function () {
+	return DEFAULTS;
+};
 
-    /**
-     * Checks if the user is dirty and needs saving
-     * @method
-     * @name User#isDirty
-     * @returns {boolean}
-     */
-    User.prototype.isDirty = function() {
-        var isDirty = Base.prototype.isDirty.call(this);
-        return isDirty || this._isDirtyInfo() || this._isDirtyRole();
-    };
+// OVERRIDE BASE: addKeyValue not implemented
+User.prototype.addKeyValue = function (key, value, kind, skipRead) {
+	throw new Error('Not implemented for User, use setPicture instead?');
+};
 
-    /**
-     * Gets a url for a user avatar
-     * 'XS': (64, 64),
-     * 'S': (128, 128),
-     * 'M': (256, 256),
-     * 'L': (512, 512)
-     * @param size {string} default null is original size
-     * @param bustCache {boolean}
-     * @returns {string}
-     */
-    User.prototype.getImageUrl = function(size, bustCache) {
-        return (
-            (this.picture!=null) &&
-            (this.picture.length>0)) ?
-            this.helper.getImageCDNUrl(this.group, this.picture, size, bustCache) :
-            this.helper.getImageUrl(this.ds, this.id, size, bustCache);
-    };
+// OVERRIDE BASE: addKeyValue not implemented
+User.prototype.addKeyValue = function (id, key, value, kind, skipRead) {
+	throw new Error('Not implemented for User, use setPicture instead?');
+};
 
-    User.prototype._getDefaults = function() {
-        return DEFAULTS;
-    };
+// OVERRIDE BASE: removeKeyValue not implemented
+User.prototype.removeKeyValue = function (id, skipRead) {
+	throw new Error('Not implemented for User, use clearPicture instead?');
+};
 
-    // OVERRIDE BASE: addKeyValue not implemented
-    User.prototype.addKeyValue = function(key, value, kind, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
-    };
+User.prototype.setPicture = function (attachmentId, skipRead) {
+	if (!this.existsInDb()) {
+		throw new Error('User does not exist in database');
+	}
+	this.picture = attachmentId;
+	return this._doApiCall({
+		method: 'setPicture',
+		params: { attachment: attachmentId },
+		skipRead: skipRead,
+	});
+};
 
-    // OVERRIDE BASE: addKeyValue not implemented
-    User.prototype.addKeyValue = function(id, key, value, kind, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use setPicture instead?");
-    };
+User.prototype.clearPicture = function (skipRead) {
+	if (!this.existsInDb()) {
+		throw new Error('User does not exist in database');
+	}
+	return this._doApiCall({
+		method: 'clearPicture',
+		skipRead: skipRead,
+	});
+};
 
-    // OVERRIDE BASE: removeKeyValue not implemented
-    User.prototype.removeKeyValue = function(id, skipRead) {
-        return $.Deferred().reject("Not implemented for User, use clearPicture instead?");
-    };
+//
+// Business logic
+//
 
-    User.prototype.setPicture = function(attachmentId, skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        this.picture = attachmentId;
-        return this._doApiCall({
-            method: 'setPicture',
-            params: {attachment: attachmentId},
-            skipRead: skipRead
-        });
-    };
+/**
+ * Checks if a user can be activated
+ * @returns {boolean}
+ */
+User.prototype.canActivate = function () {
+	return !this.active && this.archived == null;
+};
 
-    User.prototype.clearPicture = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({
-            method: 'clearPicture',
-            skipRead: skipRead
-        });
-    };
+/**
+ * Checks if a user can be deactivated
+ * @returns {boolean}
+ */
+User.prototype.canDeactivate = function () {
+	// TODO: We should also check if we're not deactivating the last or only user
+	return this.active && this.archived == null && !this.isOwner;
+};
 
-    //
-    // Business logic
-    //
+/**
+ * Checks if a user can be archived
+ * @returns {boolean}
+ */
+User.prototype.canArchive = function () {
+	// TODO: We should also check if we're not deactivating the last or only user
+	return this.archived == null && !this.isOwner;
+};
 
-    /**
-     * Checks if a user can be activated
-     * @returns {boolean}
-     */
-    User.prototype.canActivate = function() {
-        return (!this.active) && (this.archived==null);
-    };
+/**
+ * Checks if a user can be unarchived
+ * @returns {boolean}
+ */
+User.prototype.canUndoArchive = function () {
+	return this.archived != null;
+};
 
-    /**
-     * Checks if a user can be deactivated
-     * @returns {boolean}
-     */
-    User.prototype.canDeactivate = function() {
-        // TODO: We should also check if we're not deactivating the last or only user
-        return (this.active) && (this.archived==null) && (!this.isOwner);
-    };
+/**
+ * Checks if a user can be owner
+ * @returns {boolean}
+ */
+User.prototype.canBeOwner = function () {
+	return this.archived == null && this.active && !this.isOwner && this.role == 'admin';
+};
 
-    /**
-     * Checks if a user can be archived
-     * @returns {boolean}
-     */
-    User.prototype.canArchive = function() {
-        // TODO: We should also check if we're not deactivating the last or only user
-        return (this.archived==null) && (!this.isOwner);
-    };
+/**
+ * Activates a user
+ * @param skipRead
+ * @returns {promise}
+ */
+User.prototype.activate = function (skipRead) {
+	if (!this.existsInDb()) {
+		throw new Error('User does not exist in database');
+	}
+	return this._doApiCall({ method: 'activate', skipRead: skipRead });
+};
 
-    /**
-     * Checks if a user can be unarchived
-     * @returns {boolean}
-     */
-    User.prototype.canUndoArchive = function() {
-        return (this.archived!=null);
-    };
+/**
+ * Deactivates a user
+ * @param skipRead
+ * @returns {promise}
+ */
+User.prototype.deactivate = function (skipRead) {
+	if (!this.existsInDb()) {
+		throw new Error('User does not exist in database');
+	}
+	return this._doApiCall({ method: 'deactivate', skipRead: skipRead });
+};
 
-    /**
-     * Checks if a user can be owner
-     * @returns {boolean}
-     */
-    User.prototype.canBeOwner = function() {
-        return (this.archived==null) && (this.active) && (!this.isOwner) && (this.role=="admin");
-    };
+/**
+ * Archives a user
+ * @param skipRead
+ * @returns {promise}
+ */
+User.prototype.archive = function (skipRead) {
+	if (!this.existsInDb()) {
+		throw new Error('User does not exist in database');
+	}
+	return this._doApiCall({ method: 'archive', skipRead: skipRead });
+};
 
-    /**
-     * Activates a user
-     * @param skipRead
-     * @returns {promise}
-     */
-    User.prototype.activate = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({method: 'activate', skipRead: skipRead});
-    };
+/**
+ * Unarchives a user
+ * @param skipRead
+ * @returns {promise}
+ */
+User.prototype.undoArchive = function (skipRead) {
+	if (!this.existsInDb()) {
+		throw new Error('User does not exist in database');
+	}
+	return this._doApiCall({ method: 'undoArchive', skipRead: skipRead });
+};
 
-    /**
-     * Deactivates a user
-     * @param skipRead
-     * @returns {promise}
-     */
-    User.prototype.deactivate = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({method: 'deactivate', skipRead: skipRead});
-    };
+/**
+ * Updates the user
+ * @param skipRead
+ * @returns {*}
+ */
+User.prototype.update = function (skipRead) {
+	if (this.isEmpty()) {
+		throw new Error('Cannot update to empty user');
+	}
+	if (!this.existsInDb()) {
+		throw new Error('Cannot update user without id');
+	}
+	if (!this.isValid()) {
+		throw new Error('Cannot update, invalid user');
+	}
 
-    /**
-     * Archives a user
-     * @param skipRead
-     * @returns {promise}
-     */
-    User.prototype.archive = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({method: 'archive', skipRead: skipRead});
-    };
+	var that = this,
+		dfdInfo,
+		dfdRole;
 
-    /**
-     * Unarchives a user
-     * @param skipRead
-     * @returns {promise}
-     */
-    User.prototype.undoArchive = function(skipRead) {
-        if (!this.existsInDb()) {
-            return $.Deferred().reject("User does not exist in database");
-        }
-        return this._doApiCall({method: 'undoArchive', skipRead: skipRead});
-    };
+	if (this._isDirtyInfo()) {
+		var infoParams = this._toJson();
+		delete infoParams.id;
 
-     /**
-     * Updates the user
-     * @param skipRead
-     * @returns {*}
-     */
-    User.prototype.update = function(skipRead) {
-        if (this.isEmpty()) {
-            return $.Deferred().reject(new Error("Cannot update to empty user"));
-        }
-        if (!this.existsInDb()) {
-            return $.Deferred().reject(new Error("Cannot update user without id"));
-        }
-        if (!this.isValid()) {
-            return $.Deferred().reject(new Error("Cannot update, invalid user"));
-        }
+		dfdInfo = this.ds.update(this.id, infoParams, this._fields);
+	} else {
+		dfdInfo = Promise.resolve();
+	}
 
-        var that = this,
-            dfdInfo = $.Deferred(),
-            dfdRole = $.Deferred();
+	if (this._isDirtyRole()) {
+		dfdRole = this._doApiCall({ method: 'updateUserRole', params: { role: this.role }, skipRead: true });
+	} else {
+		dfdRole = Promise.resolve();
+	}
 
+	return Promise.all(dfdInfo, dfdRole);
+};
 
+/**
+ * Writes the user to a json object
+ * @param options
+ * @returns {object}
+ * @private
+ */
+User.prototype._toJson = function (options) {
+	var data = Base.prototype._toJson.call(this, options);
+	data.name = this.name || DEFAULTS.name;
+	data.email = this.email || DEFAULTS.email;
 
-        if(this._isDirtyInfo()){
-            var infoParams = this._toJson();
-            delete infoParams.id;
+	return data;
+};
 
-            dfdInfo = this.ds.update(this.id, infoParams, this._fields);
-        }else{
-            dfdInfo.resolve();
-        }              
+/**
+ * Reads the user from the json object
+ * @param data
+ * @param options
+ * @returns {promise}
+ * @private
+ */
+User.prototype._fromJson = function (data, options) {
+	var that = this;
+	return Base.prototype._fromJson.call(this, data, options).then(function () {
+		// Read the group id from group or group._id
+		// depending on the fields
+		that.group = data.group && data.group._id != null ? data.group._id : data.group || DEFAULTS.group;
+		that.name = data.name || DEFAULTS.name;
+		that.picture = data.picture || DEFAULTS.picture;
+		that.email = data.email || DEFAULTS.email;
+		that.role = data.role || DEFAULTS.role;
+		that.active = data.active != null ? data.active : DEFAULTS.active;
+		that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
+		that.archived = data.archived || DEFAULTS.archived;
 
-        if(this._isDirtyRole()){
-            dfdRole = this._doApiCall({method: 'updateUserRole', params: { role: this.role }, skipRead: true});
-        }else{
-            dfdRole.resolve();
-        }
-
-
-        return $.when(dfdInfo, dfdRole);            
-    };
-
-    /**
-     * Writes the user to a json object
-     * @param options
-     * @returns {object}
-     * @private
-     */
-    User.prototype._toJson = function(options) {
-        var data = Base.prototype._toJson.call(this, options);
-        data.name = this.name || DEFAULTS.name;
-        data.email = this.email || DEFAULTS.email;
-        
-        return data;
-    };
-
-    /**
-     * Reads the user from the json object
-     * @param data
-     * @param options
-     * @returns {promise}
-     * @private
-     */
-    User.prototype._fromJson = function(data, options) {
-        var that = this;
-        return Base.prototype._fromJson.call(this, data, options)
-            .then(function() {
-                // Read the group id from group or group._id
-                // depending on the fields
-                that.group = ((data.group) && (data.group._id!=null)) ? data.group._id : (data.group || DEFAULTS.group);
-                that.name = data.name || DEFAULTS.name;
-                that.picture = data.picture || DEFAULTS.picture;
-                that.email = data.email || DEFAULTS.email;
-                that.role = data.role || DEFAULTS.role;
-                that.active = (data.active!=null) ? data.active : DEFAULTS.active;
-                that.isOwner = (data.isOwner!=null) ? data.isOwner : DEFAULTS.isOwner;
-                that.archived = data.archived || DEFAULTS.archived;
-
-                $.publish('user.fromJson', data);
-                return data;
-            });
-    };
-
-    return User;
-    
-});
+		//$.publish('user.fromJson', data);
+		return data;
+	});
+};
+export default User;

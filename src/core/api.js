@@ -1,76 +1,77 @@
 import moment from 'moment';
 import { isEmptyObject } from './common/utils';
 import ajaxQueue from './common/queue';
-export default class fetchApi {
-    static myRequest(url, method, options = {}) {
-        const header = new Headers();
-        const controller = new AbortController();
-        const signal = controller.signal;
+class fetchApi {
+	static myRequest(url, method, options = {}) {
+		const header = new Headers();
+		const controller = new AbortController();
+		const signal = controller.signal;
 
-        // Sets content type to 'application/json' for POST,PUT,PATCH,DELETE requests
-        if (!header.get('content-type') && method !== 'GET') {
-            header.set('content-type', 'application/json; charset=UTF-8')
-        }
+		// Sets content type to 'application/json' for POST,PUT,PATCH,DELETE requests
+		if (!header.get('content-type') && method !== 'GET') {
+			header.set('content-type', 'application/json; charset=UTF-8');
+		}
 
-        options.timeOut = options.timeOut === void 0 ? false : options.timeOut;
-        options.parms = options.parms === void 0 ? false : options.parms;
-        const opts = {
-            'method': method,
-            'signal': signal,
-            'headers': header
-        };
+		options.timeOut = options.timeOut === void 0 ? false : options.timeOut;
+		options.parms = options.parms === void 0 ? false : options.parms;
+		const opts = {
+			method: method,
+			signal: signal,
+			headers: header,
+		};
 
-        if (options.parms) {
-            opts.body = JSON.stringify(options.parms);
-        }
+		if (options.parms) {
+			opts.body = JSON.stringify(options.parms);
+		}
 
-        if (options.timeOut) {
-            setTimeout(() => this.controller.abort(), options.timeOut);
-        }
+		if (options.timeOut) {
+			setTimeout(() => this.controller.abort(), options.timeOut);
+		}
 
-        return new Promise((resolve, reject) => {
-            fetch(url, opts).then((response) => {
-                    if (response.ok) {
-                        let contentType = response.headers.get('content-type')
-                        if (contentType.includes('application/json')) {
-                            return response.json();
-                        } else if (contentType.includes('text/html')) {
-                            return response.text();
-                        } else {
-                            throw new Error(`Sorry, content-type ${contentType} is not supported`)
-                        }
-                    } else {
-                        throw new api.ApiError(response.statusText, response.status);
-                    }
-                })
-                .then((result) => {
-                    return resolve(api._handleAjaxSuccess(result));
-                })
-                .catch((error) => {
-                    return reject(api._handleAjaxError(error));
-                });
-        });
-    }
+		return new Promise((resolve, reject) => {
+			fetch(url, opts)
+				.then((response) => {
+					if (response.ok) {
+						let contentType = response.headers.get('content-type');
+						if (contentType.includes('application/json')) {
+							return response.json();
+						} else if (contentType.includes('text/html')) {
+							return response.text();
+						} else {
+							throw new Error(`Sorry, content-type ${contentType} is not supported`);
+						}
+					} else {
+						throw new api.ApiError(response.statusText, response.status);
+					}
+				})
+				.then((result) => {
+					return resolve(api._handleAjaxSuccess(result));
+				})
+				.catch((error) => {
+					return reject(api._handleAjaxError(error));
+				});
+		});
+	}
 
-    static get(url, options = {}) {
-        return this.myRequest(url, 'GET', options);
-    }
+	static get(url, options = {}) {
+		return this.myRequest(url, 'GET', options);
+	}
 
-    static post(url, options = {}) {
-        return this.myRequest(url, 'POST', options);
-    }
+	static post(url, options = {}) {
+		return this.myRequest(url, 'POST', options);
+	}
 
-    static put(url, options = {}) {
-        return this.myRequest(url, 'PUT', options);
-    }
+	static put(url, options = {}) {
+		return this.myRequest(url, 'PUT', options);
+	}
 
-    static patch(url, options = {}) {
-        return this.myRequest(url, 'PATCH', options);
-    }
+	static patch(url, options = {}) {
+		return this.myRequest(url, 'PATCH', options);
+	}
 
-    static delete(url, options = {}) {
-        return this.myRequest(url, 'DELETE', options);
-    }
+	static delete(url, options = {}) {
+		return this.myRequest(url, 'DELETE', options);
+	}
 }
 
 var MAX_QUERYSTRING_LENGTH = 2048;
@@ -96,7 +97,7 @@ api.ApiError = function (msg, code = 500, opt) {
 api.ApiError.prototype = new Error();
 
 // Network
-api.NetworkNotConnected =   function (msg, opt) {
+api.NetworkNotConnected = function (msg, opt) {
 	this.code = 999;
 	this.message = msg || '';
 	this.opt = opt;
@@ -159,7 +160,6 @@ api.ApiServerCapicity = function (msg, opt) {
 };
 api.ApiServerCapicity.prototype = new Error();
 
-
 //*************
 // ApiAjax
 //*************
@@ -197,7 +197,7 @@ api.ApiAjax.prototype._handleAjaxSuccess = function (dfd, data, opt) {
 	return dfd.resolve(data);
 };
 
-api.ApiAjax.prototype._handleAjaxError = function ({name, message}) {
+api.ApiAjax.prototype._handleAjaxError = function ({ name, message }) {
 	// ajax call was aborted
 	if (name == 'AbortError') return;
 
@@ -206,7 +206,6 @@ api.ApiAjax.prototype._handleAjaxError = function ({name, message}) {
 		return new api.NetworkTimeout(msg, opt);
 	} else {
 		if (message) {
-
 			if (message.indexOf('Notify user:') > -1) {
 				msg = message;
 			}
@@ -232,7 +231,7 @@ api.ApiAjax.prototype._handleAjaxError = function ({name, message}) {
 			case 404:
 				return new api.ApiNotFound(msg, opt);
 			case 408:
-				return new api.NetworkTimeout(msg, opt)
+				return new api.NetworkTimeout(msg, opt);
 			case 422:
 				// 422 Notify user: Cannot create item, max limit 50 items reached
 				if (message.indexOf('limit') >= 0 && message.indexOf('reach') >= 0) {
@@ -244,7 +243,7 @@ api.ApiAjax.prototype._handleAjaxError = function ({name, message}) {
 				return new api.ApiServerCapicity(msg, opt);
 			case 500:
 			default:
-				return new api.ApiError(msg, opt)
+				return new api.ApiError(msg, opt);
 		}
 	}
 };
@@ -252,13 +251,13 @@ api.ApiAjax.prototype._handleAjaxError = function ({name, message}) {
 api.ApiAjax.prototype._postAjax = function (url, data, timeOut, opt) {
 	return fetchApi.post(url, {
 		parms: this._prepareDict(data),
-		timeOut: timeOut || this.timeOut
+		timeOut: timeOut || this.timeOut,
 	});
 };
 
 api.ApiAjax.prototype._getAjax = function (url, timeOut, opt) {
 	return fetchApi.get(url, {
-		timeOut: timeOut || this.timeOut
+		timeOut: timeOut || this.timeOut,
 	});
 };
 
@@ -411,11 +410,13 @@ api.ApiAuth.prototype.authenticate = function (userId, password) {
 		params.sso = this.sso;
 	}
 
-	return fetchApi.post(this.urlAuth, {
-		parms: params,
-		timeOut: 30000
-	}).then((resp) => {
-		// Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
+	return fetchApi
+		.post(this.urlAuth, {
+			parms: params,
+			timeOut: 30000,
+		})
+		.then((resp) => {
+			// Check if login is ok AND if login is ok but account is expired, check if we allow login or not (allowAccountOwner)
 			//
 			// REMARK
 			// - web app allows owners to still login on expired/cancelled account
@@ -430,7 +431,8 @@ api.ApiAuth.prototype.authenticate = function (userId, password) {
 			} else {
 				return Promise.reject(resp);
 			}
-	}).catch((err) => Promise.reject(err));
+		})
+		.catch((err) => Promise.reject(err));
 };
 
 // Deprecated ApiAuthV2, use ApiAuth
@@ -474,7 +476,9 @@ api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
 	}
 
 	var url = this.urlApi + '/' + method;
-	var queryString = Object.keys(params).map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&');
+	var queryString = Object.keys(params)
+		.map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)
+		.join('&');
 	var getUrl = url + '?' + queryString;
 
 	if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
@@ -555,7 +559,7 @@ api.ApiDataSource.prototype.exists = function (pk, fields) {
 					reject(error);
 				}
 			});
-	})
+	});
 };
 
 /**
@@ -635,8 +639,8 @@ api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
 	// Extend promise with abort method
 	// to abort xhr request if needed
 	// http://stackoverflow.com/questions/21766428/chained-jquery-promises-with-abort
-	let promise = new Promise((resolve) =>{
-		groups.forEach(function(group) {
+	let promise = new Promise((resolve) => {
+		groups.forEach(function (group) {
 			var url = that.getBaseUrl() + group.join(',');
 			var p = that.getParamsDict(fields);
 			if (!isEmptyObject(p)) {
@@ -662,8 +666,7 @@ api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
 		queue(function () {
 			return resolve(returnArr);
 		});
-
-	})
+	});
 
 	promise.abort = function () {
 		calls.forEach(function (xhr) {
@@ -782,7 +785,7 @@ api.ApiDataSource.prototype.createMultiple = function (objects, fields) {
 	var doneIds = [];
 
 	// Trigger the creates sequentially
-	var createRecurse = function(todoObjs){
+	var createRecurse = function (todoObjs) {
 		return new Promise((resolve, reject) => {
 			if (todoObjs.length > 0) {
 				var obj = todoObjs.pop();
@@ -797,8 +800,8 @@ api.ApiDataSource.prototype.createMultiple = function (objects, fields) {
 			} else {
 				resolve(doneIds);
 			}
-		})
-	}
+		});
+	};
 
 	return createRecurse(todoObjs);
 };
@@ -1006,7 +1009,9 @@ api.ApiDataSource.prototype.getBaseUrl = function (forceOldToken) {
  */
 api.ApiDataSource.prototype.getParams = function (data) {
 	const params = this.ajax._prepareDict(data);
-	return Object.keys(params).map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&')
+	return Object.keys(params)
+		.map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)
+		.join('&');
 };
 
 /**

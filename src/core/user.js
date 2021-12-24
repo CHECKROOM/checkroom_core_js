@@ -81,7 +81,7 @@ User.prototype.emailExists = function () {
 };
 
 User.prototype.isValidPassword = function () {
-	this.password = this.password.trim());
+	this.password = this.password.trim();
 	return common.isValidPassword(this.password);
 };
 

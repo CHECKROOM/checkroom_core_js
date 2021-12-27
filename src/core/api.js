@@ -3,7 +3,7 @@ import { isEmptyObject } from './common/utils';
 import ajaxQueue from './common/queue';
 class fetchApi {
 	static myRequest(url, method, options = {}) {
-		const header = new Headers();
+		const header = new Headers(options.headers);
 		const controller = new AbortController();
 		const signal = controller.signal;
 
@@ -25,31 +25,27 @@ class fetchApi {
 		}
 
 		if (options.timeOut) {
-			setTimeout(() => this.controller.abort(), options.timeOut);
+			setTimeout(() => controller.abort(), options.timeOut);
 		}
 
-		return new Promise((resolve, reject) => {
-			fetch(url, opts)
-				.then((response) => {
-					if (response.ok) {
-						let contentType = response.headers.get('content-type');
-						if (contentType.includes('application/json')) {
-							return response.json();
-						} else if (contentType.includes('text/html')) {
-							return response.text();
-						} else {
-							throw new Error(`Sorry, content-type ${contentType} is not supported`);
-						}
-					} else {
-						throw new api.ApiError(response.statusText, response.status);
-					}
-				})
-				.then((result) => {
-					return resolve(api._handleAjaxSuccess(result));
-				})
-				.catch((error) => {
-					return reject(api._handleAjaxError(error));
-				});
+		return fetch(url, opts).then(async (response) => {
+			if (response.ok) {
+				let contentType = response.headers.get('content-type');
+				if (contentType.includes('application/json')) {
+					return response.json();
+				} else if (contentType.includes('text/html')) {
+					return response.text();
+				} else {
+					throw new Error(`Sorry, content-type ${contentType} is not supported`);
+				}
+			} else {
+				let responseJson;
+				try {
+					responseJson = await response.json();
+				} finally {
+					throw new api.ApiError(response.statusText, response.status, responseJson);
+				}
+			}
 		});
 	}
 
@@ -175,29 +171,33 @@ api.ApiAjax = function (spec) {
 	spec = spec || {};
 	this.timeOut = spec.timeOut || 10000;
 	this.responseInTz = true;
-	this.beforeSend = spec.beforeSend || function () {};
+	this.customHeaders =
+		spec.customHeaders ||
+		function () {
+			return Promise.resolve({});
+		};
 };
 
-api.ApiAjax.prototype.get = function (url, timeOut) {
+api.ApiAjax.prototype.get = function (url, timeOut, opt) {
 	system.log('ApiAjax: get ' + url);
 	return this._getAjax(url, timeOut);
 };
 
-api.ApiAjax.prototype.post = function (url, data, timeOut) {
+api.ApiAjax.prototype.post = function (url, data, timeOut, opt) {
 	system.log('ApiAjax: post ' + url);
 	return this._postAjax(url, data, timeOut);
 };
 
 // Implementation
 // ----
-api.ApiAjax.prototype._handleAjaxSuccess = function (dfd, data, opt) {
+api.ApiAjax.prototype._handleAjaxSuccess = function (data, opt) {
 	if (this.responseInTz) {
 		data = this._fixDates(data);
 	}
-	return dfd.resolve(data);
+	return data;
 };
 
-api.ApiAjax.prototype._handleAjaxError = function ({ name, message }) {
+api.ApiAjax.prototype._handleAjaxError = function ({ name, message, code, opt }) {
 	// ajax call was aborted
 	if (name == 'AbortError') return;
 
@@ -213,7 +213,7 @@ api.ApiAjax.prototype._handleAjaxError = function ({ name, message }) {
 			if (code == 422) {
 				msg = message;
 				opt = {
-					detail: message,
+					detail: opt.message,
 					status: code,
 				};
 			}
@@ -248,26 +248,29 @@ api.ApiAjax.prototype._handleAjaxError = function ({ name, message }) {
 	}
 };
 
-api.ApiAjax.prototype._postAjax = function (url, data, timeOut, opt) {
-	return fetchApi.post(url, {
-		parms: this._prepareDict(data),
-		timeOut: timeOut || this.timeOut,
-	});
+api.ApiAjax.prototype._postAjax = async function (url, data, timeOut, opt) {
+	return fetchApi
+		.post(url, {
+			parms: this._prepareDict(data),
+			timeOut: timeOut || this.timeOut,
+			headers: await this.customHeaders(),
+		})
+		.then((result) => Promise.resolve(this._handleAjaxSuccess(result)))
+		.catch((error) => Promise.reject(this._handleAjaxError(error)));
 };
 
-api.ApiAjax.prototype._getAjax = function (url, timeOut, opt) {
-	return fetchApi.get(url, {
-		timeOut: timeOut || this.timeOut,
-	});
+api.ApiAjax.prototype._getAjax = async function (url, timeOut, opt) {
+	return fetchApi
+		.get(url, {
+			timeOut: timeOut || this.timeOut,
+			headers: await this.customHeaders(),
+		})
+		.then((result) => Promise.resolve(this._handleAjaxSuccess(result)))
+		.catch((error) => Promise.reject(this._handleAjaxError(error)));
 };
 
-api.ApiAjax.prototype._prepareDict = function (data) {
-	// Makes sure all values from the dict are serializable and understandable for json
-	if (!data) {
-		return {};
-	}
-
-	data.forEach(function (value, key) {
+api.ApiAjax.prototype._prepareDict = function (data = {}) {
+	Object.entries(data).forEach(([key, value]) => {
 		if (moment.isMoment(value)) {
 			data[key] = value.toJSONDate();
 		}
@@ -298,9 +301,8 @@ api.ApiAjax.prototype._fixDates = function (data) {
 			}
 		}
 	} else if (data instanceof Object || Array.isArray(data)) {
-		var that = this;
-		data.forEach(function (v, k) {
-			data[k] = that._fixDates(v);
+		Object.entries(data).forEach(([key, value]) => {
+			data[key] = this._fixDates(value);
 		});
 	}
 	return data;
@@ -434,9 +436,6 @@ api.ApiAuth.prototype.authenticate = function (userId, password) {
 		})
 		.catch((err) => Promise.reject(err));
 };
-
-// Deprecated ApiAuthV2, use ApiAuth
-api.ApiAuthV2 = api.ApiAuth;
 
 //*************
 // ApiAnonymous
@@ -1007,7 +1006,7 @@ api.ApiDataSource.prototype.getBaseUrl = function (forceOldToken) {
  * @param data
  * @returns {object}
  */
-api.ApiDataSource.prototype.getParams = function (data) {
+api.ApiDataSource.prototype.getParams = function (data = {}) {
 	const params = this.ajax._prepareDict(data);
 	return Object.keys(params)
 		.map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)

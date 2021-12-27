@@ -41,7 +41,8 @@ const common = Object.assign(
 	_document,
 	transaction,
 	changeLog,
-	spotcheck
+	spotcheck,
+	queue
 );
 
 export {
@@ -63,6 +64,7 @@ export {
 	transaction,
 	changeLog,
 	spotcheck,
+	queue,
 };
 
 export default common;

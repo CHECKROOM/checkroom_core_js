@@ -2,10 +2,8 @@
 const path = require('path');
 
 module.exports = {
-	mode: 'production',
-	entry: {
-		core: './src/core.js',
-	},
+	mode: 'development',
+	entry: './src/core.js',
 	output: {
 		environment: {
 			arrowFunction: false,
@@ -14,9 +12,11 @@ module.exports = {
 			destructuring: false,
 			dynamicImport: false,
 			forOf: false,
-			module: false,
 		},
-		libraryTarget: 'amd',
+		libraryTarget: 'umd',
+		libraryExport: 'default',
+		umdNamedDefine: true,
+		//library: 'corejs',
 		path: path.resolve(__dirname, './build'),
 		filename: '[name].js', // <--- Will be compiled to this single file
 	},

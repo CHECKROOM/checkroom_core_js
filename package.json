@@ -16,6 +16,7 @@
 		"@babel/preset-env": "^7.16.5",
 		"babel-loader": "^8.2.2",
 		"jest": "^26.0.0",
+		"jest-fetch-mock": "^3.0.3",
 		"webpack": "^5.55.1",
 		"webpack-cli": "^4.8.0"
 	},

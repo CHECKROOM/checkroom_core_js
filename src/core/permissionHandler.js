@@ -54,6 +54,7 @@ define([], function () {
         this._useBookingRestrictions = (limits.allowBookingRestrictions);
         this._useEquipmentPicking = (limits.allowEquipmentPicking) && (profile.useEquipmentPicking);
         this._useLocationBusinessHours = limits.allowLocationBusinessHours;
+        this._useClosedDays = limits.allowHolidays;
     };
 
     // 
@@ -134,6 +135,9 @@ define([], function () {
     PermissionHandler.prototype.canUseLocationBusinessHours = function () {
         return this.limits.allowLocationBusinessHours;
     }
+    PermissionHandler.prototype.canUseClosedDays = function() {
+        return this.limits.allowHolidays;
+    }
 
 
     //
@@ -180,6 +184,10 @@ define([], function () {
 
     PermissionHandler.prototype.hasLocationBusinessHours = function () {
         return this._useLocationBusinessHours;
+    }
+
+    PermissionHandler.prototype.hasClosedDays = function () {
+        return this._useClosedDays;
     }
 
     PermissionHandler.prototype.hasPublicInventoryPermission = function(){

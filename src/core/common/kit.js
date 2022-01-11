@@ -2,7 +2,7 @@
  * Kit helpers
  */
 define([
-    'jquery', 
+    'jquery',
     'common/item',
     'moment',
     'common/order',
@@ -162,9 +162,9 @@ define([
      * @memberOf common
      * @name  common#getKitStatusIcon
      * @method
-     * 
+     *
      * @param  status
-     * @return {string}       
+     * @return {string}
      */
     that.getKitStatusIcon = function(status) {
         switch(status) {
@@ -216,11 +216,11 @@ define([
      * @memberOf common
      * @name  common#getKitMessages
      * @method
-     * 
-     * @param  kit          
+     *
+     * @param  kit
      * @param  permissionHandler
-     * @param  dateHelper        
-     * @return {promise}                   
+     * @param  dateHelper
+     * @return {promise}
      */
     that.getKitMessages = function(kit, getDataSource, permissionHandler, dateHelper, user){
         var messages = [],
@@ -249,9 +249,9 @@ define([
         }
 
         // Check-out message?
-        if((perm.hasCheckoutPermission("read")) && 
+        if((perm.hasCheckoutPermission("read")) &&
            (kit.status == "checkedout" || kit.status == "await_checkout")){
-            
+
             var message = "",
                 dfd = $.Deferred();
 
@@ -269,8 +269,8 @@ define([
                             dfd.resolve(resp.docs[0]);
                         }
                     });
-                
-                
+
+
                  dfd.then(function(checkout){
                     checkout = checkout || {};
 
@@ -298,13 +298,13 @@ define([
                         checkout: !isOwn(checkout.customer) && isSelfservice?{}:checkout
                     });
 
-                    dfdCheckouts.resolve(); 
+                    dfdCheckouts.resolve();
                 });
         }else{
             dfdCheckouts.resolve();
         }
 
-        // Reservation message? 
+        // Reservation message?
         if(perm.hasReservationPermission("read") && kit.items.length > 0){
             getDataSource("reservations").search({
                 status: "open",
@@ -327,14 +327,14 @@ define([
                         isOwn: isOwn(reservation.customer),
                         message: message
                     });
-                } 
+                }
 
-                dfdReservations.resolve();       
+                dfdReservations.resolve();
             });
         }else{
             dfdReservations.resolve();
         }
-        
+
         // Custody message?
         if(kit.status == "in_custody"){
             var dfd = $.Deferred();
@@ -364,7 +364,7 @@ define([
                         getDataSource("contacts").get(resp[0].obj, "name,cover,user.picture,kind").then(function(contact){
                             dfd.resolve(contact, resp[0].created);
                         });
-                    })                    
+                    })
                 })
             }
 
@@ -391,7 +391,7 @@ define([
             kitCanReserve = (canReserve === 'available' || canReserve === 'available_partially' ),
             kitCanCheckout = (canCheckout === 'available' || canCheckout === 'available_partially'),
             kitCanCustody = (canCustody === 'available');
-            
+
         if(kitCanReserve || kitCanCheckout || kitCanCustody){
             var notAllowedActions = [],
                 allowedActions = [];
@@ -415,7 +415,7 @@ define([
                     }
                 }
                 if(kitCanCheckout){
-                    allowedActions.push("Check-out");  
+                    allowedActions.push("Check-out");
                 }else{
                     // module enabled
                     if(perm.hasCheckoutPermission("read")){
@@ -428,7 +428,7 @@ define([
             }else{
                 // module enabled?
                 if(perm.hasItemPermission("takeCustody")){
-                    notAllowedActions.push("Custody"); 
+                    notAllowedActions.push("Custody");
                 }
             }
 
@@ -444,7 +444,7 @@ define([
                 kind: "permission",
                 priority: MessagePriority.Medium,
                 message: message
-            });    
+            });
         }
 
         // Empty message?
@@ -455,7 +455,7 @@ define([
                 kind: "empty",
                 priority: MessagePriority.Low,
                 message: message
-            });    
+            });
         }
 
         // Incomplete message?
@@ -513,7 +513,7 @@ define([
                     msg.push(awaitCheckoutTotal + " awaiting checkout");
                 }
                 if(expiredTotal > 0){
-                    msg.push(expiredTotal + " expired");
+                    msg.push(expiredTotal + " retired");
                 }
                 if(inCustodyTotal > 0){
                     msg.push(inCustodyTotal + " in custody");
@@ -526,18 +526,18 @@ define([
                 kind: "incomplete",
                 priority: MessagePriority.Low,
                 message: message
-            });    
+            });
         }
 
-        // Expired message?
+        // Retired message?
         if(kit.status == "expired"){
-            var message = "Kit is <strong>expired</strong>";
+            var message = "Kit is <strong>retired</strong>";
 
             messages.push({
                 kind: "expired",
                 priority: MessagePriority.Critical,
                 message: message
-            });    
+            });
         }
 
         return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function(){

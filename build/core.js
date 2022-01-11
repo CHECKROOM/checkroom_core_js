@@ -1762,7 +1762,7 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
     case 'inspection':
       return 'Inspection';
     case 'expired':
-      return 'Expired';
+      return 'Retired';
     default:
       return 'Unknown';
     }
@@ -1773,9 +1773,9 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   * @memberOf common
   * @name  common#getItemStatusCss
   * @method
-  * 
-  * @param  status 
-  * @return {string}       
+  *
+  * @param  status
+  * @return {string}
   */
   that.getItemStatusCss = function (status) {
     switch (status) {
@@ -1807,9 +1807,9 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   * @memberOf common
   * @name  common#getItemStatusIcon
   * @method
-  * 
+  *
   * @param  status
-  * @return {string}       
+  * @return {string}
   */
   that.getItemStatusIcon = function (status) {
     switch (status) {
@@ -1841,10 +1841,10 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   * @memberOf common
   * @name  common#getItemsByStatus
   * @method
-  * 
-  * @param  {Array} 			 items      
-  * @param  {string|function} comparator 
-  * @return {Array}           
+  *
+  * @param  {Array} 			 items
+  * @param  {string|function} comparator
+  * @return {Array}
   */
   that.getItemsByStatus = function (items, comparator) {
     if (!items)
@@ -1861,13 +1861,13 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   };
   /**
   * getAvailableItems
-  * 
+  *
   * @memberOf common
   * @name  common#getAvailableItems
   * @method
-  * 
-  * @param  {Array} items 
-  * @return {Array}       
+  *
+  * @param  {Array} items
+  * @return {Array}
   */
   that.getAvailableItems = function (items) {
     return this.getItemsByStatus(items, 'available').filter(function (item) {
@@ -1876,13 +1876,13 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   };
   /**
   * getActiveItems
-  * 
+  *
   * @memberOf common
   * @name  common#getActiveItems
   * @method
-  * 
-  * @param  {Array} items 
-  * @return {Array}       
+  *
+  * @param  {Array} items
+  * @return {Array}
   */
   that.getActiveItems = function (items) {
     return this.getItemsByStatus(items, function (item) {
@@ -1897,9 +1897,9 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   * @memberOf common
   * @name  common#getItemIds
   * @method
-  * 
-  * @param  items 
-  * @return {array}       
+  *
+  * @param  items
+  * @return {array}
   */
   that.getItemIds = function (items) {
     return items.map(function (item) {
@@ -1912,12 +1912,12 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
   * @memberOf common
   * @name  common#getItemMessages
   * @method
-  * 
-  * @param  item          
+  *
+  * @param  item
   * @param  permissionHandler
   * @param  dateHelper
-  * @param  user        
-  * @return {promise}                   
+  * @param  user
+  * @return {promise}
   */
   that.getItemMessages = function (item, getDataSource, permissionHandler, dateHelper, user, group) {
     var messages = [], MessagePriority = {
@@ -1981,7 +1981,7 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
     } else {
       dfdCheckouts.resolve();
     }
-    // Reservation message? 
+    // Reservation message?
     if (perm.hasReservationPermission('read')) {
       getDataSource('reservations').search({
         status: 'open',
@@ -2122,9 +2122,9 @@ common_item = function (moment, orderHelper, reservationHelper, utils) {
         inWarranty: inWarranty
       });
     }
-    // Expired message?
+    // Retired message?
     if (item.status == 'expired') {
-      var message = 'Item was <strong>expired</strong> ' + (item.expired ? '<span class=\'text-muted\'>' + item.expired.fromNow() + '</span>' : '');
+      var message = 'Item was <strong>retired</strong> ' + (item.expired ? '<span class=\'text-muted\'>' + item.expired.fromNow() + '</span>' : '');
       messages.push({
         kind: 'expired',
         priority: MessagePriority.Critical,
@@ -2147,9 +2147,9 @@ common_conflicts = {
    * @memberOf  common
    * @name  common#getFriendlyConflictKind
    * @method
-   * 
-   * @param  kind 
-   * @return {string}    
+   *
+   * @param  kind
+   * @return {string}
    */
   getFriendlyConflictKind: function (kind) {
     switch (kind) {
@@ -2160,7 +2160,7 @@ common_conflicts = {
     case 'reservation':
       return 'Already reserved';
     case 'expired':
-      return 'Item is expired';
+      return 'Item is retired';
     case 'in_custody':
     case 'custody':
       return 'Item is in custody';
@@ -3824,18 +3824,6 @@ common_validation = function (moment) {
       return m != null && m.length > 0;
     },
     /**
-     * isFreeEmail
-     * @memberOf common
-     * @name common#isFreeEmail
-     * @method
-     * @param email
-     * @returns {boolean}
-     */
-    isFreeEmail: function (email) {
-      var m = email.match(/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i);
-      return m == null;
-    },
-    /**
      * isValidPhone
      * @memberOf common
      * @name  common#isValidPhone
@@ -4222,9 +4210,9 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper, u
    * @memberOf common
    * @name  common#getKitStatusIcon
    * @method
-   * 
+   *
    * @param  status
-   * @return {string}       
+   * @return {string}
    */
   that.getKitStatusIcon = function (status) {
     switch (status) {
@@ -4284,11 +4272,11 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper, u
    * @memberOf common
    * @name  common#getKitMessages
    * @method
-   * 
-   * @param  kit          
+   *
+   * @param  kit
    * @param  permissionHandler
-   * @param  dateHelper        
-   * @return {promise}                   
+   * @param  dateHelper
+   * @return {promise}
    */
   that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelper, user) {
     var messages = [], MessagePriority = {
@@ -4351,7 +4339,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper, u
     } else {
       dfdCheckouts.resolve();
     }
-    // Reservation message? 
+    // Reservation message?
     if (perm.hasReservationPermission('read') && kit.items.length > 0) {
       getDataSource('reservations').search({
         status: 'open',
@@ -4530,7 +4518,7 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper, u
           msg.push(awaitCheckoutTotal + ' awaiting checkout');
         }
         if (expiredTotal > 0) {
-          msg.push(expiredTotal + ' expired');
+          msg.push(expiredTotal + ' retired');
         }
         if (inCustodyTotal > 0) {
           msg.push(inCustodyTotal + ' in custody');
@@ -4543,9 +4531,9 @@ common_kit = function ($, itemHelpers, moment, orderHelper, reservationHelper, u
         message: message
       });
     }
-    // Expired message?
+    // Retired message?
     if (kit.status == 'expired') {
-      var message = 'Kit is <strong>expired</strong>';
+      var message = 'Kit is <strong>retired</strong>';
       messages.push({
         kind: 'expired',
         priority: MessagePriority.Critical,
@@ -5832,10 +5820,10 @@ common_changeLog = function (codeHelper, imageHelper, attachmentHelper, keyValue
       break;
     case 'expire':
       var message = sanitizer(arg ? arg.message : null);
-      evt.friendlyText = byName + ' expired item' + getMessageBlock(message);
+      evt.friendlyText = byName + ' retired item' + getMessageBlock(message);
       break;
     case 'undoExpire':
-      evt.friendlyText = byName + ' unexpired item';
+      evt.friendlyText = byName + ' unretired item';
       break;
     case 'setCover':
       evt.friendlyText = byName + ' updated cover image';
@@ -13033,6 +13021,8 @@ permissionHandler = function () {
     this._usePublicInventory = limits.allowPublicInventory;
     this._useBookingRestrictions = limits.allowBookingRestrictions;
     this._useEquipmentPicking = limits.allowEquipmentPicking && profile.useEquipmentPicking;
+    this._useLocationBusinessHours = limits.allowLocationBusinessHours;
+    this._useClosedDays = limits.allowHolidays;
   };
   // 
   // Module helpers
@@ -13109,6 +13099,12 @@ permissionHandler = function () {
   PermissionHandler.prototype.canUseEquipmentPicking = function () {
     return this.limits.allowEquipmentPicking;
   };
+  PermissionHandler.prototype.canUseLocationBusinessHours = function () {
+    return this.limits.allowLocationBusinessHours;
+  };
+  PermissionHandler.prototype.canUseClosedDays = function () {
+    return this.limits.allowHolidays;
+  };
   //
   // Permission helpers
   //
@@ -13132,6 +13128,12 @@ permissionHandler = function () {
   };
   PermissionHandler.prototype.hasEquipmentPicking = function () {
     return this._useEquipmentPicking;
+  };
+  PermissionHandler.prototype.hasLocationBusinessHours = function () {
+    return this._useLocationBusinessHours;
+  };
+  PermissionHandler.prototype.hasClosedDays = function () {
+    return this._useClosedDays;
   };
   PermissionHandler.prototype.hasPublicInventoryPermission = function () {
     return this._usePublicInventory;

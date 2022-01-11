@@ -10,41 +10,41 @@ define([
 	var that = {},
 		sanitizer = utils.sanitizeHtml;
 
-	
+
 	that.itemCanTakeCustody = function(item) {
 		var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
 		return canCustody && (item.status=="available");
 	};
-	
+
 	that.itemCanReleaseCustody = function(item) {
 		return (item.status=="in_custody");
 	};
-	
+
 	that.itemCanTransferCustody = function(item) {
 		var canCustody = item.canCustody !== undefined ? item.canCustody === 'available' : true;
 		return canCustody && (item.status=="in_custody");
 	};
-	
+
 	that.itemCanReserve = function(item) {
 		return item.canReserve !== undefined ? item.canReserve === 'available' : true;
 	};
-	
+
 	that.itemCanCheckout = function(item) {
 		return item.canOrder !== undefined ? item.canOrder === 'available' : true;
 	};
-	
+
 	that.itemCanGoToCheckout = function(item) {
 		return (item.status=="checkedout") || (item.status=="await_checkout");
 	};
-	
+
 	that.itemCanCheckin = function(item) {
 		return (item.status=="checkedout");
 	};
-	
+
 	that.itemCanExpire = function(item) {
 		return (item.status=="available");
 	};
-	
+
 	that.itemCanUndoExpire = function(item) {
 		return (item.status=="expired");
 	};
@@ -53,7 +53,7 @@ define([
 		return ((item.status=="available") || (item.status=="expired"));
 	};
 
-	
+
 	/**
 	 * getFriendlyItemStatus
 	 *
@@ -75,7 +75,7 @@ define([
 			case 'maintenance': return 'Maintenance';
 			case 'repair': return 'Repair';
 			case 'inspection': return 'Inspection';
-			case 'expired': return 'Expired';
+			case 'expired': return 'Retired';
 			default: return 'Unknown';
 		}
 	};
@@ -86,9 +86,9 @@ define([
 	 * @memberOf common
 	 * @name  common#getItemStatusCss
 	 * @method
-	 * 
-	 * @param  status 
-	 * @return {string}       
+	 *
+	 * @param  status
+	 * @return {string}
 	 */
 	that.getItemStatusCss = function(status) {
 		switch(status) {
@@ -111,9 +111,9 @@ define([
 	 * @memberOf common
 	 * @name  common#getItemStatusIcon
 	 * @method
-	 * 
+	 *
 	 * @param  status
-	 * @return {string}       
+	 * @return {string}
 	 */
 	that.getItemStatusIcon = function(status) {
 		switch(status) {
@@ -136,10 +136,10 @@ define([
 	 * @memberOf common
 	 * @name  common#getItemsByStatus
 	 * @method
-	 * 
-	 * @param  {Array} 			 items      
-	 * @param  {string|function} comparator 
-	 * @return {Array}           
+	 *
+	 * @param  {Array} 			 items
+	 * @param  {string|function} comparator
+	 * @return {Array}
 	 */
 	that.getItemsByStatus = function(items, comparator){
 		if(!items) return [];
@@ -150,20 +150,20 @@ define([
 				return item.status == comparator;
 			}else{
 				//use custom comparator to filter items
-				return comparator(item); 
-			} 
+				return comparator(item);
+			}
 		});
 	};
-	
+
 	/**
 	 * getAvailableItems
-	 * 
+	 *
 	 * @memberOf common
 	 * @name  common#getAvailableItems
 	 * @method
-	 * 
-	 * @param  {Array} items 
-	 * @return {Array}       
+	 *
+	 * @param  {Array} items
+	 * @return {Array}
 	 */
 	that.getAvailableItems = function(items){
 		return this.getItemsByStatus(items, "available").filter(function(item){
@@ -173,13 +173,13 @@ define([
 
 	/**
 	 * getActiveItems
-	 * 
+	 *
 	 * @memberOf common
 	 * @name  common#getActiveItems
 	 * @method
-	 * 
-	 * @param  {Array} items 
-	 * @return {Array}       
+	 *
+	 * @param  {Array} items
+	 * @return {Array}
 	 */
 	that.getActiveItems = function(items){
 		return this.getItemsByStatus(items, function(item){
@@ -188,33 +188,33 @@ define([
 			return item.canReserve === 'available';
 		});
 	};
-	
+
 	 /**
 	 * getItemIds
 	 *
 	 * @memberOf common
 	 * @name  common#getItemIds
 	 * @method
-	 * 
-	 * @param  items 
-	 * @return {array}       
+	 *
+	 * @param  items
+	 * @return {array}
 	 */
 	that.getItemIds = function(items){
 		return items.map(function(item){ return typeof(item) === "string"?item:item._id; });
 	};
-	
+
 	/**
 	 * getItemMessages
 	 *
 	 * @memberOf common
 	 * @name  common#getItemMessages
 	 * @method
-	 * 
-	 * @param  item          
+	 *
+	 * @param  item
 	 * @param  permissionHandler
 	 * @param  dateHelper
-	 * @param  user        
-	 * @return {promise}                   
+	 * @param  user
+	 * @return {promise}
 	 */
 	that.getItemMessages = function(item, getDataSource, permissionHandler, dateHelper, user, group){
 		var messages = [],
@@ -262,7 +262,7 @@ define([
 	                    dfd.resolve(resp.docs[0]);
 	                }
 	            });
-	        	
+
 	           dfd.then(function(checkout){
 	           		checkout = checkout || {};
 
@@ -291,13 +291,13 @@ define([
 	                    checkout: !isOwn(checkout.customer) && isSelfservice?{}:checkout
 	                });
 
-	                dfdCheckouts.resolve(); 
+	                dfdCheckouts.resolve();
 	           })
         }else{
             dfdCheckouts.resolve();
         }
 
-        // Reservation message? 
+        // Reservation message?
         if(perm.hasReservationPermission("read")){
 	        getDataSource("reservations").search({
 	            status: "open",
@@ -320,14 +320,14 @@ define([
                         isOwn: isOwn(reservation.customer),
                         message: message
                     });
-	            } 
+	            }
 
-	            dfdReservations.resolve();       
+	            dfdReservations.resolve();
 	        });
 		}else{
 			dfdReservations.resolve();
 		}
-       	
+
 		// Custody message?
         if(item.status == "in_custody"){
         	var dfd = $.Deferred();
@@ -342,7 +342,7 @@ define([
 	            }).then(function(resp){
 	                getDataSource("contacts").get(resp[0].obj, "name,cover,user.picture,kind").then(function(contact){
 	                	dfd.resolve(contact, resp[0].created);
-	                });                
+	                });
 	            });
 	        }
 
@@ -368,7 +368,7 @@ define([
         	canCustody = perm.hasItemPermission("takeCustody") && item.allowCustody;
 		var flag = group.itemFlags.find(function(f){ return f.id == item.flag }),
 			hasUnavailableFlag = flag && !flag.available;
-         
+
 
 
         if((!item.allowReserve || !item.allowCheckout || !item.allowCustody) && !hasUnavailableFlag){
@@ -393,7 +393,7 @@ define([
                 	}
                 }
                 if(canCheckout){
-                    allowedActions.push("Check-out");  
+                    allowedActions.push("Check-out");
                 }else{
                 	// module enabled
                 	if(perm.hasCheckoutPermission("read")){
@@ -406,7 +406,7 @@ define([
             }else{
             	// module enabled?
             	if(perm.hasItemPermission("takeCustody")){
-               		notAllowedActions.push("Custody"); 
+               		notAllowedActions.push("Custody");
                	}
             }
 
@@ -422,15 +422,15 @@ define([
                 kind: "permission",
                 priority: MessagePriority.Medium,
                 message: message
-            });    
+            });
 	    }
-    	
+
         // Flag message?
         if(flag){
 
         	var flagName = sanitizer(flag.name),
         		message = "Item was <strong>flagged</strong> as " + flagName + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
-        	
+
         	if(hasUnavailableFlag){
         		message = "Item is <strong>unavailable</strong> because of flag " + flagName + (item.flagged?" <span class='text-muted'>" + item.flagged.fromNow() + "</span>":"");
         	}
@@ -440,7 +440,7 @@ define([
                 priority: hasUnavailableFlag?MessagePriority.High:MessagePriority.Medium,
                 message: message,
                 flag: flag
-            })    
+            })
         }
 
         if(item.warrantyDate){
@@ -462,15 +462,15 @@ define([
                 });
             }
 
-        // Expired message?
+        // Retired message?
         if(item.status == "expired"){
-            var message = "Item was <strong>expired</strong> " + (item.expired?"<span class='text-muted'>" + item.expired.fromNow() + "</span>":"");
+            var message = "Item was <strong>retired</strong> " + (item.expired?"<span class='text-muted'>" + item.expired.fromNow() + "</span>":"");
 
             messages.push({
                 kind: "expired",
                 priority: MessagePriority.Critical,
                 message: message
-            });    
+            });
         }
 
         return $.when(dfdCheckouts, dfdReservations, dfdCustody).then(function(){
@@ -482,5 +482,5 @@ define([
 	}
 
 	return that;
-	
+
 });

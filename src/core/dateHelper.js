@@ -221,28 +221,6 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     };
 
     /**
-     * @deprecated use getFriendlyFromToInfo
-     * [getFriendlyFromToOld]
-     * @param  fromDate
-     * @param  toDate
-     * @param  groupProfile
-     * @return {}
-     */
-    DateHelper.prototype.getFriendlyFromToOld = function(fromDate, toDate, groupProfile) {
-        var mFrom = this.roundFromTime(fromDate, groupProfile);
-        var mTo = this.roundToTime(toDate, groupProfile);
-        return {
-            from: mFrom,
-            to: mTo,
-            daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
-            duration: moment.duration(mFrom - mTo).humanize(),
-            fromText: mFrom.calendar().replace(' at ', ' '),
-            toText: mTo.calendar().replace(' at ', ' ')
-        };
-    };
-
-
-    /**
      * makeStartDate helps making an start date for a transaction, usually a reservation
      * It will do the standard rounding
      * But also, if you're using dates instead of datetimes,

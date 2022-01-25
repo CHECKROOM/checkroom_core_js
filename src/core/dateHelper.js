@@ -43,27 +43,6 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     };
 
     /**
-     * @name parseDate
-     * @method
-     * @param data
-     * @returns {moment}
-     */
-    DateHelper.prototype.parseDate = function(data) {
-        if (typeof data == 'string' || data instanceof String) {
-            // "2014-04-03T12:15:00+00:00" (length 25)
-            // "2014-04-03T09:32:43.841000+00:00" (length 32)
-            if (data.endsWith('+00:00')) {
-                var len = data.length;
-                if (len==25) {
-                    return moment(data.substring(0, len-6));
-                } else if (len==32) {
-                    return moment(data.substring(0, len-6).split('.')[0]);
-                }
-            }
-        }
-    };
-
-    /**
      * @name  DateHelper#getNow
      * @method
      * @return {moment}

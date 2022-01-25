@@ -59,32 +59,6 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
                 equal(ranges[0].option, "days");
             });
 
-            /*
-            test('fixDates', function() {
-                var helper = new cr.DateHelper();
-                var jsn = "2015-02-28T16:00:00.000Z";
-
-                var t1 = helper.parseDate(t);
-                equal(t1.toJSONDate(), jsn);
-
-                var t2 = helper.fixDates([t]);
-                equal(t2[0].toJSONDate(), jsn);
-
-                var t3 = helper.fixDates({key:t});
-                equal(t3["key"].toJSONDate(), jsn);
-
-                var t4 = helper.fixDates({key:[t]});
-                equal(t4["key"][0].toJSONDate(), jsn);
-
-                var resp = '{"count":1,"docs":[{"status":"open","customer":{"company":"CHECKROOM","_id":"pNBYAHMGGA8NpfKrPQcfFU","name":"Vincent  Theeten"},"reserved":"2015-02-23T10:52:54.866000+00:00","toDate":"2015-02-28T16:00:00+00:00","items":[{"category":"cheqroom.types.item.heavy_equipment.forklifts","_id":"82cxdZkXPteuifTqQ9MtuV","name":"Bobcat V723"},{"category":"cheqroom.types.item.heavy_equipment.hammering","_id":"xsLgpQwSkT5Pyp5Ri6HoPT","name":"Bosch 35lb Breaker Hammer"}],"created":"2015-02-23T10:34:34.407000+00:00","modified":"2015-02-23T10:52:55.165000+00:00","keyValues":[],"fromDate":"2015-02-23T12:00:00+00:00","location":{"_id":"HsSmZ5p4uHqaccDtm3qnsD","name":"10th Street"},"_id":"7PSVYHXx5FMBTs4MfJkuCX"}]}';
-                var data = JSON.parse(resp);
-                var t5 = helper.fixDates(data);
-                equal(t5["docs"][0]["toDate"].toJSONDate(), jsn);
-            });
-            */
-
-
-
             // new Date(year, month (0-based!), day, hour, minute, second, millisecond);
             // moment().format('LLL')   // July 2 2014 12:45 PM
 

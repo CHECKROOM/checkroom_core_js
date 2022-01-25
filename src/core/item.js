@@ -276,23 +276,6 @@ define([
     };
 
     // Deprecated
-    Item.prototype._toJsonKeyValues = function(){
-        var that = this;
-        var params = {};
-
-        if( (this.keyValues!=null) &&
-            (this.keyValues.length>0)) {
-            $.each(this.keyValues, function(i, kv) {
-                var param = 'keyValues__' + kv.key;
-                params[param + "__kind"] = kv.kind;
-                params[param + "__value"] = kv.value;
-            });
-        }
-
-        return params;
-    };
-
-    // Deprecated
     Item.prototype._isDirtyName = function() {
         return this._isDirtyStringProperty("name");
     };

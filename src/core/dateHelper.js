@@ -279,62 +279,6 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
     };
 
     /**
-     * makeEndDate helps making an end date for a transaction
-     * It will do the standard rounding
-     * But also, if you're using dates instead of datetimes,
-     * it will try to make smart decisions about which hours to use
-     * @param m - the Moment date
-     * @param useHours - does the profile use hours?
-     * @param dayMode - did the selection happen via calendar day selection? (can be true even if useHours is true)
-     * @param minDate
-     * @param maxDate
-     * @param now - the current moment (just to make testing easier)
-     * @returns {moment}
-     * @private
-     */
-    DateHelper.prototype.makeEndDate = function(m, useHours, dayMode, minDate, maxDate, now) {
-        useHours = (useHours!=null) ? useHours : true;
-        dayMode = (dayMode!=null) ? dayMode : false;
-        now = now || moment();
-
-        if( (useHours) &&
-            (!dayMode)) {
-            // The account is set up to use hours,
-            // and since dayMode is false,
-            // we assume the hours are picked by the user himself
-            // just do the rounding and we're done
-            m = this.roundTimeTo(m);
-        } else {
-            // When we get here we know that either:
-            // 1) The account is set up to use hours BUT the date came from a calendar selection that just chose the date part
-            // or
-            // 2) The account is set up to use days instead of hours
-            //
-            // Which means we still need to see if we can make a smart decision about the hours part
-            var isToday = m.isSame(now, 'day'),
-                endOfBusinessDay = this._makeEndOfBusinessDay(m),
-                endOfDay = this._makeEndOfDay(m);
-            if (isToday) {
-                // The end date is today
-                // and the current date is before business hours
-                // we can use the end time to end-of-business hours
-                if (m.isBefore(endOfBusinessDay)) {
-                    m = endOfBusinessDay;
-                } else {
-                    m = endOfDay;
-                }
-            } else if (m.isAfter(endOfBusinessDay)) {
-                m = endOfDay;
-            } else {
-                m = endOfBusinessDay;
-            }
-        }
-
-        // Make sure we never return a date after the max date
-        return ((maxDate) && (m.isAfter(maxDate))) ? maxDate : m;
-    };
-
-    /**
      * [getFriendlyDateText]
      * @param  date
      * @param  useHours
@@ -507,10 +451,6 @@ define(["jquery", "moment"], /** @lends DateHelper */ function ($, moment) {
         }
 
         return this.getValidBusinessDate(endOfBusinessDay);
-    };
-
-    DateHelper.prototype._makeEndOfDay = function(m) {
-        return m.clone().hours(23).minutes(45).seconds(0).milliseconds(0);
     };
 
     return DateHelper;

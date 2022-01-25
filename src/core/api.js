@@ -373,9 +373,6 @@ define([
         return dfd.promise();
     };
 
-    // Deprecated ApiAuthV2, use ApiAuth
-    api.ApiAuthV2 = api.ApiAuth;
-
     //*************
     // ApiAnonymous
     // Communicates with the API without having token authentication

@@ -483,34 +483,6 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
                 equal(m1.format('LLL'), d1Down);
             });
 
-            // roundTimeUp
-            // ----
-            test('roundTimeUp', function() {
-                var helper = new cr.DateHelper();
-                var t = "2015-02-28T16:00:00+00:00";
-                var jsn = "2015-02-28T16:00:00.000Z";
-                var t1 = helper.parseDate(t);
-                var t2 = helper.parseDate(t).roundTo('minute', 15);
-                var t3 = helper.parseDate(t).roundTo('minute', 15);
-                equal(t3.toJSONDate(), jsn);
-                equal(t2.toJSONDate(), jsn);
-                equal(t1.toJSONDate(), t2.toJSONDate());
-            });
-
-            test('roundTimeUpEndOfDay', function() {
-                var helper = new cr.DateHelper();
-                var t = "2015-02-28T23:59:59+00:00";
-                var t1 = helper.parseDate(t);
-                var t2 = helper.parseDate(t).roundTo('minute', 15);
-                var t3 = helper.roundTimeUp(helper.parseDate(t));
-                console.log(t1.toJSONDate());
-                console.log(t2.toJSONDate());
-                console.log(t3.toJSONDate());
-
-                equal(t2.isAfter(t1), true);
-                equal(t3.isAfter(t1), true);
-            });
-
             // getFriendlyFromTo
             // ----
             test('getFriendlyFromTo', function() {

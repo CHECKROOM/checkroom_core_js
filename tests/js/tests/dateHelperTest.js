@@ -445,18 +445,6 @@ define(['settings', 'cheqroom-core', 'moment'], function(settings, cr, moment) {
                 equal(m1.format('LLL'), d1Up);
             });
 
-            // roundTimeDown
-            // ----
-            test('roundTimeDown', function() {
-                var m1 = new cr.DateHelper().roundTimeDown(d1);
-                equal(m1.format('LLL'), d1Down);
-            });
-            test('roundTimeDownTwice', function() {
-                var m1 = new cr.DateHelper().roundTimeDown(d1);
-                m1 = new cr.DateHelper().roundTimeDown(m1);
-                equal(m1.format('LLL'), d1Down);
-            });
-
             // getFriendlyFromTo
             // ----
             test('getFriendlyFromTo', function() {

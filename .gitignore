@@ -6,3 +6,4 @@ node_modules
 *.icloud
 package
 *.tgz
+doc

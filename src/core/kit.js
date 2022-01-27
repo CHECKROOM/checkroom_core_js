@@ -71,36 +71,6 @@ Kit.prototype.isValidName = function () {
 	return this.name.length >= 3;
 };
 
-/**
- * Check if name is valid and isn't already used
- * @name Kit#isValidNameAsync
- * @method
- * @return {promise}
- */
-Kit.prototype.isNameAvailableAsync = function () {
-	// When existing kit is edited, we don't want
-	// to check its current name
-	if (this.id != null && this.raw != null && this.name == this.raw.name) {
-		return Promise.resolve(true);
-	}
-
-	// If a previous name available check is pending, abort it
-	if (this._dfdNameAvailable) {
-		this._dfdNameAvailable.abort();
-	}
-
-	this._dfdNameAvailable = this.ds.search({ name: this.name.trim() }, '_id');
-
-	return this._dfdNameAvailable.then(
-		function (resp) {
-			return resp.count == 0;
-		},
-		function (error) {
-			return false;
-		}
-	);
-};
-
 //
 // Base overrides
 //

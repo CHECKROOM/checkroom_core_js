@@ -436,6 +436,4 @@ Signup.fromQueryString = function (opt, settings) {
 	);
 };
 
-Signup.common = utils;
-
 export default Signup;

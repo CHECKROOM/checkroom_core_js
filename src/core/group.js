@@ -340,45 +340,6 @@ Group.prototype.deleteLabel = function (collection, labelId, skipRead) {
 };
 
 /**
- * Buys a single product from our in-app store
- * @param productId
- * @param quantity
- * @param shipping
- * @returns {promise}
- */
-Group.prototype.buyProduct = function (productId, quantity, shipping) {
-	return this._doApiCall({
-		pk: this.id,
-		method: 'buyProduct',
-		skipRead: true,
-		params: {
-			productId: productId,
-			quantity: quantity,
-			shipping: shipping,
-		},
-	});
-};
-
-/**
- * Buys multiple products from our in-app store
- * @param listOfProductQtyTuples
- * @param shipping
- * @returns {promise}
- */
-Group.prototype.buyProducts = function (listOfProductQtyTuples, shipping, coupon) {
-	return this._doApiCall({
-		pk: this.id,
-		method: 'buyProducts',
-		skipRead: true,
-		params: {
-			products: listOfProductQtyTuples,
-			shipping: shipping,
-			coupon: coupon,
-		},
-	});
-};
-
-/**
  * Add tags
  * @param {Array} tags
  */
@@ -451,30 +412,6 @@ Group.prototype.getFieldsForCollection = function (coll, form) {
 	return fields;
 };
 
-/**
- * Helper method that gets all known flags for a certain collection of documents
- * @param coll
- * @returns {Array}
- */
-Group.prototype.getFlagsForCollection = function (coll) {
-	switch (coll) {
-		case 'items':
-			return this.getFlags(this.itemFlags);
-		case 'kits':
-			return this.getFlags(this.kitFlags);
-		case 'contacts':
-		case 'customers':
-			return this.getFlags(this.customerFlags);
-		case 'reservations':
-			return this.getFlags(this.reservationFlags);
-		case 'checkouts':
-		case 'orders':
-			return this.getFlags(this.orderFlags);
-		default:
-			return this.getFlags([]);
-	}
-};
-
 Group.prototype.getFlags = function (flags) {
 	return flags.map(function (f) {
 		if (typeof f === 'string') {
@@ -492,77 +429,6 @@ Group.prototype.getFlags = function (flags) {
 };
 
 /**
- * Helper method that returns the business days
- * @returns {Array}
- */
-Group.prototype.getBusinessDays = function () {
-	return this.businessHours.map(function (bh) {
-		//server side: 0 => monday - 6 => sunday
-		//client side: 1 => monday - 7 => sunday
-		return bh.isoWeekday;
-	});
-};
-
-/**
- * Helper method that returns the business hours for a given iso day
- * @returns {Array}
- */
-Group.prototype.getBusinessHoursForIsoWeekday = function (isoDay) {
-	return this.businessHours.filter(function (bh) {
-		//server side: 0 => monday - 6 => sunday
-		//client side: 1 => monday - 7 => sunday
-		return bh.isoWeekday == isoDay;
-	});
-};
-
-/**
- * setBusinessHours: translate iso weekdays back to server days
- * @param {array} businessHours
- * @param {boolean} skipRead
- */
-Group.prototype.setBusinessHours = function (businessHours, skipRead) {
-	var that = this;
-
-	businessHours = businessHours || [];
-
-	// Make copy of array
-	businessHours = businessHours.slice().map(function (bh) {
-		// BUGFIX clone object!!!!
-		var newBh = Object.assign({}, bh);
-
-		newBh.dayOfWeek = bh.isoWeekday - 1; //server side 0-6 Mon-Sun
-
-		delete newBh.isoWeekday;
-
-		return newBh;
-	});
-
-	return this._doApiCall({
-		method: 'setBusinessHours',
-		params: { businessHours: businessHours, _fields: this._fields },
-		skipRead: skipRead,
-		usePost: true,
-	});
-};
-
-/**
- * getDefaultBusinessHours: in iso weekdays
- * @return {array}
- * setCalendarTemplate
- * @param {string} template
- * @param {string} kind
- */
-Group.prototype.getDefaultBusinessHours = function () {
-	return [
-		{ isoWeekday: 1, openTime: 540, closeTime: 1020 },
-		{ isoWeekday: 2, openTime: 540, closeTime: 1020 },
-		{ isoWeekday: 3, openTime: 540, closeTime: 1020 },
-		{ isoWeekday: 4, openTime: 540, closeTime: 1020 },
-		{ isoWeekday: 5, openTime: 540, closeTime: 1020 },
-	];
-};
-
-/**
  * setCalendarTemplate
  * @param {string} template
  * @param {string} kind
@@ -573,16 +439,6 @@ Group.prototype.setCalendarTemplate = function (template, kind) {
 		params: { template: template, kind: kind },
 		skipRead: true,
 		usePost: true,
-	});
-};
-
-/**
- * setCalendarTemplate
- */
-Group.prototype.clearCalendarTemplate = function () {
-	return this._doApiCall({
-		method: 'clearCalendarTemplate',
-		skipRead: true,
 	});
 };
 

@@ -997,28 +997,7 @@ String.prototype.lpad = function (padString, length) {
 	return str;
 };
 
-/**
- * NUMBER EXTENSIONS
- */
-if (!Number.prototype.between) {
-	/**
-	 * between
-	 *
-	 * @memberOf  Number
-	 * @name  Number#between
-	 * @method
-	 *
-	 * @param  {int} a
-	 * @param  {int} b
-	 * @return {Boolean}
-	 */
-	Number.prototype.between = function (a, b) {
-		var min = Math.min(a, b),
-			max = Math.max(a, b);
-		return this >= min && this <= max;
-	};
-}
-
+// TODO replace with INTL
 if (!Array.prototype.joinAdvanced) {
 	/**
 	 * Special join method

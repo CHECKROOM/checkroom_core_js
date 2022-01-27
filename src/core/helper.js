@@ -13,13 +13,6 @@ export default function (settings) {
 
 	return {
 		/**
-		 * getSettings return settings file which helper uses internally
-		 * @return {object}
-		 */
-		getSettings: function () {
-			return settings;
-		},
-		/**
 		 * getImageUrl gets an image by using the datasource /get style and a mimeType
 		 * 'XS': (64, 64),
 		 * 'S': (128, 128),
@@ -155,21 +148,6 @@ export default function (settings) {
 		getNumItemsLeft: function (limits, stats) {
 			var itemsPerStatus = this.getStat(stats, 'items', 'status');
 			return limits.maxItems - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
-		},
-		/**
-		 * getNumUsersLeft
-		 *
-		 * @memberOf helper
-		 * @method
-		 * @name  helper#getNumUsersLeft
-		 *
-		 * @param limits
-		 * @param stats
-		 * @return {Number}
-		 */
-		getNumUsersLeft: function (limits, stats) {
-			var usersPerStatus = this.getStat(stats, 'users', 'status');
-			return limits.maxUsers - usersPerStatus.active;
 		},
 		/**
 		 * getStat for location

@@ -88,7 +88,6 @@ Order.prototype._fromJson = function (data, options) {
 	that.reservation = data.reservation || null;
 
 	return Transaction.prototype._fromJson.call(this, data, options).then(function () {
-		//$.publish('order.fromJson', data);
 		return data;
 	});
 };

@@ -314,7 +314,6 @@ Reservation.prototype._fromJson = function (data, options) {
 	that.repeatFrequency = data.repeatFrequency || '';
 
 	return Transaction.prototype._fromJson.call(this, data, options).then(function () {
-		//$.publish('reservation.fromJson', data);
 		return data;
 	});
 };

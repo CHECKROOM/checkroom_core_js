@@ -18,7 +18,6 @@ import clientStorage from './clientStorage';
 import _document from './document';
 import transaction from './transaction';
 import queue from './queue';
-//import pubsub from './pubsub';
 import changeLog from './changeLog';
 import spotcheck from './spotcheck';
 import DeferredPromise from './deferredPromise';

@@ -88,7 +88,6 @@ Location.prototype._fromJson = function (data, options) {
 	return Base.prototype._fromJson.call(this, data, options).then(function () {
 		that.name = data.name || DEFAULTS.name;
 		that.address = data.address || DEFAULTS.address;
-		//$.publish('location.fromJson', data);
 		return data;
 	});
 };

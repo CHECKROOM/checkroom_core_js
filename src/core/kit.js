@@ -385,7 +385,6 @@ Kit.prototype._fromJson = function (data, options) {
 
 		that._loadConflicts(that.items);
 
-		//$.publish('Kit.fromJson', data);
 		return data;
 	});
 };

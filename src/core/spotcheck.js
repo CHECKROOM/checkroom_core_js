@@ -283,7 +283,6 @@ Spotcheck.prototype._fromJson = function (data, options) {
 		that.itemFilter = data.itemFilter || DEFAULTS.itemFilter;
 		that.by = data.by || DEFAULTS.by;
 
-		//$.publish('Spotcheck.fromJson', data);
 		return data;
 	});
 };

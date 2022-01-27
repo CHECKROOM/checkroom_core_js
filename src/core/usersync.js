@@ -353,7 +353,6 @@ UserSync.prototype._fromJson = function (data, options) {
 		that.report = data.report || DEFAULTS.report;
 		that.reportEmail = data.reportEmail || DEFAULTS.reportEmail;
 
-		//$.publish('usersync.fromJson', data);
 		return data;
 	});
 };

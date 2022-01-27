@@ -365,7 +365,6 @@ User.prototype._fromJson = function (data, options) {
 		that.isOwner = data.isOwner != null ? data.isOwner : DEFAULTS.isOwner;
 		that.archived = data.archived || DEFAULTS.archived;
 
-		//$.publish('user.fromJson', data);
 		return data;
 	});
 };

@@ -265,7 +265,6 @@ Item.prototype._fromJson = function (data, options) {
 		that.allowCheckout = data.allowOrder !== undefined ? data.allowOrder : DEFAULTS.allowOrder;
 		that.allowCustody = data.allowCustody !== undefined ? data.allowCustody : DEFAULTS.allowCustody;
 
-		//$.publish('item.fromJson', data);
 		return data;
 	});
 };

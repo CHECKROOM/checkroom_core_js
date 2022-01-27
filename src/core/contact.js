@@ -312,7 +312,6 @@ Contact.prototype._fromJson = function (data, options) {
 		var cover = data.cover || DEFAULTS.cover;
 		that.cover = common.isImage(cover) ? cover : '';
 
-		//$.publish('contact.fromJson', data);
 		return data;
 	});
 };

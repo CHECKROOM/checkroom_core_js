@@ -985,20 +985,6 @@ String.prototype.OnlyAlphaNumSpaceUnderscoreAndDot = function () {
 		.replace(/[^a-z0-9_\.]/g, '');
 };
 
-if (!String.prototype.NoWhiteSpaceInWord) {
-	/**
-	 * NoWhiteSpaceInWord
-	 *
-	 * @memberOf String
-	 * @name String#NoWhiteSpaceInWord
-	 * @method
-	 * @returns {string}
-	 */
-	String.prototype.NoWhiteSpaceInWord = function () {
-		return this.replace(/[\s]+/g, '');
-	};
-}
-
 if (!String.prototype.addLeadingZero) {
 	/**
 	 * addLeadingZero adds zeros in front of a number

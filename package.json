@@ -23,5 +23,8 @@
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/CHECKROOM/checkroom_core_js.git"
+	},
+	"engines": {
+		"node": "^16"
 	}
 }

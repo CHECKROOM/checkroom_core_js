@@ -337,13 +337,14 @@ Document.prototype._doApiCall = function (spec) {
 			spec.params,
 			spec._fields || this._fields,
 			spec.timeOut,
-			spec.usePost
+			spec.usePost,
+			spec.opt
 		)
 		.then(function (data) {
 			if (spec.skipRead == true) {
 				return data;
 			} else {
-				return that._fromJson(data).done(function (data) {
+				return that._fromJson(data).then(function (data) {
 					return data;
 				});
 			}

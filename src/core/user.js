@@ -65,16 +65,18 @@ User.prototype.isValidEmail = function () {
 	return common.isValidEmail(this.email);
 };
 
-User.prototype.emailExists = function () {
+User.prototype.emailExists = function (abortController) {
 	if (this.isValidEmail()) {
 		// Don't check for emailExists for exisiting user
 		if (this.id != null && this.email == this.raw.email) {
 			return Promise.resolve(false);
 		}
 
-		return this.dsAnonymous.call('emailExists', { email: this.email }).then(function (resp) {
-			return resp.result;
-		});
+		return this.dsAnonymous
+			.call('emailExists', { email: this.email }, null, null, { abortController: abortController })
+			.then(function (resp) {
+				return resp.result;
+			});
 	} else {
 		return Promise.resolve(false);
 	}
@@ -325,7 +327,7 @@ User.prototype.update = function (skipRead) {
 		dfdRole = Promise.resolve();
 	}
 
-	return Promise.all(dfdInfo, dfdRole);
+	return Promise.all([dfdInfo, dfdRole]);
 };
 
 /**

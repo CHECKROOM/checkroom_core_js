@@ -21,9 +21,13 @@ import queue from './queue';
 //import pubsub from './pubsub';
 import changeLog from './changeLog';
 import spotcheck from './spotcheck';
+import DeferredPromise from './deferredPromise';
 
 const common = Object.assign(
-	{},
+	{
+		ajaxQueue: queue,
+		DeferredPromise: DeferredPromise,
+	},
 	code,
 	order,
 	reservation,
@@ -41,8 +45,7 @@ const common = Object.assign(
 	_document,
 	transaction,
 	changeLog,
-	spotcheck,
-	queue
+	spotcheck
 );
 
 export {
@@ -65,6 +68,7 @@ export {
 	changeLog,
 	spotcheck,
 	queue,
+	DeferredPromise,
 };
 
 export default common;

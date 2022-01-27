@@ -165,8 +165,8 @@ Spotcheck.prototype.clearName = function (skipRead) {
 	return this._doApiCall({ method: 'clearName', skipRead: skipRead });
 };
 
-Spotcheck.prototype.getEntries = function (params) {
-	return this._doApiCall({ method: 'getEntries', params: params, skipRead: true });
+Spotcheck.prototype.getEntries = function (params, opt) {
+	return this._doApiCall({ method: 'getEntries', params: params, skipRead: true, opt });
 };
 
 Spotcheck.prototype.create = function (params, skipRead) {

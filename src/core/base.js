@@ -601,7 +601,7 @@ Base.prototype._toJsonFields = function (options) {
  * @returns {*}
  * @private
  */
-Base.prototype._fromCommentsJson = function (data, options) {
+Base.prototype._fromCommentsJson = function (data, options = {}) {
 	var obj = null,
 		that = this;
 
@@ -626,7 +626,7 @@ Base.prototype._fromCommentsJson = function (data, options) {
  * @returns {*}
  * @private
  */
-Base.prototype._fromAttachmentsJson = function (data, options) {
+Base.prototype._fromAttachmentsJson = function (data, options = {}) {
 	var obj = null,
 		that = this;
 

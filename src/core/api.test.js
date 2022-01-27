@@ -109,4 +109,27 @@ describe('testing api', () => {
 			expect(onError).toHaveBeenCalledTimes(0);
 		});
 	});
+
+	it('should return valid querystring', () => {
+		expect(
+			ds.getParams({
+				emails: ['email1', 'email2'],
+			})
+		).toStrictEqual('emails%5B%5D=email1&emails%5B%5D=email2');
+
+		expect(
+			ds.getParams({
+				lat: 50.7808926,
+				lng: 2.8495725,
+				address: undefined,
+			})
+		).toStrictEqual('lat=50.7808926&lng=2.8495725');
+
+		expect(
+			ds.getParams({
+				orders: true,
+				reservations: false,
+			})
+		).toStrictEqual('orders=true&reservations=false');
+	});
 });

@@ -426,7 +426,7 @@ UserSync.prototype.update = async function (skipRead) {
 		dfdRestrictLocations = Promise.resolve();
 	}
 
-	return Promise.all(dfdInfo, dfdRestrictLocations);
+	return Promise.all([dfdInfo, dfdRestrictLocations]);
 };
 
 UserSync.prototype.create = function (skipRead) {

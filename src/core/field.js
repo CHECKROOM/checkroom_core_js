@@ -94,7 +94,8 @@ Field.prototype.isDirty = function () {
  * @returns {boolean}
  */
 Field.prototype.isEmpty = function () {
-	return this.value.trim() == '';
+	const value = typeof this.value === 'string' ? this.value.trim() : this.value;
+	return !value || value === '';
 };
 
 export default Field;

@@ -1,6 +1,6 @@
 import moment from 'moment';
 
-const isNumeric = (n) => {
+const _isNumeric = (n) => {
 	return !isNaN(parseFloat(n)) && isFinite(n);
 };
 
@@ -31,7 +31,7 @@ export default {
 		// https://stackoverflow.com/questions/20856197/remove-non-ascii-character-in-string
 		phone = phone.replace(/[^A-Za-z 0-9 \.,\?""!@#\$%\^&\*\(\)-_=\+;:<>\/\\\|\}\{\[\]`~]*/g, '');
 
-		if (isNumeric(phone)) {
+		if (_isNumeric(phone)) {
 			return true;
 		}
 
@@ -76,13 +76,11 @@ export default {
 	 * @return {Boolean}
 	 */
 	isNumeric: function (value, onlyInteger) {
-		var isNumeric = isNumeric(value);
-
 		if (onlyInteger) {
 			return (value ^ 0) === Number(value);
 		}
 
-		return isNumeric(value);
+		return _isNumeric(value);
 	},
 	/**
 	 * isValidDate

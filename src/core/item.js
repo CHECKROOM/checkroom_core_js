@@ -413,7 +413,7 @@ Item.prototype.update = function (skipRead) {
 		dfdBasic;
 
 	if (this._isDirtyCategory()) {
-		this.canChangeCategory(this.category).done(function (data) {
+		this.canChangeCategory(this.category).then(function (data) {
 			if (data.result) {
 				dfdCheck = Promise.resolve();
 			} else {
@@ -470,7 +470,7 @@ Item.prototype.update = function (skipRead) {
 			dfdPermissions = Promise.resolve();
 		}
 
-		return Promise.all(dfdCategory, dfdLocation, dfdFields, dfdBasic);
+		return Promise.all([dfdCategory, dfdLocation, dfdFields, dfdBasic]);
 	});
 };
 

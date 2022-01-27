@@ -3,6 +3,7 @@ import Transaction from './transaction';
 import Conflict from './conflict';
 import moment from 'moment';
 import common from './common';
+import { isEmptyObject } from './common/utils';
 
 // Allow overriding the ctor during inheritance
 // http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
@@ -251,7 +252,7 @@ Reservation.prototype.canMakeOrder = function () {
 		this.to.isAfter(this.getNow())
 	) {
 		var unavailable = this._getUnavailableItems();
-		return unavailable.length === 0;
+		return isEmptyObject(unavailable);
 	} else {
 		return false;
 	}
@@ -395,115 +396,119 @@ Reservation.prototype._getConflicts = function () {
 			this.contact.kind == 'maintenance'
 		); // always show flag conflicts except for maintenance contact (flag unavailable settings)
 
-		return this.ds.call(this.id, 'getConflicts').then(function (cnflcts) {
-			cnflcts = cnflcts || [];
+		this.abortConflictsController = new AbortController();
 
-			// Now we have 0 or more conflicts for this reservation
-			// run over the items again and find the conflict for each item
-			that.items.forEach(function (item) {
-				conflict = cnflcts.find(function (conflictObj) {
-					return conflictObj.item == item._id;
+		return this.ds
+			.call(this.id, 'getConflicts', null, null, null, { abortController: this.abortConflictsController })
+			.then(function (cnflcts) {
+				cnflcts = cnflcts || [];
+
+				// Now we have 0 or more conflicts for this reservation
+				// run over the items again and find the conflict for each item
+				that.items.forEach(function (item) {
+					conflict = cnflcts.find(function (conflictObj) {
+						return conflictObj.item == item._id;
+					});
+
+					if (conflict && conflict.kind == 'flag' && !showFlagConflicts) {
+						conflict = null;
+					}
+
+					// Does this item have a server-side conflict?
+					if (conflict) {
+						var kind = conflict.kind || '';
+						kind = kind || (conflict.order ? 'order' : '');
+						kind = kind || (conflict.reservation ? 'reservation' : '');
+
+						// skip to next
+						if (kind == 'flag' && !showFlagConflicts) return true;
+
+						conflicts.push(
+							new Conflict({
+								kind: kind,
+								item: item._id,
+								itemName: item.name,
+								doc: conflict.conflictsWith,
+								fromDate: conflict.fromDate,
+								toDate: conflict.toDate,
+								locationCurrent: conflict.locationCurrent,
+								locationDesired: conflict.locationDesired,
+							})
+						);
+					} else {
+						if (showFlagConflicts && that.unavailableFlagHelper(item.flag)) {
+							conflicts.push(
+								new Conflict({
+									kind: 'flag',
+									item: item._id,
+									flag: item.flag,
+									doc: item.order,
+								})
+							);
+						} else if (showPermissionConflicts && item.canReserve == 'unavailable_allow') {
+							conflicts.push(
+								new Conflict({
+									kind: 'not_allowed_reservation',
+									item: item._id,
+									itemName: item.name,
+								})
+							);
+						} else if (
+							that.status == 'open' &&
+							showPermissionConflicts &&
+							item.canOrder == 'unavailable_allow'
+						) {
+							conflicts.push(
+								new Conflict({
+									kind: 'not_allowed_order',
+									item: item._id,
+									itemName: item.name,
+								})
+							);
+						} else if (showStatusConflicts && item.status == 'expired') {
+							conflicts.push(
+								new Conflict({
+									kind: 'expired',
+									item: item._id,
+									itemName: item.name,
+									doc: item.order,
+								})
+							);
+						} else if (showStatusConflicts && item.status == 'in_custody') {
+							conflicts.push(
+								new Conflict({
+									kind: 'custody',
+									item: item._id,
+									itemName: item.name,
+									doc: item.order,
+								})
+							);
+						} else if (showOrderConflicts && item.status != 'available') {
+							conflicts.push(
+								new Conflict({
+									kind: 'order',
+									item: item._id,
+									itemName: item.name,
+									doc: item.order,
+								})
+							);
+						} else if (showLocationConflicts && item.location != locId) {
+							conflicts.push(
+								new Conflict({
+									kind: 'location',
+									item: item._id,
+									itemName: item.name,
+									locationCurrent: item.location,
+									locationDesired: locId,
+									doc: item.order,
+								})
+							);
+						}
+					}
 				});
 
-				if (conflict && conflict.kind == 'flag' && !showFlagConflicts) {
-					conflict = null;
-				}
-
-				// Does this item have a server-side conflict?
-				if (conflict) {
-					var kind = conflict.kind || '';
-					kind = kind || (conflict.order ? 'order' : '');
-					kind = kind || (conflict.reservation ? 'reservation' : '');
-
-					// skip to next
-					if (kind == 'flag' && !showFlagConflicts) return true;
-
-					conflicts.push(
-						new Conflict({
-							kind: kind,
-							item: item._id,
-							itemName: item.name,
-							doc: conflict.conflictsWith,
-							fromDate: conflict.fromDate,
-							toDate: conflict.toDate,
-							locationCurrent: conflict.locationCurrent,
-							locationDesired: conflict.locationDesired,
-						})
-					);
-				} else {
-					if (showFlagConflicts && that.unavailableFlagHelper(item.flag)) {
-						conflicts.push(
-							new Conflict({
-								kind: 'flag',
-								item: item._id,
-								flag: item.flag,
-								doc: item.order,
-							})
-						);
-					} else if (showPermissionConflicts && item.canReserve == 'unavailable_allow') {
-						conflicts.push(
-							new Conflict({
-								kind: 'not_allowed_reservation',
-								item: item._id,
-								itemName: item.name,
-							})
-						);
-					} else if (
-						that.status == 'open' &&
-						showPermissionConflicts &&
-						item.canOrder == 'unavailable_allow'
-					) {
-						conflicts.push(
-							new Conflict({
-								kind: 'not_allowed_order',
-								item: item._id,
-								itemName: item.name,
-							})
-						);
-					} else if (showStatusConflicts && item.status == 'expired') {
-						conflicts.push(
-							new Conflict({
-								kind: 'expired',
-								item: item._id,
-								itemName: item.name,
-								doc: item.order,
-							})
-						);
-					} else if (showStatusConflicts && item.status == 'in_custody') {
-						conflicts.push(
-							new Conflict({
-								kind: 'custody',
-								item: item._id,
-								itemName: item.name,
-								doc: item.order,
-							})
-						);
-					} else if (showOrderConflicts && item.status != 'available') {
-						conflicts.push(
-							new Conflict({
-								kind: 'order',
-								item: item._id,
-								itemName: item.name,
-								doc: item.order,
-							})
-						);
-					} else if (showLocationConflicts && item.location != locId) {
-						conflicts.push(
-							new Conflict({
-								kind: 'location',
-								item: item._id,
-								itemName: item.name,
-								locationCurrent: item.location,
-								locationDesired: locId,
-								doc: item.order,
-							})
-						);
-					}
-				}
+				return conflicts;
 			});
-
-			return conflicts;
-		});
 	}
 
 	return Promise.resolve(conflicts);
@@ -1018,10 +1023,10 @@ Reservation.prototype._checkFromToDate = function (from, to) {
 	var roundedToDate = to; //(due) ? this._getHelper().roundTimeTo(due) : null;
 
 	if (roundedFromDate && roundedToDate) {
-		return Promise.all(
+		return Promise.all([
 			this._checkFromDateBetweenMinMax(roundedFromDate),
-			this._checkToDateBetweenMinMax(roundedToDate)
-		).then(function (fromRes, toRes) {
+			this._checkToDateBetweenMinMax(roundedToDate),
+		]).then(function (fromRes, toRes) {
 			var interval = dateHelper.roundMinutes;
 			// TODO: We should never get here
 			if (roundedToDate.diff(roundedFromDate, 'minutes') < interval) {

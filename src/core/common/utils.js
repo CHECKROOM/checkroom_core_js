@@ -51,7 +51,7 @@ utils.sortFields = function (fields, fieldDefs, onlyFormFields, limit) {
  * @return {string}
  */
 utils.stringifyOrdered = function (obj) {
-	keys = [];
+	let keys = [];
 	if (obj) {
 		for (var key in obj) {
 			keys.push(key);

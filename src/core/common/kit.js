@@ -395,14 +395,14 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 								getDataSource('contacts')
 									.get(resp[0].obj, 'name,cover,user.picture,kind')
 									.then(function (contact) {
-										resolve(contact, resp[0].created);
+										resolve([contact, resp[0].created]);
 									});
 							});
 						});
 				}
 			});
 
-			dfd.then(function (contact, since) {
+			dfd.then(function ([contact, since]) {
 				var message =
 					'Kit is <strong>in custody</strong>' +
 					(contact
@@ -602,7 +602,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 		});
 	}
 
-	return Promise.all(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+	return Promise.all([dfdCheckouts, dfdReservations, dfdCustody]).then(function () {
 		// Sort by priority High > Low
 		return messages.sort(function (a, b) {
 			return a.priority - b.priority;

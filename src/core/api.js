@@ -1,10 +1,11 @@
 import moment from 'moment';
 import { isEmptyObject } from './common/utils';
 import ajaxQueue from './common/queue';
+
 class fetchApi {
 	static myRequest(url, method, options = {}) {
 		const header = new Headers(options.headers);
-		const controller = new AbortController();
+		const controller = options.abortController || new AbortController();
 		const signal = controller.signal;
 
 		// Sets content type to 'application/json' for POST,PUT,PATCH,DELETE requests
@@ -49,24 +50,33 @@ class fetchApi {
 		});
 	}
 
+	static _handleFetch = (request) => {
+		return new Promise((resolve, reject) => {
+			request.then(resolve).catch((err) => {
+				// Don't throw abort error to client
+				if (err.name !== 'AbortError') reject(err);
+			});
+		});
+	};
+
 	static get(url, options = {}) {
-		return this.myRequest(url, 'GET', options);
+		return this._handleFetch(this.myRequest(url, 'GET', options));
 	}
 
 	static post(url, options = {}) {
-		return this.myRequest(url, 'POST', options);
+		return this._handleFetch(this.myRequest(url, 'POST', options));
 	}
 
 	static put(url, options = {}) {
-		return this.myRequest(url, 'PUT', options);
+		return this._handleFetch(this.myRequest(url, 'PUT', options));
 	}
 
 	static patch(url, options = {}) {
-		return this.myRequest(url, 'PATCH', options);
+		return this._handleFetch(this.myRequest(url, 'PATCH', options));
 	}
 
 	static delete(url, options = {}) {
-		return this.myRequest(url, 'DELETE', options);
+		return this._handleFetch(this.myRequest(url, 'DELETE', options));
 	}
 }
 
@@ -180,12 +190,12 @@ api.ApiAjax = function (spec) {
 
 api.ApiAjax.prototype.get = function (url, timeOut, opt) {
 	system.log('ApiAjax: get ' + url);
-	return this._getAjax(url, timeOut);
+	return this._getAjax(url, timeOut, opt);
 };
 
 api.ApiAjax.prototype.post = function (url, data, timeOut, opt) {
 	system.log('ApiAjax: post ' + url);
-	return this._postAjax(url, data, timeOut);
+	return this._postAjax(url, data, timeOut, opt);
 };
 
 // Implementation
@@ -197,24 +207,25 @@ api.ApiAjax.prototype._handleAjaxSuccess = function (data, opt) {
 	return data;
 };
 
-api.ApiAjax.prototype._handleAjaxError = function ({ name, message, code, opt }) {
-	// ajax call was aborted
-	if (name == 'AbortError') return;
+api.ApiAjax.prototype._handleAjaxError = function (error) {
+	let { name, message, code, opt } = error;
+	let msg = '';
 
-	var msg = '';
+	if (name === 'AbortError') return error;
+
 	if (message === 'timeout') {
 		return new api.NetworkTimeout(msg, opt);
 	} else {
 		if (message) {
 			if (message.indexOf('Notify user:') > -1) {
-				msg = message;
+				msg = opt.message;
 			}
 
 			if (code == 422) {
-				msg = message;
+				msg = opt.message;
 				opt = {
 					detail: opt.message,
-					status: code,
+					status: opt.status,
 				};
 			}
 		}
@@ -254,6 +265,7 @@ api.ApiAjax.prototype._postAjax = async function (url, data, timeOut, opt) {
 			parms: this._prepareDict(data),
 			timeOut: timeOut || this.timeOut,
 			headers: await this.customHeaders(),
+			abortController: opt.abortController,
 		})
 		.then((result) => Promise.resolve(this._handleAjaxSuccess(result)))
 		.catch((error) => Promise.reject(this._handleAjaxError(error)));
@@ -264,6 +276,7 @@ api.ApiAjax.prototype._getAjax = async function (url, timeOut, opt) {
 		.get(url, {
 			timeOut: timeOut || this.timeOut,
 			headers: await this.customHeaders(),
+			abortController: opt.abortController,
 		})
 		.then((result) => Promise.resolve(this._handleAjaxSuccess(result)))
 		.catch((error) => Promise.reject(this._handleAjaxError(error)));
@@ -467,7 +480,7 @@ api.ApiAnonymous = function (spec) {
  * @param usePost
  * @returns {*}
  */
-api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
+api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost, opt = {}) {
 	system.log('ApiAnonymous: call ' + method);
 	if (this.version) {
 		params = params || {};
@@ -481,9 +494,9 @@ api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
 	var getUrl = url + '?' + queryString;
 
 	if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
-		return this.ajax.post(url, params, timeOut);
+		return this.ajax.post(url, params, timeOut, opt);
 	} else {
-		return this.ajax.get(getUrl, timeOut);
+		return this.ajax.get(getUrl, timeOut, opt);
 	}
 };
 
@@ -496,9 +509,9 @@ api.ApiAnonymous.prototype.call = function (method, params, timeOut, usePost) {
  * @param usePost
  * @returns {*}
  */
-api.ApiAnonymous.prototype.longCall = function (method, params, usePost) {
+api.ApiAnonymous.prototype.longCall = function (method, params, usePost, opt = {}) {
 	system.log('ApiAnonymous: longCall ' + method);
-	return this.call(method, params, 60000, usePost);
+	return this.call(method, params, 60000, usePost, opt);
 };
 
 //*************
@@ -533,7 +546,7 @@ api.ApiDataSource = function (spec) {
  * @param fields
  * @returns {*}
  */
-api.ApiDataSource.prototype.exists = function (pk, fields) {
+api.ApiDataSource.prototype.exists = function (pk, fields, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': exists ' + pk);
 	var cmd = 'exists';
 
@@ -547,11 +560,11 @@ api.ApiDataSource.prototype.exists = function (pk, fields) {
 	}
 
 	return new Promise((resolve, reject) => {
-		this._ajaxGet(cmd, url)
-			.done(function (data) {
+		this._ajaxGet(cmd, url, null, opt)
+			.then(function (data) {
 				resolve(data);
 			})
-			.fail(function (error) {
+			.catch(function (error) {
 				if (error instanceof api.ApiNotFound) {
 					resolve(null);
 				} else {
@@ -569,7 +582,7 @@ api.ApiDataSource.prototype.exists = function (pk, fields) {
  * @param fields
  * @returns {promise}
  */
-api.ApiDataSource.prototype.get = function (pk, fields) {
+api.ApiDataSource.prototype.get = function (pk, fields, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': get ' + pk);
 	var cmd = 'get';
 	var url = this.getBaseUrl() + pk;
@@ -577,7 +590,7 @@ api.ApiDataSource.prototype.get = function (pk, fields) {
 	if (!isEmptyObject(p)) {
 		url += '?' + this.getParams(p);
 	}
-	return this._ajaxGet(cmd, url);
+	return this._ajaxGet(cmd, url, null, opt);
 };
 
 /**
@@ -594,10 +607,10 @@ api.ApiDataSource.prototype.getIgnore404 = function (pk, fields) {
 
 	return new Promise((resolve, reject) => {
 		this.get(pk, fields)
-			.done(function (data) {
+			.then(function (data) {
 				resolve(data);
 			})
-			.fail(function (err) {
+			.catch(function (err) {
 				if (err instanceof api.ApiNotFound) {
 					resolve(null);
 				} else {
@@ -615,7 +628,7 @@ api.ApiDataSource.prototype.getIgnore404 = function (pk, fields) {
  * @param fields
  * @returns {promise}
  */
-api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
+api.ApiDataSource.prototype.getMultiple = function (pks, fields, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': getMultiple ' + pks);
 	var cmd = 'getMultiple';
 
@@ -647,7 +660,7 @@ api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
 			}
 
 			queue(function () {
-				var call = that._ajaxGet(cmd, url);
+				var call = that._ajaxGet(cmd, url, null, opt);
 
 				call.then(function (resp) {
 					// BUGFIX make sure that response is an array
@@ -667,12 +680,6 @@ api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
 		});
 	});
 
-	promise.abort = function () {
-		calls.forEach(function (xhr) {
-			xhr.abort();
-		});
-	};
-
 	return promise;
 };
 
@@ -683,11 +690,11 @@ api.ApiDataSource.prototype.getMultiple = function (pks, fields) {
  * @param pk
  * @returns {promise}
  */
-api.ApiDataSource.prototype.delete = function (pk) {
+api.ApiDataSource.prototype.delete = function (pk, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': delete ' + pk);
 	var cmd = 'delete';
 	var url = this.getBaseUrl() + pk + '/delete';
-	return this._ajaxGet(cmd, url);
+	return this._ajaxGet(cmd, url, null, opt);
 };
 
 /**
@@ -697,19 +704,13 @@ api.ApiDataSource.prototype.delete = function (pk) {
  * @param pks
  * @returns {promise}
  */
-api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost) {
+api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': deleteMultiple ' + pks);
 	var cmd = 'deleteMultiple';
 	var url = this.getBaseUrl() + 'delete';
 
 	var p = { pk: pks };
-	var geturl = url + '?' + this.getParams(p);
-
-	if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
-		return this._ajaxPost(cmd, url, p);
-	} else {
-		return this._ajaxGet(cmd, geturl);
-	}
+	return this._ajaxPost(cmd, url, p, null, opt);
 };
 
 /**
@@ -723,7 +724,7 @@ api.ApiDataSource.prototype.deleteMultiple = function (pks, usePost) {
  * @param usePost
  * @returns {promise}
  */
-api.ApiDataSource.prototype.update = function (pk, params, fields, timeOut, usePost) {
+api.ApiDataSource.prototype.update = function (pk, params, fields, timeOut, usePost, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': update ' + pk);
 	var cmd = 'update';
 	var url = this.getBaseUrl() + pk + '/update';
@@ -731,13 +732,7 @@ api.ApiDataSource.prototype.update = function (pk, params, fields, timeOut, useP
 	if (fields != null && fields.length > 0) {
 		p['_fields'] = Array.isArray(fields) ? fields.join(',') : fields;
 	}
-	var geturl = url + '?' + this.getParams(p);
-
-	if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
-		return this._ajaxPost(cmd, url, p, timeOut);
-	} else {
-		return this._ajaxGet(cmd, geturl, timeOut);
-	}
+	return this._ajaxPost(cmd, url, p, timeOut, opt);
 };
 
 /**
@@ -750,7 +745,7 @@ api.ApiDataSource.prototype.update = function (pk, params, fields, timeOut, useP
  * @param usePost
  * @returns {promise}
  */
-api.ApiDataSource.prototype.create = function (params, fields, timeOut, usePost) {
+api.ApiDataSource.prototype.create = function (params, fields, timeOut, usePost, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': create');
 	var cmd = 'create';
 	var url = this.getBaseUrl() + 'create';
@@ -758,14 +753,7 @@ api.ApiDataSource.prototype.create = function (params, fields, timeOut, usePost)
 	if (fields != null && fields.length > 0) {
 		p['_fields'] = Array.isArray(fields) ? fields.join(',') : fields;
 	}
-
-	var geturl = url + '?' + this.getParams(p);
-
-	if (usePost || geturl.length >= MAX_QUERYSTRING_LENGTH) {
-		return this._ajaxPost(cmd, url, p, timeOut);
-	} else {
-		return this._ajaxGet(cmd, geturl, timeOut);
-	}
+	return this._ajaxPost(cmd, url, p, timeOut, opt);
 };
 
 /**
@@ -789,11 +777,11 @@ api.ApiDataSource.prototype.createMultiple = function (objects, fields) {
 			if (todoObjs.length > 0) {
 				var obj = todoObjs.pop();
 				that.create(obj, fields)
-					.done(function (resp) {
+					.then(function (resp) {
 						doneIds.push(resp._id);
 						return createRecurse(todoObjs);
 					})
-					.fail(function (error) {
+					.catch(function (error) {
 						reject(error);
 					});
 			} else {
@@ -816,7 +804,7 @@ api.ApiDataSource.prototype.createMultiple = function (objects, fields) {
  * @param sort
  * @returns {promise}
  */
-api.ApiDataSource.prototype.list = function (name, fields, limit, skip, sort) {
+api.ApiDataSource.prototype.list = function (name, fields, limit, skip, sort, opt) {
 	name = name || '';
 
 	system.log('ApiDataSource: ' + this.collection + ': list ' + name);
@@ -829,7 +817,7 @@ api.ApiDataSource.prototype.list = function (name, fields, limit, skip, sort) {
 	if (!isEmptyObject(p)) {
 		url += '?' + this.getParams(p);
 	}
-	return this._ajaxGet(cmd, url);
+	return this._ajaxGet(cmd, url, null, opt);
 };
 
 /**
@@ -844,18 +832,13 @@ api.ApiDataSource.prototype.list = function (name, fields, limit, skip, sort) {
  * @param mimeType
  * @returns {promise}
  */
-api.ApiDataSource.prototype.search = function (params, fields, limit, skip, sort, mimeType) {
+api.ApiDataSource.prototype.search = function (params, fields, limit, skip, sort, mimeType, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': search ' + params);
 	var cmd = 'search';
 	var url = this.getBaseUrl() + 'search';
-	var geturl = this.searchUrl(params, fields, limit, skip, sort, mimeType);
 
-	if (geturl.length >= MAX_QUERYSTRING_LENGTH) {
-		var p = this.searchParams(params, fields, limit, skip, sort, mimeType);
-		return this._ajaxPost(cmd, url, p);
-	} else {
-		return this._ajaxGet(cmd, geturl);
-	}
+	var p = this.searchParams(params, fields, limit, skip, sort, mimeType);
+	return this._ajaxPost(cmd, url, p, null, opt);
 };
 
 api.ApiDataSource.prototype.searchUrl = function (params, fields, limit, skip, sort, mimeType) {
@@ -918,7 +901,7 @@ api.ApiDataSource.prototype.exportUrl = function (params, fields, limit, skip, s
  * @param usePost
  * @returns {promise}
  */
-api.ApiDataSource.prototype.call = function (pk, method, params, fields, timeOut, usePost) {
+api.ApiDataSource.prototype.call = function (pk, method, params, fields, timeOut, usePost, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': call ' + method);
 	var cmd = 'call.' + method;
 	var url =
@@ -927,9 +910,9 @@ api.ApiDataSource.prototype.call = function (pk, method, params, fields, timeOut
 	var getUrl = url + '?' + this.getParams(p);
 
 	if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
-		return this._ajaxPost(cmd, url, p, timeOut);
+		return this._ajaxPost(cmd, url, p, timeOut, opt);
 	} else {
-		return this._ajaxGet(cmd, getUrl, timeOut);
+		return this._ajaxGet(cmd, getUrl, timeOut, opt);
 	}
 };
 
@@ -945,7 +928,7 @@ api.ApiDataSource.prototype.call = function (pk, method, params, fields, timeOut
  * @param usePost
  * @returns {promise}
  */
-api.ApiDataSource.prototype.callMultiple = function (pks, method, params, fields, timeOut, usePost) {
+api.ApiDataSource.prototype.callMultiple = function (pks, method, params, fields, timeOut, usePost, opt) {
 	system.log('ApiDataSource: ' + this.collection + ': call ' + method);
 	var cmd = 'call.' + method;
 	var url = this.getBaseUrl() + pks.join(',') + '/call/' + method;
@@ -953,9 +936,9 @@ api.ApiDataSource.prototype.callMultiple = function (pks, method, params, fields
 	var getUrl = url + '?' + this.getParams(p);
 
 	if (usePost || getUrl.length >= MAX_QUERYSTRING_LENGTH) {
-		return this._ajaxPost(cmd, url, p, timeOut);
+		return this._ajaxPost(cmd, url, p, timeOut, opt);
 	} else {
-		return this._ajaxGet(cmd, getUrl, timeOut);
+		return this._ajaxGet(cmd, getUrl, timeOut, opt);
 	}
 };
 
@@ -970,8 +953,8 @@ api.ApiDataSource.prototype.callMultiple = function (pks, method, params, fields
  * @param usePost
  * @returns {promise}
  */
-api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost) {
-	return this.call(pk, method, params, fields, 60000, usePost);
+api.ApiDataSource.prototype.longCall = function (pk, method, params, fields, usePost, opt) {
+	return this.call(pk, method, params, fields, 60000, usePost, opt);
 };
 
 /**
@@ -1009,7 +992,15 @@ api.ApiDataSource.prototype.getBaseUrl = function (forceOldToken) {
 api.ApiDataSource.prototype.getParams = function (data = {}) {
 	const params = this.ajax._prepareDict(data);
 	return Object.keys(params)
-		.map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`)
+		.filter((k) => params[k] != undefined) //remove null/undefined
+		.map((k) => {
+			if (Array.isArray(params[k]))
+				return params[k]
+					.map((v) => `${encodeURIComponent(k)}${encodeURIComponent('[]')}=${encodeURIComponent(v)}`)
+					.join('&');
+
+			return `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`;
+		})
 		.join('&');
 };
 
@@ -1051,8 +1042,8 @@ api.ApiDataSource.prototype.getParamsDict = function (fields, limit, skip, sort)
  * @returns {promise}
  * @private
  */
-api.ApiDataSource.prototype._ajaxGet = function (cmd, url, timeout) {
-	return this.ajax.get(url, timeout, { coll: this.collection, cmd: cmd });
+api.ApiDataSource.prototype._ajaxGet = function (cmd, url, timeout, opt) {
+	return this.ajax.get(url, timeout, { coll: this.collection, cmd: cmd, ...opt });
 };
 
 /**
@@ -1064,8 +1055,8 @@ api.ApiDataSource.prototype._ajaxGet = function (cmd, url, timeout) {
  * @returns {promise}
  * @private
  */
-api.ApiDataSource.prototype._ajaxPost = function (cmd, url, data, timeout) {
-	return this.ajax.post(url, data, timeout, { coll: this.collection, cmd: cmd });
+api.ApiDataSource.prototype._ajaxPost = function (cmd, url, data, timeout, opt) {
+	return this.ajax.post(url, data, timeout, { coll: this.collection, cmd: cmd, ...opt });
 };
 
 export default api;

@@ -389,13 +389,13 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 							getDataSource('contacts')
 								.get(resp[0].obj, 'name,cover,user.picture,kind')
 								.then(function (contact) {
-									resolve(contact, resp[0].created);
+									resolve([contact, resp[0].created]);
 								});
 						});
 				}
 			});
 
-			dfd.then(function (contact, since) {
+			dfd.then(function ([contact, since]) {
 				var message =
 					'Item is <strong>in ' +
 					(isOwn(item.custody) ? 'your' : '') +
@@ -559,7 +559,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 		});
 	}
 
-	return Promise.all(dfdCheckouts, dfdReservations, dfdCustody).then(function () {
+	return Promise.all([dfdCheckouts, dfdReservations, dfdCustody]).then(function () {
 		// Sort by priority High > Low
 		return messages.sort(function (a, b) {
 			return a.priority - b.priority;

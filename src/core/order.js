@@ -462,13 +462,22 @@ Order.prototype._getServerConflicts = function (items, fromDate, dueDate, orderI
 			this.contact.kind == 'maintenance'
 		);
 
+	this.abortConflictsController = new AbortController();
+
 	// Get the availabilities for these items
 	return this.dsItems
-		.call(null, 'getAvailabilities', {
-			items: itemIds,
-			fromDate: fromDate,
-			toDate: dueDate,
-		})
+		.call(
+			null,
+			'getAvailabilities',
+			{
+				items: itemIds,
+				fromDate: fromDate,
+				toDate: dueDate,
+			},
+			null,
+			null,
+			{ abortController: this.abortConflictsController }
+		)
 		.then(function (data) {
 			// Run over unavailabilties for these items
 			data.forEach(function (av) {
@@ -969,10 +978,10 @@ Order.prototype._checkFromDueDate = function (from, due) {
 	var roundedDueDate = due; //(due) ? this._getHelper().roundTimeTo(due) : null;
 
 	if (roundedFromDate && roundedDueDate) {
-		return Promise.all(
+		return Promise.all([
 			this._checkDateBetweenMinMax(roundedFromDate),
-			this._checkDateBetweenMinMax(roundedDueDate)
-		).then(function (fromRes, dueRes) {
+			this._checkDateBetweenMinMax(roundedDueDate),
+		]).then(function (fromRes, dueRes) {
 			var interval = dateHelper.roundMinutes;
 			if (roundedDueDate.diff(roundedFromDate, 'minutes') < interval) {
 				throw new new api.ApiUnprocessableEntity(

@@ -81,19 +81,6 @@ export default {
 		return $canvas.get(0).toDataURL();
 	},
 	/**
-	 * Returns an maintenace avatar image
-	 *
-	 * @memberOf  common
-	 * @name  common#getMaintenanceAvatar
-	 * @method
-	 *
-	 * @param  {string} size Possible values XS,S,M,L,XL
-	 * @return {string} base64 image url
-	 */
-	getMaintenanceAvatar: function (size) {
-		return this.getIconAvatar(size, 'f0ad');
-	},
-	/**
 	 * Returns an icon avatar image from FontAwesome collection
 	 *
 	 * @memberOf  common

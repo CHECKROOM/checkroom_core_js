@@ -479,18 +479,6 @@ DateHelper.prototype.roundTime = function (m, inc, direction) {
 	return mom.roundTo('minute', inc || INCREMENT, direction);
 };
 
-/**
- * @name DateHelper#roundTimeDown
- * @method
- * @param  m
- * @param  inc
- */
-DateHelper.prototype.roundTimeDown = function (m, inc) {
-	var mom = moment.isMoment(m) ? m : moment(m);
-	mom.seconds(0).milliseconds(0);
-	return mom.roundTo('minute', inc || INCREMENT, 'down');
-};
-
 DateHelper.prototype._typeToDirection = function (type, fromto) {
 	switch (type) {
 		case 'longer':

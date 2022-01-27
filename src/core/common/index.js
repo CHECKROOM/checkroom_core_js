@@ -21,31 +21,6 @@ import changeLog from './changeLog';
 import spotcheck from './spotcheck';
 import DeferredPromise from './deferredPromise';
 
-const common = Object.assign(
-	{
-		ajaxQueue: queue,
-		DeferredPromise: DeferredPromise,
-	},
-	code,
-	order,
-	reservation,
-	item,
-	conflicts,
-	keyvalues,
-	image,
-	attachment,
-	validation,
-	utils,
-	kit,
-	contact,
-	user,
-	template,
-	_document,
-	transaction,
-	changeLog,
-	spotcheck
-);
-
 export {
 	code,
 	order,
@@ -69,4 +44,25 @@ export {
 	DeferredPromise,
 };
 
-export default common;
+export default {
+	ajaxQueue: queue,
+	DeferredPromise: DeferredPromise,
+	code,
+	order,
+	reservation,
+	item,
+	conflicts,
+	keyvalues,
+	image,
+	attachment,
+	validation,
+	utils,
+	kit,
+	contact,
+	user,
+	template,
+	_document,
+	transaction,
+	changeLog,
+	spotcheck,
+};

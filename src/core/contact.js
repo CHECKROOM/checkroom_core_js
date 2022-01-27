@@ -73,18 +73,6 @@ Contact.prototype.isValidEmail = function () {
 };
 
 /**
- * If the contact is linked to a user,
- * return its user id
- * Remark: needs field user
- * @name Contact#getUserId
- * @method
- * @return {string}
- */
-Contact.prototype.getUserId = function () {
-	return this.helper.ensureId(this.user);
-};
-
-/**
  * Checks if the user is a synced user
  * Remark: needs field user
  * @name Contact#getUserSync

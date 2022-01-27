@@ -1,5 +1,3 @@
-import common from './common';
-import api from './api';
 import Document from './document';
 
 /*

@@ -1,5 +1,3 @@
-import api from './api';
-import common from './common';
 import Document from './document';
 
 // Some constant values

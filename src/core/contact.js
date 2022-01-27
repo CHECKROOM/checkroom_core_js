@@ -1,6 +1,5 @@
 import Base from './base';
 import common from './common';
-import User from './user';
 import Helper from './helper';
 
 var DEFAULTS = {

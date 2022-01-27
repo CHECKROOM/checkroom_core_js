@@ -2,7 +2,6 @@ import api from './api';
 import Transaction from './transaction';
 import Conflict from './conflict';
 import moment from 'moment';
-import common from './common';
 import { isEmptyObject } from './common/utils';
 
 // Allow overriding the ctor during inheritance

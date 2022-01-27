@@ -9,7 +9,6 @@ import attachment from './attachment';
 import inflection from './inflection';
 import validation from './validation';
 import utils from './utils';
-import slimdown from './slimdown';
 import kit from './kit';
 import contact from './contact';
 import user from './user';

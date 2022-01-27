@@ -1,5 +1,4 @@
 import Base from './base';
-import common from './common';
 
 var DEFAULTS = {
 	kind: 'ldap',

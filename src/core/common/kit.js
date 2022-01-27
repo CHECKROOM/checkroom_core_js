@@ -2,7 +2,6 @@ import moment from 'moment';
 
 import itemHelpers from './item';
 import orderHelper from './order';
-import reservationHelper from './reservation';
 import utils from './utils';
 
 var that = {},

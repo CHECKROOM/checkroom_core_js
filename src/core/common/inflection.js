@@ -948,19 +948,6 @@ String.prototype.latinise = function () {
 String.prototype.latinize = String.prototype.latinise;
 
 /**
- * isLatin
- *
- * @memberOf  String
- * @name  String#isLatin
- * @method
- *
- * @return {Boolean}
- */
-String.prototype.isLatin = function () {
-	return this == this.latinise();
-};
-
-/**
  * OnlyAlphaNumSpaceAndUnderscore
  *
  * @memberOf String

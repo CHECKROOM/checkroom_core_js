@@ -3,7 +3,10 @@ const path = require('path');
 
 module.exports = {
 	mode: 'development',
-	entry: './src/core.js',
+	entry: {
+		core: './src/core.js',
+		signup: './src/signup.js',
+	},
 	output: {
 		environment: {
 			arrowFunction: false,

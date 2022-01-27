@@ -89,27 +89,6 @@ var DateHelper = function (spec) {
 };
 
 /**
- * @name parseDate
- * @method
- * @param data
- * @returns {moment}
- */
-DateHelper.prototype.parseDate = function (data) {
-	if (typeof data == 'string' || data instanceof String) {
-		// "2014-04-03T12:15:00+00:00" (length 25)
-		// "2014-04-03T09:32:43.841000+00:00" (length 32)
-		if (data.endsWith('+00:00')) {
-			var len = data.length;
-			if (len == 25) {
-				return moment(data.substring(0, len - 6));
-			} else if (len == 32) {
-				return moment(data.substring(0, len - 6).split('.')[0]);
-			}
-		}
-	}
-};
-
-/**
  * @name  DateHelper#getNow
  * @method
  * @return {moment}
@@ -283,27 +262,6 @@ DateHelper.prototype.getFriendlyFromTo = function (from, to, useHours, now, sepa
 };
 
 /**
- * @deprecated use getFriendlyFromToInfo
- * [getFriendlyFromToOld]
- * @param  fromDate
- * @param  toDate
- * @param  groupProfile
- * @return {}
- */
-DateHelper.prototype.getFriendlyFromToOld = function (fromDate, toDate, groupProfile) {
-	var mFrom = this.roundFromTime(fromDate, groupProfile);
-	var mTo = this.roundToTime(toDate, groupProfile);
-	return {
-		from: mFrom,
-		to: mTo,
-		daysBetween: mTo.clone().startOf('day').diff(mFrom.clone().startOf('day'), 'days'),
-		duration: moment.duration(mFrom - mTo).humanize(),
-		fromText: mFrom.calendar().replace(' at ', ' '),
-		toText: mTo.calendar().replace(' at ', ' '),
-	};
-};
-
-/**
  * makeStartDate helps making an start date for a transaction, usually a reservation
  * It will do the standard rounding
  * But also, if you're using dates instead of datetimes,
@@ -429,17 +387,6 @@ DateHelper.prototype.getFriendlyDateText = function (date, useHours, now, format
 	}
 	var parts = this.getFriendlyDateParts(date, now, format);
 	return useHours ? parts.join(' ') : parts[0];
-};
-
-/**
- * [addAverageDuration]
- * @param m
- * @returns {moment}
- */
-DateHelper.prototype.addAverageDuration = function (m) {
-	// TODO: Read the average order duration from the group.profile
-	// add it to the date that was passed
-	return m.clone().add(1, 'day');
 };
 
 /**

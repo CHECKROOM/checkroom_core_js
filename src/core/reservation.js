@@ -34,47 +34,12 @@ var Reservation = function (opt) {
 Reservation.prototype = new tmp();
 Reservation.prototype.constructor = Reservation;
 
-//
-// Date helpers; we'll need these for sliding from / to dates during a long user session
-//
-// getMinDateFrom (overwritten)
-// getMaxDateFrom (default)
-// getMinDateTo (overwritten)
-// getMaxDateTo (default)
-
 /**
  * Overwrite how we get a min date for reservation
  * Min date is a timeslot after now
  */
 Reservation.prototype.getMinDateFrom = function () {
 	return this.getNextTimeSlot();
-};
-
-Reservation.prototype.getMinDateTo = function () {
-	return this.getNextTimeSlot(this.from && this.from.isBefore(this.getNowRounded()) ? null : this.from);
-};
-
-//
-// Helpers
-//
-/**
- * Gets a moment duration object
- * @method
- * @name Reservation#getDuration
- * @returns {duration}
- */
-Reservation.prototype.getDuration = function () {
-	return common.getReservationDuration(this.raw);
-};
-
-/**
- * Gets a friendly order duration or empty string
- * @method
- * @name Reservation#getFriendlyDuration
- * @returns {string}
- */
-Reservation.prototype.getFriendlyDuration = function () {
-	return common.getFriendlyReservationDuration(this.raw, this._getDateHelper());
 };
 
 /**
@@ -112,16 +77,6 @@ Reservation.prototype.isValidToDate = function () {
 	}
 
 	return true;
-};
-
-/**
- * Checks if the reservation can be spotchecked
- * @method
- * @name Reservation#canSpotcheck
- * @returns {boolean}
- */
-Reservation.prototype.canSpotcheck = function () {
-	return common.canReservationSpotcheck(this.raw);
 };
 
 /**
@@ -171,16 +126,6 @@ Reservation.prototype.canCancel = function () {
  */
 Reservation.prototype.canClose = function () {
 	return this.status == 'open';
-};
-
-/**
- * Checks if the reservation can be unclosed
- * @method
- * @name Reservation#canUndoClose
- * @returns {boolean}
- */
-Reservation.prototype.canUndoClose = function () {
-	return this.status == 'closed_manually' && this.contact && this.contact.status == 'active';
 };
 
 /**
@@ -514,38 +459,6 @@ Reservation.prototype._getConflicts = function () {
 };
 
 /**
- * Sets the reservation from / to dates in a single call
- * @method
- * @name Reservation#setFromToDate
- * @param from
- * @param to (optional) if null, we'll take the default average checkout duration as due date
- * @param skipRead
- * @returns {*}
- */
-Reservation.prototype.setFromToDate = function (from, to, skipRead) {
-	if (this.status != 'creating') {
-		throw new api.ApiUnprocessableEntity('Cannot set reservation from / to date, status is ' + this.status);
-	}
-
-	var that = this;
-	var roundedFromDate = this._getDateHelper().roundTimeFrom(from);
-	var roundedToDate = to
-		? this._getDateHelper().roundTimeTo(to)
-		: this._getDateHelper().addAverageDuration(roundedFromDate);
-
-	return this._checkFromToDate(roundedFromDate, roundedToDate).then(function () {
-		that.from = roundedFromDate;
-		that.to = roundedToDate;
-
-		return that._doApiCall({
-			method: 'setFromToDate',
-			params: { fromDate: roundedFromDate, toDate: roundedToDate },
-			skipRead: skipRead,
-		});
-	});
-};
-
-/**
  * setFromDate
  * The from date must be:
  * - bigger than minDate
@@ -567,29 +480,27 @@ Reservation.prototype.setFromDate = function (date, skipRead) {
 	var interval = dateHelper.roundMinutes;
 	var roundedFromDate = dateHelper.roundTimeFrom(date);
 
-	return this._checkFromDateBetweenMinMax(roundedFromDate).then(function () {
-		// TODO: Should never get here
-		// Must be at least 1 interval before to date, if it's already set
-		if (that.to && that.to.diff(roundedFromDate, 'minutes') < interval) {
-			throw new api.ApiUnprocessableEntity(
-				'Cannot set reservation from date, after (or too close to) to date ' + that.to.toJSONDate()
-			);
-		}
+	// TODO: Should never get here
+	// Must be at least 1 interval before to date, if it's already set
+	if (that.to && that.to.diff(roundedFromDate, 'minutes') < interval) {
+		throw new api.ApiUnprocessableEntity(
+			'Cannot set reservation from date, after (or too close to) to date ' + that.to.toJSONDate()
+		);
+	}
 
-		that.from = roundedFromDate;
+	that.from = roundedFromDate;
 
-		//If reservation doesn't exist yet, we set from date in create call
-		//otherwise use setFromDate to update transaction
-		if (!that.existsInDb()) {
-			return that._createTransaction(skipRead);
-		} else {
-			return that._doApiCall({
-				method: 'setFromDate',
-				params: { fromDate: roundedFromDate },
-				skipRead: skipRead,
-			});
-		}
-	});
+	//If reservation doesn't exist yet, we set from date in create call
+	//otherwise use setFromDate to update transaction
+	if (!that.existsInDb()) {
+		return that._createTransaction(skipRead);
+	} else {
+		return that._doApiCall({
+			method: 'setFromDate',
+			params: { fromDate: roundedFromDate },
+			skipRead: skipRead,
+		});
+	}
 };
 
 /**
@@ -634,23 +545,21 @@ Reservation.prototype.setToDate = function (date, skipRead) {
 	var interval = dateHelper.roundMinutes;
 	var roundedToDate = dateHelper.roundTimeTo(date);
 
-	return this._checkToDateBetweenMinMax(roundedToDate).then(function () {
-		if (that.from && that.from.diff(roundedToDate, 'minutes') > interval) {
-			throw new api.ApiUnprocessableEntity(
-				'Cannot set reservation to date, before (or too close to) to date ' + that.from.toJSONDate()
-			);
-		}
+	if (that.from && that.from.diff(roundedToDate, 'minutes') > interval) {
+		throw new api.ApiUnprocessableEntity(
+			'Cannot set reservation to date, before (or too close to) to date ' + that.from.toJSONDate()
+		);
+	}
 
-		that.to = roundedToDate;
+	that.to = roundedToDate;
 
-		//If reservation doesn't exist yet, we set to date in create call
-		//otherwise use setToDate to update transaction
-		if (!that.existsInDb()) {
-			return that._createTransaction(skipRead);
-		} else {
-			return that._doApiCall({ method: 'setToDate', params: { toDate: roundedToDate }, skipRead: skipRead });
-		}
-	});
+	//If reservation doesn't exist yet, we set to date in create call
+	//otherwise use setToDate to update transaction
+	if (!that.existsInDb()) {
+		return that._createTransaction(skipRead);
+	} else {
+		return that._doApiCall({ method: 'setToDate', params: { toDate: roundedToDate }, skipRead: skipRead });
+	}
 };
 
 /**
@@ -667,15 +576,6 @@ Reservation.prototype.clearToDate = function (skipRead) {
 
 	this.to = null;
 	return this._doApiCall({ method: 'clearToDate', skipRead: skipRead });
-};
-
-// Reservation does not use due dates
-Reservation.prototype.clearDueDate = function (skipRead) {
-	throw 'Reservation.clearDueDate not implemented';
-};
-
-Reservation.prototype.setDueDate = function (date, skipRead) {
-	throw 'Reservation.setDueDate not implemented';
 };
 
 //
@@ -931,16 +831,6 @@ Reservation.prototype.makeOrder = function (skipErrorHandling) {
 };
 
 /**
- * Switch reservation to order
- * @method
- * @name Reservation#switchToOrder
- * @return {*}
- */
-Reservation.prototype.switchToOrder = function () {
-	return this._doApiCall({ method: 'switchToOrder', skipRead: true });
-};
-
-/**
  * Generates a PDF document for the reservation
  * @method
  * @name Reservation#generateDocument
@@ -1011,41 +901,6 @@ Reservation.prototype.reserveRepeat = function (frequency, until, customer, loca
 		},
 		skipRead: true,
 	}); // response is a array of reservations
-};
-
-//
-// Implementation
-//
-Reservation.prototype._checkFromToDate = function (from, to) {
-	var dateHelper = this._getDateHelper();
-	var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
-	var roundedToDate = to; //(due) ? this._getHelper().roundTimeTo(due) : null;
-
-	if (roundedFromDate && roundedToDate) {
-		return Promise.all([
-			this._checkFromDateBetweenMinMax(roundedFromDate),
-			this._checkToDateBetweenMinMax(roundedToDate),
-		]).then(function (fromRes, toRes) {
-			var interval = dateHelper.roundMinutes;
-			// TODO: We should never get here
-			if (roundedToDate.diff(roundedFromDate, 'minutes') < interval) {
-				throw new api.ApiUnprocessableEntity(
-					'Cannot set order from date, after (or too close to) to date ' + roundedToDate.toJSONDate()
-				);
-			}
-			if (roundedFromDate.diff(roundedToDate, 'minutes') > interval) {
-				throw new api.ApiUnprocessableEntity(
-					'Cannot set order due date, before (or too close to) from date ' + roundedFromDate.toJSONDate()
-				);
-			}
-		});
-	} else if (roundedFromDate) {
-		return this._checkFromDateBetweenMinMax(roundedFromDate);
-	} else if (roundedToDate) {
-		return this._checkToDateBetweenMinMax(roundedToDate);
-	} else {
-		throw new api.ApiUnprocessableEntity('Cannot from/due date, both are null');
-	}
 };
 
 Reservation.prototype._getUnavailableItems = function () {

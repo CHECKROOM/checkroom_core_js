@@ -47,27 +47,6 @@ export default {
 		}
 	},
 	/**
-	 * getFriendlyOrderSize
-	 *
-	 * @memberOf common
-	 * @name  common#getFriendlyOrderSize
-	 * @method
-	 *
-	 * @param  {object} order
-	 * @return {string}
-	 */
-	getFriendlyOrderSize: function (order) {
-		if (order.items && order.items.length > 0) {
-			var str = order.items.length + ' item';
-			if (order.items.length > 1) {
-				str += 's';
-			}
-			return str;
-		} else {
-			return 'No items';
-		}
-	},
-	/**
 	 * isOrderOverdue
 	 *
 	 * @memberOf common
@@ -137,8 +116,5 @@ export default {
 		} else {
 			return this.getFriendlyOrderCss(order.status);
 		}
-	},
-	canOrderSpotcheck: function (order) {
-		return order.archived == null && ['closed'].indexOf(order.status) == -1;
 	},
 };

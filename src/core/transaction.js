@@ -1,6 +1,5 @@
 import api from './api';
 import Base from './base';
-import Location from './location';
 import DateHelper from './dateHelper';
 import Helper from './helper';
 
@@ -134,47 +133,6 @@ Transaction.prototype.getMaxDateFrom = function () {
 };
 
 /**
- * Gets the lowest possible to date, by default from +1 timeslot
- * @method
- * @name Transaction#getMinDateTo
- * @returns {Moment}
- */
-Transaction.prototype.getMinDateTo = function () {
-	// to can only be one timeslot after the min from date
-	return this.getNextTimeSlot(this.getMinDateFrom());
-};
-
-/**
- * Gets the highest possible to date, by default years from now
- * @method
- * @name Transaction#getMaxDateTo
- * @returns {Moment}
- */
-Transaction.prototype.getMaxDateTo = function () {
-	return this.getMaxDate();
-};
-
-/**
- * Gets the lowest possible due date, by default same as getMinDateTo
- * @method
- * @name Transaction#getMinDateDue
- * @returns {Moment}
- */
-Transaction.prototype.getMinDateDue = function () {
-	return this.getMinDateTo();
-};
-
-/**
- * Gets the highest possible due date, by default same as getMaxDateDue
- * @method
- * @name Transaction#getMaxDateDue
- * @returns {Moment}
- */
-Transaction.prototype.getMaxDateDue = function () {
-	return this.getMaxDateTo();
-};
-
-/**
  * DEPRECATED
  * Gets the lowest possible date to start this transaction
  * @method
@@ -197,20 +155,6 @@ Transaction.prototype.getMaxDate = function () {
 	var now = dateHelper.getNow();
 	var next = dateHelper.roundTimeTo(now);
 	return next.add(2, 'years');
-};
-
-/**
- * suggestEndDate, makes a new moment() object with a suggested end date,
- * already rounded up according to the group.profile settings
- * @method suggestEndDate
- * @name Transaction#suggestEndDate
- * @param {Moment} m a suggested end date for this transaction
- * @returns {*}
- */
-Transaction.prototype.suggestEndDate = function (m) {
-	var dateHelper = this._getDateHelper();
-	var end = dateHelper.addAverageDuration(m || dateHelper.getNow());
-	return dateHelper.roundTimeTo(end);
 };
 
 //
@@ -362,29 +306,6 @@ Transaction.prototype._fromJson = function (data, options) {
 			that.conflicts = conflicts;
 		});
 	});
-};
-
-Transaction.prototype._toLog = function (options) {
-	var obj = this._toJson(options);
-	obj.minDateFrom = this.getMinDateFrom().toJSONDate();
-	obj.maxDateFrom = this.getMaxDateFrom().toJSONDate();
-	obj.minDateDue = this.getMinDateDue().toJSONDate();
-	obj.maxDateDue = this.getMaxDateDue().toJSONDate();
-	obj.minDateTo = this.getMinDateTo().toJSONDate();
-	obj.maxDateTo = this.getMaxDateTo().toJSONDate();
-	console.log(obj);
-};
-
-Transaction.prototype._checkFromDateBetweenMinMax = function (d) {
-	return this._checkDateBetweenMinMax(d, this.getMinDateFrom(), this.getMaxDateFrom());
-};
-
-Transaction.prototype._checkDueDateBetweenMinMax = function (d) {
-	return this._checkDateBetweenMinMax(d, this.getMinDateDue(), this.getMaxDateDue());
-};
-
-Transaction.prototype._checkToDateBetweenMinMax = function (d) {
-	return this._checkDateBetweenMinMax(d, this.getMinDateTo(), this.getMaxDateTo());
 };
 
 Transaction.prototype._getUniqueItemIds = function (ids) {
@@ -861,31 +782,6 @@ Transaction.prototype._searchItems = function (params, listName, useAvailabiliti
 			params.pk__nin = skipList;
 		}
 		return this.dsItems.search(params);
-	}
-};
-
-/**
- * Returns a rejected promise when a date is not between min and max date
- * Otherwise the deferred just resolves to the date
- * It's used to do some quick checks of transaction dates
- * @param date
- * @returns {*}
- * @private
- */
-Transaction.prototype._checkDateBetweenMinMax = function (date, minDate, maxDate) {
-	minDate = minDate || this.getMinDate();
-	maxDate = maxDate || this.getMaxDate();
-	if (date < minDate || date > maxDate) {
-		var msg =
-			'date ' +
-			date.toJSONDate() +
-			' is outside of min max range ' +
-			minDate.toJSONDate() +
-			'->' +
-			maxDate.toJSONDate();
-		throw new api.ApiUnprocessableEntity(msg);
-	} else {
-		return Promise.resolve(date);
 	}
 };
 

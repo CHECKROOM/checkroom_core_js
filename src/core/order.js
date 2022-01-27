@@ -31,14 +31,6 @@ var Order = function (opt) {
 Order.prototype = new tmp();
 Order.prototype.constructor = Order;
 
-//
-// Date helpers; we'll need these for sliding from / to dates during a long user session
-//
-// getMinDateFrom (overwritten)
-// getMaxDateFrom (default)
-// getMinDateDue (default, same as getMinDateTo)
-// getMaxDateDue (default, same as getMinDateTo)
-
 /**
  * Overwrite min date for order so it is rounded by default
  * Although it's really the server who sets the actual date
@@ -46,21 +38,6 @@ Order.prototype.constructor = Order;
  */
 Order.prototype.getMinDateFrom = function () {
 	return this.getNowRounded();
-};
-
-/**
- * Overwrite how the Order.due min date works
- * We want "open" orders to be set due at least 1 timeslot from now
- */
-Order.prototype.getMinDateDue = function () {
-	if (this.status == 'open') {
-		// Open orders can set their date to be due
-		// at least 1 timeslot from now,
-		// we can just call the default getMinDateTo function
-		return this.getNextTimeSlot();
-	} else {
-		return Transaction.prototype.getMinDateDue.call(this);
-	}
 };
 
 //
@@ -92,39 +69,6 @@ Order.prototype._fromJson = function (data, options) {
 	});
 };
 
-//
-// Helpers
-//
-/**
- * Gets a moment duration object
- * @method
- * @name Order#getDuration
- * @returns {duration}
- */
-Order.prototype.getDuration = function () {
-	return common.getOrderDuration(this.raw);
-};
-
-/**
- * Gets a friendly order duration or empty string
- * @method
- * @name Order#getFriendlyDuration
- * @returns {string}
- */
-Order.prototype.getFriendlyDuration = function () {
-	return common.getFriendlyOrderDuration(this.raw, this._getDateHelper());
-};
-
-/**
- * Checks if a PDF document can be generated
- * @method
- * @name Order#canGenerateAgreement
- * @returns {boolean}
- */
-Order.prototype.canGenerateAgreement = function () {
-	return this.status == 'open' || this.status == 'closed';
-};
-
 /**
  * Checks if order can be checked in
  * @method
@@ -133,16 +77,6 @@ Order.prototype.canGenerateAgreement = function () {
  */
 Order.prototype.canCheckin = function () {
 	return this.status == 'open';
-};
-
-/**
- * Checks if the order can be spotchecked
- * @method
- * @name Order#canSpotcheck
- * @returns {boolean}
- */
-Order.prototype.canSpotcheck = function () {
-	return common.canOrderSpotcheck(this.raw);
 };
 
 /**
@@ -165,8 +99,7 @@ Order.prototype.canGoToReservation = function () {
 Order.prototype.isValidDueDate = function () {
 	var due = this.due,
 		status = this.status,
-		nextTimeSlot = this.getNextTimeSlot(),
-		maxDueDate = this.getMaxDateDue();
+		nextTimeSlot = this.getNextTimeSlot();
 
 	if (status == 'creating' || status == 'open') {
 		return due != null && (due.isSame(nextTimeSlot) || due.isAfter(nextTimeSlot));
@@ -596,34 +529,6 @@ Order.prototype._getClientConflicts = function () {
 };
 
 /**
- * Sets the Order from and due date in a single call
- * _checkFromDueDate will handle the special check for when the order is open
- * @method
- * @name Order#setFromDueDate
- * @param from
- * @param due (optional) if null, we'll take the default average checkout duration as due date
- * @param skipRead
- * @returns {promise}
- */
-Order.prototype.setFromDueDate = function (from, due, skipRead) {
-	if (this.status != 'creating') {
-		throw new api.ApiUnprocessableEntity('Cannot set order from / due date, status is ' + this.status);
-	}
-
-	var that = this;
-	var roundedFromDate = this.getMinDateFrom();
-	var roundedDueDate = due
-		? this._getDateHelper().roundTimeTo(due)
-		: this._getDateHelper().addAverageDuration(roundedFromDate);
-
-	return this._checkFromDueDate(roundedFromDate, roundedDueDate).then(function () {
-		that.from = roundedFromDate;
-		that.due = roundedDueDate;
-		return that._handleTransaction(skipRead);
-	});
-};
-
-/**
  * Sets the Order from date
  * @method
  * @name Order#setFromDate
@@ -640,10 +545,8 @@ Order.prototype.setFromDate = function (date, skipRead) {
 
 	var roundedFromDate = this._getDateHelper().roundTimeFrom(date);
 
-	return this._checkFromDueDate(roundedFromDate, this.due).then(function () {
-		that.from = roundedFromDate;
-		return that._handleTransaction(skipRead);
-	});
+	that.from = roundedFromDate;
+	return that._handleTransaction(skipRead);
 };
 
 /**
@@ -665,7 +568,6 @@ Order.prototype.clearFromDate = function (skipRead) {
 
 /**
  * Sets the order due date
- * _checkFromDueDate will handle the special check for when the order is open
  * @method
  * @name Order#setDueDate
  * @param due
@@ -686,29 +588,27 @@ Order.prototype.setDueDate = function (due, skipRead) {
 
 	this.from = this.getMinDateFrom();
 
-	return this._checkDueDateBetweenMinMax(roundedDueDate).then(function () {
-		that.due = roundedDueDate;
+	that.due = roundedDueDate;
 
-		//If order doesn't exist yet, we set due date in create call
-		//otherwise use setDueDate to update transaction
-		if (!that.existsInDb()) {
-			return that._createTransaction(skipRead);
+	//If order doesn't exist yet, we set due date in create call
+	//otherwise use setDueDate to update transaction
+	if (!that.existsInDb()) {
+		return that._createTransaction(skipRead);
+	} else {
+		// If status is open when due date is changed,
+		// we need to check for conflicts
+		if (that.status == 'open') {
+			return that.canExtend(roundedDueDate).then(function (resp) {
+				if (resp && resp.result == true) {
+					return that.extend(roundedDueDate, skipRead);
+				} else {
+					return Promise.reject('Cannot extend order to given date because it has conflicts.', resp);
+				}
+			});
 		} else {
-			// If status is open when due date is changed,
-			// we need to check for conflicts
-			if (that.status == 'open') {
-				return that.canExtend(roundedDueDate).then(function (resp) {
-					if (resp && resp.result == true) {
-						return that.extend(roundedDueDate, skipRead);
-					} else {
-						return Promise.reject('Cannot extend order to given date because it has conflicts.', resp);
-					}
-				});
-			} else {
-				return that._doApiCall({ method: 'setDueDate', params: { due: roundedDueDate }, skipRead: skipRead });
-			}
+			return that._doApiCall({ method: 'setDueDate', params: { due: roundedDueDate }, skipRead: skipRead });
 		}
-	});
+	}
 };
 
 /**
@@ -725,14 +625,6 @@ Order.prototype.clearDueDate = function (skipRead) {
 
 	this.due = null;
 	return this._doApiCall({ method: 'clearDueDate', skipRead: skipRead });
-};
-
-Order.prototype.setToDate = function (date, skipRead) {
-	throw 'Order.setToDate not implemented, it is set during order close';
-};
-
-Order.prototype.clearToDate = function (date, skipRead) {
-	throw 'Order.clearToDate not implemented, it is set during order close';
 };
 
 //
@@ -966,40 +858,6 @@ Order.prototype._fromAttachmentsJson = function (data, options = {}) {
 
 	// Use Default attachments parser
 	return Base.prototype._fromAttachmentsJson.call(that, data, options);
-};
-
-//
-// Implementation
-//
-Order.prototype._checkFromDueDate = function (from, due) {
-	var dateHelper = this._getDateHelper();
-	var roundedFromDate = from; //(from) ? this._getHelper().roundTimeFrom(from) : null;
-	var roundedDueDate = due; //(due) ? this._getHelper().roundTimeTo(due) : null;
-
-	if (roundedFromDate && roundedDueDate) {
-		return Promise.all([
-			this._checkDateBetweenMinMax(roundedFromDate),
-			this._checkDateBetweenMinMax(roundedDueDate),
-		]).then(function (fromRes, dueRes) {
-			var interval = dateHelper.roundMinutes;
-			if (roundedDueDate.diff(roundedFromDate, 'minutes') < interval) {
-				throw new new api.ApiUnprocessableEntity(
-					'Cannot set order from date, after (or too close to) to date ' + roundedDueDate.toJSONDate()
-				)();
-			}
-			if (roundedFromDate.diff(roundedDueDate, 'minutes') > interval) {
-				throw new api.ApiUnprocessableEntity(
-					'Cannot set order due date, before (or too close to) from date ' + roundedFromDate.toJSONDate()
-				);
-			}
-		});
-	} else if (roundedFromDate) {
-		return this._checkDateBetweenMinMax(roundedFromDate);
-	} else if (roundedDueDate) {
-		return this._checkDateBetweenMinMax(roundedDueDate);
-	} else {
-		throw new api.ApiUnprocessableEntity('Cannot from/due date, both are null');
-	}
 };
 
 export default Order;

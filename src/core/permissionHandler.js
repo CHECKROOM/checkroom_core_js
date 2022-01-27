@@ -678,7 +678,6 @@ PermissionHandler.prototype.hasPermission = function (action, collection, data, 
 				// Reservation specific actions
 				case 'setCustomer':
 				case 'clearCustomer':
-				case 'setFromToDate':
 				case 'setLocation':
 				case 'clearLocation':
 				case 'addItems':
@@ -726,7 +725,6 @@ PermissionHandler.prototype.hasPermission = function (action, collection, data, 
 					);
 				case 'export':
 					return this._useExport && can(['RESERVATIONS_EXPORTER', 'RESERVATIONS_EXPORTER_RESTRICTED']);
-				case 'switchToOrder':
 				case 'makeOrder':
 					return this.hasCheckoutPermission('create', data);
 				case 'cancel':

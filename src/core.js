@@ -1,5 +1,4 @@
 import api from './core/api';
-import Availability from './core/availability';
 import Attachment from './core/attachment';
 import Base from './core/base';
 import Category from './core/category';
@@ -29,7 +28,6 @@ import Spotcheck from './core/spotcheck';
 export default {
 	api,
 	common,
-	Availability,
 	Attachment,
 	Base,
 	Category,

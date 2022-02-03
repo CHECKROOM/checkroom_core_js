@@ -173,6 +173,18 @@ utils.getParsedLines = function (text) {
 };
 
 /**
+ * getFriendlyFileName
+ * @memberOf utils
+ * @name  utils#getFriendlyFileName
+ * @method
+ * @param  {string} name
+ * @return {string}
+ */
+utils.getFriendlyFileName = function (name) {
+	return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+};
+
+/**
  * getFriendlyKind
  * @memberOf utils
  * @name  utils#getFriendlyKind

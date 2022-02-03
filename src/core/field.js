@@ -41,7 +41,7 @@ var Field = function (spec) {
  * @returns {boolean}
  */
 Field.prototype.isValid = function (allowEmpty) {
-	var value = this.value.trim();
+	var value = typeof this.value === 'string' ? this.value.trim() : value;
 
 	// skip if not required and empty
 	if (!this.required && value == '') return true;

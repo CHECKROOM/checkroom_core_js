@@ -910,7 +910,7 @@ Order.prototype.generateDocument = function (template, signature, skipRead) {
  * @returns {*}
  * @private
  */
-Order.prototype._fromCommentsJson = function (data, options) {
+Order.prototype._fromCommentsJson = function (data, options = {}) {
 	var that = this;
 
 	// Also parse reservation comments?
@@ -940,7 +940,7 @@ Order.prototype._fromCommentsJson = function (data, options) {
  * @returns {*}
  * @private
  */
-Order.prototype._fromAttachmentsJson = function (data, options) {
+Order.prototype._fromAttachmentsJson = function (data, options = {}) {
 	var that = this;
 
 	// Also parse reservation attachments?

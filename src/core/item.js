@@ -404,24 +404,25 @@ Item.prototype.update = function (skipRead) {
 	}
 
 	var that = this,
-		dfdCheck,
 		dfdCategory,
 		dfdLocation,
 		dfdFields,
 		dfdPermissions,
 		dfdBasic;
 
-	if (this._isDirtyCategory()) {
-		this.canChangeCategory(this.category).then(function (data) {
-			if (data.result) {
-				dfdCheck = Promise.resolve();
-			} else {
-				dfdCheck = Promise.reject(new Error('Unable to change item category'));
-			}
-		});
-	} else {
-		dfdCheck = Promise.resolve();
-	}
+	var dfdCheck = new Promise((resolve) => {
+		if (this._isDirtyCategory()) {
+			this.canChangeCategory(this.category).then(function (data) {
+				if (data.result) {
+					resolve();
+				} else {
+					throw new Error('Unable to change item category');
+				}
+			});
+		} else {
+			resolve();
+		}
+	});
 
 	return dfdCheck.then(function () {
 		if (that._isDirtyCategory()) {

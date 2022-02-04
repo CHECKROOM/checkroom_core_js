@@ -644,18 +644,18 @@ Base.prototype._fromAttachmentsJson = function (data, options = {}) {
 	return Promise.resolve(data);
 };
 
-Base.prototype._getComment = function (data, options) {
-	var spec = Object.assign({ ds: this.ds }, options || {}, data);
+Base.prototype._getComment = function (data, options = {}) {
+	var spec = Object.assign({ ds: this.ds }, options, data);
 	return new Comment(spec);
 };
 
-Base.prototype._getAttachment = function (data, options) {
-	var spec = Object.assign({ ds: this.ds }, options || {}, data);
+Base.prototype._getAttachment = function (data, options = {}) {
+	var spec = Object.assign({ ds: this.ds }, options, data);
 	return new Attachment(spec);
 };
 
-Base.prototype._getField = function (data, options) {
-	var spec = Object.assign({}, options || {}, data);
+Base.prototype._getField = function (data, options = {}) {
+	var spec = Object.assign({}, options, data);
 	return new Field(spec);
 };
 

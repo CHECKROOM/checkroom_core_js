@@ -377,7 +377,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 		if (item.status == 'in_custody') {
 			var dfd = new Promise((resolve) => {
 				if (isSelfservice) {
-					resolve(null);
+					resolve([]);
 				} else {
 					getDataSource('items')
 						.call(item.id, 'getChangeLog', {

@@ -366,7 +366,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 		if (kit.status == 'in_custody') {
 			var dfd = new Promise((resolve) => {
 				if (isSelfservice) {
-					resolve(null);
+					resolve([]);
 				} else {
 					getDataSource('kits')
 						.call(kit.id, 'getChangeLog', {

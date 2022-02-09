@@ -1,0 +1,47 @@
+{
+	"extends": [
+		"plugin:jest/recommended",
+		"plugin:prettier/recommended"
+	],
+	"plugins": [
+		"simple-import-sort",
+		"import",
+		"prettier",
+		"jest"
+	],
+	"rules": {
+		// IMPORTS
+		"simple-import-sort/imports": "error",
+		"sort-imports": "off",
+		"import/first": "error",
+		"import/newline-after-import": "error",
+		"import/no-duplicates": "error",
+		"import/no-unresolved": "warn",
+		"import/no-anonymous-default-export": "error",
+
+		// GENERAL
+		"no-console": "error",
+		"no-unused-vars": "off",
+		"@typescript-eslint/no-unused-vars": "warn",
+		"no-undef": "error",
+		"@typescript-eslint/unbound-method": "off",
+		"@typescript-eslint/no-misused-promises": "warn",
+
+		// IGNORE
+		"jest/valid-title": "off"
+	},
+	"root": true,
+	"env": {
+		"es6": true,
+		"browser": true,
+		"node": true
+	},
+	"settings": {
+		"import/extensions": [
+			".js"
+		]
+	},
+	"ignorePatterns": [
+		"node_modules"
+	]
+}

@@ -63,4 +63,41 @@ that.getFriendlyReservationDuration = function (transaction, dateHelper) {
 	return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
 };
 
+/**
+ * getOrderDuration
+ * Gets a moment duration object
+ *
+ * @memberOf common
+ * @name common#getOrderDuration
+ * @method
+ *
+ * @returns {duration}
+ */
+that.getOrderDuration = function (transaction) {
+	var from = transaction.started || moment();
+	var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+	if (to) {
+		return moment.duration(to - from);
+	}
+
+	return null;
+};
+
+/**
+ * getFriendlyOrderDuration
+ * Gets a friendly duration for a given order
+ *
+ * @memberOf common
+ * @name common#getFriendlyOrderDuration
+ * @method
+ *
+ * @param transaction
+ * @param dateHelper
+ * @returns {string}
+ */
+that.getFriendlyOrderDuration = function (transaction, dateHelper) {
+	var duration = that.getOrderDuration(transaction);
+	return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
+};
+
 export default that;

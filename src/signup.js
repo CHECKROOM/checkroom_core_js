@@ -385,6 +385,8 @@ Signup.splitFirstLastName = function (name) {
 	};
 };
 
+Signup.getUrlParam = utils.getUrlParam;
+
 /**
  * Constructor function that creates a Signup object from the params on the querystring
  * @returns {Signup}

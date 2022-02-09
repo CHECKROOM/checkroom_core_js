@@ -20,6 +20,7 @@ import queue from './queue';
 import changeLog from './changeLog';
 import spotcheck from './spotcheck';
 import DeferredPromise from './deferredPromise';
+import Slimdown from './slimdown';
 
 export {
 	code,
@@ -46,23 +47,24 @@ export {
 
 export default {
 	ajaxQueue: queue,
-	DeferredPromise: DeferredPromise,
-	code,
-	order,
-	reservation,
-	item,
-	conflicts,
-	keyvalues,
-	image,
-	attachment,
-	validation,
-	utils,
-	kit,
-	contact,
-	user,
-	template,
-	_document,
-	transaction,
-	changeLog,
-	spotcheck,
+	DeferredPromise,
+	Slimdown,
+	...code,
+	...order,
+	...reservation,
+	...item,
+	...conflicts,
+	...keyvalues,
+	...image,
+	...attachment,
+	...validation,
+	...utils,
+	...kit,
+	...contact,
+	...user,
+	...template,
+	..._document,
+	...transaction,
+	...changeLog,
+	...spotcheck,
 };

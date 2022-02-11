@@ -92,7 +92,7 @@ export default {
 	 */
 	isValidDate: function (value) {
 		// make sure numbers are parsed as a number
-		if (!isNaN(value)) {
+		if (/^[0-9]+$/.test(value)) {
 			value = parseInt(value);
 		}
 

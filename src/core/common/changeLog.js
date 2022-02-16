@@ -118,7 +118,7 @@ that.getChangeLogEvent = function (
 		if (!perm.hasCheckoutPermission('read')) return sanitizedText;
 
 		return (
-			"<a href='#check-outs/" +
+			"<a href='/check-outs/" +
 			id +
 			"' class='transaction-link' data-kind='order' data-id='" +
 			id +
@@ -133,7 +133,7 @@ that.getChangeLogEvent = function (
 		if (!perm.hasReservationPermission('read')) return sanitizedText;
 
 		return (
-			"<a href='#reservations/" +
+			"<a href='/reservations/" +
 			id +
 			"' class='transaction-link' data-kind='reservation' data-id='" +
 			id +
@@ -148,12 +148,12 @@ that.getChangeLogEvent = function (
 	var getContactLink = function (id, text) {
 		if (!perm.hasContactReadOtherPermission()) return sanitizer(text);
 
-		return getLink('#contacts/' + id, text);
+		return getLink('/contacts/' + id, text);
 	};
 	var getKitLink = function (id, text) {
 		if (!perm.hasKitPermission()) return sanitizer(text);
 
-		return getLink('#kits/' + id, text);
+		return getLink('/kits/' + id, text);
 	};
 	var getMessagesBlock = function (messages) {
 		if (messages.length == 0) return '';
@@ -235,9 +235,9 @@ that.getChangeLogEvent = function (
 			if (evt.action == 'takeCustody') {
 				evt.friendlyText = byName + ' placed ' + evt.kind + ' in custody of ' + getContactLink(evt.obj, name);
 			} else if (evt.action == 'item.takeCustody') {
-				evt.friendlyText = byName + ' took ' + getLink('#items/' + id, 'item') + ' custody';
+				evt.friendlyText = byName + ' took ' + getLink('/items/' + id, 'item') + ' custody';
 			} else {
-				evt.friendlyText = byName + ' took ' + getLink('#kits/' + id, 'kit') + ' custody';
+				evt.friendlyText = byName + ' took ' + getLink('/kits/' + id, 'kit') + ' custody';
 			}
 			break;
 		case 'transferCustody':
@@ -255,14 +255,14 @@ that.getChangeLogEvent = function (
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#items/' + id, 'item') +
+						getLink('/items/' + id, 'item') +
 						' custody from ' +
 						getContactLink(arg.hadCustody, name);
 				} else {
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#kits/' + id, 'kit') +
+						getLink('/kits/' + id, 'kit') +
 						' custody from ' +
 						getContactLink(arg.hadCustody, name);
 				}
@@ -276,14 +276,14 @@ that.getChangeLogEvent = function (
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#items/' + id, 'item') +
+						getLink('/items/' + id, 'item') +
 						' custody to ' +
 						getContactLink(arg.custody, name);
 				} else {
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#kits/' + id, 'kit') +
+						getLink('/kits/' + id, 'kit') +
 						' custody to ' +
 						getContactLink(arg.custody, name);
 				}
@@ -304,9 +304,9 @@ that.getChangeLogEvent = function (
 					getContactLink(arg.hadCustody, name) +
 					locationName;
 			} else if (evt.action == 'item.releaseCustody') {
-				evt.friendlyText = byName + ' released ' + getLink('#items/' + id, 'item') + ' custody';
+				evt.friendlyText = byName + ' released ' + getLink('/items/' + id, 'item') + ' custody';
 			} else {
-				evt.friendlyText = byName + ' released ' + getLink('#kits/' + id, 'kit') + ' custody';
+				evt.friendlyText = byName + ' released ' + getLink('/kits/' + id, 'kit') + ' custody';
 			}
 			break;
 		case 'setFlag':
@@ -553,7 +553,7 @@ that.getChangeLogEvent = function (
 							return (
 								"<div class='media'><div class='media-left'><img class='item-image' src='" +
 								it.imageUrl +
-								"' /></div><div class='media-body'><a href='#items/" +
+								"' /></div><div class='media-body'><a href='/items/" +
 								it._id +
 								"'>" +
 								sanitizer(it.name) +
@@ -1038,7 +1038,7 @@ that.getChangeLogEvent = function (
 			break;
 		case 'item.duplicate':
 			var id = evt.obj;
-			evt.friendlyText = byName + ' created ' + getLink('#items/' + id, 'item') + ' from duplicate';
+			evt.friendlyText = byName + ' created ' + getLink('/items/' + id, 'item') + ' from duplicate';
 			break;
 		case 'setCatalog':
 			var fields = Object.keys(arg).map(function (fieldKey) {

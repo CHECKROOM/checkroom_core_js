@@ -1105,7 +1105,7 @@ that.getChangeLogEvent = function (
 
 			if (evt.kind == 'item') {
 				evt.friendlyText =
-					byName + " scanned item in a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a>";
+					byName + " scanned item in a <a href='/spotchecks/" + id + "' class='spotcheck'>spotcheck</a>";
 			} else {
 				// Replace placeholder image with actual thumbs
 				var thumbHelper = function (thumbs) {
@@ -1150,7 +1150,7 @@ that.getChangeLogEvent = function (
 
 				evt.friendlyText =
 					byName +
-					" finished a <a href='#spotchecks/" +
+					" finished a <a href='/spotchecks/" +
 					id +
 					"' class='spotcheck'>spotcheck</a> <ul class='list-group field-group spotcheck' data-id='" +
 					id +

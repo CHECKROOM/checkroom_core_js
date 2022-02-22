@@ -435,15 +435,15 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 			allowedActions = [];
 
 		if (
-			perm.hasReservationPermission('read') &&
-			perm.hasCheckoutPermission('read') &&
+			perm._useReservations &&
+			perm._useOrders &&
 			((!canReserve && !canCheckout) || (canReserve && canCheckout))
 		) {
 			if (canReserve && canCheckout) {
 				allowedActions.push('Bookings');
 			} else {
 				// modules enabled?d
-				if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+				if (perm._useOrders && perm._useReservations) {
 					notAllowedActions.push('Bookings');
 				}
 			}
@@ -451,7 +451,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 			if (canReserve) {
 				allowedActions.push('Reservation');
 			} else {
-				if (perm.hasReservationPermission('read')) {
+				if (perm._useReservations) {
 					notAllowedActions.push('Reservation');
 				}
 			}
@@ -459,7 +459,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 				allowedActions.push('Check-out');
 			} else {
 				// module enabled
-				if (perm.hasCheckoutPermission('read')) {
+				if (perm._useOrders) {
 					notAllowedActions.push('Check-out');
 				}
 			}
@@ -474,16 +474,28 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 		}
 
 		var message = '',
-			unavailable = !canReserve && !canCheckout && !canCustody;
-		if (unavailable) {
-			message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+			unavailable = !canReserve && !canCheckout,
+			areAnyBookingModulesEnabled = perm._useReservations || perm._useOrders;
+
+		if (unavailable && areAnyBookingModulesEnabled) {
+			message = notAllowedActions.length
+				? 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ')
+				: 'Item is <strong>unavailable</strong>';
 		} else {
-			message =
-				'Item is <strong>available</strong> for ' +
-				allowedActions.joinAdvanced(', ', ' and ') +
-				"<span class='text-muted'>, not for " +
-				notAllowedActions.joinAdvanced(', ', ' and ') +
-				'</span>';
+			if (!notAllowedActions.length && !allowedActions.length) {
+				message = 'Item is available';
+			} else {
+				if (!notAllowedActions.length) {
+					message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ');
+				} else {
+					message =
+						'Item is <strong>available</strong> for ' +
+						allowedActions.joinAdvanced(', ', ' and ') +
+						"<span class='text-muted'>, not for " +
+						notAllowedActions.joinAdvanced(', ', ' and ') +
+						'</span>';
+				}
+			}
 		}
 
 		messages.push({

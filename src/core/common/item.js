@@ -77,7 +77,7 @@ that.getFriendlyItemStatus = function (status) {
 		case 'inspection':
 			return 'Inspection';
 		case 'expired':
-			return 'Expired';
+			return 'Retired';
 		default:
 			return 'Unknown';
 	}

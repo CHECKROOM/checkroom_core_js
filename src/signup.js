@@ -1,3 +1,5 @@
+import './core/dateHelper';
+
 import api from './core/api';
 import Field from './core/field';
 import { validation, utils } from './core/common';

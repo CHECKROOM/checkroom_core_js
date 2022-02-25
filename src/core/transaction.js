@@ -2,6 +2,7 @@ import api from './api';
 import Base from './base';
 import DateHelper from './dateHelper';
 import Helper from './helper';
+import moment from 'moment';
 
 var DEFAULTS = {
 	status: 'creating',

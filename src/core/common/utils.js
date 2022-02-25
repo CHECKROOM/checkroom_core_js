@@ -233,4 +233,6 @@ export const isEmptyObject = (obj) => {
 	return true;
 };
 
+utils.isEmptyObject = isEmptyObject;
+
 export default utils;

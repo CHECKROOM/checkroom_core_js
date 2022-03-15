@@ -94,7 +94,7 @@ export default function (settings) {
 					return lbl.id || '';
 				});
 			if (selectedOrderLabels.length == 0) {
-				url.searchParams.append('skipOpenOrder', true);
+				url.searchParams.append('skipOpenOrders', true);
 			} else {
 				// Only pass orderLabels if user has made a custom selection
 				if (selectedOrderLabels.length != orderLabels.length) {

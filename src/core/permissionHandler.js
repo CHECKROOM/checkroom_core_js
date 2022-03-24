@@ -232,7 +232,10 @@ PermissionHandler.prototype.hasSelfservicePermission = function () {
 };
 
 PermissionHandler.prototype.hasReportingPermission = function () {
-	return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
+	return (
+		this._useReporting &&
+		(this.permissions.indexOf('ACCOUNT_REPORTER') != -1 || this.permissions.includes('REPORTS_READER'))
+	);
 };
 
 PermissionHandler.prototype.hasExportPermission = function () {

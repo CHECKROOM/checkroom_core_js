@@ -147,7 +147,7 @@ export default function (settings) {
 		 */
 		getNumItemsLeft: function (limits, stats) {
 			var itemsPerStatus = this.getStat(stats, 'items', 'status');
-			return limits.maxItems - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
+			return limits.maxItemsSoft - this.getStat(stats, 'items', 'total') + itemsPerStatus.expired;
 		},
 		/**
 		 * getStat for location

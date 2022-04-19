@@ -560,7 +560,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 	// Expired message?
 	if (item.status == 'expired') {
 		var message =
-			'Item was <strong>expired</strong> ' +
+			'Item was <strong>retired</strong> ' +
 			(item.expired ? "<span class='text-muted'>" + item.expired.fromNow() + '</span>' : '');
 
 		messages.push({

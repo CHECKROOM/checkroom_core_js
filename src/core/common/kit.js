@@ -574,7 +574,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 				msg.push(awaitCheckoutTotal + ' awaiting checkout');
 			}
 			if (expiredTotal > 0) {
-				msg.push(expiredTotal + ' expired');
+				msg.push(expiredTotal + ' retired');
 			}
 			if (inCustodyTotal > 0) {
 				msg.push(inCustodyTotal + ' in custody');
@@ -592,7 +592,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 
 	// Expired message?
 	if (kit.status == 'expired') {
-		var message = 'Kit is <strong>expired</strong>';
+		var message = 'Kit is <strong>retired</strong>';
 
 		messages.push({
 			kind: 'expired',

@@ -1017,10 +1017,10 @@ that.getChangeLogEvent = function (
 			break;
 		case 'expire':
 			var message = sanitizer(arg ? arg.message : null);
-			evt.friendlyText = byName + ' expired item' + getMessageBlock(message);
+			evt.friendlyText = byName + ' retired item' + getMessageBlock(message);
 			break;
 		case 'undoExpire':
-			evt.friendlyText = byName + ' unexpired item';
+			evt.friendlyText = byName + ' unretired item';
 			break;
 		case 'setCover':
 			evt.friendlyText = byName + ' updated cover image';

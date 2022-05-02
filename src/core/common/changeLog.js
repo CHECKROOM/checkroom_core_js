@@ -16,6 +16,7 @@ that.getChangeLogEvent = function (
 	doc,
 	user,
 	locations,
+	categories,
 	group,
 	profile,
 	settings,
@@ -54,6 +55,12 @@ that.getChangeLogEvent = function (
 	var getLocationById = function (locId) {
 		return locations.find(function (l) {
 			return l._id == locId;
+		});
+	};
+
+	var getCategoryById = function (catId) {
+		return categories.find(function (c) {
+			return c._id == catId;
 		});
 	};
 
@@ -172,10 +179,8 @@ that.getChangeLogEvent = function (
 
 	switch (evt.action) {
 		case 'changeCategory':
-			var category = sanitizer(
-				arg.category ? arg.category.split('.').pop().replace(/_/gim, ' ').capitalize() : unknownText
-			);
-			evt.friendlyText = byName + ' updated category to ' + category;
+			var category = getCategoryById(arg.categoryId) || {};
+			evt.friendlyText = byName + ' updated category to ' + sanitizer(category.name || unknownText);
 			break;
 		case 'addCodes':
 		case 'removeCodes':
@@ -923,7 +928,8 @@ that.getChangeLogEvent = function (
 							'MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')
 						);
 					} else if (fieldKey == 'category') {
-						value = sanitizer(keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize());
+						var category = getCategoryById(arg[fieldKey]) || {};
+						value = sanitizer(category.name || unknownText);
 					} else if (fieldKey == 'location') {
 						var loc = getLocationById(fieldValue) || {};
 						value = sanitizer(loc.name || unknownText);

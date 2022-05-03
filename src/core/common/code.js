@@ -25,7 +25,7 @@ export default {
 	 * @return {Boolean}
 	 */
 	isValidBarcode: function (barCode) {
-		return barCode && barCode.match(/^([A-Z0-9\s\-]{3,43})$/i) != null;
+		return barCode && barCode.match(/^([A-Z0-9\s\-_]{3,43})$/i) != null;
 	},
 	/**
 	 * isValidQRCode

@@ -1079,7 +1079,7 @@ that.getChangeLogEvent = function (
 
 			evt.friendlyText =
 				byName +
-				" set <span class='label-tag label-" +
+				" set <span class='label-tag bg-" +
 				label.color.toLowerCase() +
 				"'></span> " +
 				sanitizer(label.name);

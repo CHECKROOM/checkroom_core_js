@@ -16,7 +16,6 @@ var DEFAULTS = {
 	role: '',
 	query: '(cn=*)',
 	base: 'ou=team,dc=yourdomain,dc=com',
-	loginField: 'uid',
 	nameField: 'cn',
 	emailField: 'mail',
 	restrictLocations: [],
@@ -51,7 +50,6 @@ tmp.prototype = Base.prototype;
  * @property {string} role                  - Sync users under which role? (selfservice, user, admin)
  * @property {string} query                 - The query
  * @property {string} base                  - The base
- * @property {string} loginField            - The loginField
  * @property {string} nameField             - The nameField
  * @property {string} emailField            - The emailField
  */
@@ -82,7 +80,6 @@ var UserSync = function (opt) {
 	this.role = spec.role || DEFAULTS.role;
 	this.query = spec.query || DEFAULTS.query;
 	this.base = spec.base || DEFAULTS.base;
-	this.loginField = spec.loginField || DEFAULTS.loginField;
 	this.nameField = spec.nameField || DEFAULTS.nameField;
 	this.emailField = spec.emailField || DEFAULTS.emailField;
 	this.restrictLocations = spec.restrictLocations
@@ -140,7 +137,6 @@ UserSync.prototype.isEmpty = function () {
 		this.role == DEFAULTS.role &&
 		this.query == DEFAULTS.query &&
 		this.base == DEFAULTS.base &&
-		this.loginField == DEFAULTS.loginField &&
 		this.nameField == DEFAULTS.nameField &&
 		this.emailField == DEFAULTS.emailField &&
 		this.timezone == DEFAULTS.timezone &&
@@ -182,7 +178,6 @@ UserSync.prototype._isDirtyInfo = function () {
 		var role = this.raw.role || DEFAULTS.role;
 		var query = this.raw.query || DEFAULTS.query;
 		var base = this.raw.base || DEFAULTS.base;
-		var loginField = this.raw.loginField || DEFAULTS.loginField;
 		var nameField = this.raw.nameField || DEFAULTS.nameField;
 		var emailField = this.raw.emailField || DEFAULTS.emailField;
 		var timezone = this.raw.timezone || DEFAULTS.timezone;
@@ -207,7 +202,6 @@ UserSync.prototype._isDirtyInfo = function () {
 			this.role != role ||
 			this.query != query ||
 			this.base != base ||
-			this.loginField != loginField ||
 			this.nameField != nameField ||
 			this.emailField != emailField ||
 			this.timezone != timezone ||
@@ -300,7 +294,6 @@ UserSync.prototype._toJson = function (options) {
 	data.role = this.role || DEFAULTS.role;
 	data.query = this.query || DEFAULTS.query;
 	data.base = this.base || DEFAULTS.base;
-	data.loginField = this.loginField || DEFAULTS.loginField;
 	data.nameField = this.nameField || DEFAULTS.nameField;
 	data.emailField = this.emailField || DEFAULTS.emailField;
 	data.timezone = this.timezone || DEFAULTS.timezone;
@@ -340,7 +333,6 @@ UserSync.prototype._fromJson = function (data, options) {
 		that.role = data.role || DEFAULTS.role;
 		that.query = data.query || DEFAULTS.query;
 		that.base = data.base || DEFAULTS.base;
-		that.loginField = data.loginField || DEFAULTS.loginField;
 		that.nameField = data.nameField || DEFAULTS.nameField;
 		that.emailField = data.emailField || DEFAULTS.emailField;
 		that.restrictLocations = data.restrictLocations

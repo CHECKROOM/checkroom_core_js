@@ -130,9 +130,13 @@ Signup.prototype.companyExists = function () {
 	});
 };
 
-Signup.prototype.emailIsValid = function () {
+Signup.prototype.emailIsValid = function (denyFreeEmail) {
 	var email = this.email.trim();
-	return validation.isValidEmail(email);
+	var isValid = validation.isValidEmail(email);
+	if (isValid && denyFreeEmail === true) {
+		return !validation.isFreeEmail(email);
+	}
+	return isValid;
 };
 
 Signup.prototype.emailExists = function () {

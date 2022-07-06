@@ -27,7 +27,7 @@ export default {
 	 */
 	isFreeEmail: function (email) {
 		var m = email.match(
-			/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i
+			/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)(?!aol\.com)(?!outlook\.com)(?!icloud\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i
 		);
 		return m == null;
 	},

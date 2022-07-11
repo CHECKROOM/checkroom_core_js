@@ -721,7 +721,7 @@ that.getChangeLogEvent = function (
 				items = arg && arg.items ? arg.items : [],
 				count = items.length;
 			if (evt.action == 'addItems') {
-				evt.friendlyText = byName + ' added ' + count + ' item'.pluralize(items.length != -1);
+				evt.friendlyText = byName + ' added ' + count + ' item'.pluralize(count);
 			} else {
 				evt.friendlyText = byName + ' added item to ' + getKitLink(id, 'kit');
 			}
@@ -732,7 +732,7 @@ that.getChangeLogEvent = function (
 				items = arg && arg.items ? arg.items : [],
 				count = items.length;
 			if (evt.action == 'removeItems') {
-				evt.friendlyText = byName + ' removed ' + count + ' item'.pluralize(items.length != -1);
+				evt.friendlyText = byName + ' removed ' + count + ' item'.pluralize(count);
 			} else {
 				evt.friendlyText = byName + ' removed item from ' + getKitLink(id, 'kit');
 			}
@@ -859,7 +859,7 @@ that.getChangeLogEvent = function (
 				byName +
 				' set ' +
 				evt.kind +
-				' field'.pluralize(fields.length > 1) +
+				' field'.pluralize(fields.length) +
 				getMessagesBlock(
 					fields.map(function (f) {
 						return "<small class='text-muted'>" + f.name + '</small><br />' + f.value;

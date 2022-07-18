@@ -380,7 +380,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 				} else {
 					getDataSource('items')
 						.call(item.id, 'getChangeLog', {
-							action__in: ['takeCustody', 'transferCustody'],
+							action__in: ['takeCustody', 'giveCustody', 'transferCustody'],
 							limit: 1,
 							skip: 0,
 						})

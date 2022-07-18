@@ -49,7 +49,6 @@ that.getChangeLogEvent = function (
 		return loc.status == 'active';
 	});
 	var locationName = sanitizer(activeLocations.length > 1 ? ' at ' + (location.name || unknownText) : '');
-	var byName = sanitizer(evt.by.name);
 	var perm = getPermissionHandler();
 
 	var getLocationById = function (locId) {
@@ -177,6 +176,8 @@ that.getChangeLogEvent = function (
 		return message ? getMessagesBlock([message]) : '';
 	};
 
+	var byName = `${getContactLink(evt.by.contactId, sanitizer(evt.by.name || unknownText))}`;
+
 	switch (evt.action) {
 		case 'changeCategory':
 			var category = getCategoryById(arg.categoryId) || {};
@@ -232,18 +233,41 @@ that.getChangeLogEvent = function (
 			evt.friendlyText = byName + ' unarchived ' + evt.kind;
 			break;
 		case 'takeCustody':
+			var name = arg.custodyName || unknownText;
+
+			evt.friendlyText = `${getContactLink(evt.obj, name)} took ${getLink(
+				`/${evt.kind}/${evt.doc}`,
+				evt.kind
+			)} in custody`;
+			break;
 		case 'item.takeCustody':
 		case 'kit.takeCustody':
-			var id = evt.obj,
-				name = arg.custodyName || unknownText;
+			var kind = evt.action === 'item.takeCustody' ? 'item' : 'kit';
+			var url = evt.action === 'item.takeCustody' ? 'items' : 'kits';
 
-			if (evt.action == 'takeCustody') {
-				evt.friendlyText = byName + ' placed ' + evt.kind + ' in custody of ' + getContactLink(evt.obj, name);
-			} else if (evt.action == 'item.takeCustody') {
-				evt.friendlyText = byName + ' took ' + getLink('/items/' + id, 'item') + ' custody';
-			} else {
-				evt.friendlyText = byName + ' took ' + getLink('/kits/' + id, 'kit') + ' custody';
-			}
+			evt.friendlyText = `${byName} took ${getLink(`/${url}/${evt.obj}`, kind)} in custody`;
+			break;
+		case 'giveCustody':
+			var custodyTaker = evt.arg.custodyName || unknownText;
+			var custodyTakerId = evt.obj;
+
+			evt.friendlyText = `${byName} placed ${getLink(
+				`/${evt.kind}/${evt.doc}`,
+				evt.kind
+			)} in custody of ${getContactLink(custodyTakerId, custodyTaker)}`;
+			break;
+		case 'item.giveCustody':
+		case 'kit.giveCustody':
+			var custodyTaker = evt.arg.custodyName || unknownText;
+			var custodyTakerId = evt.obj;
+
+			var kind = evt.action === 'item.giveCustody' ? 'item' : 'kit';
+			var url = evt.action === 'item.giveCustody' ? 'items' : 'kits';
+
+			evt.friendlyText = `${byName} placed ${getLink(`/${url}/${evt.doc}`, kind)} in custody of ${getContactLink(
+				custodyTakerId,
+				custodyTaker
+			)}`;
 			break;
 		case 'transferCustody':
 		case 'item.transferCustody':

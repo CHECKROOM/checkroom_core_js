@@ -22,26 +22,7 @@ export default {
 			XL: 512,
 		};
 
-		var colours = [
-			'#1abc9c',
-			'#2ecc71',
-			'#3498db',
-			'#9b59b6',
-			'#34495e',
-			'#16a085',
-			'#27ae60',
-			'#2980b9',
-			'#8e44ad',
-			'#2c3e50',
-			'#f1c40f',
-			'#e67e22',
-			'#e74c3c',
-			'#95a5a6',
-			'#f39c12',
-			'#d35400',
-			'#c0392b',
-			'#bdc3c7',
-		];
+		var colours = ['#64748B', '#7B61FF', '#3B82F6', '#F59E0B', '#EF4444', '#10B981'];
 
 		var nameSplit = name.split(' '),
 			initials =
@@ -104,8 +85,8 @@ export default {
 			canvasCssWidth = canvasWidth,
 			canvasCssHeight = canvasHeight;
 
-		if (!fontColorHex) fontColorHex = '#aaa';
-		if (!backgroundColorHex) backgroundColorHex = '#f5f5f5';
+		if (!fontColorHex) fontColorHex = '#64748B';
+		if (!backgroundColorHex) backgroundColorHex = '#E2E8F0';
 		if (!fontSize) fontSize = canvasWidth / 2;
 
 		var $canvas = $('<canvas />').attr({
@@ -140,8 +121,8 @@ export default {
 			XL: 512,
 		};
 
-		if (!fontColorHex) fontColorHex = '#aaa';
-		if (!backgroundColorHex) backgroundColorHex = '#e5e5e5';
+		if (!fontColorHex) fontColorHex = '#64748B';
+		if (!backgroundColorHex) backgroundColorHex = '#E2E8F0';
 
 		var canvasWidth = sizes[size],
 			canvasHeight = sizes[size],

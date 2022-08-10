@@ -2,16 +2,26 @@ import './core/dateHelper';
 
 import api from './core/api';
 import Field from './core/field';
-import { validation, utils } from './core/common';
+import utils from './core/common/utils';
+import validation from './core/common/validation';
 
-var DEFAULT_PLAN = 'cr_2004_plus_yearly_usd_500';
-var DEFAULT_PERIOD = 'yearly';
-var DEFAULT_SOURCE = 'attempt';
-var DEFAULT_KIND = 'trial';
-var DEFAULT_DEVICE_KIND = null;
+/**
+ * capitalize
+ *
+ * @memberOf String
+ * @name  String#capitalize
+ * @method
+ *
+ * @param  {Boolean} lower
+ * @return {string}
+ */
+String.prototype.capitalize = function (lower) {
+	return (lower ? this.toLowerCase() : this).replace(/(?:^|\s)\S/g, function (a) {
+		return a.toUpperCase();
+	});
+};
 
-var Signup = function (opt, settings) {
-	opt = opt || {};
+var Signup = function (opt = {}, settings) {
 	this.ds =
 		opt.ds ||
 		new api.ApiAnonymous({
@@ -25,39 +35,11 @@ var Signup = function (opt, settings) {
 	this.timezone = opt.timezone || 'America/New_York';
 	this.email = opt.email || '';
 	this.password = opt.password || '';
-	this.plan = opt.plan || DEFAULT_PLAN;
-	this.period = opt.period || DEFAULT_PERIOD;
-	this.deviceKind = opt.deviceKind || DEFAULT_DEVICE_KIND;
-	this.source = opt.source || '';
-	this.phone = opt.phone || '';
-	this.industry = opt.industry || '';
-	this.tags = opt.tags || [];
 
 	this.fields = [];
 
 	this.inviteToken = opt.inviteToken || '';
-	this.selfserviceToken = opt.selfserviceToken || '';
 
-	this.onBeforeCreateAccount =
-		opt.onBeforeCreateAccount ||
-		function () {
-			return Promise.resolve();
-		};
-	this.onCreatedAccount =
-		opt.onCreatedAccount ||
-		function () {
-			return Promise.resolve();
-		};
-	this.onBeforeActivateAccount =
-		opt.onBeforeActivateAccount ||
-		function () {
-			return Promise.resolve();
-		};
-	this.onActivatedAccount =
-		opt.onActivatedAccount ||
-		function () {
-			return Promise.resolve();
-		};
 	this.onBeforeActivateInvite =
 		opt.onBeforeActivateInvite ||
 		function () {
@@ -68,66 +50,12 @@ var Signup = function (opt, settings) {
 		function () {
 			return Promise.resolve();
 		};
-	this.onBeforeActivateSelfService =
-		opt.onBeforeActivateSelfService ||
-		function () {
-			return Promise.resolve();
-		};
-	this.onActivatedSelfService =
-		opt.onActivatedSelfService ||
-		function () {
-			return Promise.resolve();
-		};
 
 	this.onContactFields =
 		opt.onContactFields ||
 		function () {
 			return Promise.resolve();
 		};
-};
-
-// Implementation
-// ---
-Signup.prototype.validContactInfo = function () {
-	return this.firstNameIsValid() && this.lastNameIsValid() && this.companyIsValid() && this.emailIsValid();
-};
-
-Signup.prototype.validCredentials = function () {
-	return this.passwordIsValid();
-};
-
-Signup.prototype.firstNameIsValid = function () {
-	var firstName = this.firstName.trim();
-	return firstName.length >= 2 && firstName.length <= 25;
-};
-
-Signup.prototype.lastNameIsValid = function () {
-	var lastName = this.lastName.trim();
-	return lastName.length >= 2 && lastName.length <= 25;
-};
-
-Signup.prototype.companyIsValid = function () {
-	var company = this.company.trim();
-	return company.length >= 3 && company.length <= 46;
-};
-
-Signup.prototype.companyExists = function () {
-	var account = this.getGroupId();
-
-	if (this.dfdAccountExists) this.dfdAccountExists.abort();
-
-	this.dfdAccountExists = new AbortController();
-
-	return new Promise((resolve, reject) => {
-		this.ds
-			.call('accountExists', { account: account }, null, null, { abortController: this.dfdAccountExists })
-			.then(function (resp) {
-				resolve(resp.result);
-			})
-			.catch((err) => {
-				if (err.name != 'AbortError') reject(err);
-			});
-	});
 };
 
 Signup.prototype.emailIsValid = function (denyFreeEmail) {
@@ -160,18 +88,8 @@ Signup.prototype.emailExists = function () {
 	}
 };
 
-Signup.prototype.checkInvited = function () {
-	return this.ds.call('checkInvited', { email: this.email }).then(function (resp) {
-		return resp;
-	});
-};
-
 Signup.prototype.passwordIsValid = function () {
 	return validation.isValidPassword(this.password.trim());
-};
-
-Signup.prototype.phoneIsValid = function () {
-	return validation.isValidPhone(this.phone.trim());
 };
 
 Signup.prototype.parseFields = function (fieldDefs) {
@@ -207,26 +125,8 @@ Signup.prototype.inviteIsValid = function () {
 	}
 };
 
-Signup.prototype.selfServiceIsValid = function () {
-	var that = this;
-
-	if (this.selfserviceToken.trim() != '') {
-		return this.ds.call('checkSelfServiceKey', { key: this.selfserviceToken }).then(function (resp) {
-			that.parseFields(resp.customerFields);
-
-			return resp.result;
-		});
-	} else {
-		return Promise.resolve(false);
-	}
-};
-
 // Business logic
 // ----
-Signup.prototype.getGroupId = function () {
-	var company = this.company.trim();
-	return company.replace(/[\.-\s]/g, '_').OnlyAlphaNumSpaceAndUnderscore();
-};
 
 Signup.prototype.getFullName = function () {
 	var firstName = this.firstName.trim();
@@ -242,63 +142,6 @@ Signup.prototype.setFullName = function (name) {
 
 Signup.prototype._getField = function (data) {
 	return new Field(data);
-};
-
-Signup.prototype.createAccount = function () {
-	var that = this,
-		beforeCreate = this.onBeforeCreateAccount,
-		afterCreate = this.onCreatedAccount;
-
-	return beforeCreate().then(function () {
-		return that.ds
-			.longCall(
-				'createAccount',
-				{
-					kind: DEFAULT_KIND,
-					period: that.period.trim(),
-					subscription: that.plan.trim(),
-					company: that.company.trim(),
-					groupId: that.getGroupId(),
-					signupDevice: that.deviceKind,
-					tags: that.tags,
-				},
-				true
-			)
-			.then(function (data) {
-				return afterCreate(data);
-			});
-	});
-};
-
-Signup.prototype.activateAccount = function (storeInLocalStorage) {
-	var that = this,
-		beforeActivate = this.onBeforeActivateAccount,
-		afterActivate = this.onActivatedAccount;
-
-	return beforeActivate().then(function () {
-		return that.ds
-			.longCall(
-				'activateAccount',
-				{
-					groupId: that.getGroupId(),
-					name: that.getFullName(),
-					email: that.email.trim(),
-					password: that.password.trim(),
-					timezone: that.timezone.trim(),
-					load_sample: false,
-					owner_customer: true,
-					maintenance_customer: true,
-				},
-				true
-			)
-			.then(function (resp) {
-				if (storeInLocalStorage) {
-					Signup.storeLoginToken(resp.data);
-				}
-
-				return afterActivate(resp);
-			});
-	});
 };
 
 Signup.storeLoginToken = function (data) {
@@ -338,49 +181,6 @@ Signup.prototype.activateInvite = function (storeInLocalStorage) {
 	});
 };
 
-Signup.prototype.activateSelfService = function (storeInLocalStorage) {
-	var that = this,
-		beforeActivate = this.onBeforeActivateSelfService,
-		afterActivate = this.onActivatedSelfService;
-
-	return beforeActivate().then(function () {
-		var params = {
-			name: that.getFullName(),
-			password: that.password.trim(),
-			timezone: that.timezone.trim(),
-			email: that.email.trim(),
-			phone: that.phone.trim(),
-			key: that.selfserviceToken,
-		};
-
-		// Add custom contact fields
-		if (that.fields) {
-			that.fields.forEach(({ name, value }) => {
-				params['fields__' + name] = value;
-			});
-		}
-
-		return that.ds.longCall('createSelfServiceUser', params, true).then(function (user) {
-			if (storeInLocalStorage) {
-				Signup.storeLoginToken(user.data);
-			}
-
-			return afterActivate(user);
-		});
-	});
-};
-
-Signup.prototype.storeLead = function (tags) {
-	return this.ds.call('storeLead', {
-		firstName: this.firstName.trim(),
-		lastName: this.lastName.trim(),
-		email: this.email.trim(),
-		company: this.company.trim(),
-		phone: this.phone,
-		tags: tags || [],
-	});
-};
-
 // Static constructor
 // ----
 Signup.splitFirstLastName = function (name) {
@@ -390,8 +190,6 @@ Signup.splitFirstLastName = function (name) {
 		lastName: parts.join(' ').trim(),
 	};
 };
-
-Signup.getUrlParam = utils.getUrlParam;
 
 /**
  * Constructor function that creates a Signup object from the params on the querystring
@@ -403,23 +201,13 @@ Signup.fromQueryString = function (opt, settings) {
 		company = utils.getUrlParam('company', ''),
 		firstName = utils.getUrlParam('firstName', '').capitalize(),
 		lastName = utils.getUrlParam('lastName', '').capitalize(),
-		source = utils.getUrlParam('source', DEFAULT_SOURCE),
-		period = utils.getUrlParam('period', DEFAULT_PERIOD),
-		plan = utils.getUrlParam('plan', DEFAULT_PLAN),
 		timezone = utils.getUrlParam('timezone', 'America/New_York'),
-		inviteToken = utils.getUrlParam('code', ''),
-		selfserviceToken = utils.getUrlParam('key', ''),
-		phone = utils.getUrlParam('phone', '').replace(' ', '+');
+		inviteToken = utils.getUrlParam('code', '');
 
 	if (firstName.length == 0 && lastName.length == 0 && name.length > 0) {
 		var parts = Signup.splitFirstLastName(name);
 		firstName = parts.firstName;
 		lastName = parts.lastName;
-	}
-
-	// Don't allow signup to deprecated plans
-	if (['starter', 'basic', 'professional', 'enterprise'].indexOf(plan) != -1) {
-		plan = DEFAULT_PLAN;
 	}
 
 	return new Signup(
@@ -431,12 +219,7 @@ Signup.fromQueryString = function (opt, settings) {
 				timezone: timezone,
 				firstName: firstName,
 				lastName: lastName,
-				source: source,
-				plan: plan,
-				period: period,
-				phone: phone,
 				inviteToken: inviteToken,
-				selfserviceToken: selfserviceToken,
 			},
 			opt
 		),

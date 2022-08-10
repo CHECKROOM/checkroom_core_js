@@ -1,7 +1,6 @@
 import api from './core/api';
 import Attachment from './core/attachment';
 import Base from './core/base';
-import Category from './core/category';
 import Comment from './core/comment';
 import Conflict from './core/conflict';
 import Contact from './core/contact';
@@ -30,7 +29,6 @@ export default {
 	common,
 	Attachment,
 	Base,
-	Category,
 	Comment,
 	Conflict,
 	Contact,

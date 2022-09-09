@@ -42,26 +42,6 @@ utils.areEqual = function (obj1, obj2) {
 };
 
 /**
- * Turns an integer into a compact text to show in a badge
- * @memberOf  utils
- * @name  utils#badgeify
- * @method
- * @param  {int} count
- * @return {string}
- */
-utils.badgeify = function (count) {
-	if (count > 100) {
-		return '99+';
-	} else if (count > 10) {
-		return '10+';
-	} else if (count > 0) {
-		return '' + count;
-	} else {
-		return '';
-	}
-};
-
-/**
  * Gets a parameter from the querystring (returns null if not found)
  * @memberOf utils
  * @name  utils#getUrlParam

@@ -22,6 +22,8 @@ String.prototype.capitalize = function (lower) {
 };
 
 var Signup = function (opt = {}, settings) {
+	this.urlAuth = settings.urlAuth;
+
 	this.ds =
 		opt.ds ||
 		new api.ApiAnonymous({
@@ -155,7 +157,7 @@ Signup.prototype.activateInvite = function (storeInLocalStorage) {
 		beforeActivate = this.onBeforeActivateInvite,
 		afterActivate = this.onActivatedInvite;
 
-	return beforeActivate().then(function () {
+	return beforeActivate().then(async function () {
 		var params = {
 			name: that.getFullName(),
 			email: that.email.trim(),
@@ -166,18 +168,21 @@ Signup.prototype.activateInvite = function (storeInLocalStorage) {
 
 		// Add custom contact fields
 		if (that.fields) {
-			that.fields.forEach(({ name, value }) => {
-				params['fields__' + name] = value;
+			params.fields = that.fields.map(function ({ name, value }) {
+				return { name, value };
 			});
 		}
 
-		return that.ds.longCall('activateInvite', params, true).then(function (user) {
-			if (storeInLocalStorage) {
-				Signup.storeLoginToken(user.data);
-			}
+		const resp = await fetch(`${that.urlAuth}/auth/tokens/invite`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			credentials: 'include',
+			body: JSON.stringify(params),
+		}).then((res) => res.json());
 
-			return afterActivate(user);
-		});
+		return afterActivate(resp);
 	});
 };
 

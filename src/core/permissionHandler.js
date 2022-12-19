@@ -793,6 +793,7 @@ PermissionHandler.prototype.hasPermission = function (action, collection, data, 
 				case 'setField':
 				case 'clearField':
 				case 'setCover':
+				case 'assignGroup':
 					return can(['CUSTOMERS_ADMIN']);
 
 				case 'attach':

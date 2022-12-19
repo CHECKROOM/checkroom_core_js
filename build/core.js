@@ -15286,6 +15286,7 @@ PermissionHandler = function () {
       case 'setFields':
       case 'setField':
       case 'clearField':
+      case 'assignGroup':
         return can(['CUSTOMERS_ADMIN']);
       case 'attach':
       case 'addAttachment':

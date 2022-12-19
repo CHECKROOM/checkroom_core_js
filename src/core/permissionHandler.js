@@ -605,7 +605,8 @@ define([], function () {
                     case "undoArchive":
                     case "setFields":
                     case "setField":
-                    case "clearField":                                  
+                    case "clearField":
+                    case "assignGroup":
                         return can(["CUSTOMERS_ADMIN"]);
 
                     case "attach":

@@ -924,7 +924,7 @@ that.getChangeLogEvent = function (
 						}
 
 						if (evt.kind == 'contact') {
-							return ['category', 'user', 'kind'].indexOf(fieldKey) == -1;
+							return ['category', 'user', 'kind', '_kind', '_mode'].indexOf(fieldKey) == -1;
 						}
 
 						return ['category', 'kind'].indexOf(fieldKey) == -1;

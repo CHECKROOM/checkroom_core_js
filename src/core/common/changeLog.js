@@ -156,6 +156,11 @@ that.getChangeLogEvent = function (
 
 		return getLink('/contacts/' + id, text);
 	};
+	var getContactGroupLink = function (id, text) {
+		if (!perm.hasPermission('update', 'settings')) return sanitizer(text);
+
+		return getLink('/admin/settings/contact-groups/' + id, text);
+	};
 	var getKitLink = function (id, text) {
 		if (!perm.hasKitPermission()) return sanitizer(text);
 
@@ -892,6 +897,9 @@ that.getChangeLogEvent = function (
 			break;
 		case 'create':
 			var getFieldName = function (key) {
+				if (key == 'contactGroup') {
+					return 'User group';
+				}
 				if (key == 'residualValue') {
 					return 'Residual value';
 				}
@@ -924,6 +932,9 @@ that.getChangeLogEvent = function (
 						}
 
 						if (evt.kind == 'contact') {
+							if(fieldKey === 'contactGroup' && !arg[fieldKey].name) {
+								return false;
+							};
 							return ['category', 'user', 'kind', '_kind', '_mode'].indexOf(fieldKey) == -1;
 						}
 
@@ -951,6 +962,10 @@ that.getChangeLogEvent = function (
 						value = moment(arg[fieldKey]).format(
 							'MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')
 						);
+					} else if (fieldKey == 'contactGroup') {
+						const name = arg[fieldKey].name;
+						const id = arg[fieldKey].id
+						value = getContactGroupLink(id, name);
 					} else if (fieldKey == 'category') {
 						var category = getCategoryById(arg[fieldKey]) || {};
 						value = sanitizer(category.name || unknownText);

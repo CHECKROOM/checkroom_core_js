@@ -1,5 +1,4 @@
 import { enableFetchMocks } from 'jest-fetch-mock';
-import moment from 'moment';
 import api from './api';
 
 enableFetchMocks();

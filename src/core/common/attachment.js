@@ -35,25 +35,6 @@ export default {
 		return name.indexOf('.') >= 0 ? name.substr(0, name.lastIndexOf('.')) + '.jpg' : name;
 	},
 	/**
-	 * getFileNameFromUrl
-	 *
-	 * @memberOf common
-	 * @name  common#getFileNameFromUrl
-	 * @method
-	 *
-	 * @param  url
-	 * @return {string}
-	 */
-	getFileNameFromUrl: function (url) {
-		if (url) {
-			var m = url.toString().match(/.*\/(.+?)\./);
-			if (m && m.length > 1) {
-				return m[1];
-			}
-		}
-		return '';
-	},
-	/**
 	 * isImage
 	 *
 	 * @memberOf common

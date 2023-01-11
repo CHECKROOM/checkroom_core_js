@@ -1,4 +1,3 @@
-import common from './common';
 import api from './api';
 import ColorLabel from './colorLabel';
 

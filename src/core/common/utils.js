@@ -1,46 +1,6 @@
 var utils = {};
 
 /**
- * Sorts a given fields dict based on a list of fieldDefs
- * @memberOf utils
- * @name utils#sortFields
- * @param {object} fields
- * @param {Array} fieldDefs
- * @param {Boolean} onlyFormFields (optional)
- * @param {int} limit (optional)
- * @return {Array} list of dicts
- */
-utils.sortFields = function (fields, fieldDefs, onlyFormFields, limit) {
-	var sortedFields = [],
-		fieldDef = null,
-		fieldValue = null,
-		fieldText = null;
-
-	// Work on copy of fieldDefs array
-	fieldDefs = fieldDefs.slice();
-
-	// Return only form field definitions?
-	if (onlyFormFields != null) {
-		fieldDefs = fieldDefs.filter(function (def) {
-			return def.form == onlyFormFields;
-		});
-	}
-
-	// Create a Field dict for each field definition
-	for (var i = 0; i < fieldDefs.length; i++) {
-		fieldDef = fieldDefs[i];
-		fieldValue = fields[fieldDef.name];
-		sortedFields.push(Object.assign({ value: fieldValue }, fieldDef));
-
-		if (limit != null && sortedFields.length >= limit) {
-			break;
-		}
-	}
-
-	return sortedFields;
-};
-
-/**
  * Stringifies an object while first sorting the keys
  * Ensures we can use it to check object equality
  * http://stackoverflow.com/questions/16167581/sort-object-properties-and-json-stringify
@@ -79,49 +39,6 @@ utils.stringifyOrdered = function (obj) {
  */
 utils.areEqual = function (obj1, obj2) {
 	return utils.stringifyOrdered(obj1 || {}) == utils.stringifyOrdered(obj2 || {});
-};
-
-/**
- * Turns an integer into a compact text to show in a badge
- * @memberOf  utils
- * @name  utils#badgeify
- * @method
- * @param  {int} count
- * @return {string}
- */
-utils.badgeify = function (count) {
-	if (count > 100) {
-		return '99+';
-	} else if (count > 10) {
-		return '10+';
-	} else if (count > 0) {
-		return '' + count;
-	} else {
-		return '';
-	}
-};
-
-/**
- * Turns a firstName lastName into a fistname.lastname login
- * @memberOf utils
- * @name  utils#getLoginName
- * @method
- * @param  {string} firstName
- * @param  {string} lastName
- * @return {string}
- */
-utils.getLoginName = function (firstName, lastName) {
-	var patt = /[\s-]*/gim;
-
-	var parts = [];
-	if (firstName) {
-		parts.push(firstName.latinise().toLowerCase().replace(patt, ''));
-	}
-	if (lastName) {
-		parts.push(lastName.latinise().toLowerCase().replace(patt, ''));
-	}
-
-	return parts.join('.');
 };
 
 /**
@@ -295,5 +212,7 @@ export const isEmptyObject = (obj) => {
 	}
 	return true;
 };
+
+utils.isEmptyObject = isEmptyObject;
 
 export default utils;

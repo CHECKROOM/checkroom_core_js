@@ -16,6 +16,7 @@ that.getChangeLogEvent = function (
 	doc,
 	user,
 	locations,
+	categories,
 	group,
 	profile,
 	settings,
@@ -48,12 +49,17 @@ that.getChangeLogEvent = function (
 		return loc.status == 'active';
 	});
 	var locationName = sanitizer(activeLocations.length > 1 ? ' at ' + (location.name || unknownText) : '');
-	var byName = sanitizer(evt.by.name);
 	var perm = getPermissionHandler();
 
 	var getLocationById = function (locId) {
 		return locations.find(function (l) {
 			return l._id == locId;
+		});
+	};
+
+	var getCategoryById = function (catId) {
+		return categories.find(function (c) {
+			return c._id == catId;
 		});
 	};
 
@@ -118,7 +124,7 @@ that.getChangeLogEvent = function (
 		if (!perm.hasCheckoutPermission('read')) return sanitizedText;
 
 		return (
-			"<a href='#check-outs/" +
+			"<a href='/check-outs/" +
 			id +
 			"' class='transaction-link' data-kind='order' data-id='" +
 			id +
@@ -133,7 +139,7 @@ that.getChangeLogEvent = function (
 		if (!perm.hasReservationPermission('read')) return sanitizedText;
 
 		return (
-			"<a href='#reservations/" +
+			"<a href='/reservations/" +
 			id +
 			"' class='transaction-link' data-kind='reservation' data-id='" +
 			id +
@@ -148,12 +154,17 @@ that.getChangeLogEvent = function (
 	var getContactLink = function (id, text) {
 		if (!perm.hasContactReadOtherPermission()) return sanitizer(text);
 
-		return getLink('#contacts/' + id, text);
+		return getLink('/contacts/' + id, text);
+	};
+	var getContactGroupLink = function (id, text) {
+		if (!perm.hasPermission('update', 'settings')) return sanitizer(text);
+
+		return getLink('/admin/settings/contact-groups/' + id, text);
 	};
 	var getKitLink = function (id, text) {
 		if (!perm.hasKitPermission()) return sanitizer(text);
 
-		return getLink('#kits/' + id, text);
+		return getLink('/kits/' + id, text);
 	};
 	var getMessagesBlock = function (messages) {
 		if (messages.length == 0) return '';
@@ -170,12 +181,12 @@ that.getChangeLogEvent = function (
 		return message ? getMessagesBlock([message]) : '';
 	};
 
+	var byName = `${getContactLink(evt.by.contactId, sanitizer(evt.by.name || unknownText))}`;
+
 	switch (evt.action) {
 		case 'changeCategory':
-			var category = sanitizer(
-				arg.category ? arg.category.split('.').pop().replace(/_/gim, ' ').capitalize() : unknownText
-			);
-			evt.friendlyText = byName + ' updated category to ' + category;
+			var category = getCategoryById(arg.categoryId) || {};
+			evt.friendlyText = byName + ' updated category to ' + sanitizer(category.name || unknownText);
 			break;
 		case 'addCodes':
 		case 'removeCodes':
@@ -227,18 +238,41 @@ that.getChangeLogEvent = function (
 			evt.friendlyText = byName + ' unarchived ' + evt.kind;
 			break;
 		case 'takeCustody':
+			var name = arg.custodyName || unknownText;
+
+			evt.friendlyText = `${getContactLink(evt.obj, name)} took ${getLink(
+				`/${evt.kind}/${evt.doc}`,
+				evt.kind
+			)} in custody`;
+			break;
 		case 'item.takeCustody':
 		case 'kit.takeCustody':
-			var id = evt.obj,
-				name = arg.custodyName || unknownText;
+			var kind = evt.action === 'item.takeCustody' ? 'item' : 'kit';
+			var url = evt.action === 'item.takeCustody' ? 'items' : 'kits';
 
-			if (evt.action == 'takeCustody') {
-				evt.friendlyText = byName + ' placed ' + evt.kind + ' in custody of ' + getContactLink(evt.obj, name);
-			} else if (evt.action == 'item.takeCustody') {
-				evt.friendlyText = byName + ' took ' + getLink('#items/' + id, 'item') + ' custody';
-			} else {
-				evt.friendlyText = byName + ' took ' + getLink('#kits/' + id, 'kit') + ' custody';
-			}
+			evt.friendlyText = `${byName} took ${getLink(`/${url}/${evt.obj}`, kind)} in custody`;
+			break;
+		case 'giveCustody':
+			var custodyTaker = evt.arg.custodyName || unknownText;
+			var custodyTakerId = evt.obj;
+
+			evt.friendlyText = `${byName} placed ${getLink(
+				`/${evt.kind}/${evt.doc}`,
+				evt.kind
+			)} in custody of ${getContactLink(custodyTakerId, custodyTaker)}`;
+			break;
+		case 'item.giveCustody':
+		case 'kit.giveCustody':
+			var custodyTaker = evt.arg.custodyName || unknownText;
+			var custodyTakerId = evt.obj;
+
+			var kind = evt.action === 'item.giveCustody' ? 'item' : 'kit';
+			var url = evt.action === 'item.giveCustody' ? 'items' : 'kits';
+
+			evt.friendlyText = `${byName} placed ${getLink(`/${url}/${evt.doc}`, kind)} in custody of ${getContactLink(
+				custodyTakerId,
+				custodyTaker
+			)}`;
 			break;
 		case 'transferCustody':
 		case 'item.transferCustody':
@@ -255,14 +289,14 @@ that.getChangeLogEvent = function (
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#items/' + id, 'item') +
+						getLink('/items/' + id, 'item') +
 						' custody from ' +
 						getContactLink(arg.hadCustody, name);
 				} else {
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#kits/' + id, 'kit') +
+						getLink('/kits/' + id, 'kit') +
 						' custody from ' +
 						getContactLink(arg.hadCustody, name);
 				}
@@ -276,14 +310,14 @@ that.getChangeLogEvent = function (
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#items/' + id, 'item') +
+						getLink('/items/' + id, 'item') +
 						' custody to ' +
 						getContactLink(arg.custody, name);
 				} else {
 					evt.friendlyText =
 						byName +
 						' transfered ' +
-						getLink('#kits/' + id, 'kit') +
+						getLink('/kits/' + id, 'kit') +
 						' custody to ' +
 						getContactLink(arg.custody, name);
 				}
@@ -304,9 +338,9 @@ that.getChangeLogEvent = function (
 					getContactLink(arg.hadCustody, name) +
 					locationName;
 			} else if (evt.action == 'item.releaseCustody') {
-				evt.friendlyText = byName + ' released ' + getLink('#items/' + id, 'item') + ' custody';
+				evt.friendlyText = byName + ' released ' + getLink('/items/' + id, 'item') + ' custody';
 			} else {
-				evt.friendlyText = byName + ' released ' + getLink('#kits/' + id, 'kit') + ' custody';
+				evt.friendlyText = byName + ' released ' + getLink('/kits/' + id, 'kit') + ' custody';
 			}
 			break;
 		case 'setFlag':
@@ -553,7 +587,7 @@ that.getChangeLogEvent = function (
 							return (
 								"<div class='media'><div class='media-left'><img class='item-image' src='" +
 								it.imageUrl +
-								"' /></div><div class='media-body'><a href='#items/" +
+								"' /></div><div class='media-body'><a href='/items/" +
 								it._id +
 								"'>" +
 								sanitizer(it.name) +
@@ -716,7 +750,7 @@ that.getChangeLogEvent = function (
 				items = arg && arg.items ? arg.items : [],
 				count = items.length;
 			if (evt.action == 'addItems') {
-				evt.friendlyText = byName + ' added ' + count + ' item'.pluralize(items.length != -1);
+				evt.friendlyText = byName + ' added ' + count + ' item'.pluralize(count);
 			} else {
 				evt.friendlyText = byName + ' added item to ' + getKitLink(id, 'kit');
 			}
@@ -727,7 +761,7 @@ that.getChangeLogEvent = function (
 				items = arg && arg.items ? arg.items : [],
 				count = items.length;
 			if (evt.action == 'removeItems') {
-				evt.friendlyText = byName + ' removed ' + count + ' item'.pluralize(items.length != -1);
+				evt.friendlyText = byName + ' removed ' + count + ' item'.pluralize(count);
 			} else {
 				evt.friendlyText = byName + ' removed item from ' + getKitLink(id, 'kit');
 			}
@@ -854,7 +888,7 @@ that.getChangeLogEvent = function (
 				byName +
 				' set ' +
 				evt.kind +
-				' field'.pluralize(fields.length > 1) +
+				' field'.pluralize(fields.length) +
 				getMessagesBlock(
 					fields.map(function (f) {
 						return "<small class='text-muted'>" + f.name + '</small><br />' + f.value;
@@ -863,6 +897,9 @@ that.getChangeLogEvent = function (
 			break;
 		case 'create':
 			var getFieldName = function (key) {
+				if (key == 'contactGroup') {
+					return 'User group';
+				}
 				if (key == 'residualValue') {
 					return 'Residual value';
 				}
@@ -895,7 +932,10 @@ that.getChangeLogEvent = function (
 						}
 
 						if (evt.kind == 'contact') {
-							return ['category', 'user', 'kind'].indexOf(fieldKey) == -1;
+							if(fieldKey === 'contactGroup' && !arg[fieldKey].name) {
+								return false;
+							};
+							return ['category', 'user', 'kind', '_kind', '_mode'].indexOf(fieldKey) == -1;
 						}
 
 						return ['category', 'kind'].indexOf(fieldKey) == -1;
@@ -922,8 +962,13 @@ that.getChangeLogEvent = function (
 						value = moment(arg[fieldKey]).format(
 							'MMM DD YYYY' + (fieldDef.editor == 'datetime' ? ' [at] ' + hoursFormat : '')
 						);
+					} else if (fieldKey == 'contactGroup') {
+						const name = arg[fieldKey].name;
+						const id = arg[fieldKey].id
+						value = getContactGroupLink(id, name);
 					} else if (fieldKey == 'category') {
-						value = sanitizer(keyValueHelper.getCategoryNameFromKey(arg[fieldKey]).capitalize());
+						var category = getCategoryById(arg[fieldKey]) || {};
+						value = sanitizer(category.name || unknownText);
 					} else if (fieldKey == 'location') {
 						var loc = getLocationById(fieldValue) || {};
 						value = sanitizer(loc.name || unknownText);
@@ -1017,10 +1062,10 @@ that.getChangeLogEvent = function (
 			break;
 		case 'expire':
 			var message = sanitizer(arg ? arg.message : null);
-			evt.friendlyText = byName + ' expired item' + getMessageBlock(message);
+			evt.friendlyText = byName + ' retired item' + getMessageBlock(message);
 			break;
 		case 'undoExpire':
-			evt.friendlyText = byName + ' unexpired item';
+			evt.friendlyText = byName + ' unretired item';
 			break;
 		case 'setCover':
 			evt.friendlyText = byName + ' updated cover image';
@@ -1038,7 +1083,7 @@ that.getChangeLogEvent = function (
 			break;
 		case 'item.duplicate':
 			var id = evt.obj;
-			evt.friendlyText = byName + ' created ' + getLink('#items/' + id, 'item') + ' from duplicate';
+			evt.friendlyText = byName + ' created ' + getLink('/items/' + id, 'item') + ' from duplicate';
 			break;
 		case 'setCatalog':
 			var fields = Object.keys(arg).map(function (fieldKey) {
@@ -1073,7 +1118,7 @@ that.getChangeLogEvent = function (
 
 			evt.friendlyText =
 				byName +
-				" set <span class='label-tag label-" +
+				" set <span class='label-tag bg-" +
 				label.color.toLowerCase() +
 				"'></span> " +
 				sanitizer(label.name);
@@ -1105,7 +1150,7 @@ that.getChangeLogEvent = function (
 
 			if (evt.kind == 'item') {
 				evt.friendlyText =
-					byName + " scanned item in a <a href='#spotchecks/" + id + "' class='spotcheck'>spotcheck</a>";
+					byName + " scanned item in a <a href='/spotchecks/" + id + "' class='spotcheck'>spotcheck</a>";
 			} else {
 				// Replace placeholder image with actual thumbs
 				var thumbHelper = function (thumbs) {
@@ -1150,7 +1195,7 @@ that.getChangeLogEvent = function (
 
 				evt.friendlyText =
 					byName +
-					" finished a <a href='#spotchecks/" +
+					" finished a <a href='/spotchecks/" +
 					id +
 					"' class='spotcheck'>spotcheck</a> <ul class='list-group field-group spotcheck' data-id='" +
 					id +

@@ -118,5 +118,4 @@ var Slimdown = function () {
 	}
 };
 
-window.Slimdown = Slimdown;
 export default Slimdown;

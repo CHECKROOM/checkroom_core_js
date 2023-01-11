@@ -2,8 +2,7 @@ import common from './common';
 import Base from './base';
 import { isEmptyObject } from './common/utils';
 
-var FLAG = 'cheqroom.prop.Custom',
-	DEFAULT_LAT = 0.0,
+var DEFAULT_LAT = 0.0,
 	DEFAULT_LONG = 0.0,
 	DEFAULTS = {
 		name: '',
@@ -267,22 +266,6 @@ Item.prototype._fromJson = function (data, options) {
 
 		return data;
 	});
-};
-
-// Deprecated
-Item.prototype._toJsonKeyValues = function () {
-	var that = this;
-	var params = {};
-
-	if (this.keyValues != null && this.keyValues.length > 0) {
-		this.keyValues.forEach(function (kv) {
-			var param = 'keyValues__' + kv.key;
-			params[param + '__kind'] = kv.kind;
-			params[param + '__value'] = kv.value;
-		});
-	}
-
-	return params;
 };
 
 // Deprecated

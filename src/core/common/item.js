@@ -1,6 +1,5 @@
 import moment from 'moment';
 import orderHelper from './order';
-import reservationHelper from './reservation';
 import utils from './utils';
 
 var that = {},
@@ -78,7 +77,7 @@ that.getFriendlyItemStatus = function (status) {
 		case 'inspection':
 			return 'Inspection';
 		case 'expired':
-			return 'Expired';
+			return 'Retired';
 		default:
 			return 'Unknown';
 	}
@@ -381,7 +380,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 				} else {
 					getDataSource('items')
 						.call(item.id, 'getChangeLog', {
-							action__in: ['takeCustody', 'transferCustody'],
+							action__in: ['takeCustody', 'giveCustody', 'transferCustody'],
 							limit: 1,
 							skip: 0,
 						})
@@ -436,15 +435,15 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 			allowedActions = [];
 
 		if (
-			perm.hasReservationPermission('read') &&
-			perm.hasCheckoutPermission('read') &&
+			perm._useReservations &&
+			perm._useOrders &&
 			((!canReserve && !canCheckout) || (canReserve && canCheckout))
 		) {
 			if (canReserve && canCheckout) {
 				allowedActions.push('Bookings');
 			} else {
 				// modules enabled?d
-				if (perm.hasCheckoutPermission('read') && perm.hasReservationPermission('read')) {
+				if (perm._useOrders && perm._useReservations) {
 					notAllowedActions.push('Bookings');
 				}
 			}
@@ -452,7 +451,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 			if (canReserve) {
 				allowedActions.push('Reservation');
 			} else {
-				if (perm.hasReservationPermission('read')) {
+				if (perm._useReservations) {
 					notAllowedActions.push('Reservation');
 				}
 			}
@@ -460,7 +459,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 				allowedActions.push('Check-out');
 			} else {
 				// module enabled
-				if (perm.hasCheckoutPermission('read')) {
+				if (perm._useOrders) {
 					notAllowedActions.push('Check-out');
 				}
 			}
@@ -475,16 +474,28 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 		}
 
 		var message = '',
-			unavailable = !canReserve && !canCheckout && !canCustody;
-		if (unavailable) {
-			message = 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ');
+			unavailable = !canReserve && !canCheckout,
+			areAnyBookingModulesEnabled = perm._useReservations || perm._useOrders;
+
+		if (unavailable && areAnyBookingModulesEnabled) {
+			message = notAllowedActions.length
+				? 'Item is <strong>unavailable</strong> for ' + notAllowedActions.joinAdvanced(', ', ' and ')
+				: 'Item is <strong>unavailable</strong>';
 		} else {
-			message =
-				'Item is <strong>available</strong> for ' +
-				allowedActions.joinAdvanced(', ', ' and ') +
-				"<span class='text-muted'>, not for " +
-				notAllowedActions.joinAdvanced(', ', ' and ') +
-				'</span>';
+			if (!notAllowedActions.length && !allowedActions.length) {
+				message = 'Item is available';
+			} else {
+				if (!notAllowedActions.length) {
+					message = 'Item is <strong>available</strong> for ' + allowedActions.joinAdvanced(', ', ' and ');
+				} else {
+					message =
+						'Item is <strong>available</strong> for ' +
+						allowedActions.joinAdvanced(', ', ' and ') +
+						"<span class='text-muted'>, not for " +
+						notAllowedActions.joinAdvanced(', ', ' and ') +
+						'</span>';
+				}
+			}
 		}
 
 		messages.push({
@@ -549,7 +560,7 @@ that.getItemMessages = function (item, getDataSource, permissionHandler, dateHel
 	// Expired message?
 	if (item.status == 'expired') {
 		var message =
-			'Item was <strong>expired</strong> ' +
+			'Item was <strong>retired</strong> ' +
 			(item.expired ? "<span class='text-muted'>" + item.expired.fromNow() + '</span>' : '');
 
 		messages.push({

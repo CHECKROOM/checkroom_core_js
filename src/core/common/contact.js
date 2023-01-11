@@ -3,16 +3,6 @@ import attachmentHelper from './attachment';
 
 var that = {};
 
-that.contactGetUserId = function (contact) {
-	if (contact.user) {
-		if (typeof contact.user === 'string') {
-			return contact.user;
-		} else if (contact.user.hasOwnProperty('_id')) {
-			return contact._id;
-		}
-	}
-};
-
 that.contactGetUserSync = function (contact) {
 	if (contact.user && contact.user.sync) {
 		return contact.user.sync;
@@ -75,28 +65,6 @@ that.getContactImageUrl = function (ds, contact, size, bustCache) {
 
 	// Show profile picture of user?
 	if (contact.user && contact.user.picture) return imageHelper.getImageUrl(ds, contact.user.picture, size, bustCache);
-
-	// Show avatar initials
-	return imageHelper.getAvatarInitial(contact.name, size);
-};
-
-/**
- * getContactImageCDNUrl
- *
- * @memberOf common
- * @name  common#getContactImageCDNUrl
- * @method
- *
- * @param  cr.Contact or contact object
- * @return {string} image path or base64 image
- */
-that.getContactImageCDNUrl = function (settings, groupid, contact, size, bustCache) {
-	// Show contact image
-	if (contact.cover) return imageHelper.getImageCDNUrl(settings, groupid, contact.cover, size, bustCache);
-
-	// Show profile picture of user?
-	if (contact.user && contact.user.picture)
-		return imageHelper.getImageCDNUrl(settings, groupid, contact.user.picture, size, bustCache);
 
 	// Show avatar initials
 	return imageHelper.getAvatarInitial(contact.name, size);

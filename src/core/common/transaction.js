@@ -1,5 +1,4 @@
 import moment from 'moment';
-import keyValues from './keyValues';
 
 var that = {};
 
@@ -25,43 +24,6 @@ that.getTransactionSummary = function (transaction, emptyText) {
 	}
 
 	return emptyText || 'No items';
-};
-
-/**
- * getOrderDuration
- * Gets a moment duration object
- *
- * @memberOf common
- * @name common#getOrderDuration
- * @method
- *
- * @returns {duration}
- */
-that.getOrderDuration = function (transaction) {
-	var from = transaction.started || moment();
-	var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
-	if (to) {
-		return moment.duration(to - from);
-	}
-
-	return null;
-};
-
-/**
- * getFriendlyOrderDuration
- * Gets a friendly duration for a given order
- *
- * @memberOf common
- * @name common#getFriendlyOrderDuration
- * @method
- *
- * @param transaction
- * @param dateHelper
- * @returns {string}
- */
-that.getFriendlyOrderDuration = function (transaction, dateHelper) {
-	var duration = that.getOrderDuration(transaction);
-	return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
 };
 
 /**
@@ -102,67 +64,40 @@ that.getFriendlyReservationDuration = function (transaction, dateHelper) {
 };
 
 /**
- * getMessages
+ * getOrderDuration
+ * Gets a moment duration object
  *
  * @memberOf common
- * @name  common#getMessages
+ * @name common#getOrderDuration
  * @method
  *
- * @param  transaction
- * @param  permissionHandler
- * @param  dateHelper
- * @return {promise}
+ * @returns {duration}
  */
-that.getMessages = function (transaction, getDataSource, permissionHandler, dateHelper, user, group) {
-	var dfd = $.Deferred();
-	(messages = []),
-		(MessagePriority = {
-			Critical: 0,
-			High: 1,
-			Medium: 2,
-			Low: 3,
-		}),
-		(group = group.raw ? group.raw : group),
-		(perm = permissionHandler);
-
-	// Cleanup message?
-	if (transaction.status == 'creating') {
-		var cleanup = group.cleanup || {},
-			deleteIn = cleanup.deleteReservationsCreating;
-
-		if (deleteIn > 0) {
-			var deleteTime = transaction.modified.clone().add(deleteIn, 'minutes'),
-				now = moment(),
-				isPassed = deleteTime.isBefore(now);
-
-			var getDeleteTime = function () {
-				return deleteTime.fromNow();
-			};
-
-			var message = 'Reservation will be deleted <strong>' + deleteTime.fromNow() + '</strong>';
-
-			if (isPassed) {
-				message = 'Reservation will be deleted <strong>in a few seconds</strong>';
-			}
-
-			messages.push({
-				kind: 'cleanup',
-				priority: MessagePriority.Critical,
-				message: message,
-				deleteTime: deleteTime,
-				isPassed: isPassed,
-			});
-		}
+that.getOrderDuration = function (transaction) {
+	var from = transaction.started || moment();
+	var to = transaction.status == 'closed' ? transaction.finished : transaction.due;
+	if (to) {
+		return moment.duration(to - from);
 	}
 
-	dfd.resolve();
+	return null;
+};
 
-	return dfd.then(function () {
-		// Sort by priority High > Low
-		return messages.sort(function (a, b) {
-			return a.priority - b.priority;
-		});
-	});
+/**
+ * getFriendlyOrderDuration
+ * Gets a friendly duration for a given order
+ *
+ * @memberOf common
+ * @name common#getFriendlyOrderDuration
+ * @method
+ *
+ * @param transaction
+ * @param dateHelper
+ * @returns {string}
+ */
+that.getFriendlyOrderDuration = function (transaction, dateHelper) {
+	var duration = that.getOrderDuration(transaction);
+	return duration != null ? dateHelper.getFriendlyDuration(duration) : '';
 };
 
 export default that;

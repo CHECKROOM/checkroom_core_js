@@ -9,7 +9,6 @@ import attachment from './attachment';
 import inflection from './inflection';
 import validation from './validation';
 import utils from './utils';
-import slimdown from './slimdown';
 import kit from './kit';
 import contact from './contact';
 import user from './user';
@@ -21,31 +20,7 @@ import queue from './queue';
 import changeLog from './changeLog';
 import spotcheck from './spotcheck';
 import DeferredPromise from './deferredPromise';
-
-const common = Object.assign(
-	{
-		ajaxQueue: queue,
-		DeferredPromise: DeferredPromise,
-	},
-	code,
-	order,
-	reservation,
-	item,
-	conflicts,
-	keyvalues,
-	image,
-	attachment,
-	validation,
-	utils,
-	kit,
-	contact,
-	user,
-	template,
-	_document,
-	transaction,
-	changeLog,
-	spotcheck
-);
+import Slimdown from './slimdown';
 
 export {
 	code,
@@ -70,4 +45,26 @@ export {
 	DeferredPromise,
 };
 
-export default common;
+export default {
+	ajaxQueue: queue,
+	DeferredPromise,
+	Slimdown,
+	...code,
+	...order,
+	...reservation,
+	...item,
+	...conflicts,
+	...keyvalues,
+	...image,
+	...attachment,
+	...validation,
+	...utils,
+	...kit,
+	...contact,
+	...user,
+	...template,
+	..._document,
+	...transaction,
+	...changeLog,
+	...spotcheck,
+};

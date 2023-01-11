@@ -22,7 +22,7 @@ var PermissionHandler = function (user, profile, limits, permissions, isFeatureE
 
 	// Helper booleans that mix a bunch of role stuff and profile / limits stuff
 	this._isBlockedContact = user.customer && user.customer.status == 'blocked';
-	this._useWebhooks = limits.allowWebhooks && profile.useWebhooks;
+	this._useWebhooks = limits.allowWebhooks;
 	this._useOrders = limits.allowOrders && profile.useOrders;
 	this._useReservations = limits.allowReservations && profile.useReservations;
 	this._usePdf = limits.allowGeneratePdf;
@@ -39,10 +39,10 @@ var PermissionHandler = function (user, profile, limits, permissions, isFeatureE
 	this._useRestrictLocations = limits.allowRestrictLocations && profile.useRestrictLocations;
 	this._useReporting = limits.allowReporting && profile.useReporting;
 	this._useDepreciations = limits.allowDepreciations && profile.useDepreciations;
-	this._useNotifications = limits.allowNotifications && profile.useNotifications;
+	this._useNotifications = limits.allowNotifications;
 	this._useBlockContacts = limits.allowBlockContacts && profile.useBlockContacts;
 	this._useReservationsClose = this._useReservations && profile.useReservationsClose;
-	this._useSlack = limits.allowIntegrationSlack && profile.useIntegrationSlack;
+	this._useSlack = limits.allowIntegrationSlack;
 	this._useApi = limits.allowAPI;
 	this._useReleaseAtLocation =
 		this._useCustody && (profile.custodyCanChangeLocation !== undefined ? profile.custodyCanChangeLocation : true); // TODO change this update fallback (mobile)
@@ -232,7 +232,10 @@ PermissionHandler.prototype.hasSelfservicePermission = function () {
 };
 
 PermissionHandler.prototype.hasReportingPermission = function () {
-	return this._useReporting && this.permissions.indexOf('ACCOUNT_REPORTER') != -1;
+	return (
+		this._useReporting &&
+		(this.permissions.indexOf('ACCOUNT_REPORTER') != -1 || this.permissions.includes('REPORTS_READER'))
+	);
 };
 
 PermissionHandler.prototype.hasExportPermission = function () {
@@ -678,7 +681,6 @@ PermissionHandler.prototype.hasPermission = function (action, collection, data, 
 				// Reservation specific actions
 				case 'setCustomer':
 				case 'clearCustomer':
-				case 'setFromToDate':
 				case 'setLocation':
 				case 'clearLocation':
 				case 'addItems':
@@ -726,7 +728,6 @@ PermissionHandler.prototype.hasPermission = function (action, collection, data, 
 					);
 				case 'export':
 					return this._useExport && can(['RESERVATIONS_EXPORTER', 'RESERVATIONS_EXPORTER_RESTRICTED']);
-				case 'switchToOrder':
 				case 'makeOrder':
 					return this.hasCheckoutPermission('create', data);
 				case 'cancel':
@@ -792,6 +793,10 @@ PermissionHandler.prototype.hasPermission = function (action, collection, data, 
 				case 'setField':
 				case 'clearField':
 				case 'setCover':
+				case 'addGroup':
+				case 'deleteGroup':
+				case 'editGroup':
+				case 'assignGroup':
 					return can(['CUSTOMERS_ADMIN']);
 
 				case 'attach':

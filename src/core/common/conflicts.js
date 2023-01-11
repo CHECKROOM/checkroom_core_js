@@ -18,7 +18,7 @@ export default {
 			case 'reservation':
 				return 'Already reserved';
 			case 'expired':
-				return 'Item is expired';
+				return 'Item is retired';
 			case 'in_custody':
 			case 'custody':
 				return 'Item is in custody';

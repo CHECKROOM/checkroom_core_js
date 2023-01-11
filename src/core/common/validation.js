@@ -18,6 +18,20 @@ export default {
 		return m != null && m.length > 0;
 	},
 	/**
+	 * isFreeEmail
+	 * @memberOf common
+	 * @name common#isFreeEmail
+	 * @method
+	 * @param email
+	 * @returns {boolean}
+	 */
+	isFreeEmail: function (email) {
+		var m = email.match(
+			/^([\w-\+]+(?:\.[\w-\+]+)*)@(?!gmail\.com)(?!yahoo\.com)(?!hotmail\.com)(?!163\.com)(?!qq\.com)(?!mail\.ru)(?!aol\.com)(?!outlook\.com)(?!icloud\.com)((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,}(?:\.[a-z]{2})?)$/i
+		);
+		return m == null;
+	},
+	/**
 	 * isValidPhone
 	 * @memberOf common
 	 * @name  common#isValidPhone
@@ -92,7 +106,7 @@ export default {
 	 */
 	isValidDate: function (value) {
 		// make sure numbers are parsed as a number
-		if (!isNaN(value)) {
+		if (/^[0-9]+$/.test(value)) {
 			value = parseInt(value);
 		}
 

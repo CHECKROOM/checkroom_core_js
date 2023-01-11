@@ -1,6 +1,5 @@
 import Base from './base';
 import common from './common';
-import User from './user';
 import Helper from './helper';
 
 var DEFAULTS = {
@@ -71,18 +70,6 @@ Contact.prototype.isValidName = function () {
 Contact.prototype.isValidEmail = function () {
 	this.email = this.email.trim();
 	return common.isValidEmail(this.email);
-};
-
-/**
- * If the contact is linked to a user,
- * return its user id
- * Remark: needs field user
- * @name Contact#getUserId
- * @method
- * @return {string}
- */
-Contact.prototype.getUserId = function () {
-	return this.helper.ensureId(this.user);
 };
 
 /**

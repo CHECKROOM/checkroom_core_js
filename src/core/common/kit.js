@@ -2,7 +2,6 @@ import moment from 'moment';
 
 import itemHelpers from './item';
 import orderHelper from './order';
-import reservationHelper from './reservation';
 import utils from './utils';
 
 var that = {},
@@ -370,7 +369,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 				} else {
 					getDataSource('kits')
 						.call(kit.id, 'getChangeLog', {
-							action__in: ['takeCustody', 'transferCustody'],
+							action__in: ['takeCustody', 'giveCustody', 'transferCustody'],
 							limit: 1,
 							skip: 0,
 						})
@@ -379,7 +378,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 								if (resp.length == 0) {
 									getDataSource('items')
 										.call(kit.items[0]._id, 'getChangeLog', {
-											action__in: ['takeCustody', 'transferCustody'],
+											action__in: ['takeCustody', 'giveCustody', 'transferCustody'],
 											limit: 1,
 											skip: 0,
 										})
@@ -575,7 +574,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 				msg.push(awaitCheckoutTotal + ' awaiting checkout');
 			}
 			if (expiredTotal > 0) {
-				msg.push(expiredTotal + ' expired');
+				msg.push(expiredTotal + ' retired');
 			}
 			if (inCustodyTotal > 0) {
 				msg.push(inCustodyTotal + ' in custody');
@@ -593,7 +592,7 @@ that.getKitMessages = function (kit, getDataSource, permissionHandler, dateHelpe
 
 	// Expired message?
 	if (kit.status == 'expired') {
-		var message = 'Kit is <strong>expired</strong>';
+		var message = 'Kit is <strong>retired</strong>';
 
 		messages.push({
 			kind: 'expired',

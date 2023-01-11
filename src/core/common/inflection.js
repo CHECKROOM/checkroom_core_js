@@ -65,33 +65,7 @@ if (!String.prototype.truncate) {
 		return re;
 	};
 }
-if (!String.prototype.isValidUrl) {
-	/**
-	 * isValidUrl
-	 *
-	 * @memberOf String
-	 * @name  String#isValidUrl
-	 * @method
-	 *
-	 * @return {Boolean}
-	 */
-	String.prototype.isValidUrl = function () {
-		var pattern = new RegExp(
-			'^(https?:\\/\\/)?' + // protocol
-				'((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
-				'((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
-				'(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
-				'(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
-				'(\\#[-a-z\\d_]*)?$',
-			'i'
-		); // fragment locator
-		if (!pattern.test(this)) {
-			return false;
-		} else {
-			return true;
-		}
-	};
-}
+
 if (!String.prototype.hashCode) {
 	/**
 	 * hashCode
@@ -974,19 +948,6 @@ String.prototype.latinise = function () {
 String.prototype.latinize = String.prototype.latinise;
 
 /**
- * isLatin
- *
- * @memberOf  String
- * @name  String#isLatin
- * @method
- *
- * @return {Boolean}
- */
-String.prototype.isLatin = function () {
-	return this == this.latinise();
-};
-
-/**
  * OnlyAlphaNumSpaceAndUnderscore
  *
  * @memberOf String
@@ -1024,36 +985,6 @@ String.prototype.OnlyAlphaNumSpaceUnderscoreAndDot = function () {
 		.replace(/[^a-z0-9_\.]/g, '');
 };
 
-if (!String.prototype.NoWhiteSpaceInWord) {
-	/**
-	 * NoWhiteSpaceInWord
-	 *
-	 * @memberOf String
-	 * @name String#NoWhiteSpaceInWord
-	 * @method
-	 * @returns {string}
-	 */
-	String.prototype.NoWhiteSpaceInWord = function () {
-		return this.replace(/[\s]+/g, '');
-	};
-}
-
-if (!String.prototype.addLeadingZero) {
-	/**
-	 * addLeadingZero adds zeros in front of a number
-	 * http://stackoverflow.com/questions/6466135/adding-extra-zeros-in-front-of-a-number-using-jquery
-	 * ex: 5.pad(3) --> 005
-	 *
-	 * @param  {string} str
-	 * @param  {Number} max
-	 * @return {string}
-	 */
-	String.prototype.addLeadingZero = function (max) {
-		var str = this.toString();
-		return str.length < max ? ('0' + str).addLeadingZero(max) : str;
-	};
-}
-
 /**
  * Pad a number with leading zeros f.e. "5".lpad('0',2) -> 005
  * @param padString
@@ -1066,82 +997,7 @@ String.prototype.lpad = function (padString, length) {
 	return str;
 };
 
-/**
- * NUMBER EXTENSIONS
- */
-if (!Number.prototype.between) {
-	/**
-	 * between
-	 *
-	 * @memberOf  Number
-	 * @name  Number#between
-	 * @method
-	 *
-	 * @param  {int} a
-	 * @param  {int} b
-	 * @return {Boolean}
-	 */
-	Number.prototype.between = function (a, b) {
-		var min = Math.min(a, b),
-			max = Math.max(a, b);
-		return this >= min && this <= max;
-	};
-}
-
-/**
- * ARRAY EXTENSTIONS
- */
-if (!Array.prototype.joinOther) {
-	/**
-	 * joinOther
-	 *
-	 * Makes a friendly joined list of strings
-	 * constrained to a certain maxLength
-	 * where the text would be:
-	 * Kit 1, Kit2 +3 other
-	 * or
-	 * Kit 1 +4 other (if no params were passed)
-	 *
-	 * @memberOf Array
-	 * @name Array#joinOther
-	 * @method
-	 *
-	 * @param maxLength {int} 30
-	 * @param sep {string} ", "
-	 * @param other {string} "other"
-	 */
-	Array.prototype.joinOther = function (maxLength, sep, other) {
-		// If we only have 1 item, no need to join anything
-		if (this.length < 2) {
-			return this.join(sep);
-		}
-
-		sep = sep || ', ';
-		other = other || 'other';
-
-		// Take the minimum length if no maxLength was passed
-		if (!maxLength || maxLength < 0) {
-			maxLength = 1;
-		}
-
-		// Keep popping off entries in the array
-		// until there's only one left, or until
-		// the joined text is shorter than maxLength
-		var copy = this.slice(0);
-		var joined = copy.join(sep);
-		while (copy.length > 1 && joined.length > maxLength) {
-			copy.pop();
-			joined = copy.join(sep);
-		}
-
-		var numOther = this.length - copy.length;
-		if (numOther > 0) {
-			joined += ' +' + numOther + ' ' + other;
-		}
-		return joined;
-	};
-}
-
+// TODO replace with INTL
 if (!Array.prototype.joinAdvanced) {
 	/**
 	 * Special join method

@@ -1,5 +1,3 @@
-import moment from 'moment';
-
 export default {
 	templateIsArchived: function (templ) {
 		return !(templ.archived == null);

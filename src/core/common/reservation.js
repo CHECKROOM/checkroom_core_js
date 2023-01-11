@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 export default {
 	/**
 	 * getFriendlyReservationCss
@@ -150,8 +152,5 @@ export default {
 		} else {
 			return this.getFriendlyReservationStatus(reservation.status);
 		}
-	},
-	canReservationSpotcheck: function (reservation) {
-		return reservation.archived == null && ['cancelled', 'closed'].indexOf(reservation.status) == -1;
 	},
 };

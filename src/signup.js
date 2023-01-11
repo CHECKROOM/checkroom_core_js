@@ -113,12 +113,14 @@ Signup.prototype.parseFields = function (fieldDefs) {
 	this.onContactFields(fields);
 };
 
-Signup.prototype.inviteIsValid = function () {
+Signup.prototype.inviteIsValid = function (processFields = true) {
 	var that = this;
 
 	if (this.inviteToken.trim() != '') {
 		return this.ds.call('checkInvite', { code: this.inviteToken, email: this.email }).then(function (resp) {
-			that.parseFields(resp.customerFields);
+			if (processFields) {
+				that.parseFields(resp.customerFields);
+			}
 
 			return resp.result;
 		});
